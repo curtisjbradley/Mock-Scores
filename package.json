@@ -1,0 +1,15 @@
+{
+  "dependencies": {
+    "vite": "^6.4.2"
+  },
+  "name": "mock-scores",
+  "version": "1.0.0",
+  "description": "Scoring software for high school mock trial competitions",
+  "main": "index.js",
+  "devDependencies": {},
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "author": "Curtis Bradley",
+  "license": "ISC"
+}
