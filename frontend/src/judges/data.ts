@@ -10,7 +10,7 @@ export const EXAMPLE_TRIAL_DETAILS: IScoreSheetFormat = {
     scorerName: "Bary Allen",
     scorerID: "s10",
     presiderName: "John Doe",
-    courtroomNumber: "4B",
+    courtroomNumber: "Department 10",
     defense: "101",
     prosecution: "103",
 

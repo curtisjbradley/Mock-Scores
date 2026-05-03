@@ -330,8 +330,8 @@ html {
     display: inline-flex;
     align-items: center;
     justify-content: center;
-    color: var(--primary-dark);
-    background: var(--primary-subtle);
+    color: var(--nav-btn-text);
+    background: var(--nav-btn-bg);
 }
 
 #score-submit {
@@ -463,12 +463,6 @@ html {
     }
 }
 
-/* ── Dark mode ──────────────────────────────────────────────────────────── */
-
-@media (prefers-color-scheme: dark) {
-    .scoresheet-nav {
-        background: rgba(22, 28, 45, 0.92);
-    }
 
     .nav-button {
         background: var(--nav-btn-bg-dark);

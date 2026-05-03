@@ -228,8 +228,8 @@
 }
 
 .confirm-actions button:first-child {
-    color: var(--primary-dark);
-    background: var(--primary-subtle);
+    color: var(--nav-btn-text);
+    background: var(--nav-btn-bg);
 }
 
 .confirm-actions button:last-child {
@@ -276,11 +276,4 @@
     }
 }
 
-/* ── Dark mode ──────────────────────────────────────────────────────────── */
-
-@media (prefers-color-scheme: dark) {
-    .confirm-actions button:first-child {
-        background: var(--nav-btn-bg-dark);
-        color: var(--nav-btn-text-dark);
-    }
 }

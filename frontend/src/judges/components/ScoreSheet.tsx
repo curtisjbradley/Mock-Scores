@@ -4,7 +4,9 @@ import {
     type FieldErrors,
     type SubmitHandler,
     useForm,
+    useFormState,
     type UseFormRegister,
+    type Control,
 } from "react-hook-form";
 
 import type { IScoreSheetFormat, IStudentInfo } from "../types.ts";
@@ -34,26 +36,27 @@ interface ScoreBoxProps {
     /** Resolved student info, or null for team-score rows with no individual student. */
     student: IStudentInfo | null;
     register: UseFormRegister<ScoreResults>;
+    control: Control<ScoreResults>;
     minScore: number;
     maxScore: number;
-    /** Whether this input currently has a validation error. */
-    hasError?: boolean;
+    submitAttempt: number;
 }
 
 /**
  * A single score input cell, including the student name, pronouns, and nomination checkbox.
  * Scrolls itself into view on focus to avoid being hidden behind the sticky nav on mobile.
  */
-function ScoreBox({ id, student, register, minScore, maxScore, hasError = false }: ScoreBoxProps) {
+function ScoreBox({ id, student, register, control, minScore, maxScore, submitAttempt }: ScoreBoxProps) {
     const nominationId = `${id}student-nom`;
-
-    const ensureVisible = (el: HTMLElement) => {
-        const rect = el.getBoundingClientRect();
-        if (rect.top < 80 || rect.bottom > window.innerHeight - 80)
-            el.scrollIntoView({ behavior: "smooth", block: "center" });
-    };
-
-    const registered = register(id, { required: true, min: minScore, max: maxScore, valueAsNumber: true });
+    const { errors } = useFormState({ control, name: id as keyof ScoreResults });
+    const hasError = !!errors[id];
+    const registered = register(id, {
+        required: true,
+        min: minScore,
+        max: maxScore,
+        valueAsNumber: true,
+        validate: (v) => (typeof v === "number" && !isNaN(v) && v >= minScore && v <= maxScore) || `Must be ${minScore}–${maxScore}`,
+    });
 
     return (
         <div className="score-box">
@@ -69,8 +72,10 @@ function ScoreBox({ id, student, register, minScore, maxScore, hasError = false 
                 aria-describedby={hasError ? `${id}-error` : undefined}
                 onWheel={(e) => e.currentTarget.blur()}
                 {...registered}
-                onFocus={(e) => ensureVisible(e.currentTarget)}
             />
+            {hasError && (
+                <ScoreError id={id} minScore={minScore} maxScore={maxScore} submitAttempt={submitAttempt} />
+            )}
             {student && (
                 <p className="student-name">
                     {student.name}
@@ -134,7 +139,7 @@ function ScoreSheet(details: IScoreSheetFormat) {
     const [nominees, setNominees] = useState<Nominee[]>([]);
     const [nomineeRanks, setNomineeRanks] = useState<NomineeRanks>({});
 
-    const { register, handleSubmit, formState: { errors }, watch, reset, getValues } = useForm<ScoreResults>({ mode: "onBlur", reValidateMode: "onBlur" });
+    const { register, handleSubmit, watch, reset, getValues, control } = useForm<ScoreResults>({ mode: "onBlur", reValidateMode: "onBlur" });
 
     const storageKey = `mock-trial-scores-${details.trialID}-${details.scorerID}`;
     const { categoryOrder, scoringCategories, witnesses } = details;
@@ -198,17 +203,27 @@ function ScoreSheet(details: IScoreSheetFormat) {
     /** On validation failure, navigates to the category containing the first error and scrolls to it. */
     const onInvalid = (formErrors: FieldErrors<ScoreResults>) => {
         setSubmitAttempt((c) => c + 1);
-        const firstErrorId = Object.keys(formErrors)[0];
-        const idx = categoryOrder.findIndex((catId) =>
-            scoringCategories[catId].categoryAssignments.some((a) => {
-                return firstErrorId === buildScoreId(a.assignmentKey, "P") ||
-                       firstErrorId === buildScoreId(a.assignmentKey, "D");
-            })
-        );
+        const errorIds = new Set(Object.keys(formErrors));
+        let firstErrorId: string | undefined;
+        let idx = -1;
+        for (let i = 0; i < categoryOrder.length; i++) {
+            const cat = scoringCategories[categoryOrder[i]];
+            const found = cat.categoryAssignments.find((a) => {
+                const pId = buildScoreId(a.assignmentKey, "P");
+                const dId = buildScoreId(a.assignmentKey, "D");
+                return errorIds.has(pId) || errorIds.has(dId);
+            });
+            if (found) {
+                idx = i;
+                const pId = buildScoreId(found.assignmentKey, "P");
+                firstErrorId = errorIds.has(pId) ? pId : buildScoreId(found.assignmentKey, "D");
+                break;
+            }
+        }
         if (idx === -1) return;
         setCategoryIndex(idx);
         window.requestAnimationFrame(() =>
-            document.getElementById(firstErrorId)?.scrollIntoView({ behavior: "smooth", block: "center" })
+            document.getElementById(firstErrorId!)?.scrollIntoView({ behavior: "smooth", block: "center" })
         );
     };
 
@@ -282,25 +297,17 @@ function ScoreSheet(details: IScoreSheetFormat) {
                                     {cat.categoryAssignments.map((assignment) => {
                                         const pId = buildScoreId(assignment.assignmentKey, "P");
                                         const dId = buildScoreId(assignment.assignmentKey, "D");
-                                        const pError = errors[pId];
-                                        const dError = errors[dId];
                                         return (
                                             <tr key={`${assignment.assignmentKey}-${assignment.side}`} className="score-row">
                                                 <td>{assignment.assignmentName}</td>
                                                 <td>
                                                     {assignment.side !== "D" && (
-                                                        <>
-                                                            <ScoreBox id={pId} register={register} student={student(assignment.pStudentId)} minScore={assignment.minScore} maxScore={assignment.maxScore} hasError={!!pError} />
-                                                            {pError && <ScoreError id={pId} minScore={assignment.minScore} maxScore={assignment.maxScore} submitAttempt={submitAttempt} />}
-                                                        </>
+                                                        <ScoreBox id={pId} register={register} control={control} student={student(assignment.pStudentId)} minScore={assignment.minScore} maxScore={assignment.maxScore} submitAttempt={submitAttempt} />
                                                     )}
                                                 </td>
                                                 <td>
                                                     {assignment.side !== "P" && (
-                                                        <>
-                                                            <ScoreBox id={dId} register={register} student={student(assignment.dStudentId)} minScore={assignment.minScore} maxScore={assignment.maxScore} hasError={!!dError} />
-                                                            {dError && <ScoreError id={dId} minScore={assignment.minScore} maxScore={assignment.maxScore} submitAttempt={submitAttempt} />}
-                                                        </>
+                                                        <ScoreBox id={dId} register={register} control={control} student={student(assignment.dStudentId)} minScore={assignment.minScore} maxScore={assignment.maxScore} submitAttempt={submitAttempt} />
                                                     )}
                                                 </td>
                                             </tr>
