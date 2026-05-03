@@ -461,12 +461,10 @@ html {
     #score-submit-desktop{
         display: none;
     }
-}
-
 
     .nav-button {
-        background: var(--nav-btn-bg-dark);
-        color: var(--nav-btn-text-dark);
+        background: var(--nav-btn-bg);
+        color: var(--nav-btn-text);
     }
 
     .score-row:hover td {
