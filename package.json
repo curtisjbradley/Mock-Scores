@@ -1,15 +1,27 @@
 {
-  "dependencies": {
-    "vite": "^6.4.2"
-  },
   "name": "mock-scores",
   "version": "1.0.0",
-  "description": "Scoring software for high school mock trial competitions",
+  "description": "",
+  "homepage": "https://github.com/curtisjbradley/Mock-Scores#readme",
+  "bugs": {
+    "url": "https://github.com/curtisjbradley/Mock-Scores/issues"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/curtisjbradley/Mock-Scores.git"
+  },
+  "license": "ISC",
+  "author": "",
+  "type": "commonjs",
   "main": "index.js",
-  "devDependencies": {},
   "scripts": {
     "test": "echo \"Error: no test specified\" && exit 1"
   },
-  "author": "Curtis Bradley",
-  "license": "ISC"
+  "workspaces": [
+    "frontend"
+  ],
+  "dependencies": {
+    "@tailwindcss/vite": "^4.2.4",
+    "tailwindcss": "^4.2.4"
+  }
 }
