@@ -1,0 +1,286 @@
+/* ── Modal backdrop ─────────────────────────────────────────────────────── */
+
+.modal-backdrop {
+    position: fixed;
+    inset: 0;
+    z-index: 10000;
+    display: grid;
+    place-items: center;
+    padding: 1rem;
+    overflow-y: auto;
+    background: rgba(15, 23, 42, 0.5);
+}
+
+.confirm-modal {
+    width: min(100%, 30rem);
+    max-height: 90vh;
+    padding: 1.5rem;
+    overflow-y: auto;
+    border-radius: 1.25rem;
+    background: var(--surface);
+    box-shadow: 0 24px 60px rgba(15, 23, 42, 0.3);
+    overscroll-behavior: contain;
+}
+
+.confirm-modal h2 {
+    margin: 0 0 0.4rem;
+    font-size: 1.2rem;
+}
+
+.confirm-modal > p {
+    margin: 0 0 0.25rem;
+    color: var(--text-muted);
+    font-size: 0.9rem;
+}
+
+/* ── Nominee ranking ────────────────────────────────────────────────────── */
+
+.nominee-ranking {
+    margin-top: 1.25rem;
+    padding-top: 1rem;
+    border-top: 1px solid var(--border);
+}
+
+.nominee-ranking h3 {
+    margin: 0 0 0.25rem;
+    font-size: 1rem;
+}
+
+.nominee-ranking > p {
+    margin: 0 0 0.75rem;
+    color: var(--text-muted);
+    font-size: 0.85rem;
+}
+
+.nominee-rank-row {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    padding: 0.6rem 0;
+    border-bottom: 1px solid var(--border);
+}
+
+.nominee-rank-row:last-of-type {
+    border-bottom: none;
+}
+
+.nominee-info {
+    flex: 1;
+    display: grid;
+    gap: 0.15rem;
+}
+
+.nominee-roles {
+    color: var(--text-muted);
+    font-size: 0.8rem;
+    line-height: 1.4;
+}
+
+.nominee-side {
+    font-weight: 600;
+    color: var(--text-muted);
+    font-size: 0.85em;
+}
+
+.rank-selection {
+    min-height: 2.5rem;
+    min-width: 7.5rem;
+    padding: 0 0.5rem;
+    border: 1px solid var(--border-strong);
+    border-radius: var(--radius);
+    background: var(--surface);
+    color: var(--text);
+    font-size: 0.95rem;
+    font-weight: 700;
+    text-align: center;
+    text-align-last: center;
+    cursor: pointer;
+}
+
+.rank-selection:focus-visible {
+    outline: none;
+    box-shadow: 0 0 0 4px var(--focus);
+}
+
+.ranking-error {
+    margin-top: 0.75rem;
+    padding: 0.5rem 0.65rem;
+    border: 1px solid var(--danger);
+    border-radius: 0.4rem;
+    background: var(--danger-bg);
+    color: var(--danger);
+    font-size: 0.85rem;
+    font-weight: 700;
+    line-height: 1.3;
+}
+
+/* ── Tiebreaker ─────────────────────────────────────────────────────────── */
+
+.tiebreaker-section {
+    margin-top: 1.25rem;
+    padding-top: 1rem;
+    border-top: 1px solid var(--border);
+}
+
+.tiebreaker-section h3 {
+    margin: 0 0 0.25rem;
+    font-size: 1rem;
+}
+
+.tiebreaker-section > p {
+    margin: 0 0 0.75rem;
+    color: var(--text-muted);
+    font-size: 0.85rem;
+}
+
+.tiebreaker-options {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 0.75rem;
+}
+
+.tiebreaker-option {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 0.25rem;
+    padding: 1rem 0.75rem;
+    border: 2px solid var(--border);
+    border-radius: 0.75rem;
+    background: var(--surface-muted);
+    cursor: pointer;
+    transition: border-color 120ms ease, background 120ms ease;
+    text-align: center;
+    min-height: 5rem;
+    position: relative;
+}
+
+.tiebreaker-option input[type="radio"] {
+    position: absolute;
+    opacity: 0;
+    width: 0;
+    height: 0;
+}
+
+.tiebreaker-option--selected {
+    border-color: var(--primary);
+    background: var(--primary-subtle);
+}
+
+.tiebreaker-option--selected::after {
+    content: "✓";
+    position: absolute;
+    top: 0.4rem;
+    right: 0.5rem;
+    font-size: 0.85rem;
+    font-weight: 800;
+    color: var(--primary);
+}
+
+.tiebreaker-option:focus-within {
+    outline: none;
+    box-shadow: 0 0 0 4px var(--focus);
+}
+
+.tiebreaker-code {
+    font-size: 2rem;
+    font-weight: 900;
+    color: var(--primary-dark);
+    line-height: 1;
+}
+
+.tiebreaker-role {
+    font-size: 0.75rem;
+    font-weight: 600;
+    letter-spacing: 0.05em;
+    text-transform: uppercase;
+    color: var(--text-muted);
+}
+
+@media screen and (max-width: 48rem) {
+    .tiebreaker-option {
+        min-height: 6rem;
+        padding: 1.25rem 0.75rem;
+    }
+
+    .tiebreaker-code {
+        font-size: 2.4rem;
+    }
+}
+
+/* ── Actions ────────────────────────────────────────────────────────────── */
+
+.confirm-actions {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 0.75rem;
+    margin-top: 1.25rem;
+}
+
+.confirm-actions button {
+    min-height: 2.75rem;
+    border: 0;
+    border-radius: var(--radius);
+    font-size: 0.95rem;
+    font-weight: 800;
+    cursor: pointer;
+    transition: background 140ms ease, transform 140ms ease;
+}
+
+.confirm-actions button:first-child {
+    color: var(--primary-dark);
+    background: var(--primary-subtle);
+}
+
+.confirm-actions button:last-child {
+    color: #fff;
+    background: var(--primary);
+    box-shadow: 0 8px 18px rgba(31, 94, 255, 0.2);
+}
+
+.confirm-actions button:hover:not(:disabled) {
+    transform: translateY(-1px);
+}
+
+.confirm-actions button:last-child:hover:not(:disabled) {
+    background: var(--primary-dark);
+}
+
+.confirm-actions button:focus-visible {
+    outline: none;
+    box-shadow: 0 0 0 4px var(--focus);
+}
+
+#confirm-button:disabled {
+    cursor: not-allowed;
+    opacity: 0.4;
+    box-shadow: none;
+}
+
+/* ── Mobile ─────────────────────────────────────────────────────────────── */
+
+@media screen and (max-width: 48rem) {
+    .confirm-modal {
+        padding: 1.25rem;
+    }
+
+    .rank-selection {
+        min-height: 3rem;
+        min-width: 8rem;
+        font-size: 1rem;
+    }
+
+    .confirm-actions button {
+        min-height: 3.25rem;
+        font-size: 1rem;
+    }
+}
+
+/* ── Dark mode ──────────────────────────────────────────────────────────── */
+
+@media (prefers-color-scheme: dark) {
+    .confirm-actions button:first-child {
+        background: var(--nav-btn-bg-dark);
+        color: var(--nav-btn-text-dark);
+    }
+}

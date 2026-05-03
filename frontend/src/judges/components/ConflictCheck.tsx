@@ -1,0 +1,68 @@
+import "../styles/conflict-check.css";
+import type { IScoreSheetFormat } from "../types.ts";
+
+interface ConflictCheckProps {
+    /** Full scoresheet data used to display trial and scorer info. */
+    details: IScoreSheetFormat;
+    /** Called when the scorer clicks "Proceed" after reviewing for conflicts. */
+    onProceed: () => void;
+}
+
+/**
+ * Pre-trial conflict-of-interest screen shown before the scoresheet.
+ * Displays the scorer's name, presider, courtroom, and both team codes (never school names).
+ * The scorer must either proceed or report a conflict before scoring begins.
+ */
+function ConflictCheck({ details, onProceed }: ConflictCheckProps) {
+    const prosecutionLabel = details.isCriminal ? "Prosecution" : "Plaintiff";
+
+    const handleReportConflict = () => {
+        // TBI
+    };
+
+    return (
+        <div className="conflict-check">
+            <div className="conflict-card">
+                <h1 className="conflict-title">Before You Begin</h1>
+
+                <dl className="conflict-info">
+                    <div className="conflict-info-row">
+                        <dt>Your Name</dt>
+                        <dd>{details.scorerName}</dd>
+                    </div>
+                    <div className="conflict-info-row">
+                        <dt>Presider</dt>
+                        <dd>{details.presiderName}</dd>
+                    </div>
+                    <div className="conflict-info-row">
+                        <dt>Courtroom</dt>
+                        <dd>{details.courtroomNumber}</dd>
+                    </div>
+                    <div className="conflict-info-row">
+                        <dt>{prosecutionLabel} Team</dt>
+                        <dd className="conflict-team-code">{details.prosecution}</dd>
+                    </div>
+                    <div className="conflict-info-row">
+                        <dt>Defense Team</dt>
+                        <dd className="conflict-team-code">{details.defense}</dd>
+                    </div>
+                </dl>
+
+                <p className="conflict-prompt">
+                    Please look around for any conflicts of interest before proceeding.
+                </p>
+
+                <div className="conflict-actions">
+                    <button type="button" className="conflict-btn-report" onClick={handleReportConflict}>
+                        Report Conflict
+                    </button>
+                    <button type="button" className="conflict-btn-proceed" onClick={onProceed}>
+                        Proceed
+                    </button>
+                </div>
+            </div>
+        </div>
+    );
+}
+
+export default ConflictCheck;

@@ -1,0 +1,130 @@
+.conflict-check {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    min-height: 100svh;
+    padding: 1rem;
+    background: var(--bg);
+}
+
+.conflict-card {
+    width: min(100%, 26rem);
+    padding: 1.75rem;
+    border: 1px solid var(--border);
+    border-radius: 1.25rem;
+    background: var(--surface);
+    box-shadow: var(--shadow);
+}
+
+.conflict-title {
+    margin: 0 0 1.25rem;
+    font-size: 1.4rem;
+    font-weight: 800;
+    color: var(--text);
+}
+
+.conflict-info {
+    margin: 0 0 1.25rem;
+    padding: 0;
+    display: grid;
+    gap: 0;
+    border: 1px solid var(--border);
+    border-radius: 0.75rem;
+    overflow: hidden;
+}
+
+.conflict-info-row {
+    display: flex;
+    justify-content: space-between;
+    align-items: baseline;
+    gap: 1rem;
+    padding: 0.65rem 0.9rem;
+    border-bottom: 1px solid var(--border);
+}
+
+.conflict-info-row:last-child {
+    border-bottom: none;
+}
+
+.conflict-info-row dt {
+    font-size: 0.85rem;
+    color: var(--text-muted);
+    font-weight: 600;
+    flex-shrink: 0;
+}
+
+.conflict-info-row dd {
+    margin: 0;
+    font-size: 0.95rem;
+    font-weight: 700;
+    color: var(--text);
+    text-align: right;
+}
+
+.conflict-team-code {
+    font-size: 1.2rem !important;
+    font-weight: 900 !important;
+    color: var(--primary-dark) !important;
+}
+
+.conflict-prompt {
+    margin: 0 0 1.25rem;
+    padding: 0.75rem 0.9rem;
+    border-radius: 0.6rem;
+    background: var(--surface-muted);
+    border: 1px solid var(--border);
+    font-size: 0.95rem;
+    color: var(--text);
+    line-height: 1.5;
+}
+
+.conflict-actions {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 0.75rem;
+}
+
+.conflict-actions button {
+    min-height: 3rem;
+    border: 0;
+    border-radius: var(--radius);
+    font-size: 1rem;
+    font-weight: 800;
+    cursor: pointer;
+    transition: background 140ms ease, transform 140ms ease;
+}
+
+.conflict-actions button:hover {
+    transform: translateY(-1px);
+}
+
+.conflict-actions button:focus-visible {
+    outline: none;
+    box-shadow: 0 0 0 4px var(--focus);
+}
+
+.conflict-btn-report {
+    color: var(--danger);
+    background: var(--danger-bg);
+    border: 1px solid var(--danger) !important;
+}
+
+.conflict-btn-proceed {
+    color: #fff;
+    background: var(--primary);
+    box-shadow: 0 8px 18px rgba(31, 94, 255, 0.2);
+}
+
+.conflict-btn-proceed:hover {
+    background: var(--primary-dark);
+}
+
+@media screen and (max-width: 48rem) {
+    .conflict-card {
+        padding: 1.25rem;
+    }
+
+    .conflict-actions button {
+        min-height: 3.5rem;
+    }
+}

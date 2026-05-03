@@ -1,10 +1,10 @@
 import './App.css'
-import {ScoresheetHome} from "./judges/scoresheet-home.tsx";
+import {ScoreSheetHome} from "./judges/components/ScoreSheetHome.tsx";
 
 function App() {
 
   return (
-      <ScoresheetHome tournamentId={'5'}/>
+      <ScoreSheetHome tournamentId={'5'}/>
   )
 }
 
