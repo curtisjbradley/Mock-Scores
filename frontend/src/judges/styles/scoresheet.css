@@ -130,8 +130,8 @@ html {
     z-index: 20;
     color: var(--text-muted);
     background: var(--surface);
-    font-size: 0.8rem;
-    font-weight: 500;
+    font-size: 1rem;
+    font-weight: 600;
     letter-spacing: 0.06em;
     text-transform: uppercase;
     box-shadow: 0 1px 0 var(--border);
@@ -147,9 +147,9 @@ html {
     padding: 0.6rem 1rem;
     color: var(--primary-dark);
     background: var(--surface-muted);
-    font-size: 0.8rem;
-    font-weight: 500;
-    letter-spacing: 0.06em;
+    font-size: 0.875rem;
+    font-weight: 700;
+    letter-spacing: 0.04em;
     text-align: left;
     text-transform: uppercase;
     box-shadow: 0 1px 0 var(--border);
@@ -238,6 +238,7 @@ html {
 
 .score-input[aria-invalid="true"] {
     border-color: var(--danger);
+    border-width: 2px;
     background: var(--danger-bg);
 }
 
@@ -251,14 +252,16 @@ html {
 
 .student-name {
     margin: 0;
-    color: var(--text-muted);
-    font-size: 0.82rem;
+    color: var(--text);
+    font-size: 0.9rem;
     line-height: 1.25;
 }
 
 .student-pronouns {
-    font-weight: 400;
+    font-size: 0.75rem;
+    font-weight: 300;
     color: var(--text-muted);
+    opacity: 0.75;
 }
 
 .student-nom {
@@ -283,12 +286,13 @@ html {
     display: block;
     margin-top: 0.4rem;
     padding: 0.35rem 0.5rem;
-    border: 1px solid var(--danger);
+    border: 1.5px solid var(--danger);
     border-radius: 0.4rem;
     background: var(--danger-bg);
     color: var(--danger);
+    text-align: center;
     font-size: 0.75rem;
-    font-weight: 400;
+    font-weight: 600;
     line-height: 1.3;
 }
 

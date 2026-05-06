@@ -43,7 +43,7 @@
         --primary-subtle: #1e2d5a;
 
         --danger: #ff6b6b;
-        --danger-bg: #2d1a1a;
+        --danger-bg: #3d1f1f;
 
         --focus: #3d5aff;
 
@@ -63,7 +63,8 @@ body {
     margin: 0;
     background: var(--bg);
     color: var(--text);
-    font-family: "Alfa Slab One", sans-serif;
+    font-family: "Open Sans", sans-serif;
+    font-weight: 400;
 }
 
 @media (prefers-reduced-motion: reduce) {
