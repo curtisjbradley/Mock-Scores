@@ -21,7 +21,13 @@
     "frontend"
   ],
   "dependencies": {
+    "@loadable/component": "^5.16.7",
     "@tailwindcss/vite": "^4.2.4",
+    "react-loadable": "^5.5.0",
+    "react-router-dom": "^7.15.0",
     "tailwindcss": "^4.2.4"
+  },
+  "devDependencies": {
+    "@types/loadable__component": "^5.13.10"
   }
 }

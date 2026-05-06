@@ -132,7 +132,14 @@ function buildNominationId(scoreId: string) {
  * Persists in-progress scores to localStorage keyed by tournamentID.
  */
 function ScoreSheet(details: IScoreSheetFormat) {
-    const [categoryIndex, setCategoryIndex] = useState(0);
+    const storageKey = `mock-trial-scores-${details.trialID}-${details.scorerID}`;
+    const categoryKey = `${storageKey}-category`;
+
+    const [categoryIndex, setCategoryIndex] = useState(() => {
+        const saved = localStorage.getItem(categoryKey);
+        const parsed = saved !== null ? parseInt(saved, 10) : NaN;
+        return !isNaN(parsed) && parsed < details.categoryOrder.length ? parsed : 0;
+    });
     const [submitAttempt, setSubmitAttempt] = useState(0);
     const [showConfirm, setShowConfirm] = useState(false);
     const [pendingScores, setPendingScores] = useState<ScoreResults | null>(null);
@@ -141,7 +148,6 @@ function ScoreSheet(details: IScoreSheetFormat) {
 
     const { register, handleSubmit, watch, reset, getValues, control } = useForm<ScoreResults>({ mode: "onBlur", reValidateMode: "onBlur" });
 
-    const storageKey = `mock-trial-scores-${details.trialID}-${details.scorerID}`;
     const { categoryOrder, scoringCategories, witnesses } = details;
     const lastIndex = categoryOrder.length - 1;
     const prosecutionLabel = details.isCriminal ? "Prosecution" : "Plaintiff";
@@ -158,6 +164,10 @@ function ScoreSheet(details: IScoreSheetFormat) {
 
     const storageKeyRef = useRef(storageKey);
     useEffect(() => { storageKeyRef.current = storageKey; }, [storageKey]);
+
+    useEffect(() => {
+        localStorage.setItem(categoryKey, String(categoryIndex));
+    }, [categoryIndex, categoryKey]);
 
     useEffect(() => {
         const { unsubscribe } = watch(() => {

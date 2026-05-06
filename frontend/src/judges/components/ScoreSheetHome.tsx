@@ -3,21 +3,26 @@ import ScoreSheet from "./ScoreSheet.tsx";
 import ConflictCheck from "./ConflictCheck.tsx";
 import TiebreakerOnly from "./TiebreakerOnly.tsx";
 import { EXAMPLE_TRIAL_DETAILS } from "../data.ts";
+import { useParams } from 'react-router-dom';
+import NotFound from "../../NotFound.tsx";
 
-interface IScoreSheetProps {
-    /** Tournament ID injected at the entry point; overrides the value in example data. */
-    tournamentId: string;
-}
 
 /**
  * Top-level routing component for the scoring flow.
  * 1. Shows `ConflictCheck` until the scorer confirms no conflicts.
  * 2. If the user is a presider with `presiderTiebreakerOnly`, shows `TiebreakerOnly`.
- * 3. Otherwise shows the full `ScoreSheet`.
+ * 3. Otherwise, shows the full `ScoreSheet`.
  */
-const ScoreSheetHome = ({ tournamentId }: IScoreSheetProps) => {
+const ScoreSheetHome = () => {
     const [proceeded, setProceeded] = useState(false);
-    const details = { ...EXAMPLE_TRIAL_DETAILS, tournamentID: tournamentId };
+    const {scorerID} = useParams<{scorerID : string}>();
+
+    if (!scorerID) {
+        return <NotFound />;
+    }
+
+
+    const details = { ...EXAMPLE_TRIAL_DETAILS, tournamentID: scorerID };
     const storageKey = `mock-trial-scores-${details.trialID}-${details.scorerID}`;
 
     if (!proceeded) {
@@ -29,11 +34,12 @@ const ScoreSheetHome = ({ tournamentId }: IScoreSheetProps) => {
     }
 
     return (
+        <main>
         <Suspense fallback={<p>Loading…</p>}>
             <ScoreSheet {...details} />
         </Suspense>
+        </main>
     );
 };
 
-export { ScoreSheetHome };
-export type { IScoreSheetProps };
+export default  ScoreSheetHome;

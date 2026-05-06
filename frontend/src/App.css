@@ -13,8 +13,8 @@
     --primary-dark: #1d3ecf;
     --primary-subtle: #eaf0ff;
 
-    --danger: #d92d20;
-    --danger-bg: #fff4f4;
+    --danger: #e61c1c;
+    --danger-bg: rgb(159 19 19 / 0.27);
 
     --focus: #9bb8ff;
 
@@ -63,7 +63,7 @@ body {
     margin: 0;
     background: var(--bg);
     color: var(--text);
-    font-family: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+    font-family: "Alfa Slab One", sans-serif;
 }
 
 @media (prefers-reduced-motion: reduce) {

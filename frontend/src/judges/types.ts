@@ -56,8 +56,6 @@ export interface IScoreSheetFormat {
      * When true, the full scoresheet is skipped and only the tiebreaker UI is shown.
      */
     presiderTiebreakerOnly: boolean;
-    /** Unique identifier for the tournament. */
-    tournamentID: string;
     /** Unique identifier for this specific trial. */
     trialID: string;
     /** ID of the scorer/judge submitting this sheet. */

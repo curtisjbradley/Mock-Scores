@@ -4,7 +4,7 @@ export const EXAMPLE_TRIAL_DETAILS: IScoreSheetFormat = {
     isCriminal: true,
     isPresider: true,
     presiderTiebreakerOnly: false,
-    tournamentID: "6767",
+    scorerID: "6767",
     trialID: "55",
     caseName: "People v Fromholz",
     scorerName: "Bary Allen",

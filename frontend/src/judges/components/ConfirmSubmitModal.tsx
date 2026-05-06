@@ -118,7 +118,7 @@ const ConfirmSubmitModal = ({
         });
 
         const payload = {
-            tournamentID: details.tournamentID,
+            tournamentID: details.scorerID,
             trialID: details.trialID,
             scorerID: details.scorerID,
             scores,
@@ -129,6 +129,7 @@ const ConfirmSubmitModal = ({
         // TODO: Send to backend
         console.log(payload);
         localStorage.removeItem(storageKey);
+        localStorage.removeItem(`${storageKey}-category`);
         reset();
     };
 
