@@ -2,7 +2,7 @@ name: Deploy to EC2
 
 on:
   push:
-    branches: ["main"]
+    branches: ["dev"]
 
 jobs:
   deploy:
@@ -34,14 +34,14 @@ jobs:
           key: ${{ secrets.EC2_SSH_KEY }}
           script: |
             set -e
-            PORT=3000
-            APP_DIR=/opt/mock-scores
+            PORT=3001
+            APP_DIR=/opt/mock-scores-dev
             REPO_URL=https://github.com/curtisjbradley/Mock-Scores.git
 
             if [ ! -d "$APP_DIR/.git" ]; then
               echo "Cloning repo..."
               rm -rf "$APP_DIR"
-              git clone "$REPO_URL" "$APP_DIR"
+              git clone -b dev "$REPO_URL" "$APP_DIR"
             fi
 
             cd "$APP_DIR"
@@ -49,6 +49,8 @@ jobs:
             echo "Pulling latest code..."
             git fetch origin main
             git reset --hard origin/main
+            
+            git checkout -b dev
 
             echo "Installing dependencies..."
             npm ci
@@ -57,6 +59,6 @@ jobs:
             npm run build
 
             echo "Restarting app..."
-            pm2 restart mock-scores || pm2 start npm --name mock-scores -- start
+            pm2 restart mock-scores-dev || pm2 start npm --name mock-scores-dev -- start
 
             pm2 save
