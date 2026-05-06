@@ -47,8 +47,8 @@ jobs:
             cd "$APP_DIR"
 
             echo "Pulling latest code..."
-            git fetch origin main
-            git reset --hard origin/main
+            git fetch origin dev
+            git reset --hard origin/dev
             
             git checkout -b dev
 
