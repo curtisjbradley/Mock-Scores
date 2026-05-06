@@ -50,8 +50,7 @@ jobs:
             git fetch origin dev
             git reset --hard origin/dev
             
-            git checkout -b dev
-
+            
             echo "Installing dependencies..."
             npm ci
 
