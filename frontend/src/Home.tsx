@@ -1,6 +1,7 @@
 import { useNavigate } from 'react-router-dom'
 import Header from './components/Header'
 import Footer from './components/Footer'
+import heroImg from './assets/images/state.JPG'
 import './components/layout.css'
 
 const roles = [
@@ -16,6 +17,13 @@ const Home = () => {
         <>
             <Header />
             <div className="home-main">
+                <img
+                    src={heroImg}
+                    alt=""
+                    className="home-hero-img"
+                    fetchPriority="high"
+                    aria-hidden="true"
+                />
                 <main className="main-content">
                     <h1>Welcome</h1>
                     <p>Who are you?</p>
