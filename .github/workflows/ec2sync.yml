@@ -2,7 +2,7 @@ name: Deploy to EC2
 
 on:
   push:
-    branches: [ "main" ]
+    branches: ["main"]
 
 jobs:
   deploy:
@@ -18,18 +18,20 @@ jobs:
           script: |
             set -e
 
-            APP_DIR=${{ secrets.EC2_APP_DIR }}
+            APP_DIR=/opt/mock-scores
+            REPO_URL=https://github.com/curtisjbradley/Mock-Scores.git
 
-            # Clone if first time, otherwise pull
             if [ ! -d "$APP_DIR/.git" ]; then
               echo "Cloning repo..."
-              git clone https://github.com/curtisjbradley/Mock-Scores.git $APP_DIR
+              rm -rf "$APP_DIR"
+              git clone "$REPO_URL" "$APP_DIR"
             fi
 
-            cd $APP_DIR
+            cd "$APP_DIR"
 
             echo "Pulling latest code..."
-            git pull origin main
+            git fetch origin main
+            git reset --hard origin/main
 
             echo "Installing dependencies..."
             npm ci
@@ -39,3 +41,5 @@ jobs:
 
             echo "Restarting app..."
             pm2 restart mock-scores || pm2 start npm --name mock-scores -- start
+
+            pm2 save
