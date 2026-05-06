@@ -146,7 +146,7 @@ function ScoreSheet(details: IScoreSheetFormat) {
     const [nominees, setNominees] = useState<Nominee[]>([]);
     const [nomineeRanks, setNomineeRanks] = useState<NomineeRanks>({});
 
-    const { register, handleSubmit, watch, reset, getValues, control } = useForm<ScoreResults>({ mode: "onBlur", reValidateMode: "onBlur" });
+    const { register, handleSubmit, subscribe, reset, getValues, control } = useForm<ScoreResults>({ mode: "onBlur", reValidateMode: "onBlur" });
 
     const { categoryOrder, scoringCategories, witnesses } = details;
     const lastIndex = categoryOrder.length - 1;
@@ -169,14 +169,22 @@ function ScoreSheet(details: IScoreSheetFormat) {
         localStorage.setItem(categoryKey, String(categoryIndex));
     }, [categoryIndex, categoryKey]);
 
+
     useEffect(() => {
-        const { unsubscribe } = watch(() => {
-            localStorage.setItem(storageKeyRef.current, JSON.stringify(getValues()));
+        const subscription = subscribe({
+            formState: {
+                values: true,
+            },
+            callback: () => {
+                localStorage.setItem(
+                    storageKeyRef.current,
+                    JSON.stringify(getValues())
+                );
+            },
         });
-        return unsubscribe;
-    // watch and getValues are stable refs from useForm
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-    }, []);
+
+        return () => subscription();
+    }, [subscribe, getValues]);
 
     /**
      * Collects all checked nomination checkboxes from the submitted scores

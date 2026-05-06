@@ -1,0 +1,4 @@
+{
+  "frontend/**/*.{ts,tsx}": "eslint --fix",
+  "backend/**/*.ts": "eslint --fix"
+}
