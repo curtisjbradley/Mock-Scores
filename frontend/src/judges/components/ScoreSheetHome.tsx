@@ -5,6 +5,7 @@ import TiebreakerOnly from "./TiebreakerOnly.tsx";
 import { EXAMPLE_TRIAL_DETAILS } from "../data.ts";
 import { useParams } from 'react-router-dom';
 import NotFound from "../../NotFound.tsx";
+import LoadingPage from "../../components/LoadingPage.tsx";
 
 
 /**
@@ -34,11 +35,9 @@ const ScoreSheetHome = () => {
     }
 
     return (
-        <main>
-        <Suspense fallback={<p>Loading…</p>}>
+        <Suspense fallback={<LoadingPage />}>
             <ScoreSheet {...details} />
         </Suspense>
-        </main>
     );
 };
 

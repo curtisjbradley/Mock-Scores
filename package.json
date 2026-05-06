@@ -15,13 +15,14 @@
   "type": "commonjs",
   "main": "index.js",
   "scripts": {
-    "test": "echo \"Error: no test specified\" && exit 1"
+    "build": "npm run build -w frontend && npm run build -w backend",
+    "start": "npm run start -w backend"
   },
   "workspaces": [
-    "frontend"
+    "frontend",
+    "backend"
   ],
   "dependencies": {
-    "@loadable/component": "^5.16.7",
     "@tailwindcss/vite": "^4.2.4",
     "react-loadable": "^5.5.0",
     "react-router-dom": "^7.15.0",
