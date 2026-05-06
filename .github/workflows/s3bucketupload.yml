@@ -22,7 +22,7 @@ jobs:
       run: npm ci
 
     - name: Build frontend
-      run: npm run build
+      run: npm run build -w frontend
 
     - name: Configure AWS Credentials
       uses: aws-actions/configure-aws-credentials@v2
@@ -32,4 +32,4 @@ jobs:
         aws-region: us-west-1
 
     - name: Sync built frontend to S3
-      run: aws s3 sync ./dist s3://${{ secrets.AWS_S3_BUCKET }} --delete
+      run: aws s3 sync ./frontend/dist s3://${{ secrets.AWS_S3_BUCKET }} --delete
