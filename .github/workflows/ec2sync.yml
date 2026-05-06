@@ -40,8 +40,8 @@ jobs:
 
             if [ ! -d "$APP_DIR/.git" ]; then
               echo "Cloning repo..."
-              rm -rf "$APP_DIR"
-              git clone "$REPO_URL" "$APP_DIR"
+              sudo rm -rf "$APP_DIR"
+              sudo git clone "$REPO_URL" "$APP_DIR"
             fi
 
             cd "$APP_DIR"
