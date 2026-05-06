@@ -1,8 +1,9 @@
 import { useNavigate } from 'react-router-dom'
 import Header from './components/Header'
 import Footer from './components/Footer'
-import heroImg from './assets/images/state.JPG'
 import './components/layout.css'
+
+const heroImg = '/hero.JPG'
 
 const roles = [
     { label: 'Organizer', path: '/organizer' },

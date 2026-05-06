@@ -171,11 +171,11 @@ function ScoreSheet(details: IScoreSheetFormat) {
 
 
     useEffect(() => {
+        // eslint-disable-next-line react-hooks/incompatible-library
         const { unsubscribe } = watch(() => {
             localStorage.setItem(storageKeyRef.current, JSON.stringify(getValues()));
         });
         return unsubscribe;
-    // watch and getValues are stable refs from useForm
     // eslint-disable-next-line react-hooks/exhaustive-deps
     }, []);
 

@@ -29,7 +29,7 @@
 
 .confirm-modal > p {
     margin: 0 0 0.25rem;
-    color: var(--text-muted);
+    color: var(--text);
     font-size: 0.9rem;
 }
 
@@ -105,10 +105,10 @@
 .ranking-error {
     margin-top: 0.75rem;
     padding: 0.5rem 0.65rem;
-    border: 1px solid var(--danger);
+    border: 2px solid var(--danger);
     border-radius: 0.4rem;
     background: var(--danger-bg);
-    color: var(--danger);
+    color: var(--text);
     font-size: 0.85rem;
     font-weight: 700;
     line-height: 1.3;
@@ -129,7 +129,7 @@
 
 .tiebreaker-section > p {
     margin: 0 0 0.75rem;
-    color: var(--text-muted);
+    color: var(--text);
     font-size: 0.85rem;
 }
 
@@ -185,7 +185,7 @@
 .tiebreaker-code {
     font-size: 2rem;
     font-weight: 900;
-    color: var(--primary-dark);
+    color: var(--text);
     line-height: 1;
 }
 
@@ -194,7 +194,7 @@
     font-weight: 600;
     letter-spacing: 0.05em;
     text-transform: uppercase;
-    color: var(--text-muted);
+    color: var(--text);
 }
 
 @media screen and (max-width: 48rem) {
