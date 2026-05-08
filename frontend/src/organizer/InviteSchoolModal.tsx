@@ -22,11 +22,11 @@ const InviteSchoolModal = ({ onClose, onInvite }: Props) => {
     return (
         <div className="modal-backdrop" role="presentation" onClick={e => { if (e.target === e.currentTarget) onClose() }}>
             <div className="confirm-modal" role="dialog" aria-modal="true" aria-labelledby="invite-title">
-                <h2 id="invite-title">Invite a school</h2>
+                <h2 id="invite-title">Invite a team</h2>
                 <p>An invitation will be sent to the coach's email address.</p>
 
                 <form onSubmit={handleSubmit} noValidate style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem', marginTop: '1rem' }}>
-                    <label htmlFor="school-name" style={{ fontSize: '0.875rem', fontWeight: 600 }}>School name</label>
+                    <label htmlFor="school-name" style={{ fontSize: '0.875rem', fontWeight: 600 }}>Team name</label>
                     <input
                         id="school-name"
                         type="text"

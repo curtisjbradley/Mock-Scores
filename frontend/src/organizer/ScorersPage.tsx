@@ -1,14 +1,9 @@
 import { useState } from 'react'
-import { useParams, useNavigate } from 'react-router-dom'
-import Header from '../components/Header'
-import Footer from '../components/Footer'
 import '../components/layout.css'
 import '../judges/styles/modal.css'
 import { dummyScorers, type IScorer } from './dummyData'
 
 const ScorersPage = () => {
-    const { id } = useParams<{ id: string }>()
-    const navigate = useNavigate()
     const [scorers, setScorers] = useState<IScorer[]>(dummyScorers)
     const [showModal, setShowModal] = useState(false)
     const [editingId, setEditingId] = useState<string | null>(null)
@@ -55,14 +50,8 @@ const ScorersPage = () => {
 
     return (
         <>
-            <Header />
-            <main className="org-main">
                 <div className="org-container">
-                    <button className="org-back-btn" onClick={() => navigate(`/organizer/${id}`)}>← Back to tournament</button>
-                    <div className="dash-invites-header">
-                        <h1>Scorers</h1>
-                        <button className="org-new-btn" onClick={openAddModal}>+ Add scorer</button>
-                    </div>
+
                     <table className="dash-standings-table">
                         <thead><tr><th>Name</th><th>Email</th><th></th></tr></thead>
                         <tbody>
@@ -79,8 +68,6 @@ const ScorersPage = () => {
                         </tbody>
                     </table>
                 </div>
-            </main>
-            <Footer />
 
             {showModal && (
                 <div className="modal-backdrop" role="presentation" onClick={e => { if (e.target === e.currentTarget) setShowModal(false) }}>
@@ -114,6 +101,7 @@ const ScorersPage = () => {
                     </div>
                 </div>
             )}
+            <button className="org-new-btn" onClick={openAddModal}>+ Add scorer</button>
         </>
     )
 }

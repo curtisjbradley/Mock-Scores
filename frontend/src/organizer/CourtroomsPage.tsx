@@ -1,14 +1,11 @@
 import { useState } from 'react'
-import { useParams, useNavigate } from 'react-router-dom'
-import Header from '../components/Header'
-import Footer from '../components/Footer'
+import { useParams } from 'react-router-dom'
 import '../components/layout.css'
 import '../judges/styles/modal.css'
 import { dummyCourtrooms, type ICourtroom } from './dummyData'
 
 const CourtroomsPage = () => {
     const { id } = useParams<{ id: string }>()
-    const navigate = useNavigate()
     const [courtrooms, setCourtrooms] = useState<ICourtroom[]>(() => dummyCourtrooms.filter(c => c.tournamentId === id))
     const [showModal, setShowModal] = useState(false)
     const [editingId, setEditingId] = useState<string | null>(null)
@@ -51,14 +48,7 @@ const CourtroomsPage = () => {
 
     return (
         <>
-            <Header />
-            <main className="org-main">
                 <div className="org-container">
-                    <button className="org-back-btn" onClick={() => navigate(`/organizer/${id}`)}>← Back to tournament</button>
-                    <div className="dash-invites-header">
-                        <h1>Courtrooms</h1>
-                        <button className="org-new-btn" onClick={openAddModal}>+ Add courtroom</button>
-                    </div>
                     <table className="dash-standings-table">
                         <thead><tr><th>Name</th><th>Details</th><th></th></tr></thead>
                         <tbody>
@@ -75,8 +65,6 @@ const CourtroomsPage = () => {
                         </tbody>
                     </table>
                 </div>
-            </main>
-            <Footer />
 
             {showModal && (
                 <div className="modal-backdrop" role="presentation" onClick={e => { if (e.target === e.currentTarget) setShowModal(false) }}>
@@ -108,6 +96,7 @@ const CourtroomsPage = () => {
                     </div>
                 </div>
             )}
+            <button className="org-new-btn" onClick={openAddModal}>+ Add courtroom</button>
         </>
     )
 }

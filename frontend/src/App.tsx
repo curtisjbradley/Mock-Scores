@@ -12,8 +12,7 @@ import OrganizerHome from "./organizer/OrganizerHome.tsx";
 import OrganizerLogin from "./organizer/OrganizerLogin.tsx";
 import TournamentDashboard from "./organizer/TournamentDashboard.tsx";
 import ScorecardViewer from "./organizer/ScorecardViewer.tsx";
-import ScorersPage from "./organizer/ScorersPage.tsx";
-import CourtroomsPage from "./organizer/CourtroomsPage.tsx";
+import RoundView from "./organizer/RoundView.tsx";
 import CoachLogin from "./coach/CoachLogin.tsx";
 import CoachHome from "./coach/CoachHome.tsx";
 import CoachDashboard from "./coach/CoachDashboard.tsx";import LoadingPage from "./components/LoadingPage.tsx";
@@ -32,8 +31,7 @@ function App() {
           <Route path="/organizer" element={<OrganizerLogin />} />
           <Route path="/organizer/select" element={<OrganizerHome />} />
           <Route path="/organizer/:id" element={<TournamentDashboard />} />
-          <Route path="/organizer/:id/scorers" element={<ScorersPage />} />
-          <Route path="/organizer/:id/courtrooms" element={<CourtroomsPage />} />
+          <Route path="/organizer/:id/round/:round" element={<RoundView />} />
           <Route path="/organizer/:id/school/:schoolId" element={<CoachDashboard isOrganizerView />} />
           <Route path="/organizer/:id/scoresheet/:pairingId/:judgeId" element={<ScorecardViewer />} />
           <Route path="/coach" element={<CoachLogin />} />
