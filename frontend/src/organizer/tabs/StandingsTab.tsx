@@ -1,5 +1,5 @@
 // TODO: standings should be computed server-side from submitted scoresheets; fetch from GET /api/tournaments/:id/standings
-import type { ITeam } from './dummyData'
+import type { ITeam } from '../data/dummyData'
 
 export default function StandingsTab({ teams }: { teams: ITeam[] }) {
     const sorted = [...teams].sort((a, b) =>

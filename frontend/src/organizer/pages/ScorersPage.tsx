@@ -1,8 +1,8 @@
 import { useState } from 'react'
-import './styles/organizer.css'
-import './styles/pairings.css'
-import '../judges/styles/modal.css'
-import { dummyScorers, type IScorer } from './dummyData'
+import '../styles/organizer.css'
+import '../styles/pairings.css'
+import '../../judges/styles/modal.css'
+import { dummyScorers, type IScorer } from '../data/dummyData'
 
 const ScorersPage = () => {
     const [scorers, setScorers] = useState<IScorer[]>(dummyScorers)

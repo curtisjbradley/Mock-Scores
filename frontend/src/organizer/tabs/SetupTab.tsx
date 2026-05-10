@@ -1,11 +1,11 @@
 import { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 // TODO: fetch schools from GET /api/schools (replace dummySchools)
-import { dummySchools, type IInvite, type IOrganizer, type InviteStatus } from './dummyData'
-import { ConfirmRemoveModal, AddOrganizerModal } from './modals'
-import InviteSchoolModal from './InviteSchoolModal'
-import CourtroomsPage from "./CourtroomsPage.tsx";
-import ScorersPage from "./ScorersPage.tsx";
+import { dummySchools, type IInvite, type IOrganizer, type InviteStatus } from '../data/dummyData'
+import { ConfirmRemoveModal, AddOrganizerModal } from '../components/modals'
+import InviteSchoolModal from '../components/InviteSchoolModal'
+import CourtroomsPage from "../pages/CourtroomsPage.tsx";
+import ScorersPage from "../pages/ScorersPage.tsx";
 
 type SubTab = 'invites' | 'organizers' | 'scorers' | 'courtrooms'
 

@@ -1,15 +1,15 @@
 import { useState } from 'react'
 import { useNavigate, useParams } from 'react-router-dom'
-import './styles/organizer.css'
-import './styles/round-view.css'
-import './styles/pairings.css'
+import '../styles/organizer.css'
+import '../styles/round-view.css'
+import '../styles/pairings.css'
 // TODO: fetch round pairings from GET /api/tournaments/:id/rounds/:round/pairings (replace dummyPairings)
 // TODO: fetch teams from GET /api/tournaments/:id/teams (replace dummyTeams)
 // TODO: fetch courtrooms from GET /api/tournaments/:id/courtrooms (replace dummyCourtrooms)
-import { dummyTournaments, dummyPairings, dummyTeams, dummyCourtrooms, type IPairing } from './dummyData'
-import { fmt, fmtTime } from './utils'
-import PairingCard from './PairingCard'
-import { ConfirmRemoveModal } from './modals'
+import { dummyTournaments, dummyPairings, dummyTeams, dummyCourtrooms, type IPairing } from '../data/dummyData'
+import { fmt, fmtTime } from '../data/utils'
+import PairingCard from '../components/PairingCard'
+import { ConfirmRemoveModal } from '../components/modals'
 
 const initDate = (id: string | undefined, round: number) =>
     dummyPairings.find(p => p.tournamentId === id && p.round === round)?.date ?? ''

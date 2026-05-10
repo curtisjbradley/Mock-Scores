@@ -2,7 +2,7 @@ import { useNavigate, useParams } from 'react-router-dom'
 import '../organizer/styles/organizer.css'
 // TODO: fetch tournament from GET /api/tournaments/:id (replace dummyTournaments)
 // TODO: fetch school from GET /api/schools/:schoolId (replace dummySchools)
-import { dummyTournaments, dummySchools } from '../organizer/dummyData'
+import { dummyTournaments, dummySchools } from '../organizer/data/dummyData'
 
 interface Props {
     isOrganizerView?: boolean

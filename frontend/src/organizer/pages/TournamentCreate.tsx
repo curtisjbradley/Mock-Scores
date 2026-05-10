@@ -1,7 +1,7 @@
 import { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
-import './styles/organizer.css'
-import './styles/tournament-create.css'
+import '../styles/organizer.css'
+import '../styles/tournament-create.css'
 
 interface FormState {
     name: string

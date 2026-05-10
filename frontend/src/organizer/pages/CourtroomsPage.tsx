@@ -1,9 +1,9 @@
 import { useState } from 'react'
 import { useParams } from 'react-router-dom'
-import './styles/organizer.css'
-import './styles/pairings.css'
-import '../judges/styles/modal.css'
-import { dummyCourtrooms, type ICourtroom } from './dummyData'
+import '../styles/organizer.css'
+import '../styles/pairings.css'
+import '../../judges/styles/modal.css'
+import { dummyCourtrooms, type ICourtroom } from '../data/dummyData'
 
 const CourtroomsPage = () => {
     const { id } = useParams<{ id: string }>()

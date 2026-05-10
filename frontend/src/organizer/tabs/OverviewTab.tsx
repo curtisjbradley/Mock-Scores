@@ -1,6 +1,6 @@
 import { useNavigate } from 'react-router-dom'
-import { fmt, fmtTime } from './utils'
-import type { IPairing } from './dummyData'
+import { fmt, fmtTime } from '../data/utils'
+import type { IPairing } from '../data/dummyData'
 
 interface IOverviewProps {
     tournamentId: string

@@ -1,4 +1,4 @@
-import LoginPage from '../auth/LoginPage'
+import LoginPage from '../../auth/LoginPage'
 
 const OrganizerLogin = () => (
     <>

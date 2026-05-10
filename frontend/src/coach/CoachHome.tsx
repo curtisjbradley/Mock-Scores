@@ -1,7 +1,7 @@
 import { useNavigate } from 'react-router-dom'
 import '../organizer/styles/organizer.css'
 // TODO: fetch accepted invites for current school from GET /api/coach/tournaments (replace dummyInvites + dummyTournaments)
-import { dummyTournaments, dummyInvites, CURRENT_SCHOOL_ID, type ITournament } from '../organizer/dummyData'
+import { dummyTournaments, dummyInvites, CURRENT_SCHOOL_ID, type ITournament } from '../organizer/data/dummyData'
 
 const statusLabel: Record<ITournament['status'], string> = {
     upcoming: 'Upcoming',

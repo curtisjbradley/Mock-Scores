@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react'
 import { getSession, logout } from './auth'
 import { useNavigate } from 'react-router-dom'
+import './styles/account.css'
 
 export function Account() {
     const [email, setEmail] = useState<string | null>(null)
@@ -21,10 +22,15 @@ export function Account() {
     if (!email) return null
 
     return (
-        <main style={{ padding: '2rem' }}>
-            <h1>Account</h1>
-            <p>{email}</p>
-            <button onClick={handleLogout}>Sign out</button>
+        <main className="account-main">
+            <div className="account-card">
+                <h1>Account</h1>
+                <div className="account-info">
+                    <span className="account-info-label">Email</span>
+                    <span className="account-info-value">{email}</span>
+                </div>
+                <button className="account-signout" onClick={handleLogout}>Sign out</button>
+            </div>
         </main>
     )
 }

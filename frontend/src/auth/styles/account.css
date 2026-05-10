@@ -1,0 +1,63 @@
+.account-main {
+    flex: 1;
+    display: flex;
+    justify-content: center;
+    padding: 48px 24px;
+}
+
+.account-card {
+    width: min(100%, 28rem);
+    display: flex;
+    flex-direction: column;
+    gap: 24px;
+}
+
+.account-card h1 {
+    font-size: 1.75rem;
+    margin: 0;
+}
+
+.account-info {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    padding: 1.25rem 1.5rem;
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+}
+
+.account-info-label {
+    font-size: 0.75rem;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    color: var(--text-muted);
+}
+
+.account-info-value {
+    font-size: 1rem;
+    color: var(--text);
+}
+
+.account-signout {
+    height: 2.75rem;
+    border: 1px solid var(--danger);
+    border-radius: var(--radius);
+    background: transparent;
+    color: var(--danger);
+    font-size: 1rem;
+    font-weight: 600;
+    font-family: inherit;
+    cursor: pointer;
+    transition: background 140ms ease, color 140ms ease;
+}
+
+.account-signout:hover {
+    background: var(--danger-bg);
+}
+
+.account-signout:focus-visible {
+    outline: none;
+    box-shadow: 0 0 0 4px var(--focus);
+}

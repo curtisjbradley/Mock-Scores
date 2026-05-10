@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import '../judges/styles/modal.css'
+import '../../judges/styles/modal.css'
 
 interface Props {
     onClose: () => void

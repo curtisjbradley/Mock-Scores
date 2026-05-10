@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { dummyScorers, type IPairing, type ICourtroom, type ITeam } from './dummyData'
+import { dummyScorers, type IPairing, type ICourtroom, type ITeam } from '../data/dummyData'
 
 interface Props {
     pairing: IPairing

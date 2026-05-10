@@ -1,22 +1,22 @@
 import { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
-import './styles/organizer.css'
-import './styles/tabs.css'
-import './styles/rounds.css'
-import './styles/pairings.css'
-import './styles/standings.css'
+import '../styles/organizer.css'
+import '../styles/tabs.css'
+import '../styles/rounds.css'
+import '../styles/pairings.css'
+import '../styles/standings.css'
 // TODO: fetch tournament by id from GET /api/tournaments/:id (replace dummyTournaments[0])
 // TODO: fetch teams from GET /api/tournaments/:id/teams (replace dummyTeams)
 // TODO: fetch pairings from GET /api/tournaments/:id/pairings (replace dummyPairings)
 // TODO: fetch invites from GET /api/tournaments/:id/invites (replace dummyInvites)
 // TODO: fetch organizers from GET /api/tournaments/:id/organizers (replace dummyOrganizers)
 // TODO: fetch courtrooms from GET /api/tournaments/:id/courtrooms (replace dummyCourtrooms)
-import { dummyTournaments, dummyTeams, dummyPairings, dummyInvites, dummyOrganizers, dummyCourtrooms, type IInvite, type IOrganizer } from './dummyData'
-import { dateRange } from './utils'
-import OverviewTab from './OverviewTab'
-import RoundsTab from './RoundsTab'
-import StandingsTab from './StandingsTab'
-import SetupTab from './SetupTab'
+import { dummyTournaments, dummyTeams, dummyPairings, dummyInvites, dummyOrganizers, dummyCourtrooms, type IInvite, type IOrganizer } from '../data/dummyData'
+import { dateRange } from '../data/utils'
+import OverviewTab from '../tabs/OverviewTab'
+import RoundsTab from '../tabs/RoundsTab'
+import StandingsTab from '../tabs/StandingsTab'
+import SetupTab from '../tabs/SetupTab'
 
 type Tab = 'overview' | 'rounds' | 'standings' | 'setup'
 type SetupSubTab = 'invites' | 'organizers' | 'scorers' | 'courtrooms'
