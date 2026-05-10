@@ -11,4 +11,14 @@ const db = new Pool({
     ssl: process.env.DB_SSL === 'true' ? { rejectUnauthorized: false } : false,
 });
 
+db.connect()
+    .then(client => {
+        console.log(`DB connected: ${process.env.DB_NAME}@${process.env.DB_HOST}`);
+        client.release();
+    })
+    .catch(err => {
+        console.error(`DB connection failed: ${err.message}`);
+        process.exit(1);
+    });
+
 export default db;
