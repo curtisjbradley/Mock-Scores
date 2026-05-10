@@ -3,6 +3,9 @@ import { useNavigate, useParams } from 'react-router-dom'
 import './styles/organizer.css'
 import './styles/round-view.css'
 import './styles/pairings.css'
+// TODO: fetch round pairings from GET /api/tournaments/:id/rounds/:round/pairings (replace dummyPairings)
+// TODO: fetch teams from GET /api/tournaments/:id/teams (replace dummyTeams)
+// TODO: fetch courtrooms from GET /api/tournaments/:id/courtrooms (replace dummyCourtrooms)
 import { dummyTournaments, dummyPairings, dummyTeams, dummyCourtrooms, type IPairing } from './dummyData'
 import { fmt, fmtTime } from './utils'
 import PairingCard from './PairingCard'
@@ -50,6 +53,7 @@ const RoundView = () => {
     const saveDetails = () => {
         setDetailsSubmitted(true)
         if (!detailsValid) return
+        // TODO: PATCH /api/tournaments/:id/rounds/:round { name, date, time }
         setSavedDetails({ name: roundName, date: roundDate, time: roundTime })
         setDetailsSubmitted(false)
     }
@@ -70,6 +74,7 @@ const RoundView = () => {
     const addMatchup = () => {
         setAddSubmitted(true)
         if (!addPros || !addDef || addPros === addDef || !addCourtroom) return
+        // TODO: POST /api/tournaments/:id/rounds/:round/pairings { prosecutionTeamId, defenseTeamId, courtroom }
         setPairings(prev => [...prev, {
             id: `p-new-${Date.now()}`, tournamentId: id!, round,
             date: roundDate, courtroom: addCourtroom,
@@ -221,7 +226,9 @@ const RoundView = () => {
                     <ConfirmRemoveModal
                         message="Remove this matchup?"
                         onCancel={() => setConfirmRemove(null)}
-                        onConfirm={() => { setPairings(prev => prev.filter(p => p.id !== confirmRemove.id)); setConfirmRemove(null) }}
+                        onConfirm={() => { 
+                        // TODO: DELETE /api/tournaments/:id/pairings/:pairingId
+                        setPairings(prev => prev.filter(p => p.id !== confirmRemove.id)); setConfirmRemove(null) }}
                     />
                 )}
             </main>

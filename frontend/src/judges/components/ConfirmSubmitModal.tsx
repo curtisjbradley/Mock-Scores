@@ -126,7 +126,7 @@ const ConfirmSubmitModal = ({
             ...(isPresider && { tiebreaker }),
         };
 
-        // TODO: Send to backend
+        // TODO: POST /api/pairings/:pairingId/scoresheets/:scorerID with payload
         console.log(payload);
         localStorage.removeItem(storageKey);
         localStorage.removeItem(`${storageKey}-category`);

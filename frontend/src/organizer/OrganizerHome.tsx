@@ -1,5 +1,6 @@
 import { useNavigate } from 'react-router-dom'
 import './styles/organizer.css'
+// TODO: fetch tournaments from GET /api/tournaments (replace dummyTournaments)
 import { dummyTournaments, type ITournament } from './dummyData'
 
 const statusLabel: Record<ITournament['status'], string> = {

@@ -5,6 +5,12 @@ import './styles/tabs.css'
 import './styles/rounds.css'
 import './styles/pairings.css'
 import './styles/standings.css'
+// TODO: fetch tournament by id from GET /api/tournaments/:id (replace dummyTournaments[0])
+// TODO: fetch teams from GET /api/tournaments/:id/teams (replace dummyTeams)
+// TODO: fetch pairings from GET /api/tournaments/:id/pairings (replace dummyPairings)
+// TODO: fetch invites from GET /api/tournaments/:id/invites (replace dummyInvites)
+// TODO: fetch organizers from GET /api/tournaments/:id/organizers (replace dummyOrganizers)
+// TODO: fetch courtrooms from GET /api/tournaments/:id/courtrooms (replace dummyCourtrooms)
 import { dummyTournaments, dummyTeams, dummyPairings, dummyInvites, dummyOrganizers, dummyCourtrooms, type IInvite, type IOrganizer } from './dummyData'
 import { dateRange } from './utils'
 import OverviewTab from './OverviewTab'
@@ -95,6 +101,7 @@ const TournamentDashboard = () => {
                             pairings={pairings}
                             roundNames={roundNames}
                             onAddRound={() => {
+                                // TODO: POST /api/tournaments/:id/rounds to create round, then refetch pairings
                                 const nextRound = rounds.length > 0 ? Math.max(...rounds) + 1 : 1
                                 setPairings(prev => [...prev, {
                                     id: `p-new-${Date.now()}`,
@@ -110,9 +117,11 @@ const TournamentDashboard = () => {
                                 }])
                             }}
                             onTogglePublish={(round, isPublished) =>
+                                // TODO: PATCH /api/tournaments/:id/rounds/:round { isPublished: !isPublished }
                                 setPairings(prev => prev.map(p => p.round === round ? { ...p, isPublished: !isPublished } : p))
                             }
                             onToggleResults={(round, resultsPublished) =>
+                                // TODO: PATCH /api/tournaments/:id/rounds/:round { resultsPublished: !resultsPublished }
                                 setPairings(prev => prev.map(p => p.round === round ? { ...p, resultsPublished: !resultsPublished } : p))
                             }
                         />

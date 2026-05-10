@@ -23,6 +23,7 @@ const ScoreSheetHome = () => {
     }
 
 
+    // TODO: fetch scoresheet assignment from GET /api/score/:scorerID to replace EXAMPLE_TRIAL_DETAILS
     const details = { ...EXAMPLE_TRIAL_DETAILS, tournamentID: scorerID };
     const storageKey = `mock-trial-scores-${details.trialID}-${details.scorerID}`;
 

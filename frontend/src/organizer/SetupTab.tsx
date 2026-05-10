@@ -1,5 +1,6 @@
 import { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
+// TODO: fetch schools from GET /api/schools (replace dummySchools)
 import { dummySchools, type IInvite, type IOrganizer, type InviteStatus } from './dummyData'
 import { ConfirmRemoveModal, AddOrganizerModal } from './modals'
 import InviteSchoolModal from './InviteSchoolModal'
@@ -82,6 +83,7 @@ export default function SetupTab({
                                         {editingOrgId === org.id ? (
                                             <form style={{ display: 'flex', gap: '0.4rem' }} onSubmit={e => {
                                                 e.preventDefault()
+                                                // TODO: PATCH /api/tournaments/:id/organizers/:orgId { email: editEmail }
                                                 onUpdateOrgEmail(org.id, editEmail)
                                                 setEditingOrgId(null)
                                             }}>
@@ -134,6 +136,7 @@ export default function SetupTab({
                 <InviteSchoolModal
                     onClose={() => setShowInviteModal(false)}
                     onInvite={(schoolId, email) => {
+                        // TODO: POST /api/tournaments/:id/invites { schoolId, email } — send invite email and persist
                         onAddInvite({ id: `i-${Date.now()}`, tournamentId, schoolId, status: 'pending' })
                         console.log(email)
                     }}
@@ -143,7 +146,9 @@ export default function SetupTab({
             {showAddOrgModal && (
                 <AddOrganizerModal
                     onClose={() => setShowAddOrgModal(false)}
-                    onAdd={(name, email) => onAddOrganizer({ id: `o-${Date.now()}`, tournamentId, name, email, role: 'co-organizer' })}
+                    onAdd={(name, email) => 
+                        // TODO: POST /api/tournaments/:id/organizers { name, email }
+                        onAddOrganizer({ id: `o-${Date.now()}`, tournamentId, name, email, role: 'co-organizer' })}
                 />
             )}
 
@@ -153,7 +158,9 @@ export default function SetupTab({
                     <ConfirmRemoveModal
                         message={`Remove ${school?.name ?? 'this team'} from the tournament?`}
                         onCancel={() => setConfirmRemoveInvite(null)}
-                        onConfirm={() => { onRemoveInvite(confirmRemoveInvite.id); setConfirmRemoveInvite(null) }}
+                        onConfirm={() => { 
+                            // TODO: DELETE /api/tournaments/:id/invites/:inviteId
+                            onRemoveInvite(confirmRemoveInvite.id); setConfirmRemoveInvite(null) }}
                     />
                 )
             })()}
@@ -162,7 +169,9 @@ export default function SetupTab({
                 <ConfirmRemoveModal
                     message={`Remove ${confirmRemoveOrg.name} as an organizer?`}
                     onCancel={() => setConfirmRemoveOrg(null)}
-                    onConfirm={() => { onRemoveOrganizer(confirmRemoveOrg.id); setConfirmRemoveOrg(null) }}
+                    onConfirm={() => { 
+                        // TODO: DELETE /api/tournaments/:id/organizers/:orgId
+                        onRemoveOrganizer(confirmRemoveOrg.id); setConfirmRemoveOrg(null) }}
                 />
             )}
         </>

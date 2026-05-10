@@ -38,6 +38,7 @@ const TournamentCreate = () => {
         e.preventDefault()
         setSubmitted(true)
         if (!valid) return
+        // TODO: POST /api/tournaments with form data, navigate to returned tournament id
         // TODO: persist — for now navigate back with a fake id
         const newId = `t-new-${Date.now()}`
         navigate(`/organizer/${newId}`)
@@ -63,7 +64,7 @@ const TournamentCreate = () => {
 
             <main className="org-main">
                 <div className="org-container">
-                    <button className="org-back-btn" onClick={() => navigate('/organizer/select')}>← All tournaments</button>
+                    <button className="org-back-btn" onClick={() => navigate('/organizer')}>← All tournaments</button>
                     <div className="org-header">
                         <h1>New tournament</h1>
                     </div>
