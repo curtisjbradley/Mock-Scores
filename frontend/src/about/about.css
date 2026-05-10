@@ -1,0 +1,28 @@
+.about-main {
+    flex: 1;
+    display: flex;
+    justify-content: center;
+    padding: 48px 24px;
+}
+
+.about-card {
+    width: min(100%, 48rem);
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+}
+
+.about-card h1 {
+    font-size: 2rem;
+    margin-bottom: 4px;
+}
+
+.about-card h2 {
+    font-size: 1.1rem;
+    margin-top: 12px;
+}
+
+.about-card p {
+    color: var(--text-muted);
+    line-height: 1.6;
+}

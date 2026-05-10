@@ -1,5 +1,6 @@
 import { useState } from 'react'
-import '../components/layout.css'
+import './organizer.css'
+import './pairings.css'
 import '../judges/styles/modal.css'
 import { dummyScorers, type IScorer } from './dummyData'
 

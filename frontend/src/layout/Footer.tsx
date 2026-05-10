@@ -1,3 +1,5 @@
+import './footer.css'
+
 const Footer = () => (
     <footer className="site-footer">
         <a

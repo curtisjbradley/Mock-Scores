@@ -1,0 +1,191 @@
+.org-main {
+    flex: 1;
+    display: flex;
+    justify-content: center;
+    padding: 2rem 1rem;
+}
+
+.org-container {
+    width: min(100%, 52rem);
+    display: flex;
+    flex-direction: column;
+    gap: 1.25rem;
+}
+
+.org-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 1rem;
+    flex-wrap: wrap;
+}
+
+.org-header h1 {
+    font-size: 1.75rem;
+}
+
+.org-new-btn {
+    height: 2.5rem;
+    padding: 0 1.25rem;
+    border: 0;
+    border-radius: var(--radius);
+    background: var(--primary);
+    color: #fff;
+    font-size: 0.95rem;
+    font-weight: 600;
+    font-family: inherit;
+    cursor: pointer;
+    transition: background 140ms ease;
+}
+
+.org-new-btn:hover { background: var(--primary-dark); }
+
+.org-back-btn {
+    align-self: flex-start;
+    background: none;
+    border: none;
+    padding: 0;
+    color: var(--primary);
+    font-size: 0.9rem;
+    font-weight: 500;
+    font-family: inherit;
+    cursor: pointer;
+}
+
+.org-back-btn:hover { text-decoration: underline; }
+
+.org-tournament-list {
+    display: flex;
+    flex-direction: column;
+    gap: 0.75rem;
+}
+
+.org-tournament-card {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 1rem;
+    padding: 1rem 1.25rem;
+    border: 1px solid var(--border);
+    border-radius: 1rem;
+    background: var(--surface);
+    box-shadow: var(--shadow);
+    text-align: left;
+    cursor: pointer;
+    font-family: inherit;
+    transition: border-color 140ms ease, box-shadow 140ms ease;
+}
+
+.org-tournament-card:hover {
+    border-color: var(--primary);
+    box-shadow: 0 0 0 3px var(--focus);
+}
+
+.org-tournament-info {
+    display: flex;
+    flex-direction: column;
+    gap: 0.25rem;
+}
+
+.org-tournament-name {
+    font-size: 1rem;
+    font-weight: 600;
+    color: var(--text);
+}
+
+.org-tournament-meta {
+    font-size: 0.82rem;
+    color: var(--text-muted);
+}
+
+.org-status {
+    flex-shrink: 0;
+    padding: 0.25rem 0.65rem;
+    border-radius: 2rem;
+    font-size: 0.78rem;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+}
+
+.org-status--upcoming  { background: var(--surface-muted); color: var(--text-muted); }
+.org-status--active    { background: #d1fae5; color: #065f46; }
+.org-status--completed { background: var(--primary-subtle); color: var(--primary-dark); }
+
+@media (prefers-color-scheme: dark) {
+    .org-status--active { background: #064e3b; color: #6ee7b7; }
+}
+
+.org-meta-row {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.5rem 1.5rem;
+    font-size: 0.875rem;
+    color: var(--text-muted);
+}
+
+.org-dashboard-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(10rem, 1fr));
+    gap: 0.75rem;
+}
+
+.org-dashboard-card {
+    padding: 1.25rem;
+    border: 1px solid var(--border);
+    border-radius: 1rem;
+    background: var(--surface);
+    box-shadow: var(--shadow);
+}
+
+.org-dashboard-card h2 {
+    font-size: 0.8rem;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    color: var(--text-muted);
+    margin-bottom: 0.5rem;
+}
+
+.org-dashboard-stat {
+    font-size: 2rem;
+    font-weight: 700;
+    color: var(--text);
+    line-height: 1;
+}
+
+.org-dashboard-stat--alert {
+    color: var(--danger);
+}
+
+/* Coach dashboard */
+.coach-section {
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+    padding: 1.25rem;
+    border: 1px solid var(--border);
+    border-radius: 1rem;
+    background: var(--surface);
+    box-shadow: var(--shadow);
+}
+
+.coach-section h2 {
+    font-size: 1rem;
+    font-weight: 700;
+}
+
+.coach-empty {
+    color: var(--text-muted);
+    font-size: 0.9rem;
+}
+
+.coach-view-banner {
+    padding: 0.4rem 0.9rem;
+    border-radius: 0.5rem;
+    background: var(--primary-subtle);
+    color: var(--primary-dark);
+    font-size: 0.85rem;
+    font-weight: 600;
+    align-self: flex-start;
+}

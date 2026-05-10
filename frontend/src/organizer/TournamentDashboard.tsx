@@ -1,8 +1,10 @@
 import { useState } from 'react'
-import { useNavigate, useParams } from 'react-router-dom'
-import Header from '../components/Header'
-import Footer from '../components/Footer'
-import '../components/layout.css'
+import { useNavigate } from 'react-router-dom'
+import './organizer.css'
+import './tabs.css'
+import './rounds.css'
+import './pairings.css'
+import './standings.css'
 import { dummyTournaments, dummyTeams, dummyPairings, dummyInvites, dummyOrganizers, dummyCourtrooms, type IInvite, type IOrganizer } from './dummyData'
 import { dateRange } from './utils'
 import OverviewTab from './OverviewTab'
@@ -14,17 +16,16 @@ type Tab = 'overview' | 'rounds' | 'standings' | 'setup'
 type SetupSubTab = 'invites' | 'organizers' | 'scorers' | 'courtrooms'
 
 const TournamentDashboard = () => {
-    const { id } = useParams<{ id: string }>()
     const navigate = useNavigate()
-    const tournament = dummyTournaments.find(t => t.id === id)
+    const tournament = dummyTournaments[0]
 
     const [activeTab, setActiveTab] = useState<Tab>('overview')
     const [setupSubTab, setSetupSubTab] = useState<SetupSubTab>('invites')
 
-    const [invites, setInvites] = useState<IInvite[]>(() => dummyInvites.filter(i => i.tournamentId === id))
-    const [organizers, setOrganizers] = useState<IOrganizer[]>(() => dummyOrganizers.filter(o => o.tournamentId === id))
-    const [pairings, setPairings] = useState(() => dummyPairings.filter(p => p.tournamentId === id))
-    const [courtroomsState] = useState(() => dummyCourtrooms.filter(c => c.tournamentId === id))
+    const [invites, setInvites] = useState<IInvite[]>(() => dummyInvites)
+    const [organizers, setOrganizers] = useState<IOrganizer[]>(() => dummyOrganizers)
+    const [pairings, setPairings] = useState(() => dummyPairings)
+    const [courtroomsState] = useState(() => dummyCourtrooms)
     const [roundNames] = useState<Record<number, string>>({})
 
     if (!tournament) {
@@ -32,16 +33,16 @@ const TournamentDashboard = () => {
         return null
     }
 
-    const teams = dummyTeams.filter(t => t.tournamentId === id)
+    const teams = dummyTeams
     const rounds = [...new Set(pairings.map(p => p.round))].sort((a, b) => a - b)
     const allSheets = pairings.flatMap(p => p.scoresheets)
     const submitted = allSheets.filter(s => s.status === 'submitted').length
     const missing   = allSheets.filter(s => s.status === 'missing').length
     const pending   = allSheets.filter(s => s.status === 'pending').length
-
+    const id= 't2';
     return (
-        <>
-            <Header />
+
+
             <main className="org-main">
                 <div className="org-container">
                     <button className="org-back-btn" onClick={() => navigate('/organizer/select')}>← All tournaments</button>
@@ -143,8 +144,8 @@ const TournamentDashboard = () => {
                     )}
                 </div>
             </main>
-            <Footer />
-        </>
+
+
     )
 }
 

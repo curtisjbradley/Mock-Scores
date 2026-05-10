@@ -1,7 +1,5 @@
 import { useNavigate, useParams } from 'react-router-dom'
-import Header from '../components/Header'
-import Footer from '../components/Footer'
-import '../components/layout.css'
+import '../organizer/organizer.css'
 import { dummyTournaments, dummySchools } from '../organizer/dummyData'
 
 interface Props {
@@ -24,11 +22,9 @@ const CoachDashboard = ({ isOrganizerView = false }: Props) => {
     const dateStr = dates[0] === dates[dates.length - 1] ? fmt(dates[0]) : `${fmt(dates[0])} – ${fmt(dates[dates.length - 1])}`
 
     return (
-        <>
-            <Header />
             <main className="org-main">
                 <div className="org-container">
-                    <button className="org-back-btn" onClick={() => navigate(isOrganizerView ? `/organizer/${id}` : '/coach/select')}>
+                    <button className="org-back-btn" onClick={() => navigate(isOrganizerView ? `/organizer/${id}` : '/coach')}>
                         {isOrganizerView ? '← Back to tournament' : '← All tournaments'}
                     </button>
 
@@ -66,8 +62,7 @@ const CoachDashboard = ({ isOrganizerView = false }: Props) => {
                     </div>
                 </div>
             </main>
-            <Footer />
-        </>
+
     )
 }
 

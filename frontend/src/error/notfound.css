@@ -1,0 +1,51 @@
+.notfound-main {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 12px;
+    padding: 48px 24px;
+}
+
+.notfound-code {
+    font-size: 96px;
+    font-weight: 700;
+    color: var(--primary);
+    line-height: 1;
+}
+
+.notfound-main h2 {
+    font-size: 24px;
+}
+
+.notfound-main p {
+    color: var(--text-muted);
+}
+
+.notfound-main a {
+    margin-top: 8px;
+    color: var(--primary);
+    text-decoration: none;
+    font-weight: 500;
+}
+
+.notfound-main a:hover {
+    text-decoration: underline;
+}
+
+.notfound-back-btn {
+    margin-top: 8px;
+    background: none;
+    border: none;
+    color: var(--primary);
+    font-size: inherit;
+    font-family: inherit;
+    font-weight: 500;
+    cursor: pointer;
+    padding: 0;
+}
+
+.notfound-back-btn:hover {
+    text-decoration: underline;
+}

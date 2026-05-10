@@ -1,8 +1,8 @@
 import { useState } from 'react'
 import { useNavigate, useParams } from 'react-router-dom'
-import Header from '../components/Header'
-import Footer from '../components/Footer'
-import '../components/layout.css'
+import './organizer.css'
+import './round-view.css'
+import './pairings.css'
 import { dummyTournaments, dummyPairings, dummyTeams, dummyCourtrooms, type IPairing } from './dummyData'
 import { fmt, fmtTime } from './utils'
 import PairingCard from './PairingCard'
@@ -90,8 +90,8 @@ const RoundView = () => {
     }
 
     return (
-        <>
-            <Header />
+
+
             <main className="org-main">
                 <div className="org-container">
                     <button className="org-back-btn" onClick={() => navigate(`/organizer/${id}`)}>← Back to dashboard</button>
@@ -216,17 +216,16 @@ const RoundView = () => {
                         ))}
                     </div>
                 </div>
-            </main>
-            <Footer />
 
-            {confirmRemove && (
-                <ConfirmRemoveModal
-                    message="Remove this matchup?"
-                    onCancel={() => setConfirmRemove(null)}
-                    onConfirm={() => { setPairings(prev => prev.filter(p => p.id !== confirmRemove.id)); setConfirmRemove(null) }}
-                />
-            )}
-        </>
+                {confirmRemove && (
+                    <ConfirmRemoveModal
+                        message="Remove this matchup?"
+                        onCancel={() => setConfirmRemove(null)}
+                        onConfirm={() => { setPairings(prev => prev.filter(p => p.id !== confirmRemove.id)); setConfirmRemove(null) }}
+                    />
+                )}
+            </main>
+
     )
 }
 

@@ -4,8 +4,8 @@ import ConflictCheck from "./ConflictCheck.tsx";
 import TiebreakerOnly from "./TiebreakerOnly.tsx";
 import { EXAMPLE_TRIAL_DETAILS } from "../data.ts";
 import { useParams } from 'react-router-dom';
-import NotFound from "../../NotFound.tsx";
-import LoadingPage from "../../components/LoadingPage.tsx";
+import NotFound from "../../error/NotFound.tsx";
+import LoadingPage from "../../layout/LoadingPage.tsx";
 
 
 /**
@@ -35,7 +35,7 @@ const ScoreSheetHome = () => {
     }
 
     return (
-        <Suspense fallback={<LoadingPage />}>
+        <Suspense fallback={<LoadingPage loadingText={"Loading scoresheet"} />}>
             <ScoreSheet {...details} />
         </Suspense>
     );

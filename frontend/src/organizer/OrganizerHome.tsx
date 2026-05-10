@@ -1,7 +1,5 @@
 import { useNavigate } from 'react-router-dom'
-import Header from '../components/Header'
-import Footer from '../components/Footer'
-import '../components/layout.css'
+import './organizer.css'
 import { dummyTournaments, type ITournament } from './dummyData'
 
 const statusLabel: Record<ITournament['status'], string> = {
@@ -14,8 +12,6 @@ const OrganizerHome = () => {
     const navigate = useNavigate()
 
     return (
-        <>
-            <Header />
             <main className="org-main">
                 <div className="org-container">
                     <div className="org-header">
@@ -48,8 +44,7 @@ const OrganizerHome = () => {
                     </div>
                 </div>
             </main>
-            <Footer />
-        </>
+
     )
 }
 

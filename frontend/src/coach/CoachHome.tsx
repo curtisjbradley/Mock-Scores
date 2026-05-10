@@ -1,7 +1,5 @@
 import { useNavigate } from 'react-router-dom'
-import Header from '../components/Header'
-import Footer from '../components/Footer'
-import '../components/layout.css'
+import '../organizer/organizer.css'
 import { dummyTournaments, dummyInvites, CURRENT_SCHOOL_ID, type ITournament } from '../organizer/dummyData'
 
 const statusLabel: Record<ITournament['status'], string> = {
@@ -21,8 +19,6 @@ const CoachHome = () => {
     const tournaments = dummyTournaments.filter(t => myTournamentIds.has(t.id))
 
     return (
-        <>
-            <Header />
             <main className="org-main">
                 <div className="org-container">
                     <h1>Select a tournament</h1>
@@ -49,8 +45,7 @@ const CoachHome = () => {
                     </div>
                 </div>
             </main>
-            <Footer />
-        </>
+
     )
 }
 
