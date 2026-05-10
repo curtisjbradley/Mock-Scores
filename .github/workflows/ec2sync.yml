@@ -34,7 +34,6 @@ jobs:
           key: ${{ secrets.EC2_SSH_KEY }}
           script: |
             set -e
-            PORT=3000
             APP_DIR=/opt/mock-scores
             REPO_URL=https://github.com/curtisjbradley/Mock-Scores.git
 
@@ -58,5 +57,3 @@ jobs:
 
             echo "Restarting app..."
             pm2 restart mock-scores || pm2 start npm --name mock-scores -- start
-
-            pm2 save
