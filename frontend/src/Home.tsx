@@ -1,5 +1,5 @@
 import { useNavigate } from 'react-router-dom'
-import './home/home.css'
+import './home/styles/home.css'
 
 const heroImg = '/hero.JPG'
 

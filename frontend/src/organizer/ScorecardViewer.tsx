@@ -1,5 +1,5 @@
 import { useParams, useNavigate } from 'react-router-dom'
-import './organizer.css'
+import './styles/organizer.css'
 
 const ScorecardViewer = () => {
     const { id, pairingId, judgeId } = useParams<{ id: string; pairingId: string; judgeId: string }>()

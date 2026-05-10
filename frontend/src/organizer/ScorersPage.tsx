@@ -1,6 +1,6 @@
 import { useState } from 'react'
-import './organizer.css'
-import './pairings.css'
+import './styles/organizer.css'
+import './styles/pairings.css'
 import '../judges/styles/modal.css'
 import { dummyScorers, type IScorer } from './dummyData'
 

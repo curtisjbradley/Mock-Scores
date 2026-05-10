@@ -1,5 +1,5 @@
 import { useNavigate } from 'react-router-dom'
-import './organizer.css'
+import './styles/organizer.css'
 import { dummyTournaments, type ITournament } from './dummyData'
 
 const statusLabel: Record<ITournament['status'], string> = {

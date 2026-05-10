@@ -1,5 +1,5 @@
 import { Link, useNavigate } from 'react-router-dom'
-import './notfound.css'
+import './styles/notfound.css'
 
 const Forbidden = () => {
     const navigate = useNavigate()

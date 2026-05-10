@@ -1,4 +1,4 @@
-import './loading.css'
+import './styles/loading.css'
 
 type LoadingPageProps = {
     loadingText?: string

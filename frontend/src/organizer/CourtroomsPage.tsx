@@ -1,7 +1,7 @@
 import { useState } from 'react'
 import { useParams } from 'react-router-dom'
-import './organizer.css'
-import './pairings.css'
+import './styles/organizer.css'
+import './styles/pairings.css'
 import '../judges/styles/modal.css'
 import { dummyCourtrooms, type ICourtroom } from './dummyData'
 

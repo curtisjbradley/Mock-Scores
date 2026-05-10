@@ -1,7 +1,7 @@
 import { useState } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
 import { saveToken } from './auth'
-import './auth-form.css'
+import './styles/auth-form.css'
 
 interface LoginPageProps {
     title: string

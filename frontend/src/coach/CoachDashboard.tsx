@@ -1,5 +1,5 @@
 import { useNavigate, useParams } from 'react-router-dom'
-import '../organizer/organizer.css'
+import '../organizer/styles/organizer.css'
 import { dummyTournaments, dummySchools } from '../organizer/dummyData'
 
 interface Props {
