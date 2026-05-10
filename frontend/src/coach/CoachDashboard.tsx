@@ -1,8 +1,8 @@
 import { useNavigate, useParams } from 'react-router-dom'
-import Header from '../components/Header'
-import Footer from '../components/Footer'
-import '../components/layout.css'
-import { dummyTournaments, dummySchools } from '../organizer/dummyData'
+import '../organizer/styles/organizer.css'
+// TODO: fetch tournament from GET /api/tournaments/:id (replace dummyTournaments)
+// TODO: fetch school from GET /api/schools/:schoolId (replace dummySchools)
+import { dummyTournaments, dummySchools } from '../organizer/data/dummyData'
 
 interface Props {
     isOrganizerView?: boolean
@@ -24,11 +24,9 @@ const CoachDashboard = ({ isOrganizerView = false }: Props) => {
     const dateStr = dates[0] === dates[dates.length - 1] ? fmt(dates[0]) : `${fmt(dates[0])} – ${fmt(dates[dates.length - 1])}`
 
     return (
-        <>
-            <Header />
             <main className="org-main">
                 <div className="org-container">
-                    <button className="org-back-btn" onClick={() => navigate(isOrganizerView ? `/organizer/${id}` : '/coach/select')}>
+                    <button className="org-back-btn" onClick={() => navigate(isOrganizerView ? `/organizer/${id}` : '/coach')}>
                         {isOrganizerView ? '← Back to tournament' : '← All tournaments'}
                     </button>
 
@@ -52,22 +50,24 @@ const CoachDashboard = ({ isOrganizerView = false }: Props) => {
 
                     <div className="coach-section">
                         <h2>My teams</h2>
+                        {/* TODO: fetch teams from GET /api/coach/tournaments/:id/teams */}
                         <p className="coach-empty">No teams assigned yet.</p>
                     </div>
 
                     <div className="coach-section">
                         <h2>Schedule</h2>
+                        {/* TODO: fetch published rounds from GET /api/coach/tournaments/:id/schedule */}
                         <p className="coach-empty">No rounds scheduled yet.</p>
                     </div>
 
                     <div className="coach-section">
                         <h2>Results</h2>
+                        {/* TODO: fetch published results from GET /api/coach/tournaments/:id/results */}
                         <p className="coach-empty">No results available yet.</p>
                     </div>
                 </div>
             </main>
-            <Footer />
-        </>
+
     )
 }
 

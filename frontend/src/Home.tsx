@@ -1,7 +1,5 @@
 import { useNavigate } from 'react-router-dom'
-import Header from './components/Header'
-import Footer from './components/Footer'
-import './components/layout.css'
+import './home/styles/home.css'
 
 const heroImg = '/hero.JPG'
 
@@ -15,9 +13,7 @@ const Home = () => {
     const navigate = useNavigate()
 
     return (
-        <>
-            <Header />
-            <div className="home-main">
+        <div className="home-main">
                 <img
                     src={heroImg}
                     alt=""
@@ -41,8 +37,6 @@ const Home = () => {
                     </div>
                 </main>
             </div>
-            <Footer />
-        </>
     )
 }
 

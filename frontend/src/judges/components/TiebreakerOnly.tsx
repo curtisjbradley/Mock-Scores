@@ -28,7 +28,7 @@ function TiebreakerOnly({ details, storageKey }: TiebreakerOnlyProps) {
 
     const handleSubmit = () => {
         if (!tiebreaker) return;
-        // TODO: Send to backend
+        // TODO: POST /api/pairings/:pairingId/tiebreaker { scorerID, tiebreaker }
         console.log({ tournamentID: details.scorerID, trialID: details.trialID, scorerID: details.scorerID, tiebreaker });
         localStorage.removeItem(storageKey);
         setSubmitted(true);

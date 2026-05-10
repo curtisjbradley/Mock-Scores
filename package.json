@@ -17,21 +17,11 @@
   "scripts": {
     "build": "npm run build -w frontend && npm run build -w backend",
     "lint": "npm run lint -w frontend && npm run lint -w backend",
-    "start": "npm run start -w backend",
+    "start": "npm run build -w frontend && npm run start -w backend",
     "prepare": "husky"
   },
   "workspaces": [
     "frontend",
     "backend"
-  ],
-  "dependencies": {
-    "@tailwindcss/vite": "^4.2.4",
-    "dotenv": "^17.4.2",
-    "react-loadable": "^5.5.0",
-    "react-router-dom": "^7.15.0",
-    "tailwindcss": "^4.2.4"
-  },
-  "devDependencies": {
-    "@types/loadable__component": "^5.13.10"
-  }
+  ]
 }

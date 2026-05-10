@@ -1,4 +1,4 @@
-name: Deploy to EC2
+name: Deploy to EC2 (Dev Branch)
 
 on:
   push:
@@ -34,7 +34,6 @@ jobs:
           key: ${{ secrets.EC2_SSH_KEY }}
           script: |
             set -e
-            PORT=3001
             APP_DIR=/opt/mock-scores-dev
             REPO_URL=https://github.com/curtisjbradley/Mock-Scores.git
 
@@ -59,5 +58,3 @@ jobs:
 
             echo "Restarting app..."
             pm2 restart mock-scores-dev || pm2 start npm --name mock-scores-dev -- start
-
-            pm2 save

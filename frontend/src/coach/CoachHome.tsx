@@ -1,8 +1,7 @@
 import { useNavigate } from 'react-router-dom'
-import Header from '../components/Header'
-import Footer from '../components/Footer'
-import '../components/layout.css'
-import { dummyTournaments, dummyInvites, CURRENT_SCHOOL_ID, type ITournament } from '../organizer/dummyData'
+import '../organizer/styles/organizer.css'
+// TODO: fetch accepted invites for current school from GET /api/coach/tournaments (replace dummyInvites + dummyTournaments)
+import { dummyTournaments, dummyInvites, CURRENT_SCHOOL_ID, type ITournament } from '../organizer/data/dummyData'
 
 const statusLabel: Record<ITournament['status'], string> = {
     upcoming: 'Upcoming',
@@ -21,8 +20,6 @@ const CoachHome = () => {
     const tournaments = dummyTournaments.filter(t => myTournamentIds.has(t.id))
 
     return (
-        <>
-            <Header />
             <main className="org-main">
                 <div className="org-container">
                     <h1>Select a tournament</h1>
@@ -49,8 +46,7 @@ const CoachHome = () => {
                     </div>
                 </div>
             </main>
-            <Footer />
-        </>
+
     )
 }
 

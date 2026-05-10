@@ -1,0 +1,20 @@
+.site-footer {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    padding: 16px;
+    border-top: 1px solid var(--border);
+    flex-shrink: 0;
+    margin-top: auto;
+    background: var(--surface);
+}
+
+.footer-github {
+    color: var(--text-muted);
+    display: flex;
+    transition: color 0.15s;
+}
+
+.footer-github:hover {
+    color: var(--text);
+}

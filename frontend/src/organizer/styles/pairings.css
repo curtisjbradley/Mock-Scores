@@ -1,0 +1,320 @@
+.dash-pairings {
+    display: flex;
+    flex-direction: column;
+    gap: 0.75rem;
+    padding-bottom: 0.5rem;
+}
+
+.dash-pairing-card {
+    padding: 1rem 1.25rem;
+    border: 1px solid var(--border);
+    border-radius: 1rem;
+    background: var(--surface);
+    box-shadow: var(--shadow);
+    display: flex;
+    flex-direction: column;
+    gap: 0.75rem;
+}
+
+.dash-pairing-topbar {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 0.5rem;
+}
+
+.dash-courtroom-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.3rem;
+    padding: 0.25rem 0.65rem;
+    border-radius: 2rem;
+    border: 1px solid var(--border);
+    background: var(--surface-muted);
+    font-size: 0.78rem;
+    font-weight: 600;
+    color: var(--text-muted);
+    font-family: inherit;
+    cursor: pointer;
+    transition: border-color 120ms ease, color 120ms ease;
+}
+
+.dash-courtroom-badge:hover {
+    border-color: var(--primary);
+    color: var(--primary);
+}
+
+.dash-matchup-grid {
+    display: grid;
+    grid-template-columns: 1fr auto 1fr;
+    align-items: center;
+    gap: 0.75rem;
+    padding: 0.75rem 0;
+    border-top: 1px solid var(--border);
+    border-bottom: 1px solid var(--border);
+}
+
+.dash-matchup-side {
+    display: flex;
+    flex-direction: column;
+    gap: 0.2rem;
+}
+
+.dash-matchup-side--right {
+    text-align: right;
+    align-items: flex-end;
+}
+
+.dash-side-label {
+    font-size: 0.7rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+    color: var(--text-muted);
+}
+
+.dash-team-name {
+    font-size: 0.9rem;
+    font-weight: 600;
+    color: var(--text);
+}
+
+.dash-vs {
+    color: var(--text-muted);
+    font-weight: 400;
+    font-style: italic;
+    font-size: 0.9rem;
+    text-align: center;
+}
+
+.dash-scoresheets {
+    display: flex;
+    flex-direction: column;
+    gap: 0.4rem;
+}
+
+.dash-scoresheet-row {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 0.5rem;
+    font-size: 0.85rem;
+    padding: 0.35rem 0.5rem;
+    border-radius: 0.5rem;
+    transition: background 120ms ease;
+}
+
+.dash-scoresheet-row:hover {
+    background: var(--surface-muted);
+}
+
+.dash-scoresheet-actions {
+    display: flex;
+    align-items: center;
+    gap: 0.4rem;
+    flex-shrink: 0;
+}
+
+.dash-judge-name { color: var(--text-muted); }
+
+.ss-chip {
+    padding: 0.15rem 0.55rem;
+    border-radius: 2rem;
+    font-size: 0.72rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+}
+
+.ss-chip--submitted { background: #d1fae5; color: #065f46; }
+.ss-chip--pending   { background: var(--surface-muted); color: var(--text-muted); }
+.ss-chip--missing   { background: var(--danger-bg); color: var(--danger); border: 1px solid var(--danger); }
+
+@media (prefers-color-scheme: dark) {
+    .ss-chip--submitted { background: #064e3b; color: #6ee7b7; }
+}
+
+.dash-school-link {
+    background: none;
+    border: none;
+    padding: 0;
+    color: var(--primary);
+    font-size: inherit;
+    font-family: inherit;
+    font-weight: 600;
+    cursor: pointer;
+    text-decoration: underline;
+    text-underline-offset: 2px;
+}
+
+.dash-assign-btn {
+    background: none;
+    border: 1px solid var(--primary);
+    padding: 0.2rem 0.6rem;
+    border-radius: 0.4rem;
+    color: var(--primary);
+    font-size: 0.78rem;
+    font-weight: 600;
+    font-family: inherit;
+    cursor: pointer;
+    transition: background 120ms ease;
+}
+
+.dash-assign-btn:hover {
+    background: var(--primary-subtle);
+}
+
+.dash-view-btn {
+    background: none;
+    border: 1px solid var(--border-strong);
+    padding: 0.2rem 0.6rem;
+    border-radius: 0.4rem;
+    color: var(--text);
+    font-size: 0.78rem;
+    font-weight: 600;
+    font-family: inherit;
+    cursor: pointer;
+    transition: background 120ms ease;
+}
+
+.dash-view-btn:hover {
+    background: var(--surface-muted);
+}
+
+.dash-scorer-badge {
+    font-size: 0.72rem;
+    color: var(--text-muted);
+    background: var(--surface-muted);
+    padding: 0.15rem 0.4rem;
+    border-radius: 0.3rem;
+}
+
+.dash-presider-badge {
+    font-size: 0.72rem;
+    color: #065f46;
+    background: #d1fae5;
+    padding: 0.15rem 0.4rem;
+    border-radius: 0.3rem;
+    font-weight: 600;
+}
+
+.dash-presider-slot {
+    min-width: 4rem;
+    display: inline-block;
+}
+
+@media (prefers-color-scheme: dark) {
+    .dash-presider-badge {
+        background: #064e3b;
+        color: #6ee7b7;
+    }
+}
+
+.dash-scorer-select {
+    height: 2rem;
+    padding: 0 0.5rem;
+    border: 1px solid var(--border-strong);
+    border-radius: var(--radius);
+    background: var(--surface);
+    color: var(--text);
+    font-size: 0.85rem;
+    font-family: inherit;
+    cursor: pointer;
+}
+
+.dash-paper-scorer-form {
+    display: flex;
+    align-items: center;
+    gap: 0.35rem;
+}
+
+.dash-paper-scorer-input {
+    height: 2rem;
+    padding: 0 0.5rem;
+    border: 1px solid var(--primary);
+    border-radius: var(--radius);
+    background: var(--surface);
+    color: var(--text);
+    font-size: 0.85rem;
+    font-family: inherit;
+    width: 10rem;
+    outline: none;
+    box-shadow: 0 0 0 3px var(--focus);
+}
+
+.dash-paper-scorer-add {
+    height: 2rem;
+    padding: 0 0.65rem;
+    border: 0;
+    border-radius: var(--radius);
+    background: var(--primary);
+    color: #fff;
+    font-size: 0.82rem;
+    font-weight: 600;
+    font-family: inherit;
+    cursor: pointer;
+}
+
+.dash-paper-scorer-add:disabled {
+    opacity: 0.45;
+    cursor: default;
+}
+
+.dash-paper-scorer-cancel {
+    height: 2rem;
+    width: 2rem;
+    border: 0;
+    border-radius: var(--radius);
+    background: var(--surface-muted);
+    color: var(--text-muted);
+    font-size: 0.85rem;
+    font-family: inherit;
+    cursor: pointer;
+}
+
+.dash-presider-label {
+    display: flex;
+    align-items: center;
+    gap: 0.25rem;
+    font-size: 0.8rem;
+    color: var(--text-muted);
+    cursor: pointer;
+}
+
+.dash-presider-label input {
+    cursor: pointer;
+}
+
+.dash-remove-btn {
+    background: none;
+    border: none;
+    color: var(--danger);
+    font-size: 0.85rem;
+    font-weight: 600;
+    font-family: inherit;
+    cursor: pointer;
+    padding: 0.2rem 0.4rem;
+    border-radius: 0.4rem;
+    transition: background 120ms ease;
+}
+
+.dash-remove-btn:hover {
+    background: var(--danger-bg);
+}
+
+.confirm-btn-danger {
+    background: var(--danger) !important;
+    color: #fff !important;
+}
+
+.confirm-btn-danger:hover {
+    opacity: 0.9;
+}
+
+.dash-invites-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    flex-wrap: wrap;
+    gap: 0.75rem;
+}
