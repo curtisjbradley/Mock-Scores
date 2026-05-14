@@ -31,7 +31,7 @@ export class TournamentProvider {
         return result ? (result.rows[0] ?? null) : null;
     }
 
-    async createTournament(tournament: TournamentPayload, ownerEmail: string): Promise<ITournament | null> {
+    async createTournament(tournament: TournamentPayload): Promise<ITournament | null> {
         const tournamentID = randomUUID();
 
         const insertion = await dbQuery(
@@ -43,10 +43,6 @@ export class TournamentProvider {
         );
         if (!insertion || insertion.rowCount !== 1) return null;
 
-        await dbQuery(
-            'INSERT INTO tournament_owners (tournament, delegate_email, role) VALUES ($1,$2,$3)',
-            [tournamentID, ownerEmail, 'owner']
-        );
 
         const witnesses: [string, string][] = [
             ...tournament.caseFormat.pWitnessNames.map(n => ['P', n] as [string, string]),
