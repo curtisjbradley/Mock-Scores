@@ -43,16 +43,18 @@ export interface TournamentPayload {
 export interface ScorecardPayload {
     trialID: string
     scorerID: string
-    scores: {
-        categoryId: string
-        assignmentKey: string
-        side: 'P' | 'D'
-        studentId: string | null
-        score: number
-    }[]
+    scores: ScoreSection[]
     nominations: {
         studentId: string
         rank: number
     }[]
     tiebreaker?: string
+}
+
+export interface ScoreSection {
+    categoryId: string
+    assignmentKey: string
+    side: 'P' | 'D'
+    studentId: string | null
+    score: number
 }
