@@ -7,6 +7,6 @@
     "build": "npx tsc"
   },
   "devDependencies": {
-    "typescript": "*"
+    "typescript": "^6.0.3"
   }
 }
