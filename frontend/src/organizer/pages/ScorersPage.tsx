@@ -3,6 +3,7 @@ import '../styles/organizer.css'
 import '../styles/pairings.css'
 import '../../judges/styles/modal.css'
 import { dummyScorers, type IScorer } from '../data/dummyData'
+import { isValidEmail } from '../../utils/validation'
 
 const ScorersPage = () => {
     const [scorers, setScorers] = useState<IScorer[]>(dummyScorers)
@@ -31,7 +32,7 @@ const ScorersPage = () => {
     }
 
     const handleSave = () => {
-        if (!firstName.trim() || !lastName.trim() || !email.trim()) return
+        if (!firstName.trim() || !lastName.trim() || !isValidEmail(email)) return
         if (editingId) {
             setScorers(prev => prev.map(s => s.id === editingId ? { ...s, name: `${firstName.trim()} ${lastName.trim()}`, email: email.trim() } : s))
         } else {
@@ -51,24 +52,29 @@ const ScorersPage = () => {
 
     return (
         <>
-                <div className="org-container">
+            <div style={{ display: 'flex', justifyContent: 'flex-end', marginBottom: '0.75rem' }}>
+                <button className="org-new-btn" onClick={openAddModal}>+ Add scorer</button>
+            </div>
 
-                    <table className="dash-standings-table">
-                        <thead><tr><th>Name</th><th>Email</th><th></th></tr></thead>
-                        <tbody>
-                            {scorers.map(scorer => (
-                                <tr key={scorer.id}>
-                                    <td>{scorer.name}</td>
-                                    <td className="dash-judge-name">{scorer.email ?? '—'}</td>
-                                    <td style={{ display: 'flex', gap: '0.4rem' }}>
+            <div style={{ overflowX: 'auto' }}>
+                <table className="dash-standings-table">
+                    <thead><tr><th>Name</th><th>Email</th><th></th></tr></thead>
+                    <tbody>
+                        {scorers.map(scorer => (
+                            <tr key={scorer.id}>
+                                <td>{scorer.name}</td>
+                                <td className="dash-judge-name">{scorer.email ?? '—'}</td>
+                                <td>
+                                    <div style={{ display: 'flex', gap: '0.4rem' }}>
                                         <button className="dash-remove-btn" onClick={() => openEditModal(scorer)}>Edit</button>
                                         <button className="dash-remove-btn" onClick={() => setConfirmRemove(scorer)}>Remove</button>
-                                    </td>
-                                </tr>
-                            ))}
-                        </tbody>
-                    </table>
-                </div>
+                                    </div>
+                                </td>
+                            </tr>
+                        ))}
+                    </tbody>
+                </table>
+            </div>
 
             {showModal && (
                 <div className="modal-backdrop" role="presentation" onClick={e => { if (e.target === e.currentTarget) setShowModal(false) }}>
@@ -80,10 +86,11 @@ const ScorersPage = () => {
                             <label htmlFor="last-name" style={{ fontSize: '0.875rem', fontWeight: 600, marginTop: '0.25rem' }}>Last name</label>
                             <input id="last-name" type="text" required value={lastName} onChange={e => setLastName(e.target.value)} placeholder="Last name" style={inputStyle} />
                             <label htmlFor="email" style={{ fontSize: '0.875rem', fontWeight: 600, marginTop: '0.25rem' }}>Email</label>
-                            <input id="email" type="email" required value={email} onChange={e => setEmail(e.target.value)} placeholder="scorer@example.com" style={inputStyle} />
+                            <input id="email" type="email" required value={email} onChange={e => setEmail(e.target.value)} placeholder="scorer@example.com"
+                                style={{ ...inputStyle, borderColor: email && !isValidEmail(email) ? 'var(--danger)' : 'var(--border-strong)' }} />
                             <div className="confirm-actions">
                                 <button type="button" onClick={() => setShowModal(false)}>Cancel</button>
-                                <button type="submit" disabled={!firstName.trim() || !lastName.trim() || !email.trim()}>{editingId ? 'Save' : 'Add scorer'}</button>
+                                <button type="submit" disabled={!firstName.trim() || !lastName.trim() || !isValidEmail(email)}>{editingId ? 'Save' : 'Add scorer'}</button>
                             </div>
                         </form>
                     </div>
@@ -102,7 +109,6 @@ const ScorersPage = () => {
                     </div>
                 </div>
             )}
-            <button className="org-new-btn" onClick={openAddModal}>+ Add scorer</button>
         </>
     )
 }

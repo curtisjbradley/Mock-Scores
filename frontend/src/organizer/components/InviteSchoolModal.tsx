@@ -1,5 +1,6 @@
 import { useState } from 'react'
 import '../../judges/styles/modal.css'
+import { isValidEmail } from '../../utils/validation'
 
 interface Props {
     onClose: () => void
@@ -17,7 +18,7 @@ const InviteSchoolModal = ({ onClose, onInvite }: Props) => {
         onClose()
     }
 
-    const valid = school.trim() && email.trim()
+    const valid = school.trim() && isValidEmail(email)
 
     return (
         <div className="modal-backdrop" role="presentation" onClick={e => { if (e.target === e.currentTarget) onClose() }}>
@@ -45,7 +46,7 @@ const InviteSchoolModal = ({ onClose, onInvite }: Props) => {
                         value={email}
                         onChange={e => setEmail(e.target.value)}
                         placeholder="coach@school.edu"
-                        style={{ height: '2.75rem', padding: '0 0.75rem', border: '1px solid var(--border-strong)', borderRadius: 'var(--radius)', background: 'var(--surface)', color: 'var(--text)', fontSize: '1rem', fontFamily: 'inherit' }}
+                        style={{ height: '2.75rem', padding: '0 0.75rem', border: `1px solid ${email && !isValidEmail(email) ? 'var(--danger)' : 'var(--border-strong)'}`, borderRadius: 'var(--radius)', background: 'var(--surface)', color: 'var(--text)', fontSize: '1rem', fontFamily: 'inherit' }}
                     />
 
                     <div className="confirm-actions">

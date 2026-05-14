@@ -1,9 +1,12 @@
 import { useState } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
+import { isValidEmail } from '../utils/validation'
 import './styles/auth-form.css'
 
 const Register = () => {
     const navigate = useNavigate()
+    const [firstName, setFirstName] = useState('')
+    const [lastName, setLastName] = useState('')
     const [email, setEmail] = useState('')
     const [password, setPassword] = useState('')
     const [confirm, setConfirm] = useState('')
@@ -12,6 +15,10 @@ const Register = () => {
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault()
         setError('')
+        if (!isValidEmail(email)) {
+            setError('Please enter a valid email address.')
+            return
+        }
         if (password !== confirm) {
             setError('Passwords do not match.')
             return
@@ -20,7 +27,12 @@ const Register = () => {
             const res = await fetch('/api/auth/register', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ email, password }),
+                body: JSON.stringify({
+                    firstName: firstName.trim(),
+                    lastName: lastName.trim(),
+                    email,
+                    password,
+                }),
             })
             if (!res.ok) {
                 const data = await res.json().catch(() => ({}))
@@ -38,6 +50,24 @@ const Register = () => {
             <div className="auth-card">
                 <h1>Create account</h1>
                 <form className="auth-form" onSubmit={handleSubmit} noValidate>
+                    <label htmlFor="firstName">First name</label>
+                    <input
+                        id="firstName"
+                        type="text"
+                        autoComplete="given-name"
+                        required
+                        value={firstName}
+                        onChange={e => setFirstName(e.target.value)}
+                    />
+                    <label htmlFor="lastName">Last name</label>
+                    <input
+                        id="lastName"
+                        type="text"
+                        autoComplete="family-name"
+                        required
+                        value={lastName}
+                        onChange={e => setLastName(e.target.value)}
+                    />
                     <label htmlFor="email">Email</label>
                     <input
                         id="email"

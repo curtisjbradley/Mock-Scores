@@ -6,6 +6,7 @@ import { ConfirmRemoveModal, AddOrganizerModal } from '../components/modals'
 import InviteSchoolModal from '../components/InviteSchoolModal'
 import CourtroomsPage from "../pages/CourtroomsPage.tsx";
 import ScorersPage from "../pages/ScorersPage.tsx";
+import { isValidEmail } from '../../utils/validation'
 
 type SubTab = 'invites' | 'organizers' | 'scorers' | 'courtrooms'
 
@@ -16,6 +17,7 @@ interface Props {
     organizers: IOrganizer[]
     onAddInvite: (invite: IInvite) => void
     onRemoveInvite: (id: string) => void
+    onUpdateInviteEmail: (id: string, email: string) => void
     onAddOrganizer: (org: IOrganizer) => void
     onRemoveOrganizer: (id: string) => void
     onUpdateOrgEmail: (id: string, email: string) => void
@@ -28,7 +30,7 @@ const inviteChip = (s: InviteStatus) => (
 export default function SetupTab({
     tournamentId, subTab,
     invites, organizers,
-    onAddInvite, onRemoveInvite,
+    onAddInvite, onRemoveInvite, onUpdateInviteEmail,
     onAddOrganizer, onRemoveOrganizer, onUpdateOrgEmail,
 }: Props) {
     const navigate = useNavigate()
@@ -38,6 +40,8 @@ export default function SetupTab({
     const [confirmRemoveOrg, setConfirmRemoveOrg] = useState<IOrganizer | null>(null)
     const [editingOrgId, setEditingOrgId] = useState<string | null>(null)
     const [editEmail, setEditEmail] = useState('')
+    const [editingInviteId, setEditingInviteId] = useState<string | null>(null)
+    const [editInviteEmail, setEditInviteEmail] = useState('')
 
     return (
         <>
@@ -53,12 +57,36 @@ export default function SetupTab({
                             {invites.map(invite => {
                                 const school = dummySchools.find(s => s.id === invite.schoolId)
                                 if (!school) return null
+                                const displayEmail = invite.contactEmail ?? school.contactEmail
                                 return (
                                     <tr key={invite.id}>
                                         <td><button className="dash-school-link" onClick={() => navigate(`/organizer/${tournamentId}/school/${invite.schoolId}`)}>{school.name}</button></td>
-                                        <td className="dash-judge-name">{school.contactEmail}</td>
+                                        <td>
+                                            {editingInviteId === invite.id ? (
+                                                <form style={{ display: 'flex', gap: '0.4rem' }} onSubmit={e => {
+                                                    e.preventDefault()
+                                                    if (!isValidEmail(editInviteEmail)) return
+                                                    onUpdateInviteEmail(invite.id, editInviteEmail.trim())
+                                                    setEditingInviteId(null)
+                                                }}>
+                                                    <input autoFocus type="email" value={editInviteEmail} onChange={e => setEditInviteEmail(e.target.value)}
+                                                        style={{ height: '2rem', padding: '0 0.5rem', border: `1px solid ${isValidEmail(editInviteEmail) || !editInviteEmail ? 'var(--border-strong)' : 'var(--danger)'}`, borderRadius: '0.5rem', background: 'var(--surface)', color: 'var(--text)', fontSize: '0.85rem', fontFamily: 'inherit', flex: 1, minWidth: 0 }} />
+                                                    <button type="submit" disabled={!isValidEmail(editInviteEmail)} style={{ height: '2rem', padding: '0 0.6rem', border: 0, borderRadius: '0.5rem', background: 'var(--primary)', color: '#fff', fontFamily: 'inherit', fontSize: '0.82rem', cursor: 'pointer' }}>Save</button>
+                                                    <button type="button" style={{ height: '2rem', padding: '0 0.6rem', border: 0, borderRadius: '0.5rem', background: 'var(--surface-muted)', color: 'var(--text)', fontFamily: 'inherit', fontSize: '0.82rem', cursor: 'pointer' }} onClick={() => setEditingInviteId(null)}>Cancel</button>
+                                                </form>
+                                            ) : (
+                                                <span className="dash-judge-name">{displayEmail}</span>
+                                            )}
+                                        </td>
                                         <td>{inviteChip(invite.status)}</td>
-                                        <td><button className="dash-remove-btn" onClick={() => setConfirmRemoveInvite(invite)}>Remove</button></td>
+                                        <td>
+                                            <div style={{ display: 'flex', gap: '0.4rem' }}>
+                                                {editingInviteId !== invite.id && (
+                                                    <button className="dash-remove-btn" onClick={() => { setEditingInviteId(invite.id); setEditInviteEmail(displayEmail) }}>Edit email</button>
+                                                )}
+                                                <button className="dash-remove-btn" onClick={() => setConfirmRemoveInvite(invite)}>Remove</button>
+                                            </div>
+                                        </td>
                                     </tr>
                                 )
                             })}
@@ -83,13 +111,14 @@ export default function SetupTab({
                                         {editingOrgId === org.id ? (
                                             <form style={{ display: 'flex', gap: '0.4rem' }} onSubmit={e => {
                                                 e.preventDefault()
+                                                if (!isValidEmail(editEmail)) return
                                                 // TODO: PATCH /api/tournaments/:id/organizers/:orgId { email: editEmail }
                                                 onUpdateOrgEmail(org.id, editEmail)
                                                 setEditingOrgId(null)
                                             }}>
                                                 <input autoFocus type="email" value={editEmail} onChange={e => setEditEmail(e.target.value)}
-                                                    style={{ height: '2rem', padding: '0 0.5rem', border: '1px solid var(--border-strong)', borderRadius: '0.5rem', background: 'var(--surface)', color: 'var(--text)', fontSize: '0.85rem', fontFamily: 'inherit', flex: 1, minWidth: 0 }} />
-                                                <button type="submit" style={{ height: '2rem', padding: '0 0.6rem', border: 0, borderRadius: '0.5rem', background: 'var(--primary)', color: '#fff', fontFamily: 'inherit', fontSize: '0.82rem', cursor: 'pointer' }}>Save</button>
+                                                    style={{ height: '2rem', padding: '0 0.5rem', border: `1px solid ${isValidEmail(editEmail) || !editEmail ? 'var(--border-strong)' : 'var(--danger)'}`, borderRadius: '0.5rem', background: 'var(--surface)', color: 'var(--text)', fontSize: '0.85rem', fontFamily: 'inherit', flex: 1, minWidth: 0 }} />
+                                                <button type="submit" disabled={!isValidEmail(editEmail)} style={{ height: '2rem', padding: '0 0.6rem', border: 0, borderRadius: '0.5rem', background: 'var(--primary)', color: '#fff', fontFamily: 'inherit', fontSize: '0.82rem', cursor: 'pointer' }}>Save</button>
                                                 <button type="button" style={{ height: '2rem', padding: '0 0.6rem', border: 0, borderRadius: '0.5rem', background: 'var(--surface-muted)', color: 'var(--text)', fontFamily: 'inherit', fontSize: '0.82rem', cursor: 'pointer' }} onClick={() => setEditingOrgId(null)}>Cancel</button>
                                             </form>
                                         ) : (
@@ -114,21 +143,21 @@ export default function SetupTab({
 
             {subTab === 'scorers' && (
                 <div className="dash-section">
-                    <p className="dash-judge-name">Manage your list of available scorers.</p>
                     <div className="dash-invites-header">
                         <h2>Scorers</h2>
-                        <ScorersPage />
                     </div>
+                    <p className="dash-judge-name">Manage your list of available scorers.</p>
+                    <ScorersPage />
                 </div>
             )}
 
             {subTab === 'courtrooms' && (
                 <div className="dash-section">
-                    <p className="dash-judge-name">Manage available courtrooms in use during competition.</p>
                     <div className="dash-invites-header">
                         <h2>Courtrooms</h2>
-                        <CourtroomsPage />
                     </div>
+                    <p className="dash-judge-name">Manage available courtrooms in use during competition.</p>
+                    <CourtroomsPage />
                 </div>
             )}
 

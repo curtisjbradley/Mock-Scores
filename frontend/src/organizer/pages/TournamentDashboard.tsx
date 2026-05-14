@@ -14,11 +14,11 @@ import '../styles/standings.css'
 import { dummyTournaments, dummyTeams, dummyPairings, dummyInvites, dummyOrganizers, dummyCourtrooms, type IInvite, type IOrganizer } from '../data/dummyData'
 import { dateRange } from '../data/utils'
 import OverviewTab from '../tabs/OverviewTab'
-import RoundsTab from '../tabs/RoundsTab'
 import StandingsTab from '../tabs/StandingsTab'
 import SetupTab from '../tabs/SetupTab'
+import { ConfirmRemoveModal } from '../components/modals'
 
-type Tab = 'overview' | 'rounds' | 'standings' | 'setup'
+type Tab = 'overview' | 'standings' | 'setup'
 type SetupSubTab = 'invites' | 'organizers' | 'scorers' | 'courtrooms'
 
 const TournamentDashboard = () => {
@@ -33,9 +33,10 @@ const TournamentDashboard = () => {
     const [pairings, setPairings] = useState(() => dummyPairings)
     const [courtroomsState] = useState(() => dummyCourtrooms)
     const [roundNames] = useState<Record<number, string>>({})
+    const [confirmRemoveRound, setConfirmRemoveRound] = useState<number | null>(null)
 
     if (!tournament) {
-        navigate('/organizer/select', { replace: true })
+        navigate('/organizer', { replace: true })
         return null
     }
 
@@ -51,7 +52,7 @@ const TournamentDashboard = () => {
 
             <main className="org-main">
                 <div className="org-container">
-                    <button className="org-back-btn" onClick={() => navigate('/organizer/select')}>← All tournaments</button>
+                    <button className="org-back-btn" onClick={() => navigate('/organizer')}>← All tournaments</button>
 
                     <div className="org-header">
                         <h1>{tournament.name}</h1>
@@ -75,7 +76,7 @@ const TournamentDashboard = () => {
                     </div>
 
                     <div className="dash-tabs">
-                        {(['overview', 'rounds', 'standings', 'setup'] as const).map(tab => (
+                        {(['overview', 'standings', 'setup'] as const).map(tab => (
                             <button key={tab} className={`dash-tab${activeTab === tab ? ' dash-tab--active' : ''}`}
                                 onClick={() => setActiveTab(tab)}>
                                 {tab.charAt(0).toUpperCase() + tab.slice(1)}
@@ -124,15 +125,7 @@ const TournamentDashboard = () => {
                                 // TODO: PATCH /api/tournaments/:id/rounds/:round { resultsPublished: !resultsPublished }
                                 setPairings(prev => prev.map(p => p.round === round ? { ...p, resultsPublished: !resultsPublished } : p))
                             }
-                        />
-                    )}
-
-                    {activeTab === 'rounds' && (
-                        <RoundsTab
-                            tournamentId={id!}
-                            rounds={rounds}
-                            pairings={pairings}
-                            roundNames={roundNames}
+                            onRemoveRound={round => setConfirmRemoveRound(round)}
                         />
                     )}
 
@@ -146,13 +139,27 @@ const TournamentDashboard = () => {
                             organizers={organizers}
                             onAddInvite={inv => setInvites(prev => [...prev, inv])}
                             onRemoveInvite={invId => setInvites(prev => prev.filter(i => i.id !== invId))}
+                            onUpdateInviteEmail={(invId, email) => setInvites(prev => prev.map(i => i.id === invId ? { ...i, contactEmail: email } : i))}
                             onAddOrganizer={org => setOrganizers(prev => [...prev, org])}
                             onRemoveOrganizer={orgId => setOrganizers(prev => prev.filter(o => o.id !== orgId))}
                             onUpdateOrgEmail={(orgId, email) => setOrganizers(prev => prev.map(o => o.id === orgId ? { ...o, email } : o))}
                         />
                     )}
                 </div>
+                {confirmRemoveRound !== null && (
+                    <ConfirmRemoveModal
+                        message={`Remove ${roundNames[confirmRemoveRound] ?? `Round ${confirmRemoveRound}`} and all its matchups?`}
+                        onCancel={() => setConfirmRemoveRound(null)}
+                        onConfirm={() => {
+                            // TODO: DELETE /api/tournaments/:id/rounds/:round
+                            setPairings(prev => prev.filter(p => p.round !== confirmRemoveRound))
+                            setConfirmRemoveRound(null)
+                        }}
+                    />
+                )}
             </main>
+
+
 
 
     )

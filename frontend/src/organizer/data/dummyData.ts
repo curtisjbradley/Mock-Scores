@@ -21,6 +21,7 @@ export interface IInvite {
     tournamentId: string
     schoolId: string
     status: InviteStatus
+    contactEmail?: string
 }
 
 export interface ITeam {

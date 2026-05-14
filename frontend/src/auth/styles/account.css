@@ -38,6 +38,7 @@
 .account-info-value {
     font-size: 1rem;
     color: var(--text);
+    overflow-wrap: anywhere;
 }
 
 .account-signout {

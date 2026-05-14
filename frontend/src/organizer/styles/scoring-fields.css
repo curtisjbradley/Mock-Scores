@@ -1,0 +1,195 @@
+.sf-form {
+    max-width: 56rem;
+}
+
+.sf-category-card {
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+    padding: 1rem;
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    background: var(--surface);
+    transition: opacity 140ms ease, box-shadow 140ms ease;
+}
+
+.sf-category-card--dragging {
+    opacity: 0.4;
+}
+
+.sf-category-card--over {
+    box-shadow: 0 -4px 0 0 var(--primary);
+    border-color: var(--primary);
+}
+
+.sf-drag-handle {
+    font-size: 1.1rem;
+    color: var(--text-muted);
+    cursor: grab;
+    padding: 0 0.25rem;
+    user-select: none;
+    flex-shrink: 0;
+}
+
+.sf-category-header {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+}
+
+.sf-cat-name {
+    flex: 1;
+    font-weight: 600;
+}
+
+.sf-table-wrap {
+    width: 100%;
+    overflow-x: auto;
+}
+
+.sf-table {
+    width: 100%;
+    border-collapse: collapse;
+}
+
+.sf-table thead th {
+    padding: 0.4rem 0.5rem;
+    font-size: 0.75rem;
+    font-weight: 700;
+    letter-spacing: 0.05em;
+    text-transform: uppercase;
+    color: var(--text-muted);
+    text-align: left;
+    border-bottom: 1px solid var(--border);
+    white-space: nowrap;
+}
+
+.sf-table thead th:not(:first-child) {
+    text-align: center;
+}
+
+.sf-row td {
+    padding: 0.35rem 0.5rem;
+    vertical-align: middle;
+    border-bottom: 1px solid var(--border);
+}
+
+.sf-row:last-child td {
+    border-bottom: none;
+}
+
+.sf-label-input {
+    width: 100%;
+    min-width: 8rem;
+}
+
+.sf-num {
+    width: 5rem;
+    height: 2.25rem;
+    text-align: center;
+    padding: 0 0.4rem;
+    display: block;
+    margin: 0 auto;
+}
+
+.sf-assignable-cell,
+.sf-remove-cell {
+    text-align: center;
+}
+
+.sf-assignable-cell input[type="checkbox"] {
+    width: 1.1rem;
+    height: 1.1rem;
+    accent-color: var(--primary);
+    cursor: pointer;
+}
+
+.sf-cat-name--locked {
+    background: var(--surface-muted);
+    color: var(--text-muted);
+    cursor: default;
+    border-style: dashed;
+}
+
+.sf-max-scores {
+    display: flex;
+    gap: 1rem;
+    padding: 0.75rem 1.25rem;
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    background: var(--surface);
+    font-size: 0.9rem;
+    color: var(--text-muted);
+}
+
+.sf-max-scores span {
+    display: flex;
+    align-items: center;
+    gap: 0.4rem;
+}
+
+.sf-max-scores strong {
+    font-size: 1.1rem;
+    color: var(--primary);
+}
+
+.sf-modal-overlay {
+    position: fixed;
+    inset: 0;
+    background: rgba(0, 0, 0, 0.45);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 100;
+}
+
+.sf-modal {
+    background: var(--surface);
+    border-radius: var(--radius);
+    box-shadow: var(--shadow);
+    padding: 2rem;
+    display: flex;
+    flex-direction: column;
+    gap: 1.25rem;
+    min-width: 22rem;
+    max-width: 90vw;
+}
+
+.sf-modal-title {
+    margin: 0;
+    font-size: 1.2rem;
+    font-weight: 700;
+    color: var(--text);
+}
+
+.sf-modal-options {
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+}
+
+.sf-modal-option {
+    padding: 0.75rem 1rem;
+    border: 2px solid var(--border);
+    border-radius: var(--radius);
+    background: var(--surface-muted);
+    color: var(--text);
+    font-size: 1rem;
+    font-weight: 500;
+    font-family: inherit;
+    cursor: pointer;
+    text-align: left;
+    transition: border-color 140ms ease, background 140ms ease;
+}
+
+.sf-modal-option:hover {
+    border-color: var(--primary);
+    background: var(--primary-subtle);
+}
+
+.sf-modal-option--selected {
+    border-color: var(--primary);
+    background: var(--primary-subtle);
+    color: var(--primary);
+    font-weight: 700;
+}

@@ -1,5 +1,6 @@
 import "../styles/modal.css";
 import { type Dispatch, type SetStateAction, useEffect, useMemo, useRef, useState } from "react";
+import type { ScorecardPayload } from '@mock-scores/shared';
 import type { IScoreSheetFormat } from "../types.ts";
 import type { Nominee, NomineeRanks, ScoreResults } from "./ScoreSheet.tsx";
 
@@ -117,8 +118,7 @@ const ConfirmSubmitModal = ({
             });
         });
 
-        const payload = {
-            tournamentID: details.scorerID,
+        const payload: ScorecardPayload = {
             trialID: details.trialID,
             scorerID: details.scorerID,
             scores,
@@ -126,8 +126,8 @@ const ConfirmSubmitModal = ({
             ...(isPresider && { tiebreaker }),
         };
 
-        // TODO: POST /api/pairings/:pairingId/scoresheets/:scorerID with payload
-        console.log(payload);
+        // TODO: fetch(`/api/scoresheets/${details.trialID}`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload) })
+        console.log('Scorecard payload:', JSON.stringify(payload, null, 2));
         localStorage.removeItem(storageKey);
         localStorage.removeItem(`${storageKey}-category`);
         reset();

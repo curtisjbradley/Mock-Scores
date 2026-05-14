@@ -1,5 +1,6 @@
 import { useState } from 'react'
 import '../../judges/styles/modal.css'
+import { isValidEmail } from '../../utils/validation'
 
 export function ConfirmRemoveModal({ message, onCancel, onConfirm }: {
     message: string
@@ -26,7 +27,7 @@ export function AddOrganizerModal({ onClose, onAdd }: {
 }) {
     const [name, setName] = useState('')
     const [email, setEmail] = useState('')
-    const valid = name.trim() && email.trim()
+    const valid = name.trim() && isValidEmail(email)
     const handleSubmit = (e: React.FormEvent) => {
         e.preventDefault()
         if (!valid) return
@@ -48,7 +49,8 @@ export function AddOrganizerModal({ onClose, onAdd }: {
                     <label htmlFor="org-name" style={{ fontSize: '0.875rem', fontWeight: 600 }}>Name</label>
                     <input id="org-name" type="text" required autoFocus value={name} onChange={e => setName(e.target.value)} placeholder="Full name" style={inputStyle} />
                     <label htmlFor="org-email" style={{ fontSize: '0.875rem', fontWeight: 600, marginTop: '0.25rem' }}>Email</label>
-                    <input id="org-email" type="email" required value={email} onChange={e => setEmail(e.target.value)} placeholder="organizer@crf.org" style={inputStyle} />
+                    <input id="org-email" type="email" required value={email} onChange={e => setEmail(e.target.value)} placeholder="organizer@crf.org"
+                        style={{ ...inputStyle, borderColor: email && !isValidEmail(email) ? 'var(--danger)' : 'var(--border-strong)' }} />
                     <div className="confirm-actions">
                         <button type="button" onClick={onClose}>Cancel</button>
                         <button type="submit" disabled={!valid}>Add organizer</button>

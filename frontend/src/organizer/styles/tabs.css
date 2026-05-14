@@ -2,9 +2,14 @@
     display: flex;
     gap: 0.25rem;
     border-bottom: 1px solid var(--border);
+    overflow-x: auto;
+    scrollbar-width: none;
 }
 
+.dash-tabs::-webkit-scrollbar { display: none; }
+
 .dash-tab {
+    flex-shrink: 0;
     padding: 0.6rem 1.1rem;
     border: none;
     border-bottom: 2px solid transparent;
@@ -44,9 +49,14 @@
     padding: 1rem 0 0.5rem;
     border-bottom: 1px solid var(--border-muted);
     margin-bottom: 1.5rem;
+    overflow-x: auto;
+    scrollbar-width: none;
 }
 
+.dash-subtabs::-webkit-scrollbar { display: none; }
+
 .dash-subtab {
+    flex-shrink: 0;
     padding: 0.5rem 0.9rem;
     border: none;
     border-radius: var(--radius);

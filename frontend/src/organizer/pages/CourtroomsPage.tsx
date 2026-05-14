@@ -49,23 +49,29 @@ const CourtroomsPage = () => {
 
     return (
         <>
-                <div className="org-container">
-                    <table className="dash-standings-table">
-                        <thead><tr><th>Name</th><th>Details</th><th></th></tr></thead>
-                        <tbody>
-                            {courtrooms.map(courtroom => (
-                                <tr key={courtroom.id}>
-                                    <td className="dash-team-code">{courtroom.name}</td>
-                                    <td className="dash-judge-name">{courtroom.details ?? '—'}</td>
-                                    <td style={{ display: 'flex', gap: '0.4rem' }}>
+            <div style={{ display: 'flex', justifyContent: 'flex-end', marginBottom: '0.75rem' }}>
+                <button className="org-new-btn" onClick={openAddModal}>+ Add courtroom</button>
+            </div>
+
+            <div style={{ overflowX: 'auto' }}>
+                <table className="dash-standings-table">
+                    <thead><tr><th>Name</th><th>Details</th><th></th></tr></thead>
+                    <tbody>
+                        {courtrooms.map(courtroom => (
+                            <tr key={courtroom.id}>
+                                <td className="dash-team-code">{courtroom.name}</td>
+                                <td className="dash-judge-name">{courtroom.details ?? '—'}</td>
+                                <td>
+                                    <div style={{ display: 'flex', gap: '0.4rem' }}>
                                         <button className="dash-remove-btn" onClick={() => openEditModal(courtroom)}>Edit</button>
                                         <button className="dash-remove-btn" onClick={() => setConfirmRemove(courtroom)}>Remove</button>
-                                    </td>
-                                </tr>
-                            ))}
-                        </tbody>
-                    </table>
-                </div>
+                                    </div>
+                                </td>
+                            </tr>
+                        ))}
+                    </tbody>
+                </table>
+            </div>
 
             {showModal && (
                 <div className="modal-backdrop" role="presentation" onClick={e => { if (e.target === e.currentTarget) setShowModal(false) }}>
@@ -97,7 +103,6 @@ const CourtroomsPage = () => {
                     </div>
                 </div>
             )}
-            <button className="org-new-btn" onClick={openAddModal}>+ Add courtroom</button>
         </>
     )
 }
