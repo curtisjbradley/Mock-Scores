@@ -1,11 +1,10 @@
 import express, { Request, Response } from "express";
 import path from "path";
 import dotenv from 'dotenv';
+dotenv.config({ path: path.resolve(__dirname, '../.env') });
 import authRouter from './routes/authRoutes';
 import tournamentRouter from './routes/tournamentRoutes';
 import { verifyUser} from "./authUtils";
-
-dotenv.config();
 
 const app = express();
 const port = process.env.PORT || 3000;
