@@ -22,3 +22,18 @@ db.connect()
     });
 
 export default db;
+
+import type { QueryResultRow } from 'pg';
+
+/** Runs a parameterized query and returns the result, or null on error. */
+export async function dbQuery<T extends QueryResultRow = QueryResultRow>(
+    sql: string,
+    params?: unknown[]
+) {
+    try {
+        return await db.query<T>(sql, params);
+    } catch (err) {
+        console.error('DB query error:', (err as Error).message, { sql });
+        return null;
+    }
+}

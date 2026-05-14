@@ -68,6 +68,6 @@ create table tournament_owners
     tournament uuid NOT NULL references tournaments(id),
     delegate_email text NOT NULL,
     role text not null check (role in ('owner', 'delegate'))
-)
+);
 
 ```
