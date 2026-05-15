@@ -80,7 +80,7 @@ jobs:
             cd "$APP_DIR"
 
             echo "Installing production dependencies only..."
-            npm ci --omit=dev
+            NODE_ENV=production npm ci --omit=dev --ignore-scripts
 
             echo "Restarting app..."
             pm2 restart mock-scores || pm2 start npm --name mock-scores -- start
