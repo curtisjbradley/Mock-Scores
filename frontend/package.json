@@ -7,7 +7,7 @@
     "build": "npx tsc -b && npx vite build",
     "lint": "eslint .",
     "preview": "vite preview",
-    "prepare": "cd .. && husky"
+    "prepare": "if [ \"$NODE_ENV\" != \"production\" ]; then cd .. && husky; fi"
   },
   "lint-staged": {
     "*.{ts,tsx}": "eslint --fix"
