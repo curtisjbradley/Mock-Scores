@@ -10,7 +10,7 @@ import TournamentStepper from '../components/TournamentStepper'
 import TournamentDetails from '../steps/TournamentDetails'
 import TournamentCaseFormat from '../steps/TournamentCaseFormat'
 import TournamentScoringFields from '../steps/TournamentScoringFields'
-import {getToken} from "../../auth/auth.ts";
+import { apiFetch } from '../../auth/auth'
 import LoadingPage from "../../layout/LoadingPage.tsx";
 
 function buildPayload(info: TournamentInfo, caseFormat: CaseFormatState, categories: ScoringCategory[]): TournamentPayload {
@@ -70,9 +70,7 @@ export default function TournamentNew() {
         const payload = buildPayload(info, caseFormat, categories)
 
         setSubmitting(true)
-        fetch('/api/tournament', { method: 'POST',
-            headers: { 'Content-Type': 'application/json', 'Authorization' : `Bearer ${getToken()}` },
-            body: JSON.stringify(payload) })
+        apiFetch('/api/tournament', { method: 'POST', body: JSON.stringify(payload) })
             .then(res => {
                 if(!res.ok) {
                     setSubmitting(false)

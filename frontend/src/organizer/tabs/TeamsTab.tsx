@@ -20,7 +20,11 @@ export default function TeamsTab({ tournamentId }: { tournamentId: string }) {
 
     return (
         <Section title="Teams" description="Manage invited teams">
-            {<button className="org-new-btn" onClick={() => setShowModal(true)}>+ Invite team</button>}
+
+            <div style={{ display: 'flex', justifyContent: 'flex-end', marginBottom: '0.75rem' }}>
+                <button className="org-new-btn" onClick={() => setShowModal(true)}>+ Add team</button>
+            </div>
+
             <div className="dash-table-scroll">
                 <table className="dash-standings-table">
                     <thead><tr><th>Team</th><th>Contact</th><th>Status</th><th></th></tr></thead>

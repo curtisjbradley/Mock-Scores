@@ -205,7 +205,29 @@ export class TournamentProvider {
     }
 
     async getScorers(tournamentID: string): Promise<IScorer[] | undefined> {
+        return (await dbQuery<IScorer>("select * from scorers where tournament_id = $1", [tournamentID]))?.rows
+    }
+    async addScorer(scorer : IScorer): Promise<boolean> {
+        const result = await dbQuery(
+            'INSERT INTO scorers (scorer_id, tournament_id, first_name, last_name, email) VALUES ($1,$2,$3,$4,$5)',
+            [scorer.scorer_id, scorer.tournament_id, scorer.first_name, scorer.last_name, scorer.email]
+        );
+        return result !== null;
+    }
+    async updateScorer(scorer: IScorer): Promise<boolean> {
+        const result = await dbQuery(
+            'UPDATE scorers SET tournament_id = $1, first_name = $2, last_name = $3, email = $4 where scorer_id = $5',
+            [scorer.tournament_id, scorer.first_name, scorer.last_name, scorer.email, scorer.scorer_id]
+        );
+        return result !== null;
+    }
+    async deleteScorer(scorerId : string): Promise<boolean> {
 
-        return (await dbQuery<IScorer>("select * from scorers where scorers.tournament_id = $1", [tournamentID]))?.rows;
+        const result = await dbQuery(
+            'DELETE from scorers where scorer_id = $1',
+            [scorerId]
+        );
+
+        return result !== null;
     }
 }

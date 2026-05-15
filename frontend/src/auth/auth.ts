@@ -38,3 +38,15 @@ export function logout() {
     removeToken();
     window.dispatchEvent(new StorageEvent('storage', { key: 'auth_token' }));
 }
+
+export function apiFetch(url: string, init: RequestInit = {}): Promise<Response> {
+    const token = getToken();
+    return fetch(url, {
+        ...init,
+        headers: {
+            ...(init.body ? { 'Content-Type': 'application/json' } : {}),
+            ...(init.headers ?? {}),
+            ...(token ? { Authorization: `Bearer ${token}` } : {}),
+        },
+    });
+}

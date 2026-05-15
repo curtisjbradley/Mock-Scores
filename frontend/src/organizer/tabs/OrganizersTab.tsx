@@ -13,7 +13,9 @@ export default function OrganizersTab({ tournamentId }: { tournamentId: string }
 
     return (
         <Section title="Organizers" description="Manage your organizers">
-            <button className="org-new-btn" onClick={() => setShowModal(true)}>+ Add organizer</button>
+            <div style={{ display: 'flex', justifyContent: 'flex-end', marginBottom: '0.75rem' }}>
+                <button className="org-new-btn" onClick={() => setShowModal(true)}>+ Add Organizer</button>
+            </div>
             <div className="dash-table-scroll">
                 <table className="dash-standings-table">
                     <thead><tr><th>Name</th><th>Email</th><th>Role</th><th></th></tr></thead>

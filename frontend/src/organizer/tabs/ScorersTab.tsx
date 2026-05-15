@@ -2,9 +2,11 @@ import {useEffect, useState} from 'react'
 import '../styles/organizer.css'
 import '../styles/pairings.css'
 import '../../judges/styles/modal.css'
-import { type IScorer } from '../data/dummyData'
+import { type IScorer } from '@mock-scores/shared'
+import { apiFetch } from '../../auth/auth'
 import { isValidEmail } from '../../utils/validation'
 import Section from "./Section.tsx";
+import { v4 as randomUUID } from "uuid";
 
 interface ITabProps {
     tournamentId : string
@@ -21,8 +23,11 @@ const ScorersTab = ({ tournamentId }: ITabProps) => {
 
 
     useEffect(() => {
-        fetch(`/api/tournament/${tournamentId}/scorers`).then(res => res.json()).then((data : IScorer[]) => setScorers(data)).catch(() => setScorers([]))
-    },[setScorers])
+        apiFetch(`/api/tournament/${tournamentId}/scorers`)
+            .then(r => r.ok ? r.json() : [])
+            .then((data: IScorer[]) => setScorers(Array.isArray(data) ? data : []))
+            .catch(() => setScorers([]))
+    }, [tournamentId])
 
     const openAddModal = () => {
         setEditingId(null)
@@ -33,10 +38,9 @@ const ScorersTab = ({ tournamentId }: ITabProps) => {
     }
 
     const openEditModal = (scorer: IScorer) => {
-        const [first, ...rest] = scorer.name.split(' ')
-        setEditingId(scorer.id)
-        setFirstName(first ?? '')
-        setLastName(rest.join(' '))
+        setEditingId(scorer.scorer_id)
+        setFirstName(scorer.first_name)
+        setLastName(scorer.last_name)
         setEmail(scorer.email ?? '')
         setShowModal(true)
     }
@@ -44,17 +48,28 @@ const ScorersTab = ({ tournamentId }: ITabProps) => {
     const handleSave = () => {
         if (!firstName.trim() || !lastName.trim() || !isValidEmail(email)) return
         if (editingId) {
-            setScorers(prev => prev.map(s => s.id === editingId ? { ...s, name: `${firstName.trim()} ${lastName.trim()}`, email: email.trim() } : s))
+
+            setScorers(prev => prev.map(s => s.scorer_id === editingId ? { ...s, name: `${firstName.trim()} ${lastName.trim()}`, email: email.trim() } : s))
+            scorers.filter(s => s.scorer_id === editingId).find(async scorer => {
+                await apiFetch(`/api/tournament/${tournamentId}/scorers`, {method: "PUT", body: JSON.stringify({ ...scorer, name: `${firstName.trim()} ${lastName.trim()}`, email: email.trim() })})
+            })
         } else {
-            const newScorer: IScorer = { id: `sc-${Date.now()}`, name: `${firstName.trim()} ${lastName.trim()}`, email: email.trim() }
+            const newScorer: IScorer = {scorer_id : randomUUID() , tournament_id: tournamentId, first_name: firstName, last_name : lastName,  email: email.trim() }
             setScorers(prev => [...prev, newScorer])
+            //todo: display errors
+            apiFetch(`/api/tournament/${tournamentId}/scorers`, {method: "POST", body: JSON.stringify(newScorer)}).then(res => console.log(res))
         }
         setShowModal(false)
     }
 
     const handleRemove = () => {
         if (!confirmRemove) return
-        setScorers(prev => prev.filter(s => s.id !== confirmRemove.id))
+
+        scorers.filter(s => s.scorer_id === confirmRemove.scorer_id).find(async scorer => {
+            apiFetch(`/api/tournament/${tournamentId}/scorers`,{method: "DELETE", body: JSON.stringify({scorer_id: scorer.scorer_id})}).then(res => console.log(res))
+        })
+
+        setScorers(prev => prev.filter(s => s.scorer_id !== confirmRemove.scorer_id))
         setConfirmRemove(null)
     }
 
@@ -71,8 +86,8 @@ const ScorersTab = ({ tournamentId }: ITabProps) => {
                     <thead><tr><th>Name</th><th>Email</th><th></th></tr></thead>
                     <tbody>
                         {scorers.map(scorer => (
-                            <tr key={scorer.id}>
-                                <td>{scorer.name}</td>
+                            <tr key={scorer.scorer_id}>
+                                <td>{scorer.first_name} {scorer.last_name}</td>
                                 <td className="dash-judge-name">{scorer.email ?? '—'}</td>
                                 <td>
                                     <div style={{ display: 'flex', gap: '0.4rem' }}>
@@ -98,6 +113,7 @@ const ScorersTab = ({ tournamentId }: ITabProps) => {
                             <label htmlFor="email" style={{ fontSize: '0.875rem', fontWeight: 600, marginTop: '0.25rem' }}>Email</label>
                             <input id="email" type="email" required value={email} onChange={e => setEmail(e.target.value)} placeholder="scorer@example.com"
                                 style={{ ...inputStyle, borderColor: email && !isValidEmail(email) ? 'var(--danger)' : 'var(--border-strong)' }} />
+                            {email && !isValidEmail(email) && <span style={{ color: 'var(--danger)', fontSize: '0.8rem' }}>Invalid email address</span>}
                             <div className="confirm-actions">
                                 <button type="button" onClick={() => setShowModal(false)}>Cancel</button>
                                 <button type="submit" disabled={!firstName.trim() || !lastName.trim() || !isValidEmail(email)}>{editingId ? 'Save' : 'Add scorer'}</button>
@@ -111,7 +127,7 @@ const ScorersTab = ({ tournamentId }: ITabProps) => {
                 <div className="modal-backdrop" role="presentation" onClick={e => { if (e.target === e.currentTarget) setConfirmRemove(null) }}>
                     <div className="confirm-modal" role="dialog" aria-modal="true">
                         <h2>Remove scorer?</h2>
-                        <p>Remove {confirmRemove.name} from the scorer list?</p>
+                        <p>Remove {confirmRemove.first_name} {confirmRemove.last_name} from the scorer list?</p>
                         <div className="confirm-actions">
                             <button type="button" onClick={() => setConfirmRemove(null)}>Cancel</button>
                             <button type="button" className="confirm-btn-danger" onClick={handleRemove}>Remove</button>

@@ -2,7 +2,7 @@ import { useEffect, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import '../styles/organizer.css'
 import type { ITournament } from '../data/dummyData'
-import { getToken } from '../../auth/auth'
+import { apiFetch } from '../../auth/auth'
 
 const statusLabel: Record<ITournament['status'], string> = {
     upcoming: 'Upcoming',
@@ -15,8 +15,8 @@ const OrganizerHome = () => {
     const [tournaments, setTournaments] = useState<ITournament[]>([])
 
     useEffect(() => {
-        fetch('/api/tournament', { headers: { Authorization: `Bearer ${getToken()}` } })
-            .then(res => res.json())
+        apiFetch('/api/tournament')
+            .then(res => res.ok ? res.json() : [])
             .then(setTournaments)
             .catch(console.error)
     }, [])

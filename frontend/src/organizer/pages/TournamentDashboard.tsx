@@ -11,7 +11,7 @@ import OverviewTab from '../tabs/OverviewTab'
 import StandingsTab from '../tabs/StandingsTab'
 import SetupTab from '../tabs/SetupTab'
 import { ConfirmRemoveModal } from '../components/modals'
-import { getToken } from '../../auth/auth'
+import { apiFetch } from '../../auth/auth'
 import { emptyInfo, emptyCaseFormat, defaultWitnessCategory } from '../types/tournament'
 import type { TournamentInfo, CaseFormatState, ScoringCategory } from '../types/tournament'
 import type { TournamentPayload } from '@mock-scores/shared'
@@ -41,9 +41,7 @@ const TournamentDashboard = () => {
 
     useEffect(() => {
         if (!id) return
-        fetch(`/api/tournament/${id}`, {
-            headers: { Authorization: `Bearer ${getToken()}` },
-        })
+        apiFetch(`/api/tournament/${id}`)
             .then(r => {
                 if (r.status === 403) { navigate('/403', { replace: true }); return null }
                 return r.ok ? r.json() : null
@@ -110,9 +108,8 @@ const TournamentDashboard = () => {
                 })),
             })),
         }
-        const res = await fetch(`/api/tournament/${id}`, {
+        const res = await apiFetch(`/api/tournament/${id}`, {
             method: 'PATCH',
-            headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${getToken()}` },
             body: JSON.stringify(payload),
         })
         if (!res.ok) throw new Error(res.statusText)
