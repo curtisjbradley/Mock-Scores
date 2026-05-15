@@ -41,6 +41,17 @@ jobs:
 
           echo "host=$IP" >> "$GITHUB_OUTPUT"
 
+      - name: Prepare release directory
+        uses: appleboy/ssh-action@v1.0.3
+        with:
+          host: ${{ steps.ec2.outputs.host }}
+          username: ${{ secrets.EC2_USER }}
+          key: ${{ secrets.EC2_SSH_KEY }}
+          script: |
+            sudo rm -rf /opt/mock-scores-release
+            sudo mkdir -p /opt/mock-scores-release
+            sudo chown -R $USER:$USER /opt/mock-scores-release
+
       - name: Upload files to EC2
         uses: appleboy/scp-action@v0.1.7
         with:
