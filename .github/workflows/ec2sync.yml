@@ -84,7 +84,7 @@ jobs:
             sudo chown -R $USER:$USER "$APP_DIR"
             
             if [ -f "$ENV_BACKUP" ]; then
-            cp "$ENV_BACKUP" "$APP_DIR/.env"
+            cp "$ENV_BACKUP" "$APP_DIR/backend/.env"
             rm "$ENV_BACKUP"
             fi
             
