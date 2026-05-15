@@ -69,7 +69,7 @@ jobs:
           script: |
             APP_DIR=/opt/mock-scores-dev
             RELEASE_DIR=/opt/mock-scores-dev-release
-            ENV_FILE=/opt/mock-scores-dev/.env
+            ENV_FILE=/opt/mock-scores-dev/backend/.env
             ENV_BACKUP=/tmp/mock-scores-dev.env
             
             if [ -f "$ENV_FILE" ]; then

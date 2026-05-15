@@ -72,7 +72,7 @@ jobs:
 
             APP_DIR=/opt/mock-scores
             RELEASE_DIR=/opt/mock-scores-release
-            ENV_FILE=/opt/mock-scores/.env
+            ENV_FILE=/opt/mock-scores/backend/.env
             ENV_BACKUP=/tmp/mock-scores.env
             
             if [ -f "$ENV_FILE" ]; then
