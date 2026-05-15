@@ -72,15 +72,26 @@ jobs:
 
             APP_DIR=/opt/mock-scores
             RELEASE_DIR=/opt/mock-scores-release
-
+            ENV_FILE=/opt/mock-scores/.env
+            ENV_BACKUP=/tmp/mock-scores.env
+            
+            if [ -f "$ENV_FILE" ]; then
+            cp "$ENV_FILE" "$ENV_BACKUP"
+            fi
+            
             sudo rm -rf "$APP_DIR"
             sudo mv "$RELEASE_DIR" "$APP_DIR"
             sudo chown -R $USER:$USER "$APP_DIR"
-
+            
+            if [ -f "$ENV_BACKUP" ]; then
+            cp "$ENV_BACKUP" "$APP_DIR/.env"
+            rm "$ENV_BACKUP"
+            fi
+            
             cd "$APP_DIR"
-
+            
             echo "Installing production dependencies only..."
-            NODE_ENV=production npm ci --omit=dev --ignore-scripts
-
+            NODE_ENV=production npm ci --omit=dev
+            
             echo "Restarting app..."
-            pm2 restart mock-scores || pm2 start npm --name mock-scores -- start
+            pm2 restart mock-scores --update-env || pm2 start npm --name mock-scores -- start
