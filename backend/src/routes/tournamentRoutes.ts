@@ -19,7 +19,7 @@ router.get("/", async (req: Request, res: Response) => {
         return res.status(401).json({ message: 'Invalid or expired token' });
     }
 
-    const tournaments = await tournamentProvider.getTournaments(req.session.email)
+    const tournaments = await tournamentProvider.getTournaments(req.session.userId)
 
     if (tournaments == null) {
         return res.status(401).json({ message: 'Invalid or expired token' });
@@ -38,7 +38,7 @@ router.post("/", async (req: Request, res: Response) => {
     if (!tournament) {
         return res.status(500).json({ message: 'Unable to create tournament' });
     }
-    await tournamentProvider.addTournamentOrganizer(tournament.id,req.session.email, "owner")
+    await tournamentProvider.addTournamentOrganizer(tournament.id,req.session.userId, "owner")
 
     return res.status(201).json(tournament);
 })

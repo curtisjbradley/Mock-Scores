@@ -104,10 +104,10 @@ export class TournamentProvider {
         }));
     }
 
-    async getTournaments(userEmail: string): Promise<ITournament[] | null> {
+    async getTournaments(userId: string): Promise<ITournament[] | null> {
         const result = await dbQuery<ITournament>(
-            'SELECT * FROM tournaments WHERE id IN (SELECT tournament FROM tournament_owners WHERE delegate_email = $1)',
-            [userEmail]
+            'SELECT * FROM tournaments WHERE id IN (SELECT tournament_id FROM tournament_owners WHERE delegate_id = $1)',
+            [userId]
         );
         return result ? result.rows : null;
     }
@@ -196,10 +196,10 @@ export class TournamentProvider {
         return true;
     }
 
-    async addTournamentOrganizer(tournamentID: string, delegateEmail: string, role: 'owner' | 'delegate'): Promise<boolean> {
+    async addTournamentOrganizer(tournamentID: string, userId: string, role: 'owner' | 'delegate'): Promise<boolean> {
         const result = await dbQuery(
-            'INSERT INTO tournament_owners (tournament, delegate_email, role) VALUES ($1,$2,$3)',
-            [tournamentID, delegateEmail, role]
+            'INSERT INTO tournament_owners (tournament_id, delegate_id, role) VALUES ($1,$2,$3)',
+            [tournamentID, userId, role]
         );
         return result !== null;
     }

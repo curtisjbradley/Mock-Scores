@@ -1,6 +1,6 @@
 import { jwtVerify, SignJWT } from 'jose';
 import {NextFunction, Request, Response} from 'express';
-import db from "./db";
+import {dbQuery} from "./db";
 
 const JWT_SECRET = new TextEncoder().encode(process.env.JWT_SECRET ?? 'JWT_SECRET');
 const JWT_EXPIRY = process.env.JWT_EXPIRY ?? '7d';
@@ -77,8 +77,12 @@ export async function verifyTournamentAccess(req: Request, res: Response, next: 
         return res.status(400).json({ message: 'Tournament id is not a valid uuid' });
     }
 
-    const roles : string[]= (await db.query("select role from tournament_owners where tournament = $1 and delegate_email = $2", [tournamentId,req.session.email])).rows.map(role => role.role)
-    if(roles.length == 0){
+    const roles = (await dbQuery<{role: string}>("select role from tournament_owners where tournament_id = $1 and delegate_id = $2", [tournamentId, req.session.userId]))
+
+    if (roles == null) {
+        return res.status(500).json({ message: 'Unable to reach database' });
+    }
+    if(roles.rowCount == 0){
         return res.status(403).json({ message: 'Not authorized' });
     }
 

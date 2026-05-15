@@ -1,126 +1,148 @@
 # Backend
 
-
 ## Database
-The database uses Postgres. 
+
+The database uses Postgres.
 The following command creates all the proper tables.
 
 ```postgresql
-create table auth
+CREATE TABLE auth
 (
-    userid    uuid PRIMARY KEY   default gen_random_uuid(),
-    password  TEXT      NOT NULL,
-    email     TEXT      NOT NULL,
-    createdAt TIMESTAMP not null DEFAULT NOW(),
-    firstName text      not null,
-    lastName  text      not null
+    user_id       UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    password_hash TEXT NOT NULL,
+    email         TEXT NOT NULL UNIQUE,
+    created_at    TIMESTAMP NOT NULL DEFAULT NOW(),
+    first_name    TEXT NOT NULL,
+    last_name     TEXT NOT NULL
 );
 
 CREATE TABLE tournaments
 (
-    id                 uuid PRIMARY KEY     default gen_random_uuid(),
-    name               TEXT        NOT NULL,
-    location           TEXT        NOT NULL,
-    start_date         DATE,
-    end_date           DATE,
-    created_at         TIMESTAMPTZ NOT NULL DEFAULT NOW(),
-    case_name          TEXT        NOT NULL,
-    criminal_case      BOOLEAN     NOT NULL DEFAULT TRUE,
-    p_witnesses_called SMALLINT    NOT NULL,
-    d_witnesses_called SMALLINT    NOT NULL,
-    has_swing          BOOLEAN     NOT NULL DEFAULT FALSE
-);
+    id                   UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    name                 TEXT NOT NULL,
+    location             TEXT NOT NULL,
+    start_date           DATE,
+    end_date             DATE,
+    created_at           TIMESTAMP NOT NULL DEFAULT NOW(),
+    case_name            TEXT NOT NULL,
+    criminal_case        BOOLEAN NOT NULL DEFAULT TRUE,
+    p_witnesses_called   SMALLINT NOT NULL,
+    d_witnesses_called   SMALLINT NOT NULL,
+    has_swing            BOOLEAN NOT NULL DEFAULT FALSE,
 
+    CHECK (
+        start_date IS NULL
+            OR end_date IS NULL
+            OR start_date <= end_date
+        )
+);
 
 CREATE TABLE case_witnesses
 (
-    id            uuid PRIMARY KEY default gen_random_uuid(),
-    tournament_id uuid       NOT NULL REFERENCES tournaments (id) ON DELETE CASCADE,
+    id            UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    tournament_id UUID NOT NULL REFERENCES tournaments(id) ON DELETE CASCADE,
     side          VARCHAR(1) NOT NULL CHECK (side IN ('P', 'D', 'S')),
-    name          TEXT       NOT NULL
+    name          TEXT NOT NULL
 );
 
 CREATE TABLE scoring_categories
 (
-    id               uuid PRIMARY KEY  default gen_random_uuid(),
-    tournament_id    uuid     NOT NULL REFERENCES tournaments (id) ON DELETE CASCADE,
-    name             TEXT     NOT NULL,
-    witness_category BOOLEAN  NOT NULL DEFAULT FALSE,
-    position         SMALLINT NOT NULL
+    id                UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    tournament_id     UUID NOT NULL REFERENCES tournaments(id) ON DELETE CASCADE,
+    name              TEXT NOT NULL,
+    witness_category  BOOLEAN NOT NULL DEFAULT FALSE,
+    position          SMALLINT NOT NULL,
+
+    UNIQUE (tournament_id, position)
 );
 
 CREATE TABLE scoring_fields
 (
-    id                 uuid PRIMARY KEY       default gen_random_uuid(),
-    category_id        uuid          NOT NULL REFERENCES scoring_categories (id) ON DELETE CASCADE,
-    label              TEXT          NOT NULL,
-    min_score          SMALLINT      NOT NULL DEFAULT 0,
-    max_score          SMALLINT      NOT NULL DEFAULT 10,
-    multiplier         NUMERIC(5, 2) NOT NULL DEFAULT 1,
-    assignable         BOOLEAN       NOT NULL DEFAULT TRUE,
-    eligible_for_award BOOLEAN       NOT NULL DEFAULT FALSE,
-    visible_to_scorers BOOLEAN       NOT NULL DEFAULT TRUE,
-    prosecution        BOOLEAN       NOT NULL DEFAULT FALSE,
-    defense            BOOLEAN       NOT NULL DEFAULT FALSE,
-    calling            BOOLEAN       NOT NULL DEFAULT FALSE,
-    crossing           BOOLEAN       NOT NULL DEFAULT FALSE,
-    position           SMALLINT      NOT NULL
+    id                   UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    category_id          UUID NOT NULL REFERENCES scoring_categories(id) ON DELETE CASCADE,
+    label                TEXT NOT NULL,
+    min_score            SMALLINT NOT NULL DEFAULT 0,
+    max_score            SMALLINT NOT NULL DEFAULT 10,
+    multiplier           NUMERIC(5,2) NOT NULL DEFAULT 1,
+    assignable           BOOLEAN NOT NULL DEFAULT TRUE,
+    eligible_for_award   BOOLEAN NOT NULL DEFAULT FALSE,
+    visible_to_scorers   BOOLEAN NOT NULL DEFAULT TRUE,
+    prosecution          BOOLEAN NOT NULL DEFAULT FALSE,
+    defense              BOOLEAN NOT NULL DEFAULT FALSE,
+    calling              BOOLEAN NOT NULL DEFAULT FALSE,
+    crossing             BOOLEAN NOT NULL DEFAULT FALSE,
+    position             SMALLINT NOT NULL,
+
+    CHECK (min_score <= max_score),
+    CHECK (multiplier >= 0),
+
+    UNIQUE (category_id, position)
 );
 
-
-create table tournament_owners
+CREATE TABLE tournament_owners
 (
-    tournament uuid NOT NULL references tournaments (id),
-    delegate   uuid not null references auth (userid),
-    role       text not null check (role in ('owner', 'delegate'))
+    tournament_id UUID NOT NULL REFERENCES tournaments(id) ON DELETE CASCADE,
+    delegate_id   UUID NOT NULL REFERENCES auth(user_id) ON DELETE CASCADE,
+    role          TEXT NOT NULL CHECK (role IN ('owner', 'delegate')),
+
+    PRIMARY KEY (tournament_id, delegate_id)
 );
 
-create table tournament_delegate_invites
+CREATE TABLE tournament_delegate_invites
 (
-    tournament uuid not null references tournaments (id),
-    name       text not null,
-    email      text not null
+    id            UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    tournament_id UUID NOT NULL REFERENCES tournaments(id) ON DELETE CASCADE,
+    name          TEXT NOT NULL,
+    email         TEXT NOT NULL
 );
 
-CREATE table scorers
+CREATE TABLE scorers
 (
-    scorer_id     uuid primary key default gen_random_uuid(),
-    tournament_id uuid not null references tournaments (id),
-    first_name    text not null,
-    last_name     text not null,
-    email         text not null
-
+    scorer_id      UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    tournament_id  UUID NOT NULL REFERENCES tournaments(id) ON DELETE CASCADE,
+    user_id        UUID REFERENCES auth(user_id) ON DELETE SET NULL,
+    first_name     TEXT NOT NULL,
+    last_name      TEXT NOT NULL,
+    email          TEXT NOT NULL
 );
-
 
 CREATE TABLE courtrooms
 (
-    id           uuid primary key default gen_random_uuid(),
-    tournamentId uuid not null references tournaments (id),
-    name         text not null,
-    location     text
+    id             UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    tournament_id  UUID NOT NULL REFERENCES tournaments(id) ON DELETE CASCADE,
+    name           TEXT NOT NULL,
+    location       TEXT,
+
+    UNIQUE (tournament_id, name)
 );
 
-create table teams
+CREATE TABLE teams
 (
-    id           uuid primary key default gen_random_uuid(),
-    tournamentId uuid not null references tournaments (id),
-    name         text not null,
-    code         text not null
+    id             UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    tournament_id  UUID NOT NULL REFERENCES tournaments(id) ON DELETE CASCADE,
+    name           TEXT NOT NULL,
+    code           TEXT NOT NULL,
+
+    UNIQUE (tournament_id, name),
+    UNIQUE (tournament_id, code)
 );
 
-create table team_invites
+CREATE TABLE team_invites
 (
-    tournamentId uuid not null references tournaments (id),
-    invite_email text not null,
-    name         text not null,
-    code         text not null
+    id            UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    team_id       UUID NOT NULL REFERENCES teams(id) ON DELETE CASCADE,
+    invite_email  TEXT NOT NULL,
+    name          TEXT NOT NULL,
+    code          TEXT NOT NULL
 );
-create table team_coaches
+
+CREATE TABLE team_coaches
 (
-    coach   uuid    not null references auth (userid),
-    team    uuid    not null references teams (id),
-    isOwner boolean not null default false
+    coach_id   UUID NOT NULL REFERENCES auth(user_id) ON DELETE CASCADE,
+    team_id    UUID NOT NULL REFERENCES teams(id) ON DELETE CASCADE,
+    is_owner   BOOLEAN NOT NULL DEFAULT FALSE,
+
+    PRIMARY KEY (coach_id, team_id)
 );
 
 ```

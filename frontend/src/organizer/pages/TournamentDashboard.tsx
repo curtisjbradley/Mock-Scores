@@ -46,7 +46,10 @@ const TournamentDashboard = () => {
         fetch(`/api/tournament/${id}`, {
             headers: { Authorization: `Bearer ${getToken()}` },
         })
-            .then(r => r.ok ? r.json() : null)
+            .then(r => {
+                if (r.status === 403) { navigate('/403', { replace: true }); return null }
+                return r.ok ? r.json() : null
+            })
             .then(data => {
                 if (!data) return
                 setTournamentName(data.name)
@@ -75,7 +78,7 @@ const TournamentDashboard = () => {
                     setCategories(data.scoringCategories.map((c: ScoringCategory) => ({ ...c })))
                 }
             })
-    }, [id])
+    }, [id, navigate])
 
     const handleSaveTournament = async (newInfo: TournamentInfo, newCaseFormat: CaseFormatState, newCategories: ScoringCategory[]) => {
         const payload: TournamentPayload = {
