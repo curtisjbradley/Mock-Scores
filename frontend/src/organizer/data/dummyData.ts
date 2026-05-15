@@ -14,13 +14,13 @@ export interface ISchool {
     contactEmail: string
 }
 
-export type InviteStatus = 'pending' | 'accepted'
+export type TeamInviteStatus = 'pending' | 'accepted'
 
-export interface IInvite {
+export interface ITeamInvite {
     id: string
     tournamentId: string
     schoolId: string
-    status: InviteStatus
+    status: TeamInviteStatus
     contactEmail?: string
 }
 
@@ -261,7 +261,7 @@ export const dummySchools: ISchool[] = [
 // Each invite = one school invited to one tournament.
 // The coach's school (s1 = Lincoln High) is invited to t2 and t3.
 
-export const dummyInvites: IInvite[] = [
+export const dummyTeamInvites: ITeamInvite[] = [
     // t2 — Bay Area Invitational (active)
     { id: 'i1',  tournamentId: 't2', schoolId: 's1', status: 'accepted' },
     { id: 'i2',  tournamentId: 't2', schoolId: 's2', status: 'accepted' },

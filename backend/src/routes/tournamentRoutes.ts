@@ -44,6 +44,16 @@ router.post("/", async (req: Request, res: Response) => {
 })
 
 
+router.patch("/:tournamentId", verifyTournamentAccess, async (req: Request, res: Response) => {
+    if (!req?.tournament) return res.status(403).json({ message: 'No access to tournament' });
+
+    const payload = req.body as TournamentPayload;
+    const ok = await tournamentProvider.updateTournament(req.tournament, payload);
+
+    if (!ok) return res.status(500).json({ message: 'Unable to update tournament' });
+    return res.status(200).json({ success: true });
+})
+
 router.get("/:tournamentId", verifyTournamentAccess, async (req: Request, res: Response) => {
     if(!req?.tournament) {
         return res.status(403).json({ message: 'No access to tournament' });

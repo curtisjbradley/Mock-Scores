@@ -26,12 +26,13 @@ interface Props {
     caseFormat: CaseFormatState
     onSubmit: () => void
     onBack: () => void
+    isEditing?: boolean
 }
 
-export default function TournamentScoringFields({ categories, onChange, caseFormat, onSubmit, onBack }: Props) {
+export default function TournamentScoringFields({ categories, onChange, caseFormat, onSubmit, onBack, isEditing }: Props) {
     const [submitted, setSubmitted] = useState(false)
     const [selectedTemplate, setSelectedTemplate] = useState('manual')
-    const [showModal, setShowModal] = useState(true)
+    const [showModal, setShowModal] = useState(!isEditing)
     const dragId = useRef<string | null>(null)
     const [draggingId, setDraggingId] = useState<string | null>(null)
     const [dragOver, setDragOver] = useState<string | null>(null)
@@ -140,7 +141,7 @@ export default function TournamentScoringFields({ categories, onChange, caseForm
 
                 <div className="tc-actions">
                     <button type="button" className="tc-cancel-btn" onClick={onBack}>← Back</button>
-                    <button type="submit" className="org-new-btn">Create tournament</button>
+                    <button type="submit" className="org-new-btn">{isEditing ? 'Save changes' : 'Create tournament'}</button>
                 </div>
             </form>
         </>
