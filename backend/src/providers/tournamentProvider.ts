@@ -1,5 +1,5 @@
 import { dbQuery } from '../db';
-import type { TournamentPayload } from '@mock-scores/shared';
+import type {IScorer, TournamentPayload} from '@mock-scores/shared';
 import { randomUUID } from 'node:crypto';
 
 export interface ITournament {
@@ -202,5 +202,10 @@ export class TournamentProvider {
             [tournamentID, userId, role]
         );
         return result !== null;
+    }
+
+    async getScorers(tournamentID: string): Promise<IScorer[] | undefined> {
+
+        return (await dbQuery<IScorer>("select * from scorers where scorers.tournament_id = $1", [tournamentID]))?.rows;
     }
 }

@@ -3,7 +3,7 @@ import bcrypt from 'bcrypt';
 import { signToken } from '../authUtils';
 import {randomUUID} from "node:crypto";
 
-interface IUser { userid: string; email: string; firstname: string; lastname: string; password: string; }
+interface IUser { user_id: string; email: string; first_name: string; last_name: string; password_hash: string; }
 interface IStatusResponse { status: number; message: string; }
 
 export class AuthProvider {
@@ -48,9 +48,9 @@ export class AuthProvider {
         if (result === null) return { status: 500, message: 'Internal error' };
 
         const user = result.rows[0];
-        if (!user || !(await bcrypt.compare(password, user.password))) {
+        if (!user || !(await bcrypt.compare(password, user.password_hash))) {
             return { status: 401, message: 'Invalid Username / Password' };
         }
-        return signToken(user.userid, user.email, user.firstname, user.lastname);
+        return signToken(user.user_id, user.email, user.first_name, user.last_name);
     }
 }

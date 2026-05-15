@@ -58,3 +58,11 @@ export interface ScoreSection {
     studentId: string | null
     score: number
 }
+
+export interface IScorer {
+    scorer_id: string;
+    tournament_id: string;
+    first_name: string
+    last_name: string
+    email: string;
+}

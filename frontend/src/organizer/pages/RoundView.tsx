@@ -168,7 +168,7 @@ const RoundView = () => {
                                             value={addPros}
                                             onChange={e => setAddPros(e.target.value)}>
                                             <option value="">Select team…</option>
-                                            {teams.map(t => <option key={t.id} value={t.id}>{t.code} — {t.school}</option>)}
+                                            {teams.map(t => <option key={t.id} value={t.id}>{t.code} — {t.team}</option>)}
                                         </select>
                                     </label>
                                     {addProsError && <span className="rv-field-error">{addProsError}</span>}
@@ -180,7 +180,7 @@ const RoundView = () => {
                                             value={addDef}
                                             onChange={e => setAddDef(e.target.value)}>
                                             <option value="">Select team…</option>
-                                            {teams.map(t => <option key={t.id} value={t.id}>{t.code} — {t.school}</option>)}
+                                            {teams.map(t => <option key={t.id} value={t.id}>{t.code} — {t.team}</option>)}
                                         </select>
                                     </label>
                                     {addDefError && <span className="rv-field-error">{addDefError}</span>}

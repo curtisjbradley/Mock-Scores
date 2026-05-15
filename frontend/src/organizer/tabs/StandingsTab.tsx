@@ -20,7 +20,7 @@ export default function StandingsTab({ teams }: { teams: ITeam[] }) {
                             <tr key={team.id}>
                                 <td>{i + 1}</td>
                                 <td className="dash-team-code">{team.code}</td>
-                                <td>{team.school}</td>
+                                <td>{team.team}</td>
                                 <td>{team.wins}</td><td>{team.losses}</td>
                                 <td>{team.pointsFor}</td><td>{team.pointsAgainst}</td>
                                 <td className={diff >= 0 ? 'dash-diff--pos' : 'dash-diff--neg'}>

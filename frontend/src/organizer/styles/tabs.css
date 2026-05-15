@@ -148,3 +148,9 @@
     gap: 0.4rem;
     align-items: center;
 }
+
+.dash-header-count {
+    font-weight: 400;
+    color: var(--text-muted);
+    font-size: 0.9rem;
+}

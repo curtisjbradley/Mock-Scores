@@ -1,35 +1,26 @@
 import { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { dummySchools, type ITeamInvite, type TeamInviteStatus } from '../data/dummyData'
+import { dummySchools, dummyTeamInvites, type ITeamInvite, type TeamInviteStatus } from '../data/dummyData'
 import { ConfirmRemoveModal } from '../components/modals'
+import Section from './Section'
 import AddTeamModal from '../components/AddTeamModal'
 import { isValidEmail } from '../../utils/validation'
-
-interface Props {
-    tournamentId: string
-    teams: ITeamInvite[]
-    onAddTeam: (team: ITeamInvite) => void
-    onRemoveTeam: (id: string) => void
-    onUpdateTeamEmail: (id: string, email: string) => void
-}
 
 const teamChip = (s: TeamInviteStatus) => (
     <span className={`ss-chip ss-chip--${s === 'accepted' ? 'submitted' : 'pending'}`}>{s}</span>
 )
 
-export default function TeamsTab({ tournamentId, teams, onAddTeam, onRemoveTeam, onUpdateTeamEmail }: Props) {
+export default function TeamsTab({ tournamentId }: { tournamentId: string }) {
     const navigate = useNavigate()
+    const [teams, setTeams] = useState<ITeamInvite[]>(() => dummyTeamInvites.filter(t => t.tournamentId === tournamentId))
     const [showModal, setShowModal] = useState(false)
     const [confirmRemove, setConfirmRemove] = useState<ITeamInvite | null>(null)
     const [editingId, setEditingId] = useState<string | null>(null)
     const [editEmail, setEditEmail] = useState('')
 
     return (
-        <div className="dash-section">
-            <div className="dash-invites-header">
-                <h2>{teams.length} team{teams.length !== 1 ? 's' : ''} invited</h2>
-                <button className="org-new-btn" onClick={() => setShowModal(true)}>+ Invite team</button>
-            </div>
+        <Section title="Teams" description="Manage invited teams">
+            {<button className="org-new-btn" onClick={() => setShowModal(true)}>+ Invite team</button>}
             <div className="dash-table-scroll">
                 <table className="dash-standings-table">
                     <thead><tr><th>Team</th><th>Contact</th><th>Status</th><th></th></tr></thead>
@@ -46,7 +37,7 @@ export default function TeamsTab({ tournamentId, teams, onAddTeam, onRemoveTeam,
                                             <form className="dash-edit-form" onSubmit={e => {
                                                 e.preventDefault()
                                                 if (!isValidEmail(editEmail)) return
-                                                onUpdateTeamEmail(team.id, editEmail.trim())
+                                                setTeams(prev => prev.map(t => t.id === team.id ? { ...t, contactEmail: editEmail.trim() } : t))
                                                 setEditingId(null)
                                             }}>
                                                 <input autoFocus type="email" value={editEmail} onChange={e => setEditEmail(e.target.value)}
@@ -79,8 +70,9 @@ export default function TeamsTab({ tournamentId, teams, onAddTeam, onRemoveTeam,
                     onClose={() => setShowModal(false)}
                     onAdd={(schoolId, email) => {
                         // TODO: POST /api/tournaments/:id/teams { schoolId, email }
-                        onAddTeam({ id: `t-${Date.now()}`, tournamentId, schoolId, status: 'pending' })
+                        setTeams(prev => [...prev, { id: `t-${Date.now()}`, tournamentId, schoolId, status: 'pending' }])
                         console.log(email)
+                        setShowModal(false)
                     }}
                 />
             )}
@@ -93,11 +85,12 @@ export default function TeamsTab({ tournamentId, teams, onAddTeam, onRemoveTeam,
                         onCancel={() => setConfirmRemove(null)}
                         onConfirm={() => {
                             // TODO: DELETE /api/tournaments/:id/teams/:teamId
-                            onRemoveTeam(confirmRemove.id); setConfirmRemove(null)
+                            setTeams(prev => prev.filter(t => t.id !== confirmRemove.id))
+                            setConfirmRemove(null)
                         }}
                     />
                 )
             })()}
-        </div>
+        </Section>
     )
 }

@@ -3,15 +3,14 @@ import type { TournamentPayload } from '@mock-scores/shared';
 import {TournamentProvider} from "../providers/tournamentProvider";
 import {verifyTournamentAccess} from "../authUtils";
 
+import subRoutes from "./tournamentSubRoutes";
+
 const router = Router();
 
 
 
 
 const tournamentProvider = new TournamentProvider();
-
-
-
 
 
 router.get("/", async (req: Request, res: Response) => {
@@ -27,6 +26,7 @@ router.get("/", async (req: Request, res: Response) => {
 
    return res.status(200).json(tournaments);
 })
+
 
 router.post("/", async (req: Request, res: Response) => {
     if (!req?.session) return res.status(401).json({ message: 'Invalid or expired token' });
@@ -44,29 +44,7 @@ router.post("/", async (req: Request, res: Response) => {
 })
 
 
-router.patch("/:tournamentId", verifyTournamentAccess, async (req: Request, res: Response) => {
-    if (!req?.tournament) return res.status(403).json({ message: 'No access to tournament' });
-
-    const payload = req.body as TournamentPayload;
-    const ok = await tournamentProvider.updateTournament(req.tournament, payload);
-
-    if (!ok) return res.status(500).json({ message: 'Unable to update tournament' });
-    return res.status(200).json({ success: true });
-})
-
-router.get("/:tournamentId", verifyTournamentAccess, async (req: Request, res: Response) => {
-    if(!req?.tournament) {
-        return res.status(403).json({ message: 'No access to tournament' });
-    }
-
-    const tournament = await tournamentProvider.getTournament(req.tournament)
-
-    if(!tournament) {
-        return res.status(404).json({ message: 'No tournament found' });
-    }
-    return res.status(200).json(tournament);
-
-})
+router.use("/:tournamentId", verifyTournamentAccess, subRoutes)
 
 
 export default router;

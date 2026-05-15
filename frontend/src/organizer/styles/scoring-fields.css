@@ -11,6 +11,8 @@
     border-radius: var(--radius);
     background: var(--surface);
     transition: opacity 140ms ease, box-shadow 140ms ease;
+    min-width: 0;
+    overflow: hidden;
 }
 
 .sf-category-card--dragging {

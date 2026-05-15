@@ -1,11 +1,11 @@
 import { useState } from 'react'
 import '../styles/tournament-create.css'
 import '../styles/scoring-fields.css'
-import { type ITeamInvite, type IOrganizer } from '../data/dummyData'
 import TournamentDetails from '../steps/TournamentDetails'
 import TournamentCaseFormat from '../steps/TournamentCaseFormat'
 import TournamentScoringFields from '../steps/TournamentScoringFields'
 import TournamentStepper from '../components/TournamentStepper'
+import Section from './Section'
 import TeamsTab from './TeamsTab'
 import OrganizersTab from './OrganizersTab'
 import ScorersTab from './ScorersTab'
@@ -24,14 +24,6 @@ interface Props {
     onChangeCaseFormat: (cf: CaseFormatState) => void
     onChangeCategories: (cats: ScoringCategory[]) => void
     onSaveTournament: (info: TournamentInfo, caseFormat: CaseFormatState, categories: ScoringCategory[]) => Promise<void>
-    teams: ITeamInvite[]
-    organizers: IOrganizer[]
-    onAddTeam: (team: ITeamInvite) => void
-    onRemoveTeam: (id: string) => void
-    onUpdateTeamEmail: (id: string, email: string) => void
-    onAddOrganizer: (org: IOrganizer) => void
-    onRemoveOrganizer: (id: string) => void
-    onUpdateOrgEmail: (id: string, email: string) => void
 }
 
 export default function SetupTab({
@@ -39,9 +31,6 @@ export default function SetupTab({
     info, caseFormat, categories,
     onChangeInfo, onChangeCaseFormat, onChangeCategories,
     onSaveTournament,
-    teams, organizers,
-    onAddTeam, onRemoveTeam, onUpdateTeamEmail,
-    onAddOrganizer, onRemoveOrganizer, onUpdateOrgEmail,
 }: Props) {
     const [tStep, setTStep] = useState(1)
     const [saving, setSaving] = useState(false)
@@ -62,13 +51,13 @@ export default function SetupTab({
         }
     }
 
-    if (subTab === 'teams')      return <TeamsTab tournamentId={tournamentId} teams={teams} onAddTeam={onAddTeam} onRemoveTeam={onRemoveTeam} onUpdateTeamEmail={onUpdateTeamEmail} />
-    if (subTab === 'organizers') return <OrganizersTab tournamentId={tournamentId} organizers={organizers} onAddOrganizer={onAddOrganizer} onRemoveOrganizer={onRemoveOrganizer} onUpdateOrgEmail={onUpdateOrgEmail} />
-    if (subTab === 'scorers')    return <ScorersTab />
-    if (subTab === 'courtrooms') return <CourtroomsTab />
+    if (subTab === 'teams')      return <TeamsTab tournamentId={tournamentId} />
+    if (subTab === 'organizers') return <OrganizersTab tournamentId={tournamentId} />
+    if (subTab === 'scorers')    return <ScorersTab tournamentId={tournamentId} />
+    if (subTab === 'courtrooms') return <CourtroomsTab tournamentId={tournamentId} />
 
     return (
-        <div className="dash-section">
+        <Section title="Tournament settings">
             <TournamentStepper current={tStep} onGoTo={setTStep} />
             {saveError && <div className="tc-error-banner">{saveError}</div>}
             {saveSuccess && <div className="tc-error-banner dash-save-success">Saved successfully</div>}
@@ -78,6 +67,6 @@ export default function SetupTab({
                 {tStep === 3 && <TournamentScoringFields categories={categories} onChange={onChangeCategories} caseFormat={caseFormat} onSubmit={handleSave} onBack={() => setTStep(2)} isEditing />}
             </div>
             {saving && <p className="dash-saving">Saving…</p>}
-        </div>
+        </Section>
     )
 }

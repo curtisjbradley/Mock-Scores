@@ -25,7 +25,7 @@ export default function PairingCard({ pairing, teams, courtrooms, onRemove, onUp
 
     const teamName = (tid: string) => {
         const t = teams.find(t => t.id === tid)
-        return t ? `${t.code} — ${t.school}` : '—'
+        return t ? `${t.code} — ${t.team}` : '—'
     }
 
     const availableScorers = dummyScorers.filter(
@@ -105,14 +105,14 @@ export default function PairingCard({ pairing, teams, courtrooms, onRemove, onUp
                         Prosecution
                         <select className="rv-select" value={prosDraft} onChange={e => setProsDraft(e.target.value)}>
                             <option value="">Select team…</option>
-                            {teams.map(t => <option key={t.id} value={t.id}>{t.code} — {t.school}</option>)}
+                            {teams.map(t => <option key={t.id} value={t.id}>{t.code} — {t.team}</option>)}
                         </select>
                     </label>
                     <label className="rv-field-label">
                         Defense
                         <select className="rv-select" value={defDraft} onChange={e => setDefDraft(e.target.value)}>
                             <option value="">Select team…</option>
-                            {teams.map(t => <option key={t.id} value={t.id}>{t.code} — {t.school}</option>)}
+                            {teams.map(t => <option key={t.id} value={t.id}>{t.code} — {t.team}</option>)}
                         </select>
                     </label>
                     <div className="pc-edit-actions">

@@ -1,28 +1,19 @@
 import { useState } from 'react'
-import { type IOrganizer } from '../data/dummyData'
+import { dummyOrganizers, type IOrganizer } from '../data/dummyData'
 import { ConfirmRemoveModal, AddOrganizerModal } from '../components/modals'
+import Section from './Section'
 import { isValidEmail } from '../../utils/validation'
 
-interface Props {
-    tournamentId: string
-    organizers: IOrganizer[]
-    onAddOrganizer: (org: IOrganizer) => void
-    onRemoveOrganizer: (id: string) => void
-    onUpdateOrgEmail: (id: string, email: string) => void
-}
-
-export default function OrganizersTab({ tournamentId, organizers, onAddOrganizer, onRemoveOrganizer, onUpdateOrgEmail }: Props) {
+export default function OrganizersTab({ tournamentId }: { tournamentId: string }) {
+    const [organizers, setOrganizers] = useState<IOrganizer[]>(() => dummyOrganizers.filter(o => o.tournamentId === tournamentId))
     const [showModal, setShowModal] = useState(false)
     const [confirmRemove, setConfirmRemove] = useState<IOrganizer | null>(null)
     const [editingId, setEditingId] = useState<string | null>(null)
     const [editEmail, setEditEmail] = useState('')
 
     return (
-        <div className="dash-section">
-            <div className="dash-invites-header">
-                <h2>{organizers.length} organizer{organizers.length !== 1 ? 's' : ''}</h2>
-                <button className="org-new-btn" onClick={() => setShowModal(true)}>+ Add organizer</button>
-            </div>
+        <Section title="Organizers" description="Manage your organizers">
+            <button className="org-new-btn" onClick={() => setShowModal(true)}>+ Add organizer</button>
             <div className="dash-table-scroll">
                 <table className="dash-standings-table">
                     <thead><tr><th>Name</th><th>Email</th><th>Role</th><th></th></tr></thead>
@@ -36,7 +27,7 @@ export default function OrganizersTab({ tournamentId, organizers, onAddOrganizer
                                             e.preventDefault()
                                             if (!isValidEmail(editEmail)) return
                                             // TODO: PATCH /api/tournaments/:id/organizers/:orgId { email: editEmail }
-                                            onUpdateOrgEmail(org.id, editEmail)
+                                            setOrganizers(prev => prev.map(o => o.id === org.id ? { ...o, email: editEmail } : o))
                                             setEditingId(null)
                                         }}>
                                             <input autoFocus type="email" value={editEmail} onChange={e => setEditEmail(e.target.value)}
@@ -68,9 +59,11 @@ export default function OrganizersTab({ tournamentId, organizers, onAddOrganizer
             {showModal && (
                 <AddOrganizerModal
                     onClose={() => setShowModal(false)}
-                    onAdd={(name, email) =>
+                    onAdd={(name, email) => {
                         // TODO: POST /api/tournaments/:id/organizers { name, email }
-                        onAddOrganizer({ id: `o-${Date.now()}`, tournamentId, name, email, role: 'co-organizer' })}
+                        setOrganizers(prev => [...prev, { id: `o-${Date.now()}`, tournamentId, name, email, role: 'co-organizer' }])
+                        setShowModal(false)
+                    }}
                 />
             )}
 
@@ -80,10 +73,11 @@ export default function OrganizersTab({ tournamentId, organizers, onAddOrganizer
                     onCancel={() => setConfirmRemove(null)}
                     onConfirm={() => {
                         // TODO: DELETE /api/tournaments/:id/organizers/:orgId
-                        onRemoveOrganizer(confirmRemove.id); setConfirmRemove(null)
+                        setOrganizers(prev => prev.filter(o => o.id !== confirmRemove.id))
+                        setConfirmRemove(null)
                     }}
                 />
             )}
-        </div>
+        </Section>
     )
 }

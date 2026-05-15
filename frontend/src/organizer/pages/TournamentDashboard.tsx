@@ -5,7 +5,7 @@ import '../styles/tabs.css'
 import '../styles/rounds.css'
 import '../styles/pairings.css'
 import '../styles/standings.css'
-import { dummyTeams, dummyPairings, dummyTeamInvites, dummyOrganizers, dummyCourtrooms, type ITeamInvite, type IOrganizer } from '../data/dummyData'
+import { dummyTeams, dummyPairings, dummyCourtrooms } from '../data/dummyData'
 import { dateRange } from '../data/utils'
 import OverviewTab from '../tabs/OverviewTab'
 import StandingsTab from '../tabs/StandingsTab'
@@ -26,8 +26,6 @@ const TournamentDashboard = () => {
     const [activeTab, setActiveTab] = useState<Tab>('overview')
     const [setupSubTab, setSetupSubTab] = useState<SetupSubTab>('tournament')
 
-    const [teamInvites, setTeamInvites] = useState<ITeamInvite[]>(() => dummyTeamInvites)
-    const [organizers, setOrganizers] = useState<IOrganizer[]>(() => dummyOrganizers)
     const [pairings, setPairings] = useState(() => dummyPairings)
     const [courtroomsState] = useState(() => dummyCourtrooms)
     const [roundNames] = useState<Record<number, string>>({})
@@ -226,14 +224,6 @@ const TournamentDashboard = () => {
                         onChangeCaseFormat={setCaseFormat}
                         onChangeCategories={setCategories}
                         onSaveTournament={handleSaveTournament}
-                        teams={teamInvites}
-                        organizers={organizers}
-                        onAddTeam={inv => setTeamInvites(prev => [...prev, inv])}
-                        onRemoveTeam={invId => setTeamInvites(prev => prev.filter(i => i.id !== invId))}
-                        onUpdateTeamEmail={(invId, email) => setTeamInvites(prev => prev.map(i => i.id === invId ? { ...i, contactEmail: email } : i))}
-                        onAddOrganizer={org => setOrganizers(prev => [...prev, org])}
-                        onRemoveOrganizer={orgId => setOrganizers(prev => prev.filter(o => o.id !== orgId))}
-                        onUpdateOrgEmail={(orgId, email) => setOrganizers(prev => prev.map(o => o.id === orgId ? { ...o, email } : o))}
                     />
                 )}
             </div>

@@ -2,6 +2,7 @@ import { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { fmt, fmtTime } from '../data/utils'
 import type { IPairing } from '../data/dummyData'
+import Section from './Section'
 
 interface IOverviewProps {
     tournamentId: string
@@ -81,11 +82,8 @@ export default function OverviewTab({
 }: IOverviewProps) {
     const navigate = useNavigate()
     return (
-        <div className="dash-section">
-            <div className="dash-invites-header">
-                <h2>Rounds</h2>
-                <button className="org-new-btn" onClick={onAddRound}>+ Add round</button>
-            </div>
+        <Section title="Rounds">
+            {<button className="org-new-btn" onClick={onAddRound}>+ Add round</button>}
             {rounds.map(round => {
                 const rp = pairings.filter(p => p.round === round)
                 const displayName = roundNames[round] ?? `Round ${round}`
@@ -96,6 +94,6 @@ export default function OverviewTab({
                         navigate={navigate} />
                 )
             })}
-        </div>
+        </Section>
     )
 }
