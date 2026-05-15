@@ -1,7 +1,7 @@
 import { useNavigate } from 'react-router-dom'
 import '../organizer/styles/organizer.css'
 // TODO: fetch accepted invites for current school from GET /api/coach/tournaments (replace dummyInvites + dummyTournaments)
-import { dummyTournaments, dummyInvites, CURRENT_SCHOOL_ID, type ITournament } from '../organizer/data/dummyData'
+import { dummyTournaments, dummyTeams, CURRENT_SCHOOL_ID, type ITournament } from '../organizer/data/dummyData'
 
 const statusLabel: Record<ITournament['status'], string> = {
     upcoming: 'Upcoming',
@@ -13,8 +13,8 @@ const CoachHome = () => {
     const navigate = useNavigate()
 
     const myTournamentIds = new Set(
-        dummyInvites
-            .filter(i => i.schoolId === CURRENT_SCHOOL_ID && i.status == 'accepted')
+        dummyTeams
+            .filter(i => i.team === CURRENT_SCHOOL_ID)
             .map(i => i.tournamentId)
     )
     const tournaments = dummyTournaments.filter(t => myTournamentIds.has(t.id))

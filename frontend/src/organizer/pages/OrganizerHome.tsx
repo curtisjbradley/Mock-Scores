@@ -1,7 +1,8 @@
+import { useEffect, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import '../styles/organizer.css'
-// TODO: fetch tournaments from GET /api/tournaments (replace dummyTournaments)
-import { dummyTournaments, type ITournament } from '../data/dummyData'
+import type { ITournament } from '../data/dummyData'
+import { apiFetch } from '../../auth/auth'
 
 const statusLabel: Record<ITournament['status'], string> = {
     upcoming: 'Upcoming',
@@ -11,6 +12,14 @@ const statusLabel: Record<ITournament['status'], string> = {
 
 const OrganizerHome = () => {
     const navigate = useNavigate()
+    const [tournaments, setTournaments] = useState<ITournament[]>([])
+
+    useEffect(() => {
+        apiFetch('/api/tournament')
+            .then(res => res.ok ? res.json() : [])
+            .then(setTournaments)
+            .catch(console.error)
+    }, [])
 
     return (
             <main className="org-main">
@@ -23,7 +32,7 @@ const OrganizerHome = () => {
                     </div>
 
                     <div className="org-tournament-list">
-                        {dummyTournaments.map(t => (
+                        {tournaments.map(t => (
                             <button
                                 key={t.id}
                                 className="org-tournament-card"
@@ -32,7 +41,6 @@ const OrganizerHome = () => {
                                 <div className="org-tournament-info">
                                     <span className="org-tournament-name">{t.name}</span>
                                     <span className="org-tournament-meta">
-                                        {t.dates[0] === t.dates[t.dates.length-1] ? new Date(t.dates[0]).toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' }) : new Date(t.dates[0]).toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' }) + ' – ' + new Date(t.dates[t.dates.length-1]).toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' })}
                                         {' · '}{t.location}
                                         {' · '}{t.teams} teams · {t.rounds} rounds
                                     </span>

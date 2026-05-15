@@ -1,13 +1,12 @@
 import { useState } from 'react'
-import { useParams } from 'react-router-dom'
 import '../styles/organizer.css'
 import '../styles/pairings.css'
 import '../../judges/styles/modal.css'
 import { dummyCourtrooms, type ICourtroom } from '../data/dummyData'
+import Section from "./Section.tsx";
 
-const CourtroomsPage = () => {
-    const { id } = useParams<{ id: string }>()
-    const [courtrooms, setCourtrooms] = useState<ICourtroom[]>(() => dummyCourtrooms.filter(c => c.tournamentId === id))
+const CourtroomsTab = ({ tournamentId }: { tournamentId: string }) => {
+    const [courtrooms, setCourtrooms] = useState<ICourtroom[]>(() => dummyCourtrooms.filter(c => c.tournamentId === tournamentId))
     const [showModal, setShowModal] = useState(false)
     const [editingId, setEditingId] = useState<string | null>(null)
     const [confirmRemove, setConfirmRemove] = useState<ICourtroom | null>(null)
@@ -33,7 +32,7 @@ const CourtroomsPage = () => {
         if (editingId) {
             setCourtrooms(prev => prev.map(c => c.id === editingId ? { ...c, name: name.trim(), details: details.trim() || undefined } : c))
         } else {
-            const newCourtroom: ICourtroom = { id: `cr-${Date.now()}`, tournamentId: id!, name: name.trim(), details: details.trim() || undefined }
+            const newCourtroom: ICourtroom = { id: `cr-${Date.now()}`, tournamentId, name: name.trim(), details: details.trim() || undefined }
             setCourtrooms(prev => [...prev, newCourtroom])
         }
         setShowModal(false)
@@ -48,24 +47,30 @@ const CourtroomsPage = () => {
     const inputStyle = { height: '2.75rem', padding: '0 0.75rem', border: '1px solid var(--border-strong)', borderRadius: 'var(--radius)', background: 'var(--surface)', color: 'var(--text)', fontSize: '1rem', fontFamily: 'inherit' } as const
 
     return (
-        <>
-                <div className="org-container">
-                    <table className="dash-standings-table">
-                        <thead><tr><th>Name</th><th>Details</th><th></th></tr></thead>
-                        <tbody>
-                            {courtrooms.map(courtroom => (
-                                <tr key={courtroom.id}>
-                                    <td className="dash-team-code">{courtroom.name}</td>
-                                    <td className="dash-judge-name">{courtroom.details ?? '—'}</td>
-                                    <td style={{ display: 'flex', gap: '0.4rem' }}>
+        <Section title={'Courtrooms'} description={"Manage available courtrooms"}>
+            <div style={{ display: 'flex', justifyContent: 'flex-end', marginBottom: '0.75rem' }}>
+                <button className="org-new-btn" onClick={openAddModal}>+ Add courtroom</button>
+            </div>
+
+            <div style={{ overflowX: 'auto' }}>
+                <table className="dash-standings-table">
+                    <thead><tr><th>Name</th><th>Details</th><th></th></tr></thead>
+                    <tbody>
+                        {courtrooms.map(courtroom => (
+                            <tr key={courtroom.id}>
+                                <td className="dash-team-code">{courtroom.name}</td>
+                                <td className="dash-judge-name">{courtroom.details ?? '—'}</td>
+                                <td>
+                                    <div style={{ display: 'flex', gap: '0.4rem' }}>
                                         <button className="dash-remove-btn" onClick={() => openEditModal(courtroom)}>Edit</button>
                                         <button className="dash-remove-btn" onClick={() => setConfirmRemove(courtroom)}>Remove</button>
-                                    </td>
-                                </tr>
-                            ))}
-                        </tbody>
-                    </table>
-                </div>
+                                    </div>
+                                </td>
+                            </tr>
+                        ))}
+                    </tbody>
+                </table>
+            </div>
 
             {showModal && (
                 <div className="modal-backdrop" role="presentation" onClick={e => { if (e.target === e.currentTarget) setShowModal(false) }}>
@@ -97,9 +102,8 @@ const CourtroomsPage = () => {
                     </div>
                 </div>
             )}
-            <button className="org-new-btn" onClick={openAddModal}>+ Add courtroom</button>
-        </>
+        </Section>
     )
 }
 
-export default CourtroomsPage
+export default CourtroomsTab

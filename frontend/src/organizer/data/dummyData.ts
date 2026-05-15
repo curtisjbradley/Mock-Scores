@@ -14,20 +14,21 @@ export interface ISchool {
     contactEmail: string
 }
 
-export type InviteStatus = 'pending' | 'accepted'
+export type TeamInviteStatus = 'pending' | 'accepted'
 
-export interface IInvite {
+export interface ITeamInvite {
     id: string
     tournamentId: string
     schoolId: string
-    status: InviteStatus
+    status: TeamInviteStatus
+    contactEmail?: string
 }
 
 export interface ITeam {
     id: string
     tournamentId: string
     code: string
-    school: string
+    team: string
     wins: number
     losses: number
     pointsFor: number
@@ -116,12 +117,12 @@ export const dummyTournaments: ITournament[] = [
 // ── Teams (for t2 — active tournament) ──────────────────────────────────────
 
 export const dummyTeams: ITeam[] = [
-    { id: 'tm1',  tournamentId: 't2', code: '101', school: 'Lincoln High',       wins: 3, losses: 1, pointsFor: 412, pointsAgainst: 378 },
-    { id: 'tm2',  tournamentId: 't2', code: '102', school: 'Washington Academy', wins: 3, losses: 1, pointsFor: 405, pointsAgainst: 390 },
-    { id: 'tm3',  tournamentId: 't2', code: '103', school: 'Jefferson Prep',     wins: 2, losses: 2, pointsFor: 388, pointsAgainst: 395 },
-    { id: 'tm4',  tournamentId: 't2', code: '104', school: 'Roosevelt High',     wins: 2, losses: 2, pointsFor: 375, pointsAgainst: 382 },
-    { id: 'tm5',  tournamentId: 't2', code: '105', school: 'Kennedy Charter',    wins: 1, losses: 3, pointsFor: 360, pointsAgainst: 410 },
-    { id: 'tm6',  tournamentId: 't2', code: '106', school: 'Madison Collegiate', wins: 1, losses: 3, pointsFor: 355, pointsAgainst: 420 },
+    { id: 'tm1',  tournamentId: 't2', code: '101', team: 'Lincoln High',       wins: 3, losses: 1, pointsFor: 412, pointsAgainst: 378 },
+    { id: 'tm2',  tournamentId: 't2', code: '102', team: 'Washington Academy', wins: 3, losses: 1, pointsFor: 405, pointsAgainst: 390 },
+    { id: 'tm3',  tournamentId: 't2', code: '103', team: 'Jefferson Prep',     wins: 2, losses: 2, pointsFor: 388, pointsAgainst: 395 },
+    { id: 'tm4',  tournamentId: 't2', code: '104', team: 'Roosevelt High',     wins: 2, losses: 2, pointsFor: 375, pointsAgainst: 382 },
+    { id: 'tm5',  tournamentId: 't2', code: '105', team: 'Kennedy Charter',    wins: 1, losses: 3, pointsFor: 360, pointsAgainst: 410 },
+    { id: 'tm6',  tournamentId: 't2', code: '106', team: 'Madison Collegiate', wins: 1, losses: 3, pointsFor: 355, pointsAgainst: 420 },
 ]
 
 // ── Judges ───────────────────────────────────────────────────────────────────
@@ -260,7 +261,7 @@ export const dummySchools: ISchool[] = [
 // Each invite = one school invited to one tournament.
 // The coach's school (s1 = Lincoln High) is invited to t2 and t3.
 
-export const dummyInvites: IInvite[] = [
+export const dummyTeamInvites: ITeamInvite[] = [
     // t2 — Bay Area Invitational (active)
     { id: 'i1',  tournamentId: 't2', schoolId: 's1', status: 'accepted' },
     { id: 'i2',  tournamentId: 't2', schoolId: 's2', status: 'accepted' },

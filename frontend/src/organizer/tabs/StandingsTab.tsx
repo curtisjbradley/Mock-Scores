@@ -8,6 +8,7 @@ export default function StandingsTab({ teams }: { teams: ITeam[] }) {
     )
     return (
         <div className="dash-section">
+            <div className="dash-table-scroll">
             <table className="dash-standings-table">
                 <thead>
                     <tr><th>#</th><th>Team</th><th>Team</th><th>W</th><th>L</th><th>PF</th><th>PA</th><th>Diff</th></tr>
@@ -19,7 +20,7 @@ export default function StandingsTab({ teams }: { teams: ITeam[] }) {
                             <tr key={team.id}>
                                 <td>{i + 1}</td>
                                 <td className="dash-team-code">{team.code}</td>
-                                <td>{team.school}</td>
+                                <td>{team.team}</td>
                                 <td>{team.wins}</td><td>{team.losses}</td>
                                 <td>{team.pointsFor}</td><td>{team.pointsAgainst}</td>
                                 <td className={diff >= 0 ? 'dash-diff--pos' : 'dash-diff--neg'}>
@@ -30,6 +31,7 @@ export default function StandingsTab({ teams }: { teams: ITeam[] }) {
                     })}
                 </tbody>
             </table>
+            </div>
         </div>
     )
 }

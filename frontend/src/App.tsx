@@ -12,7 +12,7 @@ const Forbidden = lazy(() => import('./error/Forbidden.tsx'));
 const About = lazy(() => import('./About.tsx'));
 const OrganizerHome = lazy(() => import('./organizer/pages/OrganizerHome.tsx'));
 const TournamentDashboard = lazy(() => import('./organizer/pages/TournamentDashboard.tsx'));
-const TournamentCreate = lazy(() => import('./organizer/pages/TournamentCreate.tsx'));
+const TournamentNew = lazy(() => import('./organizer/pages/TournamentNew.tsx'));
 const ScorecardViewer = lazy(() => import('./organizer/pages/ScorecardViewer.tsx'));
 const RoundView = lazy(() => import('./organizer/pages/RoundView.tsx'));
 const CoachHome = lazy(() => import('./coach/CoachHome.tsx'));
@@ -39,7 +39,7 @@ function App() {
 
               <Route path="organizer" element={<ProtectedRoute />}>
                   <Route index element={<OrganizerHome />} />
-                  <Route path="new" element={<TournamentCreate />} />
+                  <Route path="new" element={<TournamentNew />} />
                   <Route path=":id" element={<TournamentDashboard />} />
                   <Route path=":id/round/:round" element={<RoundView />} />
                   <Route path=":id/school/:schoolId" element={<CoachDashboard isOrganizerView />} />

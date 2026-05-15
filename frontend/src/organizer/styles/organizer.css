@@ -6,7 +6,7 @@
 }
 
 .org-container {
-    width: min(100%, 52rem);
+    width: min(100%, 72rem);
     display: flex;
     flex-direction: column;
     gap: 1.25rem;

@@ -18,6 +18,63 @@
     color: var(--primary);
     letter-spacing: -0.5px;
 }
-.user-button {
+
+.account-button {
     margin-left: auto;
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    padding: 4px 10px 4px 4px;
+    border-radius: 999px;
+    background: var(--surface-muted);
+    color: var(--text);
+    font-size: 0.875rem;
+    font-weight: 500;
+    line-height: 1;
+    border: 1px solid var(--border);
+    transition: background 140ms ease, border-color 140ms ease, box-shadow 140ms ease;
+}
+
+.account-button:hover {
+    background: var(--primary-subtle);
+    border-color: var(--primary);
+    box-shadow: 0 2px 8px rgba(47, 91, 255, 0.12);
+}
+
+.account-button:focus-visible {
+    outline: none;
+    box-shadow: 0 0 0 3px var(--focus);
+}
+
+.account-avatar {
+    width: 30px;
+    height: 30px;
+    border-radius: 50%;
+    background: var(--primary);
+    color: #fff;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 0.7rem;
+    font-weight: 700;
+    letter-spacing: 0.04em;
+    flex-shrink: 0;
+    box-shadow: 0 0 0 2px var(--surface), 0 0 0 3px var(--primary);
+}
+
+.account-name {
+    max-width: 10rem;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.account-chevron {
+    color: var(--text-muted);
+    flex-shrink: 0;
+    transition: color 140ms ease;
+}
+
+.account-button:hover .account-chevron {
+    color: var(--primary);
 }
