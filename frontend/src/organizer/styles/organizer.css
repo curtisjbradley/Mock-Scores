@@ -42,17 +42,19 @@
 
 .org-back-btn {
     align-self: flex-start;
-    background: none;
-    border: none;
-    padding: 0;
+    background: var(--primary-subtle);
+    border: 1px solid var(--primary);
+    border-radius: var(--radius);
+    padding: 0.4rem 0.9rem;
     color: var(--primary);
     font-size: 0.9rem;
-    font-weight: 500;
+    font-weight: 600;
     font-family: inherit;
     cursor: pointer;
+    transition: background 120ms ease;
 }
 
-.org-back-btn:hover { text-decoration: underline; }
+.org-back-btn:hover { background: var(--primary); color: #fff; }
 
 .org-tournament-list {
     display: flex;
@@ -188,4 +190,15 @@
     font-size: 0.85rem;
     font-weight: 600;
     align-self: flex-start;
+}
+
+.tab-actions {
+    display: flex;
+    justify-content: flex-end;
+    margin-bottom: 0.75rem;
+}
+
+.scorecard-note {
+    margin-top: 1rem;
+    font-style: italic;
 }

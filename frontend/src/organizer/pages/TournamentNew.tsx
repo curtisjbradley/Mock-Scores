@@ -3,7 +3,7 @@ import { useNavigate } from 'react-router-dom'
 import '../styles/organizer.css'
 import '../styles/tournament-create.css'
 import '../styles/scoring-fields.css'
-import type { TournamentPayload } from '@mock-scores/shared'
+import type { TournamentPayload, ITournament } from '@mock-scores/shared'
 import { emptyInfo, emptyCaseFormat, defaultWitnessCategory } from '../types/tournament'
 import type { TournamentInfo, CaseFormatState, ScoringCategory } from '../types/tournament'
 import TournamentStepper from '../components/TournamentStepper'
@@ -70,14 +70,14 @@ export default function TournamentNew() {
         const payload = buildPayload(info, caseFormat, categories)
 
         setSubmitting(true)
-        apiFetch('/api/tournament', { method: 'POST', body: JSON.stringify(payload) })
+        apiFetch('/api/organizer/tournament', { method: 'POST', body: JSON.stringify(payload) })
             .then(res => {
                 if(!res.ok) {
                     setSubmitting(false)
                    return setError(res.statusText)
                 }
                 return res.json()
-            }).then(res => {
+            }).then((res: ITournament | null) => {
                 setSubmitting(false)
                 if(res === null){
                     return

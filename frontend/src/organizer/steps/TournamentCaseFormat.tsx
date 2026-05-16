@@ -17,14 +17,11 @@ export default function TournamentCaseFormat({ caseFormat, onChange, onNext, onB
     const pAvailable = caseFormat.pWitnessNames.length + swingCount
     const dAvailable = caseFormat.dWitnessNames.length + swingCount
 
-    const witnessNameErrors = [
-        ...caseFormat.pWitnessNames.map((n, i) => !n.trim() ? `P witness ${i + 1}` : ''),
-        ...caseFormat.dWitnessNames.map((n, i) => !n.trim() ? `D witness ${i + 1}` : ''),
-        ...(caseFormat.hasSwing ? caseFormat.swingWitnessNames.map((n, i) => !n.trim() ? `Swing ${i + 1}` : '') : []),
-    ].filter(Boolean)
+    const hasBlankWitness = [...caseFormat.pWitnessNames, ...caseFormat.dWitnessNames, ...(caseFormat.hasSwing ? caseFormat.swingWitnessNames : [])].some(n => !n.trim())
 
     const errors = {
         caseName: !caseFormat.caseName.trim() ? 'Required' : '',
+        witnessNames: hasBlankWitness ? 'All witness names are required' : '',
         pWitnessesCalled: caseFormat.pWitnessesCalled === '' ? 'Required' : pCalled < 0 ? 'Must be ≥ 0' : pCalled > pAvailable ? `Only ${pAvailable} have been defined` : '',
         dWitnessesCalled: caseFormat.dWitnessesCalled === '' ? 'Required' : dCalled < 0 ? 'Must be ≥ 0' : dCalled > dAvailable ? `Only ${dAvailable} have been defined` : '',
     }
@@ -32,18 +29,8 @@ export default function TournamentCaseFormat({ caseFormat, onChange, onNext, onB
     const handleSubmit = (e: { preventDefault(): void }) => {
         e.preventDefault()
         setSubmitted(true)
-        if (!errors.caseName && !errors.pWitnessesCalled && !errors.dWitnessesCalled && !witnessNameErrors.length) onNext()
+        if (!errors.caseName && !errors.witnessNames && !errors.pWitnessesCalled && !errors.dWitnessesCalled) onNext()
     }
-
-    const setWitnessName = (key: 'pWitnessNames' | 'dWitnessNames' | 'swingWitnessNames', idx: number) =>
-        (e: { target: { value: string } }) => {
-            const arr = [...caseFormat[key]]; arr[idx] = e.target.value
-            onChange({ ...caseFormat, [key]: arr })
-        }
-    const addWitness = (key: 'pWitnessNames' | 'dWitnessNames' | 'swingWitnessNames') =>
-        () => onChange({ ...caseFormat, [key]: [...caseFormat[key], ''] })
-    const removeWitness = (key: 'pWitnessNames' | 'dWitnessNames' | 'swingWitnessNames', idx: number) =>
-        () => onChange({ ...caseFormat, [key]: caseFormat[key].filter((_, i) => i !== idx) })
 
     const sideLabel = caseFormat.criminalCase ? ['Prosecution', 'Defense'] : ['Plaintiff', 'Defense']
 
@@ -69,26 +56,28 @@ export default function TournamentCaseFormat({ caseFormat, onChange, onNext, onB
             {(['P', 'D'] as const).map((side, si) => {
                 const namesKey = side === 'P' ? 'pWitnessNames' : 'dWitnessNames'
                 const calledKey = side === 'P' ? 'pWitnessesCalled' : 'dWitnessesCalled'
+                const names = caseFormat[namesKey]
+                const setName = (i: number, val: string) => {
+                    const arr = [...names]; arr[i] = val
+                    onChange({ ...caseFormat, [namesKey]: arr })
+                }
                 return (
                     <div key={side} className="tc-section">
                         <span className="tc-section-label">{sideLabel[si]} witnesses</span>
                         <div className="tc-witness-list">
-                            {caseFormat[namesKey].map((name, i) => (
+                            {names.map((name, i) => (
                                 <div key={i} className="tc-witness-row">
                                     <input type="text"
                                         className={`tc-input${submitted && !name.trim() ? ' tc-input--invalid' : ''}`}
                                         placeholder={`Witness ${i + 1}`} value={name}
-                                        onChange={setWitnessName(namesKey, i)}
-                                    />
-                                    <button type="button" className="tc-remove-btn" onClick={removeWitness(namesKey, i)}>×</button>
+                                        onChange={e => setName(i, e.target.value)} />
+                                    <button type="button" className="tc-remove-btn"
+                                        onClick={() => onChange({ ...caseFormat, [namesKey]: names.filter((_, j) => j !== i) })}>×</button>
                                 </div>
                             ))}
-                            {submitted && caseFormat[namesKey].some(n => !n.trim()) &&
-                                <span className="tc-field-error">All witness names are required</span>}
                         </div>
-                        <button type="button" className="tc-add-btn" onClick={addWitness(namesKey)}>
-                            + Add witness
-                        </button>
+                        <button type="button" className="tc-add-btn"
+                            onClick={() => onChange({ ...caseFormat, [namesKey]: [...names, ''] })}>+ Add witness</button>
                         <div className="tc-field">
                             <label className="tc-label">Witnesses called per trial</label>
                             <input type="number" min={0}
@@ -115,21 +104,20 @@ export default function TournamentCaseFormat({ caseFormat, onChange, onNext, onB
                         {caseFormat.swingWitnessNames.map((name, i) => (
                             <div key={i} className="tc-witness-row">
                                 <input type="text"
-                                    className={`tc-input${submitted && !name.trim() ? ' tc-input--invalid' : ''}`}
-                                    placeholder={`Swing witness ${i + 1}`} value={name}
-                                    onChange={setWitnessName('swingWitnessNames', i)}
-                                />
-                                <button type="button" className="tc-remove-btn" onClick={removeWitness('swingWitnessNames', i)}>×</button>
+                                        className={`tc-input${submitted && !name.trim() ? ' tc-input--invalid' : ''}`}
+                                        placeholder={`Swing witness ${i + 1}`} value={name}
+                                    onChange={e => { const arr = [...caseFormat.swingWitnessNames]; arr[i] = e.target.value; onChange({ ...caseFormat, swingWitnessNames: arr }) }} />
+                                <button type="button" className="tc-remove-btn"
+                                    onClick={() => onChange({ ...caseFormat, swingWitnessNames: caseFormat.swingWitnessNames.filter((_, j) => j !== i) })}>×</button>
                             </div>
                         ))}
-                        {submitted && caseFormat.swingWitnessNames.some(n => !n.trim()) &&
-                            <span className="tc-field-error">All witness names are required</span>}
                     </div>
-                    <button type="button" className="tc-add-btn" onClick={addWitness('swingWitnessNames')}>
-                        + Add swing witness
-                    </button>
+                    <button type="button" className="tc-add-btn"
+                        onClick={() => onChange({ ...caseFormat, swingWitnessNames: [...caseFormat.swingWitnessNames, ''] })}>+ Add swing witness</button>
                 </div>
             )}
+
+            {submitted && errors.witnessNames && <span className="tc-field-error">{errors.witnessNames}</span>}
 
             <div className="tc-actions">
                 <button type="button" className="tc-cancel-btn" onClick={onBack}>← Back</button>

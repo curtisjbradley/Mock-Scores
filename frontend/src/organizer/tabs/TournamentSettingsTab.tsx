@@ -1,18 +1,13 @@
 import { Component } from 'react'
 import '../styles/tournament-create.css'
 import Section from './Section'
-import TeamsTab from './TeamsTab'
-import OrganizersTab from './OrganizersTab'
-import ScorersTab from './ScorersTab'
-import CourtroomsTab from './CourtroomsTab'
 import { fetchFormat, saveFormat, saveTournamentInfo } from '../hooks/useTournamentData'
 import type { TournamentInfo, CaseFormatState } from '../types/tournament'
 import { emptyCaseFormat } from '../types/tournament'
 import type { ITournament } from '@mock-scores/shared'
 import { apiFetch } from '../../auth/auth'
 
-type SubTab = 'tournament' | 'teams' | 'organizers' | 'scorers' | 'courtrooms'
-interface Props { tournamentId: string; subTab: SubTab; visitedSubTabs: Set<SubTab> }
+interface Props { tournamentId: string }
 
 const emptyInfo: TournamentInfo = { name: '', location: '', startDate: '', endDate: '', startTbd: false, endTbd: false }
 
@@ -27,7 +22,7 @@ interface State {
     submitted: boolean
 }
 
-export default class SetupTab extends Component<Props, State> {
+export default class TournamentSettingsTab extends Component<Props, State> {
     state: State = { info: emptyInfo, caseFormat: emptyCaseFormat, loading: true, error: null, saving: false, saveError: null, saveSuccess: false, submitted: false }
 
     componentDidMount() {
@@ -79,21 +74,15 @@ export default class SetupTab extends Component<Props, State> {
     }
 
     render() {
-        const { tournamentId, subTab, visitedSubTabs } = this.props
         const { info, caseFormat, loading, error, saveError, saveSuccess, saving, submitted } = this.state
         const errors = this.getErrors(info, caseFormat)
         const setInfo = (i: TournamentInfo) => this.setState({ info: i })
         const setCf = (cf: CaseFormatState) => this.setState({ caseFormat: cf })
 
+        if (loading) return <p className="dash-saving">Loading…</p>
+
         return (
-            <>
-                {visitedSubTabs.has('teams')       && <div hidden={subTab !== 'teams'}><TeamsTab tournamentId={tournamentId} /></div>}
-                {visitedSubTabs.has('organizers')  && <div hidden={subTab !== 'organizers'}><OrganizersTab tournamentId={tournamentId} /></div>}
-                {visitedSubTabs.has('scorers')     && <div hidden={subTab !== 'scorers'}><ScorersTab tournamentId={tournamentId} /></div>}
-                {visitedSubTabs.has('courtrooms')  && <div hidden={subTab !== 'courtrooms'}><CourtroomsTab tournamentId={tournamentId} /></div>}
-                <div hidden={subTab !== 'tournament'}>
-                {loading ? <p className="dash-saving">Loading…</p> : (
-                <Section title="Tournament settings">
+            <Section title="Tournament settings">
                 {(error || saveError) && <div className="tc-error-banner">{error ?? saveError}</div>}
                 {saveSuccess && <div className="tc-error-banner dash-save-success">Saved successfully</div>}
                 <form className="tc-form" onSubmit={this.handleSave} noValidate>
@@ -161,10 +150,7 @@ export default class SetupTab extends Component<Props, State> {
                         </button>
                     </div>
                 </form>
-                </Section>
-                )}
-                </div>
-            </>
+            </Section>
         )
     }
 }

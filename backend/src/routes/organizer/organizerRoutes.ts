@@ -1,16 +1,16 @@
 import { Request, Response, Router} from "express";
 import type { TournamentPayload } from '@mock-scores/shared';
-import {TournamentProvider} from "../providers/tournamentProvider";
-import {verifyTournamentAccess} from "../authUtils";
+import {OrganizerProvider} from "../../providers/organizerProvider";
+import {verifyTournamentAccess} from "../../authUtils";
 
-import subRoutes from "./tournamentSubRoutes";
+import subRoutes from "./organizerTournamentRoutes";
 
 const router = Router();
 
 
 
 
-const tournamentProvider = new TournamentProvider();
+const tournamentProvider = new OrganizerProvider();
 
 
 router.get("/", async (req: Request, res: Response) => {
@@ -38,6 +38,7 @@ router.post("/", async (req: Request, res: Response) => {
     if (!tournament) {
         return res.status(500).json({ message: 'Unable to create tournament' });
     }
+    console.log(req.session.userId, tournament);
     await tournamentProvider.addTournamentOrganizer(tournament.id,req.session.userId, "owner")
 
     return res.status(201).json(tournament);

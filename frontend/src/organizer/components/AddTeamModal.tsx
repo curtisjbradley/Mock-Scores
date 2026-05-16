@@ -4,21 +4,25 @@ import { isValidEmail } from '../../utils/validation'
 
 interface Props {
     onClose: () => void
-    onAdd: (school: string, email: string) => void
+    onAdd: (name: string, email: string, code: string) => void
+    existingNames: string[]
 }
 
-const AddTeamModal = ({ onClose, onAdd }: Props) => {
-    const [school, setSchool] = useState('')
+const AddTeamModal = ({ onClose, onAdd, existingNames }: Props) => {
+    const [name, setName] = useState('')
     const [email, setEmail] = useState('')
+    const [code, setCode] = useState('')
+
+    const isDuplicate = existingNames.some(n => n.toLowerCase() === name.trim().toLowerCase())
 
     const handleSubmit = (e: React.FormEvent) => {
         e.preventDefault()
-        if (!school.trim() || !email.trim()) return
-        onAdd(school.trim(), email.trim())
+        if (!name.trim() || !isValidEmail(email) || isDuplicate) return
+        onAdd(name.trim(), email.trim(), code.trim() || name.trim())
         onClose()
     }
 
-    const valid = school.trim() && isValidEmail(email)
+    const valid = name.trim() && isValidEmail(email) && !isDuplicate
 
     return (
         <div className="modal-backdrop" role="presentation" onClick={e => { if (e.target === e.currentTarget) onClose() }}>
@@ -26,27 +30,36 @@ const AddTeamModal = ({ onClose, onAdd }: Props) => {
                 <h2 id="add-team-title">Invite a team</h2>
                 <p>An invitation will be sent to the coach's email address.</p>
 
-                <form onSubmit={handleSubmit} noValidate style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem', marginTop: '1rem' }}>
-                    <label htmlFor="school-name" style={{ fontSize: '0.875rem', fontWeight: 600 }}>Team name</label>
+                <form onSubmit={handleSubmit} noValidate className="modal-form">
+                    <label htmlFor="team-name" className="modal-label">Team name</label>
                     <input
-                        id="school-name"
+                        id="team-name"
                         type="text"
                         required
                         autoFocus
-                        value={school}
-                        onChange={e => setSchool(e.target.value)}
+                        className={`modal-input${isDuplicate ? ' modal-input--invalid' : ''}`}
+                        value={name}
+                        onChange={e => setName(e.target.value)}
                         placeholder="e.g Morro Bay High School"
-                        style={{ height: '2.75rem', padding: '0 0.75rem', border: '1px solid var(--border-strong)', borderRadius: 'var(--radius)', background: 'var(--surface)', color: 'var(--text)', fontSize: '1rem', fontFamily: 'inherit' }}
                     />
-                    <label htmlFor="school-email" style={{ fontSize: '0.875rem', fontWeight: 600, marginTop: '0.25rem' }}>Coach email</label>
+                    <label htmlFor="team-code" className="modal-label">Team code <span style={{ fontWeight: 'normal', opacity: 0.6 }}>(optional)</span></label>
+                    <input
+                        id="team-code"
+                        type="text"
+                        className="modal-input"
+                        value={code}
+                        onChange={e => setCode(e.target.value)}
+                        placeholder={name.trim() || 'Defaults to team name'}
+                    />
+                    <label htmlFor="school-email" className="modal-label">Coach email</label>
                     <input
                         id="school-email"
                         type="email"
                         required
+                        className={`modal-input${email && !isValidEmail(email) ? ' modal-input--invalid' : ''}`}
                         value={email}
                         onChange={e => setEmail(e.target.value)}
                         placeholder="coach@school.edu"
-                        style={{ height: '2.75rem', padding: '0 0.75rem', border: `1px solid ${email && !isValidEmail(email) ? 'var(--danger)' : 'var(--border-strong)'}`, borderRadius: 'var(--radius)', background: 'var(--surface)', color: 'var(--text)', fontSize: '1rem', fontFamily: 'inherit' }}
                     />
 
                     <div className="confirm-actions">

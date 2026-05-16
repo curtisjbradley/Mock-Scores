@@ -3,7 +3,7 @@ import path from "path";
 import dotenv from 'dotenv';
 dotenv.config({ path: path.resolve(__dirname, '../.env') });
 import authRouter from './routes/authRoutes';
-import tournamentRouter from './routes/tournamentRoutes';
+import organizerTournamentRouter from './routes/organizer/organizerRoutes';
 import { verifyUser} from "./authUtils";
 
 const app = express();
@@ -16,7 +16,7 @@ app.use(express.urlencoded({ extended: true }));
 app.use(express.json());
 
 app.use('/api/auth', authRouter);
-app.use('/api/tournament',verifyUser, tournamentRouter);
+app.use('/api/organizer/tournament',verifyUser, organizerTournamentRouter);
 
 
 

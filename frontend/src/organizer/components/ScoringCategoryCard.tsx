@@ -40,8 +40,7 @@ export default function ScoringCategoryCard({
                     readOnly={cat.witnessCategory}
                     title={cat.witnessCategory ? 'Witness category names cannot be renamed' : undefined}
                 />
-                <button type="button" className="tc-remove-btn" onClick={onRemoveCategory}
-                    style={cat.witnessCategory ? { visibility: 'hidden' } : undefined}>×</button>
+                <button type="button" className={`tc-remove-btn${cat.witnessCategory ? ' tc-remove-btn--hidden' : ''}`} onClick={onRemoveCategory}>×</button>
             </div>
             <div className="sf-table-wrap">
                 <table className="sf-table">

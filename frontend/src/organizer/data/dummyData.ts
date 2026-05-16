@@ -35,12 +35,7 @@ export interface ITeam {
     pointsAgainst: number
 }
 
-export interface ICourtroom {
-    id: string
-    tournamentId: string
-    name: string
-    details?: string
-}
+
 
 export type ScoresheetStatus = 'pending' | 'submitted' | 'missing'
 
@@ -59,7 +54,7 @@ export interface IScoresheet {
 export interface IPairing {
     id: string
     tournamentId: string
-    round: number
+    round: string
     date: string
     time?: string
     courtroom: string
@@ -125,16 +120,6 @@ export const dummyTeams: ITeam[] = [
     { id: 'tm6',  tournamentId: 't2', code: '106', team: 'Madison Collegiate', wins: 1, losses: 3, pointsFor: 355, pointsAgainst: 420 },
 ]
 
-// ── Judges ───────────────────────────────────────────────────────────────────
-
-export const dummyJudges: IJudge[] = [
-    { id: 'j1', name: 'Hon. Patricia Nguyen' },
-    { id: 'j2', name: 'Hon. Marcus Webb' },
-    { id: 'j3', name: 'Hon. Sandra Kim' },
-    { id: 'j4', name: 'Atty. David Osei' },
-    { id: 'j5', name: 'Atty. Rachel Torres' },
-    { id: 'j6', name: 'Atty. James Patel' },
-]
 
 export const dummyScorers: IScorer[] = [
     { id: 'sc1', name: 'Maria Santos', email: 'maria@example.com' },
@@ -143,24 +128,12 @@ export const dummyScorers: IScorer[] = [
     { id: 'sc4', name: 'Robert Kim', email: 'robert@example.com' },
 ]
 
-export const dummyCourtrooms: ICourtroom[] = [
-    { id: 'cr1', tournamentId: 't2', name: '1A', details: '1st Floor' },
-    { id: 'cr2', tournamentId: 't2', name: '1B', details: '1st Floor' },
-    { id: 'cr3', tournamentId: 't2', name: '1C', details: '1st Floor' },
-    { id: 'cr4', tournamentId: 't2', name: '2A', details: '2nd Floor' },
-    { id: 'cr5', tournamentId: 't2', name: '2B', details: '2nd Floor' },
-    { id: 'cr6', tournamentId: 't2', name: '2C', details: '2nd Floor' },
-    { id: 'cr7', tournamentId: 't2', name: '3A', details: '3rd Floor' },
-    { id: 'cr8', tournamentId: 't2', name: '3B', details: '3rd Floor' },
-    { id: 'cr9', tournamentId: 't2', name: '3C', details: '3rd Floor' },
-]
-
 // ── Pairings (for t2) ────────────────────────────────────────────────────────
 
 export const dummyPairings: IPairing[] = [
     // Round 1 — 2026-04-20 (all submitted)
     {
-        id: 'p1', tournamentId: 't2', round: 1, date: '2026-04-20', time: '09:00', courtroom: '1A',
+        id: 'p1', tournamentId: 't2', round: "1", date: '2026-04-20', time: '09:00', courtroom: '1A',
         prosecutionTeamId: 'tm1', defenseTeamId: 'tm2',
         scoresheets: [
             { judgeId: 'j1', judgeName: 'Hon. Patricia Nguyen', status: 'submitted', prosecutionScore: 187, defenseScore: 174 },
@@ -169,7 +142,7 @@ export const dummyPairings: IPairing[] = [
         ],
     },
     {
-        id: 'p2', tournamentId: 't2', round: 1, date: '2026-04-20', time: '09:00', courtroom: '1B',
+        id: 'p2', tournamentId: 't2', round: "1", date: '2026-04-20', time: '09:00', courtroom: '1B',
         prosecutionTeamId: 'tm3', defenseTeamId: 'tm4',
         scoresheets: [
             { judgeId: 'j4', judgeName: 'Atty. David Osei',    status: 'submitted' },
@@ -178,7 +151,7 @@ export const dummyPairings: IPairing[] = [
         ],
     },
     {
-        id: 'p3', tournamentId: 't2', round: 1, date: '2026-04-20', time: '09:00', courtroom: '1C',
+        id: 'p3', tournamentId: 't2', round: "1", date: '2026-04-20', time: '09:00', courtroom: '1C',
         prosecutionTeamId: 'tm5', defenseTeamId: 'tm6',
         scoresheets: [
             { judgeId: 'j1', judgeName: 'Hon. Patricia Nguyen', status: 'submitted', prosecutionScore: 187, defenseScore: 174 },
@@ -188,7 +161,7 @@ export const dummyPairings: IPairing[] = [
     },
     // Round 2 — 2026-04-27 (mixed)
     {
-        id: 'p4', tournamentId: 't2', round: 2, date: '2026-04-27', time: '13:00', courtroom: '2A',
+        id: 'p4', tournamentId: 't2', round: "2", date: '2026-04-27', time: '13:00', courtroom: '2A',
         prosecutionTeamId: 'tm1', defenseTeamId: 'tm3',
         scoresheets: [
             { judgeId: 'j2', judgeName: 'Hon. Marcus Webb',    status: 'submitted' },
@@ -197,7 +170,7 @@ export const dummyPairings: IPairing[] = [
         ],
     },
     {
-        id: 'p5', tournamentId: 't2', round: 2, date: '2026-04-27', time: '13:00', courtroom: '2B',
+        id: 'p5', tournamentId: 't2', round: "2", date: '2026-04-27', time: '13:00', courtroom: '2B',
         prosecutionTeamId: 'tm2', defenseTeamId: 'tm5',
         scoresheets: [
             { judgeId: 'j1', judgeName: 'Hon. Patricia Nguyen', status: 'submitted', prosecutionScore: 187, defenseScore: 174 },
@@ -206,7 +179,7 @@ export const dummyPairings: IPairing[] = [
         ],
     },
     {
-        id: 'p6', tournamentId: 't2', round: 2, date: '2026-04-27', time: '13:00', courtroom: '2C',
+        id: 'p6', tournamentId: 't2', round: "2", date: '2026-04-27', time: '13:00', courtroom: '2C',
         prosecutionTeamId: 'tm4', defenseTeamId: 'tm6',
         scoresheets: [
             { judgeId: 'j2', judgeName: 'Hon. Marcus Webb',  status: 'submitted' },
@@ -216,7 +189,7 @@ export const dummyPairings: IPairing[] = [
     },
     // Round 3 — 2026-05-04 (all pending)
     {
-        id: 'p7', tournamentId: 't2', round: 3, date: '2026-05-04', time: '10:30', courtroom: '3A',
+        id: 'p7', tournamentId: 't2', round: "3", date: '2026-05-04', time: '10:30', courtroom: '3A',
         prosecutionTeamId: 'tm2', defenseTeamId: 'tm1',
         scoresheets: [
             { judgeId: 'j3', judgeName: 'Hon. Sandra Kim',     status: 'pending' },
@@ -225,7 +198,7 @@ export const dummyPairings: IPairing[] = [
         ],
     },
     {
-        id: 'p8', tournamentId: 't2', round: 3, date: '2026-05-04', time: '10:30', courtroom: '3B',
+        id: 'p8', tournamentId: 't2', round: "3", date: '2026-05-04', time: '10:30', courtroom: '3B',
         prosecutionTeamId: 'tm4', defenseTeamId: 'tm3',
         scoresheets: [
             { judgeId: 'j1', judgeName: 'Hon. Patricia Nguyen', status: 'pending' },
@@ -234,7 +207,7 @@ export const dummyPairings: IPairing[] = [
         ],
     },
     {
-        id: 'p9', tournamentId: 't2', round: 3, date: '2026-05-04', time: '10:30', courtroom: '3C',
+        id: 'p9', tournamentId: 't2', round: "3", date: '2026-05-04', time: '10:30', courtroom: '3C',
         prosecutionTeamId: 'tm6', defenseTeamId: 'tm5',
         scoresheets: [
             { judgeId: 'j1', judgeName: 'Hon. Patricia Nguyen', status: 'pending' },

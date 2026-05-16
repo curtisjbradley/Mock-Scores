@@ -5,7 +5,7 @@ import {dbQuery} from "./db";
 const JWT_SECRET = new TextEncoder().encode(process.env.JWT_SECRET ?? 'JWT_SECRET');
 const JWT_EXPIRY = process.env.JWT_EXPIRY ?? '7d';
 
-const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+export const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
 export interface ISessionPayload {
     userId: string;

@@ -1,69 +1,73 @@
-import { useState } from 'react'
-import '../styles/organizer.css'
-import '../styles/pairings.css'
-import '../../judges/styles/modal.css'
-import { dummyCourtrooms, type ICourtroom } from '../data/dummyData'
-import Section from "./Section.tsx";
+import { useState, useEffect } from 'react'
+import type { ICourtroom } from '@mock-scores/shared'
+import { ConfirmRemoveModal } from '../components/modals'
+import Section from './Section'
+import { apiFetch } from '../../auth/auth'
+import { v4 as randomUUID } from 'uuid'
 
-const CourtroomsTab = ({ tournamentId }: { tournamentId: string }) => {
-    const [courtrooms, setCourtrooms] = useState<ICourtroom[]>(() => dummyCourtrooms.filter(c => c.tournamentId === tournamentId))
+
+
+export default function CourtroomsTab({ tournamentId }: { tournamentId: string }) {
+    const [courtrooms, setCourtrooms] = useState<ICourtroom[]>([])
     const [showModal, setShowModal] = useState(false)
     const [editingId, setEditingId] = useState<string | null>(null)
     const [confirmRemove, setConfirmRemove] = useState<ICourtroom | null>(null)
     const [name, setName] = useState('')
-    const [details, setDetails] = useState('')
+    const [location, setLocation] = useState('')
 
-    const openAddModal = () => {
-        setEditingId(null)
-        setName('')
-        setDetails('')
-        setShowModal(true)
-    }
+    useEffect(() => {
 
-    const openEditModal = (courtroom: ICourtroom) => {
-        setEditingId(courtroom.id)
-        setName(courtroom.name)
-        setDetails(courtroom.details ?? '')
-        setShowModal(true)
-    }
+        apiFetch(`/api/organizer/tournament/${tournamentId}/courtrooms`).then(res => {
+            if (!res.ok) throw new Error('Courtrooms not found.')
+            return res.json()
+        }).then(setCourtrooms).catch(console.error)
+
+    }, [tournamentId])
+
+    const openAddModal = () => { setEditingId(null); setName(''); setLocation(''); setShowModal(true) }
+    const openEditModal = (c: ICourtroom) => { setEditingId(c.id); setName(c.name); setLocation(c.location ?? ''); setShowModal(true) }
 
     const handleSave = () => {
         if (!name.trim()) return
         if (editingId) {
-            setCourtrooms(prev => prev.map(c => c.id === editingId ? { ...c, name: name.trim(), details: details.trim() || undefined } : c))
+
+            const modifiedCourtroom: ICourtroom = {id: editingId, name: name.trim(), location: location.trim() }
+
+            apiFetch(`/api/organizer/tournament/${tournamentId}/courtrooms`, {method: 'PUT', body: JSON.stringify(modifiedCourtroom)}).then(res => {
+                if (!res.ok) throw new Error('Courtroom not found.')
+            }).catch(console.error) //todo: better reporting
+
+            setCourtrooms(prev => prev.map(c => c.id === editingId ? modifiedCourtroom : c))
         } else {
-            const newCourtroom: ICourtroom = { id: `cr-${Date.now()}`, tournamentId, name: name.trim(), details: details.trim() || undefined }
-            setCourtrooms(prev => [...prev, newCourtroom])
+            const newCourtroom: ICourtroom = {id: randomUUID(), name: name.trim(), location: location.trim() }
+
+            apiFetch(`/api/organizer/tournament/${tournamentId}/courtrooms`, {method: 'POST', body: JSON.stringify(newCourtroom)}).then(res => {
+                if (!res.ok) throw new Error('Courtroom not found.')
+            }).catch(console.error) //todo: better reporting
+
+            setCourtrooms(prev => [...prev,newCourtroom])
         }
         setShowModal(false)
     }
 
-    const handleRemove = () => {
-        if (!confirmRemove) return
-        setCourtrooms(prev => prev.filter(c => c.id !== confirmRemove.id))
-        setConfirmRemove(null)
-    }
-
-    const inputStyle = { height: '2.75rem', padding: '0 0.75rem', border: '1px solid var(--border-strong)', borderRadius: 'var(--radius)', background: 'var(--surface)', color: 'var(--text)', fontSize: '1rem', fontFamily: 'inherit' } as const
-
     return (
-        <Section title={'Courtrooms'} description={"Manage available courtrooms"}>
-            <div style={{ display: 'flex', justifyContent: 'flex-end', marginBottom: '0.75rem' }}>
+        <Section title="Courtrooms" description="Manage available courtrooms">
+            <div className="tab-actions">
                 <button className="org-new-btn" onClick={openAddModal}>+ Add courtroom</button>
             </div>
 
-            <div style={{ overflowX: 'auto' }}>
+            <div className="dash-table-scroll">
                 <table className="dash-standings-table">
                     <thead><tr><th>Name</th><th>Details</th><th></th></tr></thead>
                     <tbody>
-                        {courtrooms.map(courtroom => (
-                            <tr key={courtroom.id}>
-                                <td className="dash-team-code">{courtroom.name}</td>
-                                <td className="dash-judge-name">{courtroom.details ?? '—'}</td>
+                        {courtrooms.map(c => (
+                            <tr key={c.id}>
+                                <td className="dash-team-code">{c.name}</td>
+                                <td className="dash-judge-name">{c.location ?? '—'}</td>
                                 <td>
-                                    <div style={{ display: 'flex', gap: '0.4rem' }}>
-                                        <button className="dash-remove-btn" onClick={() => openEditModal(courtroom)}>Edit</button>
-                                        <button className="dash-remove-btn" onClick={() => setConfirmRemove(courtroom)}>Remove</button>
+                                    <div className="dash-actions-cell">
+                                        <button className="dash-remove-btn" onClick={() => openEditModal(c)}>Edit</button>
+                                        <button className="dash-remove-btn" onClick={() => setConfirmRemove(c)}>Remove</button>
                                     </div>
                                 </td>
                             </tr>
@@ -76,11 +80,17 @@ const CourtroomsTab = ({ tournamentId }: { tournamentId: string }) => {
                 <div className="modal-backdrop" role="presentation" onClick={e => { if (e.target === e.currentTarget) setShowModal(false) }}>
                     <div className="confirm-modal" role="dialog" aria-modal="true">
                         <h2>{editingId ? 'Edit courtroom' : 'Add courtroom'}</h2>
-                        <form onSubmit={e => { e.preventDefault(); handleSave() }} noValidate style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem', marginTop: '1rem' }}>
-                            <label htmlFor="name" style={{ fontSize: '0.875rem', fontWeight: 600 }}>Name</label>
-                            <input id="name" type="text" required autoFocus value={name} onChange={e => setName(e.target.value)} placeholder="e.g. 1A" style={inputStyle} />
-                            <label htmlFor="details" style={{ fontSize: '0.875rem', fontWeight: 600, marginTop: '0.25rem' }}>Details (optional)</label>
-                            <input id="details" type="text" value={details} onChange={e => setDetails(e.target.value)} placeholder="e.g. 2nd Floor" style={inputStyle} />
+                        <form className="tc-form" onSubmit={e => { e.preventDefault(); handleSave() }} noValidate>
+                            <div className="tc-field">
+                                <label className="tc-label" htmlFor="cr-name">Name</label>
+                                <input id="cr-name" type="text" className="tc-input" required autoFocus
+                                    value={name} onChange={e => setName(e.target.value)} placeholder="e.g. 1A" />
+                            </div>
+                            <div className="tc-field">
+                                <label className="tc-label" htmlFor="cr-details">Details (optional)</label>
+                                <input id="cr-details" type="text" className="tc-input"
+                                    value={location} onChange={e => setLocation(e.target.value)} placeholder="e.g. 2nd Floor" />
+                            </div>
                             <div className="confirm-actions">
                                 <button type="button" onClick={() => setShowModal(false)}>Cancel</button>
                                 <button type="submit" disabled={!name.trim()}>{editingId ? 'Save' : 'Add courtroom'}</button>
@@ -91,19 +101,20 @@ const CourtroomsTab = ({ tournamentId }: { tournamentId: string }) => {
             )}
 
             {confirmRemove && (
-                <div className="modal-backdrop" role="presentation" onClick={e => { if (e.target === e.currentTarget) setConfirmRemove(null) }}>
-                    <div className="confirm-modal" role="dialog" aria-modal="true">
-                        <h2>Remove courtroom?</h2>
-                        <p>Remove {confirmRemove.name} from the courtroom list?</p>
-                        <div className="confirm-actions">
-                            <button type="button" onClick={() => setConfirmRemove(null)}>Cancel</button>
-                            <button type="button" className="confirm-btn-danger" onClick={handleRemove}>Remove</button>
-                        </div>
-                    </div>
-                </div>
+                <ConfirmRemoveModal
+                    message={`Remove ${confirmRemove.name} from the courtroom list?`}
+                    onCancel={() => setConfirmRemove(null)}
+                    onConfirm={() => {
+
+                        apiFetch(`/api/organizer/tournament/${tournamentId}/courtrooms`, {method: 'DELETE', body: JSON.stringify(confirmRemove)}).then(res => {
+                            if (!res.ok) throw new Error('Courtroom not found.')
+                        }).catch(console.error) //todo: better reporting
+
+                        setCourtrooms(prev => prev.filter(c => c.id !== confirmRemove.id))
+                        setConfirmRemove(null)
+                    }}
+                />
             )}
         </Section>
     )
 }
-
-export default CourtroomsTab

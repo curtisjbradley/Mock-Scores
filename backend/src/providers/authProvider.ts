@@ -1,9 +1,8 @@
 import { dbQuery } from '../db';
 import bcrypt from 'bcrypt';
 import { signToken } from '../authUtils';
-import {randomUUID} from "node:crypto";
-
-interface IUser { user_id: string; email: string; first_name: string; last_name: string; password_hash: string; }
+import { randomUUID } from 'node:crypto';
+import type { IAuthRow } from '../types/dbtypes';
 interface IStatusResponse { status: number; message: string; }
 
 export class AuthProvider {
@@ -42,7 +41,7 @@ export class AuthProvider {
     }
 
     async loginUser(email: string, password: string): Promise<IStatusResponse | string> {
-        const result = await dbQuery<IUser>(
+        const result = await dbQuery<IAuthRow>(
             'SELECT user_id, email, password_hash, first_name, last_name FROM auth WHERE email = $1', [email]
         );
         if (result === null) return { status: 500, message: 'Internal error' };

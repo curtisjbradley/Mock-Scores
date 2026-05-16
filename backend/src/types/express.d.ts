@@ -1,11 +1,14 @@
 import 'express';
 import {ISessionPayload} from "../authUtils";
-import {IScorer} from "@mock-scores/shared";
+import {IOrganizer, IRound, IScorer, ITeam} from "@mock-scores/shared";
 
 declare module 'express' {
     interface Request {
-        session?: ISessionPayload,
+        session?: ISessionPayload
         tournament?: string
         scorer?: IScorer
+        round?: IRound
+        selectedOrganizer?: IOrganizer
+        selectedTeam?: ITeam
     }
 }

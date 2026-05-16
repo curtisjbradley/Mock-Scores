@@ -1,18 +1,12 @@
-import {useEffect, useState} from 'react'
-import '../styles/organizer.css'
-import '../styles/pairings.css'
-import '../../judges/styles/modal.css'
-import { type IScorer } from '@mock-scores/shared'
+import { useEffect, useState } from 'react'
+import type { IScorer } from '@mock-scores/shared'
 import { apiFetch } from '../../auth/auth'
 import { isValidEmail } from '../../utils/validation'
-import Section from "./Section.tsx";
-import { v4 as randomUUID } from "uuid";
+import { ConfirmRemoveModal } from '../components/modals'
+import Section from './Section'
+import { v4 as randomUUID } from 'uuid'
 
-interface ITabProps {
-    tournamentId : string
-}
-
-const ScorersTab = ({ tournamentId }: ITabProps) => {
+export default function ScorersTab({ tournamentId }: { tournamentId: string }) {
     const [scorers, setScorers] = useState<IScorer[]>([])
     const [showModal, setShowModal] = useState(false)
     const [editingId, setEditingId] = useState<string | null>(null)
@@ -21,67 +15,54 @@ const ScorersTab = ({ tournamentId }: ITabProps) => {
     const [lastName, setLastName] = useState('')
     const [email, setEmail] = useState('')
 
-
     useEffect(() => {
-        apiFetch(`/api/tournament/${tournamentId}/scorers`)
+        apiFetch(`/api/organizer/tournament/${tournamentId}/scorers`)
             .then(r => r.ok ? r.json() : [])
             .then((data: IScorer[]) => setScorers(Array.isArray(data) ? data : []))
             .catch(() => setScorers([]))
     }, [tournamentId])
 
     const openAddModal = () => {
-        setEditingId(null)
-        setFirstName('')
-        setLastName('')
-        setEmail('')
+        setEditingId(null); setFirstName(''); setLastName(''); setEmail('')
         setShowModal(true)
     }
 
     const openEditModal = (scorer: IScorer) => {
         setEditingId(scorer.scorer_id)
-        setFirstName(scorer.first_name)
-        setLastName(scorer.last_name)
-        setEmail(scorer.email ?? '')
+        setFirstName(scorer.first_name); setLastName(scorer.last_name); setEmail(scorer.email ?? '')
         setShowModal(true)
     }
 
     const handleSave = () => {
         if (!firstName.trim() || !lastName.trim() || !isValidEmail(email)) return
         if (editingId) {
-
-            setScorers(prev => prev.map(s => s.scorer_id === editingId ? { ...s, name: `${firstName.trim()} ${lastName.trim()}`, email: email.trim() } : s))
-            scorers.filter(s => s.scorer_id === editingId).find(async scorer => {
-                await apiFetch(`/api/tournament/${tournamentId}/scorers`, {method: "PUT", body: JSON.stringify({ ...scorer, name: `${firstName.trim()} ${lastName.trim()}`, email: email.trim() })})
-            })
+            const updated = scorers.find(s => s.scorer_id === editingId)
+            if (!updated) return
+            const payload = { ...updated, first_name: firstName.trim(), last_name: lastName.trim(), email: email.trim() }
+            setScorers(prev => prev.map(s => s.scorer_id === editingId ? payload : s))
+            apiFetch(`/api/organizer/tournament/${tournamentId}/scorers`, { method: 'PUT', body: JSON.stringify(payload) }).catch(console.error) //todo: better error reporting
         } else {
-            const newScorer: IScorer = {scorer_id : randomUUID() , tournament_id: tournamentId, first_name: firstName, last_name : lastName,  email: email.trim() }
+            const newScorer: IScorer = { scorer_id: randomUUID(), first_name: firstName.trim(), last_name: lastName.trim(), email: email.trim() }
             setScorers(prev => [...prev, newScorer])
-            //todo: display errors
-            apiFetch(`/api/tournament/${tournamentId}/scorers`, {method: "POST", body: JSON.stringify(newScorer)}).then(res => console.log(res))
+            apiFetch(`/api/organizer/tournament/${tournamentId}/scorers`, { method: 'POST', body: JSON.stringify(newScorer) }).catch(console.error) //todo: better error reporting
         }
         setShowModal(false)
     }
 
     const handleRemove = () => {
         if (!confirmRemove) return
-
-        scorers.filter(s => s.scorer_id === confirmRemove.scorer_id).find(async scorer => {
-            apiFetch(`/api/tournament/${tournamentId}/scorers`,{method: "DELETE", body: JSON.stringify({scorer_id: scorer.scorer_id})}).then(res => console.log(res))
-        })
-
+        apiFetch(`/api/organizer/tournament/${tournamentId}/scorers`, { method: 'DELETE', body: JSON.stringify({ scorer_id: confirmRemove.scorer_id }) }).catch(console.error) //todo: better error reporting
         setScorers(prev => prev.filter(s => s.scorer_id !== confirmRemove.scorer_id))
         setConfirmRemove(null)
     }
 
-    const inputStyle = { height: '2.75rem', padding: '0 0.75rem', border: '1px solid var(--border-strong)', borderRadius: 'var(--radius)', background: 'var(--surface)', color: 'var(--text)', fontSize: '1rem', fontFamily: 'inherit' } as const
-
     return (
-        <Section title={"Scorers"} description={"Manage available scorers"}>
-            <div style={{ display: 'flex', justifyContent: 'flex-end', marginBottom: '0.75rem' }}>
+        <Section title="Scorers" description="Manage available scorers">
+            <div className="tab-actions">
                 <button className="org-new-btn" onClick={openAddModal}>+ Add scorer</button>
             </div>
 
-            <div style={{ overflowX: 'auto' }}>
+            <div className="dash-table-scroll">
                 <table className="dash-standings-table">
                     <thead><tr><th>Name</th><th>Email</th><th></th></tr></thead>
                     <tbody>
@@ -90,7 +71,7 @@ const ScorersTab = ({ tournamentId }: ITabProps) => {
                                 <td>{scorer.first_name} {scorer.last_name}</td>
                                 <td className="dash-judge-name">{scorer.email ?? '—'}</td>
                                 <td>
-                                    <div style={{ display: 'flex', gap: '0.4rem' }}>
+                                    <div className="dash-actions-cell">
                                         <button className="dash-remove-btn" onClick={() => openEditModal(scorer)}>Edit</button>
                                         <button className="dash-remove-btn" onClick={() => setConfirmRemove(scorer)}>Remove</button>
                                     </div>
@@ -105,18 +86,29 @@ const ScorersTab = ({ tournamentId }: ITabProps) => {
                 <div className="modal-backdrop" role="presentation" onClick={e => { if (e.target === e.currentTarget) setShowModal(false) }}>
                     <div className="confirm-modal" role="dialog" aria-modal="true">
                         <h2>{editingId ? 'Edit scorer' : 'Add scorer'}</h2>
-                        <form onSubmit={e => { e.preventDefault(); handleSave() }} noValidate style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem', marginTop: '1rem' }}>
-                            <label htmlFor="first-name" style={{ fontSize: '0.875rem', fontWeight: 600 }}>First name</label>
-                            <input id="first-name" type="text" required autoFocus value={firstName} onChange={e => setFirstName(e.target.value)} placeholder="First name" style={inputStyle} />
-                            <label htmlFor="last-name" style={{ fontSize: '0.875rem', fontWeight: 600, marginTop: '0.25rem' }}>Last name</label>
-                            <input id="last-name" type="text" required value={lastName} onChange={e => setLastName(e.target.value)} placeholder="Last name" style={inputStyle} />
-                            <label htmlFor="email" style={{ fontSize: '0.875rem', fontWeight: 600, marginTop: '0.25rem' }}>Email</label>
-                            <input id="email" type="email" required value={email} onChange={e => setEmail(e.target.value)} placeholder="scorer@example.com"
-                                style={{ ...inputStyle, borderColor: email && !isValidEmail(email) ? 'var(--danger)' : 'var(--border-strong)' }} />
-                            {email && !isValidEmail(email) && <span style={{ color: 'var(--danger)', fontSize: '0.8rem' }}>Invalid email address</span>}
+                        <form className="tc-form" onSubmit={e => { e.preventDefault(); handleSave() }} noValidate>
+                            <div className="tc-field">
+                                <label className="tc-label" htmlFor="first-name">First name</label>
+                                <input id="first-name" type="text" className="tc-input" required autoFocus
+                                    value={firstName} onChange={e => setFirstName(e.target.value)} placeholder="First name" />
+                            </div>
+                            <div className="tc-field">
+                                <label className="tc-label" htmlFor="last-name">Last name</label>
+                                <input id="last-name" type="text" className="tc-input" required
+                                    value={lastName} onChange={e => setLastName(e.target.value)} placeholder="Last name" />
+                            </div>
+                            <div className="tc-field">
+                                <label className="tc-label" htmlFor="scorer-email">Email</label>
+                                <input id="scorer-email" type="email" required
+                                    className={`tc-input${email && !isValidEmail(email) ? ' tc-input--invalid' : ''}`}
+                                    value={email} onChange={e => setEmail(e.target.value)} placeholder="scorer@example.com" />
+                                {email && !isValidEmail(email) && <span className="tc-field-error">Invalid email address</span>}
+                            </div>
                             <div className="confirm-actions">
                                 <button type="button" onClick={() => setShowModal(false)}>Cancel</button>
-                                <button type="submit" disabled={!firstName.trim() || !lastName.trim() || !isValidEmail(email)}>{editingId ? 'Save' : 'Add scorer'}</button>
+                                <button type="submit" disabled={!firstName.trim() || !lastName.trim() || !isValidEmail(email)}>
+                                    {editingId ? 'Save' : 'Add scorer'}
+                                </button>
                             </div>
                         </form>
                     </div>
@@ -124,19 +116,12 @@ const ScorersTab = ({ tournamentId }: ITabProps) => {
             )}
 
             {confirmRemove && (
-                <div className="modal-backdrop" role="presentation" onClick={e => { if (e.target === e.currentTarget) setConfirmRemove(null) }}>
-                    <div className="confirm-modal" role="dialog" aria-modal="true">
-                        <h2>Remove scorer?</h2>
-                        <p>Remove {confirmRemove.first_name} {confirmRemove.last_name} from the scorer list?</p>
-                        <div className="confirm-actions">
-                            <button type="button" onClick={() => setConfirmRemove(null)}>Cancel</button>
-                            <button type="button" className="confirm-btn-danger" onClick={handleRemove}>Remove</button>
-                        </div>
-                    </div>
-                </div>
+                <ConfirmRemoveModal
+                    message={`Remove ${confirmRemove.first_name} ${confirmRemove.last_name} from the scorer list?`}
+                    onCancel={() => setConfirmRemove(null)}
+                    onConfirm={handleRemove}
+                />
             )}
         </Section>
     )
 }
-
-export default ScorersTab

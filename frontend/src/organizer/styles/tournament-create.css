@@ -344,3 +344,6 @@
 .tc-card .sf-form {
     max-width: 100%;
 }
+
+.tc-remove-btn--hidden { visibility: hidden; }
+.tc-step--clickable { cursor: pointer; }

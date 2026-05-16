@@ -6,142 +6,358 @@ The database uses Postgres.
 The following command creates all the proper tables.
 
 ```postgresql
-CREATE TABLE auth
+create table auth
 (
-    user_id       UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-    password_hash TEXT NOT NULL,
-    email         TEXT NOT NULL UNIQUE,
-    created_at    TIMESTAMP NOT NULL DEFAULT NOW(),
-    first_name    TEXT NOT NULL,
-    last_name     TEXT NOT NULL
+    user_id       uuid      default gen_random_uuid() not null
+        primary key,
+    password_hash text                                not null,
+    email         text                                not null
+        unique,
+    created_at    timestamp default now()             not null,
+    first_name    text                                not null,
+    last_name     text                                not null
+);
+create table tournament_format(
+                                  format_id uuid primary key default gen_random_uuid(),
+                                  case_name          text                                not null,
+                                  criminal_case      boolean   default true              not null,
+                                  p_witnesses_called smallint                            not null,
+                                  d_witnesses_called smallint                            not null,
+                                  has_swing boolean default false
 );
 
-CREATE TABLE tournaments
-(
-    id                   UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-    name                 TEXT NOT NULL,
-    location             TEXT NOT NULL,
-    start_date           DATE,
-    end_date             DATE,
-    created_at           TIMESTAMP NOT NULL DEFAULT NOW(),
-    case_name            TEXT NOT NULL,
-    criminal_case        BOOLEAN NOT NULL DEFAULT TRUE,
-    p_witnesses_called   SMALLINT NOT NULL,
-    d_witnesses_called   SMALLINT NOT NULL,
-    has_swing            BOOLEAN NOT NULL DEFAULT FALSE,
+alter table auth
+    owner to postgres;
 
-    CHECK (
-        start_date IS NULL
-            OR end_date IS NULL
-            OR start_date <= end_date
-        )
+create table tournaments
+(
+    id                 uuid      default gen_random_uuid() not null
+        primary key,
+    name               text                                not null,
+    location           text                                not null,
+    start_date         date,
+    end_date           date,
+    created_at         timestamp default now()             not null,
+    case_format_id uuid not null references tournament_format(format_id),
+    num_rounds         smallint  default 0                 not null,
+    num_teams          smallint  default 0                 not null,
+    constraint tournaments_check
+        check ((start_date IS NULL) OR (end_date IS NULL) OR (start_date <= end_date))
 );
 
-CREATE TABLE case_witnesses
+alter table tournaments
+    owner to postgres;
+
+create table case_witnesses
 (
-    id            UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-    tournament_id UUID NOT NULL REFERENCES tournaments(id) ON DELETE CASCADE,
-    side          VARCHAR(1) NOT NULL CHECK (side IN ('P', 'D', 'S')),
-    name          TEXT NOT NULL
+    id            uuid default gen_random_uuid() not null
+        primary key,
+    case_format uuid                           not null
+        references tournament_format(format_id)
+            on delete cascade,
+    side          varchar(1)                     not null
+        constraint case_witnesses_side_check
+            check ((side)::text = ANY
+                   ((ARRAY ['P'::character varying, 'D'::character varying, 'S'::character varying])::text[])),
+    name          text                           not null
 );
 
-CREATE TABLE scoring_categories
-(
-    id                UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-    tournament_id     UUID NOT NULL REFERENCES tournaments(id) ON DELETE CASCADE,
-    name              TEXT NOT NULL,
-    witness_category  BOOLEAN NOT NULL DEFAULT FALSE,
-    position          SMALLINT NOT NULL,
+alter table case_witnesses
+    owner to postgres;
 
-    UNIQUE (tournament_id, position)
+create table scoring_categories
+(
+    id               uuid    default gen_random_uuid() not null
+        primary key,
+    tournament_id    uuid                              not null
+        references tournaments
+            on delete cascade,
+    name             text                              not null,
+    witness_category boolean default false             not null,
+    position         smallint                          not null,
+    unique (tournament_id, position)
 );
 
-CREATE TABLE scoring_fields
+alter table scoring_categories
+    owner to postgres;
+
+create table scoring_fields
 (
-    id                   UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-    category_id          UUID NOT NULL REFERENCES scoring_categories(id) ON DELETE CASCADE,
-    label                TEXT NOT NULL,
-    min_score            SMALLINT NOT NULL DEFAULT 0,
-    max_score            SMALLINT NOT NULL DEFAULT 10,
-    multiplier           NUMERIC(5,2) NOT NULL DEFAULT 1,
-    assignable           BOOLEAN NOT NULL DEFAULT TRUE,
-    eligible_for_award   BOOLEAN NOT NULL DEFAULT FALSE,
-    visible_to_scorers   BOOLEAN NOT NULL DEFAULT TRUE,
-    prosecution          BOOLEAN NOT NULL DEFAULT FALSE,
-    defense              BOOLEAN NOT NULL DEFAULT FALSE,
-    calling              BOOLEAN NOT NULL DEFAULT FALSE,
-    crossing             BOOLEAN NOT NULL DEFAULT FALSE,
-    position             SMALLINT NOT NULL,
-
-    CHECK (min_score <= max_score),
-    CHECK (multiplier >= 0),
-
-    UNIQUE (category_id, position)
+    id                 uuid          default gen_random_uuid() not null
+        primary key,
+    category_id        uuid                                    not null
+        references scoring_categories
+            on delete cascade,
+    label              text                                    not null,
+    min_score          smallint      default 0                 not null,
+    max_score          smallint      default 10                not null,
+    multiplier         numeric(5, 2) default 1                 not null
+        constraint scoring_fields_multiplier_check
+            check (multiplier >= (0)::numeric),
+    assignable         boolean       default true              not null,
+    eligible_for_award boolean       default false             not null,
+    visible_to_scorers boolean       default true              not null,
+    prosecution        boolean       default false             not null,
+    defense            boolean       default false             not null,
+    calling            boolean       default false             not null,
+    crossing           boolean       default false             not null,
+    position           smallint                                not null,
+    unique (category_id, position),
+    constraint scoring_fields_check
+        check (min_score <= max_score)
 );
 
-CREATE TABLE tournament_owners
-(
-    tournament_id UUID NOT NULL REFERENCES tournaments(id) ON DELETE CASCADE,
-    delegate_id   UUID NOT NULL REFERENCES auth(user_id) ON DELETE CASCADE,
-    role          TEXT NOT NULL CHECK (role IN ('owner', 'delegate')),
+alter table scoring_fields
+    owner to postgres;
 
-    PRIMARY KEY (tournament_id, delegate_id)
+create table tournament_owners
+(
+    id uuid primary key default gen_random_uuid(), 
+    tournament_id uuid not null
+        references tournaments
+            on delete cascade,
+    delegate_id   uuid not null
+        references auth
+            on delete cascade,
+    role          text not null
+        constraint tournament_owners_role_check
+            check (role = ANY (ARRAY ['owner'::text, 'delegate'::text])),
+    unique(tournament_id, delegate_id)
 );
 
-CREATE TABLE tournament_delegate_invites
+alter table tournament_owners
+    owner to postgres;
+
+create table tournament_delegate_invites
 (
-    id            UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-    tournament_id UUID NOT NULL REFERENCES tournaments(id) ON DELETE CASCADE,
-    name          TEXT NOT NULL,
-    email         TEXT NOT NULL
+    id            uuid default gen_random_uuid() not null
+        primary key,
+    tournament_id uuid                           not null
+        references tournaments
+            on delete cascade,
+    name          text                           not null,
+    email         text                           not null
 );
 
-CREATE TABLE scorers
+alter table tournament_delegate_invites
+    owner to postgres;
+
+create table scorers
 (
-    scorer_id      UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-    tournament_id  UUID NOT NULL REFERENCES tournaments(id) ON DELETE CASCADE,
-    first_name     TEXT NOT NULL,
-    last_name      TEXT NOT NULL,
-    email          TEXT NOT NULL
+    scorer_id     uuid default gen_random_uuid() not null
+        primary key,
+    tournament_id uuid                           not null
+        references tournaments
+            on delete cascade,
+    first_name    text                           not null,
+    last_name     text                           not null,
+    email         text                           not null
 );
 
-CREATE TABLE courtrooms
-(
-    id             UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-    tournament_id  UUID NOT NULL REFERENCES tournaments(id) ON DELETE CASCADE,
-    name           TEXT NOT NULL,
-    location       TEXT,
+alter table scorers
+    owner to postgres;
 
-    UNIQUE (tournament_id, name)
+create table courtrooms
+(
+    id            uuid default gen_random_uuid() not null
+        primary key,
+    tournament_id uuid                           not null
+        references tournaments
+            on delete cascade,
+    name          text                           not null,
+    location      text,
+    unique (tournament_id, name)
 );
 
-CREATE TABLE teams
-(
-    id             UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-    tournament_id  UUID NOT NULL REFERENCES tournaments(id) ON DELETE CASCADE,
-    name           TEXT NOT NULL,
-    code           TEXT NOT NULL,
+alter table courtrooms
+    owner to postgres;
 
-    UNIQUE (tournament_id, name),
-    UNIQUE (tournament_id, code)
+create table teams
+(
+    id            uuid default gen_random_uuid() not null
+        primary key,
+    tournament_id uuid                           not null
+        references tournaments
+            on delete cascade,
+    name          text                           not null,
+    code          text                           not null,
+    unique (tournament_id, name),
+    unique (tournament_id, code)
 );
 
-CREATE TABLE team_invites
+alter table teams
+    owner to postgres;
+
+create table team_invites
 (
-    id            UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-    team_id       UUID NOT NULL REFERENCES teams(id) ON DELETE CASCADE,
-    invite_email  TEXT NOT NULL,
-    name          TEXT NOT NULL,
-    code          TEXT NOT NULL
+    id           uuid default gen_random_uuid() not null
+        primary key,
+    team_id      uuid                           not null
+        references teams
+            on delete cascade,
+    invite_email text                           not null,
+    name         text                           not null,
+    code         text                           not null
 );
 
-CREATE TABLE team_coaches
-(
-    coach_id   UUID NOT NULL REFERENCES auth(user_id) ON DELETE CASCADE,
-    team_id    UUID NOT NULL REFERENCES teams(id) ON DELETE CASCADE,
-    is_owner   BOOLEAN NOT NULL DEFAULT FALSE,
+alter table team_invites
+    owner to postgres;
 
-    PRIMARY KEY (coach_id, team_id)
+create table team_coaches
+(
+    coach_id uuid                  not null
+        references auth
+            on delete cascade,
+    team_id  uuid                  not null
+        references teams
+            on delete cascade,
+    is_owner boolean default false not null,
+    primary key (coach_id, team_id)
 );
+
+alter table team_coaches
+    owner to postgres;
+
+create table rounds
+(
+    round_id       uuid     default gen_random_uuid() not null
+        primary key,
+    tournament_id  uuid                               not null
+        references tournaments
+            on delete cascade,
+    results_public boolean not null default false,
+    teams_public   boolean not null default false,
+    position       smallint default 1                 not null,
+    name           text                               not null,
+    round_time     timestamp with time zone,
+    unique (tournament_id, position)
+);
+
+alter table rounds
+    owner to postgres;
+
+
+
+create table pairings
+(
+    pairing_id uuid default gen_random_uuid() not null
+        primary key,
+    round_id   uuid                           not null
+        references rounds
+            on delete cascade,
+    p_team     uuid                           not null
+        references teams
+            on delete cascade,
+    d_team     uuid                           not null
+        references teams
+            on delete cascade,
+    courtroom  uuid
+        references courtrooms
+            on delete cascade,
+    unique (round_id, p_team),
+    unique (round_id, d_team)
+);
+
+create table paper_scorers
+(
+    scorer_id  uuid default gen_random_uuid() not null
+        primary key,
+    pairing_id uuid                           not null
+        references pairings
+            on delete cascade,
+    name       text                           not null
+);
+
+
+alter table pairings
+    owner to postgres;
+
+create table scorer_pairing_assignments
+(
+    assignment_id        uuid default gen_random_uuid() not null
+        primary key,
+    registered_scorer_id uuid
+        references scorers
+            on delete cascade,
+    paper_scorer_id      uuid
+        references paper_scorers
+            on delete cascade,
+    pairing_id           uuid                           not null
+        references pairings
+            on delete cascade,
+    constraint scorer_pairing_assignments_check
+        check (((registered_scorer_id IS NOT NULL) AND (paper_scorer_id IS NULL)) OR
+               ((registered_scorer_id IS NULL) AND (paper_scorer_id IS NOT NULL)))
+);
+
+alter table scorer_pairing_assignments
+    owner to postgres;
+
+create table scorer_presider_assignment
+(
+    presider_assignment_id uuid    default gen_random_uuid() not null
+        primary key,
+    scorer_assignment_id   uuid                              not null
+        references scorer_pairing_assignments
+            on delete cascade,
+    pairing_id             uuid                              not null
+        unique
+        references pairings,
+    show_scores            boolean default true              not null
+);
+
+alter table scorer_presider_assignment
+    owner to postgres;
+
+
+create table team_rostered_students (
+                                        student_id uuid primary key default gen_random_uuid(),
+                                        team_id uuid not null references teams(id) on delete cascade,
+                                        student_name text not null,
+                                        unique(team_id, student_name)
+);
+
+create function update_tournament_num_rounds() returns trigger
+    language plpgsql
+as
+$$
+begin
+    update tournaments
+    set num_rounds = (select count(*)
+                      from rounds
+                      where tournament_id = coalesce(new.tournament_id, old.tournament_id))
+    where id = coalesce(new.tournament_id, old.tournament_id);
+
+    return null;
+end;
+$$;
+
+alter function update_tournament_num_rounds() owner to postgres;
+
+create function update_tournament_num_teams() returns trigger
+    language plpgsql
+as
+$$
+begin
+    update tournaments
+    set num_teams = (select count(*)
+                     from teams
+                     where tournament_id = coalesce(new.tournament_id, old.tournament_id))
+    where id = coalesce(new.tournament_id, old.tournament_id);
+
+    return null;
+end;
+$$;
+
+alter function update_tournament_num_teams() owner to postgres;
+
+
+CREATE TRIGGER trg_update_num_teams
+  AFTER INSERT OR UPDATE OR DELETE ON teams
+    FOR EACH ROW EXECUTE FUNCTION update_tournament_num_teams();
+
+CREATE TRIGGER trg_update_num_rounds
+    AFTER INSERT OR UPDATE OR DELETE ON rounds
+    FOR EACH ROW EXECUTE FUNCTION update_tournament_num_rounds();
 
 ```

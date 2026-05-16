@@ -16,6 +16,10 @@
     --danger: #e61c1c;
     --danger-bg: rgb(159 19 19 / 0.27);
 
+    --success: #d4edda;
+    --success-text: #155724;
+    --success-border: #c3e6cb;
+
     --focus: #9bb8ff;
 
     --radius: 0.9rem;
@@ -44,6 +48,10 @@
 
         --danger: #ff8080;
         --danger-bg: #4a2020;
+
+        --success: #1e3a2a;
+        --success-text: #6fcf97;
+        --success-border: #2d6a4f;
 
         --focus: #3d5aff;
 
