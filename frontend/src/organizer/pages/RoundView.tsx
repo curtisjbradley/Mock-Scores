@@ -194,7 +194,7 @@ const RoundView = () => {
                                         <select className={`rv-select${addCourtroomError ? ' rv-select-invalid' : ''}`}
                                             value={addCourtroom} onChange={e => setAddCourtroom(e.target.value)}>
                                             <option value="">Select courtroom…</option>
-                                            {courtrooms.map(c => <option key={c.id} value={c.name}>{c.name}{c.details ? ` (${c.details})` : ''}</option>)}
+                                            {courtrooms.map(c => <option key={c.id} value={c.name}>{c.name}{c.location ? ` (${c.location})` : ''}</option>)}
                                         </select>
                                     </label>
                                     {addCourtroomError && <span className="rv-field-error">{addCourtroomError}</span>}

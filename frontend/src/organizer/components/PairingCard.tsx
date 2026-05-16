@@ -85,7 +85,7 @@ export default function PairingCard({ pairing, teams, courtrooms, onRemove, onUp
                             value={courtroomDraft}
                             onChange={e => setCourtroomDraft(e.target.value)}>
                             {courtrooms.map(c => (
-                                <option key={c.id} value={c.name}>{c.name}{c.details ? ` (${c.details})` : ''}</option>
+                                <option key={c.id} value={c.name}>{c.name}{c.location ? ` (${c.location})` : ''}</option>
                             ))}
                         </select>
                         <button className="pc-save-btn" onClick={saveCourtroomEdit}>Save</button>
