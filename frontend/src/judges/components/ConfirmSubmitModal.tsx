@@ -120,8 +120,7 @@ const ConfirmSubmitModal = ({
         }) as ScoreSection[];
 
         const payload: ScorecardPayload = {
-            trialID: details.trialID,
-            scorerID: details.scorerID,
+            pairingID: details.trialID,
             scores,
             nominations: nominees.map((n) => ({ studentId: n.id, rank: nomineeRanks[n.id] })),
             ...(isPresider && { tiebreaker }),

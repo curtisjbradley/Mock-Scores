@@ -6,7 +6,7 @@ import '../styles/pairings.css'
 // TODO: fetch round pairings from GET /api/tournaments/:id/rounds/:round/pairings (replace dummyPairings)
 // TODO: fetch teams from GET /api/tournaments/:id/teams (replace dummyTeams)
 // TODO: fetch courtrooms from GET /api/tournaments/:id/courtrooms (replace dummyCourtrooms)
-import { dummyTournaments, dummyPairings, dummyTeams, dummyCourtrooms, type IPairing } from '../data/dummyData'
+import { dummyTournaments, dummyPairings, dummyTeams, type IPairing } from '../data/dummyData'
 import { fmt, fmtTime } from '../data/utils'
 import PairingCard from '../components/PairingCard'
 import { ConfirmRemoveModal } from '../components/modals'
@@ -25,7 +25,7 @@ const RoundView = () => {
 
     const tournament = dummyTournaments.find(t => t.id === id)
     const teams = dummyTeams.filter(t => t.tournamentId === id)
-    const courtrooms = dummyCourtrooms.filter(c => c.tournamentId === id)
+    const courtrooms: import('@mock-scores/shared').ICourtroom[] = []
 
     const [pairings, setPairings] = useState<IPairing[]>(() =>
         dummyPairings.filter(p => p.tournamentId === id)

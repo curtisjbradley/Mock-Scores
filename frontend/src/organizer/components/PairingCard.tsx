@@ -1,5 +1,6 @@
 import { useState } from 'react'
-import { dummyScorers, type IPairing, type ICourtroom, type ITeam } from '../data/dummyData'
+import { dummyScorers, type IPairing, type ITeam } from '../data/dummyData'
+import type { ICourtroom } from '@mock-scores/shared'
 
 interface Props {
     pairing: IPairing
