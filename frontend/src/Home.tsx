@@ -1,8 +1,6 @@
 import { useNavigate } from 'react-router-dom'
 import './home/styles/home.css'
 
-const heroImg = '/hero.JPG'
-
 const roles = [
     { label: 'Organizer', path: '/organizer' },
     { label: 'Coach', path: '/coach' },
@@ -14,13 +12,16 @@ const Home = () => {
 
     return (
         <div className="home-main">
-                <img
-                    src={heroImg}
-                    alt=""
-                    className="home-hero-img"
-                    fetchPriority="high"
-                    aria-hidden="true"
-                />
+                <picture>
+                    <source srcSet="/hero.webp" type="image/webp" />
+                    <img
+                        src="/hero.JPG"
+                        alt=""
+                        className="home-hero-img"
+                        fetchPriority="high"
+                        aria-hidden="true"
+                    />
+                </picture>
                 <main className="main-content">
                     <h1>Welcome</h1>
                     <p>Who are you?</p>
