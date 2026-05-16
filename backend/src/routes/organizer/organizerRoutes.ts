@@ -38,7 +38,6 @@ router.post("/", async (req: Request, res: Response) => {
     if (!tournament) {
         return res.status(500).json({ message: 'Unable to create tournament' });
     }
-    console.log(req.session.userId, tournament);
     await tournamentProvider.addTournamentOrganizer(tournament.id,req.session.userId, "owner")
 
     return res.status(201).json(tournament);
