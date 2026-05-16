@@ -1,5 +1,6 @@
 import { useState } from 'react'
-import { dummyScorers, type IPairing, type ICourtroom, type ITeam } from '../data/dummyData'
+import { dummyScorers, type IPairing, type ITeam } from '../data/dummyData'
+import type { ICourtroom } from '@mock-scores/shared'
 
 interface Props {
     pairing: IPairing
@@ -25,7 +26,7 @@ export default function PairingCard({ pairing, teams, courtrooms, onRemove, onUp
 
     const teamName = (tid: string) => {
         const t = teams.find(t => t.id === tid)
-        return t ? `${t.code} — ${t.school}` : '—'
+        return t ? `${t.code} — ${t.team}` : '—'
     }
 
     const availableScorers = dummyScorers.filter(
@@ -84,7 +85,7 @@ export default function PairingCard({ pairing, teams, courtrooms, onRemove, onUp
                             value={courtroomDraft}
                             onChange={e => setCourtroomDraft(e.target.value)}>
                             {courtrooms.map(c => (
-                                <option key={c.id} value={c.name}>{c.name}{c.details ? ` (${c.details})` : ''}</option>
+                                <option key={c.id} value={c.name}>{c.name}{c.location ? ` (${c.location})` : ''}</option>
                             ))}
                         </select>
                         <button className="pc-save-btn" onClick={saveCourtroomEdit}>Save</button>
@@ -105,14 +106,14 @@ export default function PairingCard({ pairing, teams, courtrooms, onRemove, onUp
                         Prosecution
                         <select className="rv-select" value={prosDraft} onChange={e => setProsDraft(e.target.value)}>
                             <option value="">Select team…</option>
-                            {teams.map(t => <option key={t.id} value={t.id}>{t.code} — {t.school}</option>)}
+                            {teams.map(t => <option key={t.id} value={t.id}>{t.code} — {t.team}</option>)}
                         </select>
                     </label>
                     <label className="rv-field-label">
                         Defense
                         <select className="rv-select" value={defDraft} onChange={e => setDefDraft(e.target.value)}>
                             <option value="">Select team…</option>
-                            {teams.map(t => <option key={t.id} value={t.id}>{t.code} — {t.school}</option>)}
+                            {teams.map(t => <option key={t.id} value={t.id}>{t.code} — {t.team}</option>)}
                         </select>
                     </label>
                     <div className="pc-edit-actions">

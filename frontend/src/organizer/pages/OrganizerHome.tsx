@@ -1,16 +1,22 @@
+import { useEffect, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import '../styles/organizer.css'
-// TODO: fetch tournaments from GET /api/tournaments (replace dummyTournaments)
-import { dummyTournaments, type ITournament } from '../data/dummyData'
+import type { ITournament } from '@mock-scores/shared'
+import { apiFetch } from '../../auth/auth'
+import { fmt } from '../data/utils'
 
-const statusLabel: Record<ITournament['status'], string> = {
-    upcoming: 'Upcoming',
-    active: 'Active',
-    completed: 'Completed',
-}
+const fmtDate = (d: Date | null) => d ? fmt(String(d)) : 'TBD'
 
 const OrganizerHome = () => {
     const navigate = useNavigate()
+    const [tournaments, setTournaments] = useState<ITournament[]>([])
+
+    useEffect(() => {
+        apiFetch('/api/organizer/tournament')
+            .then(res => res.ok ? res.json() : [])
+            .then((data: ITournament[]) => setTournaments(data))
+            .catch(console.error)
+    }, [])
 
     return (
             <main className="org-main">
@@ -23,7 +29,7 @@ const OrganizerHome = () => {
                     </div>
 
                     <div className="org-tournament-list">
-                        {dummyTournaments.map(t => (
+                        {tournaments.map(t => (
                             <button
                                 key={t.id}
                                 className="org-tournament-card"
@@ -32,14 +38,11 @@ const OrganizerHome = () => {
                                 <div className="org-tournament-info">
                                     <span className="org-tournament-name">{t.name}</span>
                                     <span className="org-tournament-meta">
-                                        {t.dates[0] === t.dates[t.dates.length-1] ? new Date(t.dates[0]).toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' }) : new Date(t.dates[0]).toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' }) + ' – ' + new Date(t.dates[t.dates.length-1]).toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' })}
+                                        {fmtDate(t.start_date)} – {fmtDate(t.end_date)}
                                         {' · '}{t.location}
-                                        {' · '}{t.teams} teams · {t.rounds} rounds
+                                        {' · '}{t.num_teams} teams · {t.num_rounds} rounds
                                     </span>
                                 </div>
-                                <span className={`org-status org-status--${t.status}`}>
-                                    {statusLabel[t.status]}
-                                </span>
                             </button>
                         ))}
                     </div>

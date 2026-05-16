@@ -14,7 +14,7 @@ const ScorecardViewer = () => {
                         <p className="coach-empty">Tournament: {id}</p>
                         <p className="coach-empty">Pairing: {pairingId}</p>
                         <p className="coach-empty">Judge: {judgeId}</p>
-                        <p className="coach-empty" style={{ marginTop: '1rem', fontStyle: 'italic' }}>
+                        <p className="coach-empty scorecard-note">
                             {/* TODO: fetch scorecard from GET /api/pairings/:pairingId/scoresheets/:judgeId and render read-only ScoreSheet */}
                             Scorecard details will be displayed here when backend integration is complete.
                         </p>

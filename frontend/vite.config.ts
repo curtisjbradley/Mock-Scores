@@ -6,7 +6,13 @@ import babel from '@rolldown/plugin-babel'
 // Small stylesheets are cheaper to parse inline than to fetch as a
 // render-blocking request, and Vite hashes the CSS filename per build
 // so the caching benefit of a separate file is negligible.
+//
+// Only the CSS files actually referenced from index.html's
+// <link rel="stylesheet"> tags are inlined and removed from the bundle.
+// Route-level CSS (emitted alongside lazy JS chunks via cssCodeSplit)
+// is left alone because it is loaded dynamically from JS, not from HTML.
 function inlineCss(): Plugin {
+  const inlinedFiles = new Set<string>()
   return {
     name: 'inline-css',
     apply: 'build',
@@ -22,39 +28,29 @@ function inlineCss(): Plugin {
               typeof asset.source === 'string'
                 ? asset.source
                 : Buffer.from(asset.source).toString('utf8')
+            inlinedFiles.add(file)
             return `<style>${source}</style>`
           }
           return match
         },
       )
     },
-    // Drop now-unused CSS asset from the bundle so it isn't emitted to dist.
     generateBundle(_options, bundle) {
-      const htmlFiles = Object.values(bundle).filter(
-        (c) => c.type === 'asset' && c.fileName.endsWith('.html'),
-      )
-      const referenced = new Set<string>()
-      for (const html of htmlFiles) {
-        if (html.type !== 'asset') continue
-        const src =
-          typeof html.source === 'string'
-            ? html.source
-            : Buffer.from(html.source).toString('utf8')
-        for (const match of src.matchAll(/href="\/([^"]+\.css)"/g)) {
-          referenced.add(match[1])
-        }
+      for (const file of inlinedFiles) {
+        delete bundle[file]
       }
-      for (const [key, chunk] of Object.entries(bundle)) {
-        if (chunk.type === 'asset' && chunk.fileName.endsWith('.css') && !referenced.has(chunk.fileName)) {
-          delete bundle[key]
-        }
-      }
+      inlinedFiles.clear()
     },
   }
 }
 
 // https://vite.dev/config/
 export default defineConfig({
+  server: {
+    proxy: {
+      '/api': 'http://localhost:3000',
+    },
+  },
   plugins: [
     react(),
     babel({ presets: [reactCompilerPreset()] }),

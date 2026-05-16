@@ -6,41 +6,43 @@ import '../styles/pairings.css'
 // TODO: fetch round pairings from GET /api/tournaments/:id/rounds/:round/pairings (replace dummyPairings)
 // TODO: fetch teams from GET /api/tournaments/:id/teams (replace dummyTeams)
 // TODO: fetch courtrooms from GET /api/tournaments/:id/courtrooms (replace dummyCourtrooms)
-import { dummyTournaments, dummyPairings, dummyTeams, dummyCourtrooms, type IPairing } from '../data/dummyData'
+import { dummyTournaments, dummyPairings, dummyTeams, type IPairing } from '../data/dummyData'
 import { fmt, fmtTime } from '../data/utils'
 import PairingCard from '../components/PairingCard'
 import { ConfirmRemoveModal } from '../components/modals'
 
-const initDate = (id: string | undefined, round: number) =>
-    dummyPairings.find(p => p.tournamentId === id && p.round === round)?.date ?? ''
-const initTime = (id: string | undefined, round: number) =>
-    dummyPairings.find(p => p.tournamentId === id && p.round === round)?.time ?? ''
+const initDate = (round: string) =>
+    dummyPairings.find(p => p.round === round)?.date ?? ''
+const initTime = ( round: string) =>
+    dummyPairings.find(p => p.round === round)?.time ?? ''
 
 const RoundView = () => {
-    const { id, round: roundParam } = useParams<{ id: string; round: string }>()
+    const { id } = useParams<{ id: string; round: string }>()
     const navigate = useNavigate()
-    const round = Number(roundParam)
+
+    if(!id) navigate('/')
+
 
     const tournament = dummyTournaments.find(t => t.id === id)
     const teams = dummyTeams.filter(t => t.tournamentId === id)
-    const courtrooms = dummyCourtrooms.filter(c => c.tournamentId === id)
+    const courtrooms: import('@mock-scores/shared').ICourtroom[] = []
 
     const [pairings, setPairings] = useState<IPairing[]>(() =>
-        dummyPairings.filter(p => p.tournamentId === id && p.round === round)
+        dummyPairings.filter(p => p.tournamentId === id)
     )
 
     // Round details
-    const [roundName, setRoundName] = useState(`Round ${round}`)
+    const [roundName, setRoundName] = useState(`Round 1`)
     const [editingName, setEditingName] = useState(false)
     const [nameValue, setNameValue] = useState('')
-    const [roundDate, setRoundDate] = useState(() => initDate(id, round))
-    const [roundTime, setRoundTime] = useState(() => initTime(id, round))
+    const [roundDate, setRoundDate] = useState(() => initDate(id as string))
+    const [roundTime, setRoundTime] = useState(() => initTime(id as string))
     const [editingDate, setEditingDate] = useState(false)
     const [editingTime, setEditingTime] = useState(false)
     const [savedDetails, setSavedDetails] = useState({
-        name: `Round ${round}`,
-        date: initDate(id, round),
-        time: initTime(id, round),
+        name: `Round `,
+        date: initDate(id as string),
+        time: initTime(id as string),
     })
     const [detailsSubmitted, setDetailsSubmitted] = useState(false)
 
@@ -75,12 +77,14 @@ const RoundView = () => {
         setAddSubmitted(true)
         if (!addPros || !addDef || addPros === addDef || !addCourtroom) return
         // TODO: POST /api/tournaments/:id/rounds/:round/pairings { prosecutionTeamId, defenseTeamId, courtroom }
-        setPairings(prev => [...prev, {
+        /*setPairings(prev => [...prev, {
             id: `p-new-${Date.now()}`, tournamentId: id!, round,
             date: roundDate, courtroom: addCourtroom,
             prosecutionTeamId: addPros, defenseTeamId: addDef,
             scoresheets: [], isPublished: false,
         }])
+
+         */
         setAddPros(''); setAddDef(''); setAddSubmitted(false); setShowAddForm(false)
     }
 
@@ -132,10 +136,9 @@ const RoundView = () => {
                                 )}
                                 <span className="rv-meta-sep">·</span>
                                 {editingTime ? (
-                                    <input autoFocus type="time" className="rv-date-input"
+                                    <input autoFocus type="time" className="rv-date-input rv-date-input--time"
                                         value={roundTime} onChange={e => setRoundTime(e.target.value)}
-                                        onBlur={() => setEditingTime(false)}
-                                        style={{ width: '7.5rem' }} />
+                                        onBlur={() => setEditingTime(false)} />
                                 ) : (
                                     <button className={`rv-date-btn${timeError ? ' rv-field-invalid' : ''}`} onClick={() => setEditingTime(true)}>
                                         {roundTime ? fmtTime(roundTime) : <span className="rv-placeholder">Set time</span>} <span className="rv-edit-icon">✎</span>
@@ -168,7 +171,7 @@ const RoundView = () => {
                                             value={addPros}
                                             onChange={e => setAddPros(e.target.value)}>
                                             <option value="">Select team…</option>
-                                            {teams.map(t => <option key={t.id} value={t.id}>{t.code} — {t.school}</option>)}
+                                            {teams.map(t => <option key={t.id} value={t.id}>{t.code} — {t.team}</option>)}
                                         </select>
                                     </label>
                                     {addProsError && <span className="rv-field-error">{addProsError}</span>}
@@ -180,7 +183,7 @@ const RoundView = () => {
                                             value={addDef}
                                             onChange={e => setAddDef(e.target.value)}>
                                             <option value="">Select team…</option>
-                                            {teams.map(t => <option key={t.id} value={t.id}>{t.code} — {t.school}</option>)}
+                                            {teams.map(t => <option key={t.id} value={t.id}>{t.code} — {t.team}</option>)}
                                         </select>
                                     </label>
                                     {addDefError && <span className="rv-field-error">{addDefError}</span>}
@@ -191,7 +194,7 @@ const RoundView = () => {
                                         <select className={`rv-select${addCourtroomError ? ' rv-select-invalid' : ''}`}
                                             value={addCourtroom} onChange={e => setAddCourtroom(e.target.value)}>
                                             <option value="">Select courtroom…</option>
-                                            {courtrooms.map(c => <option key={c.id} value={c.name}>{c.name}{c.details ? ` (${c.details})` : ''}</option>)}
+                                            {courtrooms.map(c => <option key={c.id} value={c.name}>{c.name}{c.location ? ` (${c.location})` : ''}</option>)}
                                         </select>
                                     </label>
                                     {addCourtroomError && <span className="rv-field-error">{addCourtroomError}</span>}

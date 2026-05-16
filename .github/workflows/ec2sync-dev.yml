@@ -9,6 +9,21 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
+      - name: Checkout repo
+        uses: actions/checkout@v4
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Build app
+        run: npm run build
+
       - name: Configure AWS credentials
         uses: aws-actions/configure-aws-credentials@v2
         with:
@@ -23,10 +38,29 @@ jobs:
             --instance-ids ${{ secrets.EC2_INSTANCE_ID }} \
             --query "Reservations[0].Instances[0].PublicIpAddress" \
             --output text)
-
           echo "host=$IP" >> "$GITHUB_OUTPUT"
 
-      - name: Deploy over SSH
+      - name: Prepare release directory
+        uses: appleboy/ssh-action@v1.0.3
+        with:
+          host: ${{ steps.ec2.outputs.host }}
+          username: ${{ secrets.EC2_USER }}
+          key: ${{ secrets.EC2_SSH_KEY }}
+          script: |
+            sudo rm -rf /opt/mock-scores-dev-release
+            sudo mkdir -p /opt/mock-scores-dev-release
+            sudo chown -R $USER:$USER /opt/mock-scores-dev-release
+
+      - name: Upload files to EC2
+        uses: appleboy/scp-action@v0.1.7
+        with:
+          host: ${{ steps.ec2.outputs.host }}
+          username: ${{ secrets.EC2_USER }}
+          key: ${{ secrets.EC2_SSH_KEY }}
+          source: "package.json,package-lock.json,backend/dist,backend/package.json,frontend/dist,frontend/package.json"
+          target: "/opt/mock-scores-dev-release"
+
+      - name: Restart app on EC2
         uses: appleboy/ssh-action@v1.0.3
         with:
           host: ${{ steps.ec2.outputs.host }}
@@ -35,26 +69,27 @@ jobs:
           script: |
             set -e
             APP_DIR=/opt/mock-scores-dev
-            REPO_URL=https://github.com/curtisjbradley/Mock-Scores.git
-
-            if [ ! -d "$APP_DIR/.git" ]; then
-              echo "Cloning repo..."
-              sudo rm -rf "$APP_DIR"
-              sudo git clone -b dev "$REPO_URL" "$APP_DIR"
+            RELEASE_DIR=/opt/mock-scores-dev-release
+            ENV_FILE=/opt/mock-scores-dev/backend/.env
+            ENV_BACKUP=/tmp/mock-scores-dev.env
+            
+            if [ -f "$ENV_FILE" ]; then
+            cp "$ENV_FILE" "$ENV_BACKUP"
             fi
-
+            
+            sudo rm -rf "$APP_DIR"
+            sudo mv "$RELEASE_DIR" "$APP_DIR"
+            sudo chown -R $USER:$USER "$APP_DIR"
+            
+            if [ -f "$ENV_BACKUP" ]; then
+            cp "$ENV_BACKUP" "$APP_DIR/backend/.env"
+            rm "$ENV_BACKUP"
+            fi
+            
             cd "$APP_DIR"
-
-            echo "Pulling latest code..."
-            git fetch origin dev
-            git reset --hard origin/dev
             
+            echo "Installing production dependencies only..."
+            NODE_ENV=production npm ci --omit=dev
             
-            echo "Installing dependencies..."
-            npm ci
-
-            echo "Building app..."
-            npm run build
-
             echo "Restarting app..."
-            pm2 restart mock-scores-dev || pm2 start npm --name mock-scores-dev -- start
+            pm2 restart mock-scores-dev --update-env || pm2 start npm --name mock-scores-dev -- start

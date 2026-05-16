@@ -1,179 +1,170 @@
-import { useState } from 'react'
-import { useNavigate } from 'react-router-dom'
-// TODO: fetch schools from GET /api/schools (replace dummySchools)
-import { dummySchools, type IInvite, type IOrganizer, type InviteStatus } from '../data/dummyData'
-import { ConfirmRemoveModal, AddOrganizerModal } from '../components/modals'
-import InviteSchoolModal from '../components/InviteSchoolModal'
-import CourtroomsPage from "../pages/CourtroomsPage.tsx";
-import ScorersPage from "../pages/ScorersPage.tsx";
+import { Component } from 'react'
+import '../styles/tournament-create.css'
+import Section from './Section'
+import TeamsTab from './TeamsTab'
+import OrganizersTab from './OrganizersTab'
+import ScorersTab from './ScorersTab'
+import CourtroomsTab from './CourtroomsTab'
+import { fetchFormat, saveFormat, saveTournamentInfo } from '../hooks/useTournamentData'
+import type { TournamentInfo, CaseFormatState } from '../types/tournament'
+import { emptyCaseFormat } from '../types/tournament'
+import type { ITournament } from '@mock-scores/shared'
+import { apiFetch } from '../../auth/auth'
 
-type SubTab = 'invites' | 'organizers' | 'scorers' | 'courtrooms'
+type SubTab = 'tournament' | 'teams' | 'organizers' | 'scorers' | 'courtrooms'
+interface Props { tournamentId: string; subTab: SubTab; visitedSubTabs: Set<SubTab> }
 
-interface Props {
-    tournamentId: string
-    subTab: SubTab
-    invites: IInvite[]
-    organizers: IOrganizer[]
-    onAddInvite: (invite: IInvite) => void
-    onRemoveInvite: (id: string) => void
-    onAddOrganizer: (org: IOrganizer) => void
-    onRemoveOrganizer: (id: string) => void
-    onUpdateOrgEmail: (id: string, email: string) => void
+const emptyInfo: TournamentInfo = { name: '', location: '', startDate: '', endDate: '', startTbd: false, endTbd: false }
+
+interface State {
+    info: TournamentInfo
+    caseFormat: CaseFormatState
+    loading: boolean
+    error: string | null
+    saving: boolean
+    saveError: string | null
+    saveSuccess: boolean
+    submitted: boolean
 }
 
-const inviteChip = (s: InviteStatus) => (
-    <span className={`ss-chip ss-chip--${s === 'accepted' ? 'submitted' : 'pending'}`}>{s}</span>
-)
+export default class SetupTab extends Component<Props, State> {
+    state: State = { info: emptyInfo, caseFormat: emptyCaseFormat, loading: true, error: null, saving: false, saveError: null, saveSuccess: false, submitted: false }
 
-export default function SetupTab({
-    tournamentId, subTab,
-    invites, organizers,
-    onAddInvite, onRemoveInvite,
-    onAddOrganizer, onRemoveOrganizer, onUpdateOrgEmail,
-}: Props) {
-    const navigate = useNavigate()
-    const [showInviteModal, setShowInviteModal] = useState(false)
-    const [showAddOrgModal, setShowAddOrgModal] = useState(false)
-    const [confirmRemoveInvite, setConfirmRemoveInvite] = useState<IInvite | null>(null)
-    const [confirmRemoveOrg, setConfirmRemoveOrg] = useState<IOrganizer | null>(null)
-    const [editingOrgId, setEditingOrgId] = useState<string | null>(null)
-    const [editEmail, setEditEmail] = useState('')
+    componentDidMount() {
+        Promise.all([
+            apiFetch(`/api/organizer/tournament/${this.props.tournamentId}`).then(r => r.ok ? r.json() as Promise<ITournament> : Promise.reject()),
+            fetchFormat(this.props.tournamentId),
+        ]).then(([t, cf]) => {
+            this.setState({
+                info: {
+                    name: t.name, location: t.location,
+                    startDate: t.start_date ? String(t.start_date).slice(0, 10) : '',
+                    endDate: t.end_date ? String(t.end_date).slice(0, 10) : '',
+                    startTbd: !t.start_date, endTbd: !t.end_date,
+                },
+                caseFormat: cf,
+                loading: false,
+            })
+        }).catch(() => this.setState({ loading: false, error: 'Failed to load tournament data.' }))
+    }
 
-    return (
-        <>
-            {subTab === 'invites' && (
-                <div className="dash-section">
-                    <div className="dash-invites-header">
-                        <h2>{invites.length} team{invites.length !== 1 ? 's' : ''} invited</h2>
-                        <button className="org-new-btn" onClick={() => setShowInviteModal(true)}>+ Invite team</button>
+    getErrors(info: TournamentInfo, cf: CaseFormatState) {
+        return {
+            name:      !info.name.trim() ? 'Required' : '',
+            location:  !info.location.trim() ? 'Required' : '',
+            startDate: !info.startTbd && !info.startDate ? 'Required' : '',
+            endDate:   !info.endTbd && !info.endDate ? 'Required'
+                     : !info.endTbd && !info.startTbd && info.endDate < info.startDate ? 'Must be after start' : '',
+            caseName:  !cf.caseName.trim() ? 'Required' : '',
+        }
+    }
+
+    handleSave = async (e: { preventDefault(): void }) => {
+        e.preventDefault()
+        this.setState({ submitted: true })
+        const { info, caseFormat } = this.state
+        if (Object.values(this.getErrors(info, caseFormat)).some(Boolean)) return
+        this.setState({ saving: true, saveError: null, saveSuccess: false })
+        try {
+            await Promise.all([
+                saveTournamentInfo(this.props.tournamentId, info),
+                saveFormat(this.props.tournamentId, caseFormat),
+            ])
+            this.setState({ saveSuccess: true })
+        } catch (err: unknown) {
+            this.setState({ saveError: err instanceof Error ? err.message : 'Failed to save' })
+        } finally {
+            this.setState({ saving: false })
+        }
+    }
+
+    render() {
+        const { tournamentId, subTab, visitedSubTabs } = this.props
+        const { info, caseFormat, loading, error, saveError, saveSuccess, saving, submitted } = this.state
+        const errors = this.getErrors(info, caseFormat)
+        const setInfo = (i: TournamentInfo) => this.setState({ info: i })
+        const setCf = (cf: CaseFormatState) => this.setState({ caseFormat: cf })
+
+        return (
+            <>
+                {visitedSubTabs.has('teams')       && <div hidden={subTab !== 'teams'}><TeamsTab tournamentId={tournamentId} /></div>}
+                {visitedSubTabs.has('organizers')  && <div hidden={subTab !== 'organizers'}><OrganizersTab tournamentId={tournamentId} /></div>}
+                {visitedSubTabs.has('scorers')     && <div hidden={subTab !== 'scorers'}><ScorersTab tournamentId={tournamentId} /></div>}
+                {visitedSubTabs.has('courtrooms')  && <div hidden={subTab !== 'courtrooms'}><CourtroomsTab tournamentId={tournamentId} /></div>}
+                <div hidden={subTab !== 'tournament'}>
+                {loading ? <p className="dash-saving">Loading…</p> : (
+                <Section title="Tournament settings">
+                {(error || saveError) && <div className="tc-error-banner">{error ?? saveError}</div>}
+                {saveSuccess && <div className="tc-error-banner dash-save-success">Saved successfully</div>}
+                <form className="tc-form" onSubmit={this.handleSave} noValidate>
+                    <div className="tc-field">
+                        <label className="tc-label" htmlFor="name">Tournament name</label>
+                        <input id="name" type="text"
+                            className={`tc-input${submitted && errors.name ? ' tc-input--invalid' : ''}`}
+                            value={info.name} placeholder="e.g. San Luis Obispo County"
+                            onChange={e => setInfo({ ...info, name: e.target.value })} />
+                        {submitted && errors.name && <span className="tc-field-error">{errors.name}</span>}
                     </div>
-                    <table className="dash-standings-table">
-                        <thead><tr><th>Team</th><th>Contact</th><th>Status</th><th></th></tr></thead>
-                        <tbody>
-                            {invites.map(invite => {
-                                const school = dummySchools.find(s => s.id === invite.schoolId)
-                                if (!school) return null
+
+                    <div className="tc-field">
+                        <label className="tc-label" htmlFor="location">Location</label>
+                        <input id="location" type="text"
+                            className={`tc-input${submitted && errors.location ? ' tc-input--invalid' : ''}`}
+                            value={info.location} placeholder="e.g. SLO Superior Court"
+                            onChange={e => setInfo({ ...info, location: e.target.value })} />
+                        {submitted && errors.location && <span className="tc-field-error">{errors.location}</span>}
+                    </div>
+
+                    <div className="tc-section">
+                        <span className="tc-section-label">Dates</span>
+                        <div className="tc-row">
+                            {(['startDate', 'endDate'] as const).map(key => {
+                                const tbdKey = key === 'startDate' ? 'startTbd' : 'endTbd'
                                 return (
-                                    <tr key={invite.id}>
-                                        <td><button className="dash-school-link" onClick={() => navigate(`/organizer/${tournamentId}/school/${invite.schoolId}`)}>{school.name}</button></td>
-                                        <td className="dash-judge-name">{school.contactEmail}</td>
-                                        <td>{inviteChip(invite.status)}</td>
-                                        <td><button className="dash-remove-btn" onClick={() => setConfirmRemoveInvite(invite)}>Remove</button></td>
-                                    </tr>
+                                    <div key={key} className="tc-field">
+                                        <label className="tc-label">{key === 'startDate' ? 'Start' : 'End'}</label>
+                                        {!info[tbdKey] && (
+                                            <input type="date"
+                                                className={`tc-input${submitted && errors[key] ? ' tc-input--invalid' : ''}`}
+                                                value={info[key]} onChange={e => setInfo({ ...info, [key]: e.target.value })} />
+                                        )}
+                                        <label className="tc-checkbox-label">
+                                            <input type="checkbox" checked={info[tbdKey]}
+                                                onChange={() => setInfo({ ...info, [tbdKey]: !info[tbdKey] })} />
+                                            TBD
+                                        </label>
+                                        {submitted && errors[key] && <span className="tc-field-error">{errors[key]}</span>}
+                                    </div>
                                 )
                             })}
-                        </tbody>
-                    </table>
-                </div>
-            )}
-
-            {subTab === 'organizers' && (
-                <div className="dash-section">
-                    <div className="dash-invites-header">
-                        <h2>{organizers.length} organizer{organizers.length !== 1 ? 's' : ''}</h2>
-                        <button className="org-new-btn" onClick={() => setShowAddOrgModal(true)}>+ Add organizer</button>
+                        </div>
                     </div>
-                    <table className="dash-standings-table">
-                        <thead><tr><th>Name</th><th>Email</th><th>Role</th><th></th></tr></thead>
-                        <tbody>
-                            {organizers.map(org => (
-                                <tr key={org.id}>
-                                    <td>{org.name}</td>
-                                    <td>
-                                        {editingOrgId === org.id ? (
-                                            <form style={{ display: 'flex', gap: '0.4rem' }} onSubmit={e => {
-                                                e.preventDefault()
-                                                // TODO: PATCH /api/tournaments/:id/organizers/:orgId { email: editEmail }
-                                                onUpdateOrgEmail(org.id, editEmail)
-                                                setEditingOrgId(null)
-                                            }}>
-                                                <input autoFocus type="email" value={editEmail} onChange={e => setEditEmail(e.target.value)}
-                                                    style={{ height: '2rem', padding: '0 0.5rem', border: '1px solid var(--border-strong)', borderRadius: '0.5rem', background: 'var(--surface)', color: 'var(--text)', fontSize: '0.85rem', fontFamily: 'inherit', flex: 1, minWidth: 0 }} />
-                                                <button type="submit" style={{ height: '2rem', padding: '0 0.6rem', border: 0, borderRadius: '0.5rem', background: 'var(--primary)', color: '#fff', fontFamily: 'inherit', fontSize: '0.82rem', cursor: 'pointer' }}>Save</button>
-                                                <button type="button" style={{ height: '2rem', padding: '0 0.6rem', border: 0, borderRadius: '0.5rem', background: 'var(--surface-muted)', color: 'var(--text)', fontFamily: 'inherit', fontSize: '0.82rem', cursor: 'pointer' }} onClick={() => setEditingOrgId(null)}>Cancel</button>
-                                            </form>
-                                        ) : (
-                                            <span className="dash-judge-name">{org.email}</span>
-                                        )}
-                                    </td>
-                                    <td><span className={`ss-chip ${org.role === 'owner' ? 'ss-chip--submitted' : 'ss-chip--pending'}`}>{org.role}</span></td>
-                                    <td style={{ display: 'flex', gap: '0.4rem', alignItems: 'center' }}>
-                                        {editingOrgId !== org.id && (
-                                            <button className="dash-remove-btn" onClick={() => { setEditingOrgId(org.id); setEditEmail(org.email) }}>Edit email</button>
-                                        )}
-                                        {org.role !== 'owner' && (
-                                            <button className="dash-remove-btn" onClick={() => setConfirmRemoveOrg(org)}>Remove</button>
-                                        )}
-                                    </td>
-                                </tr>
-                            ))}
-                        </tbody>
-                    </table>
-                </div>
-            )}
 
-            {subTab === 'scorers' && (
-                <div className="dash-section">
-                    <p className="dash-judge-name">Manage your list of available scorers.</p>
-                    <div className="dash-invites-header">
-                        <h2>Scorers</h2>
-                        <ScorersPage />
+                    <div className="tc-field">
+                        <label className="tc-label" htmlFor="caseName">Case name</label>
+                        <input id="caseName" type="text"
+                            className={`tc-input${submitted && errors.caseName ? ' tc-input--invalid' : ''}`}
+                            value={caseFormat.caseName} placeholder="e.g. People v. Fromholz"
+                            onChange={e => setCf({ ...caseFormat, caseName: e.target.value })} />
+                        {submitted && errors.caseName && <span className="tc-field-error">{errors.caseName}</span>}
                     </div>
-                </div>
-            )}
 
-            {subTab === 'courtrooms' && (
-                <div className="dash-section">
-                    <p className="dash-judge-name">Manage available courtrooms in use during competition.</p>
-                    <div className="dash-invites-header">
-                        <h2>Courtrooms</h2>
-                        <CourtroomsPage />
+                    <label className="tc-checkbox-label">
+                        <input type="checkbox" checked={caseFormat.criminalCase}
+                            onChange={() => setCf({ ...caseFormat, criminalCase: !caseFormat.criminalCase })} />
+                        Criminal case
+                    </label>
+
+                    <div className="tc-actions">
+                        <button type="submit" className="org-new-btn" disabled={saving}>
+                            {saving ? 'Saving…' : 'Save'}
+                        </button>
                     </div>
+                </form>
+                </Section>
+                )}
                 </div>
-            )}
-
-            {showInviteModal && (
-                <InviteSchoolModal
-                    onClose={() => setShowInviteModal(false)}
-                    onInvite={(schoolId, email) => {
-                        // TODO: POST /api/tournaments/:id/invites { schoolId, email } — send invite email and persist
-                        onAddInvite({ id: `i-${Date.now()}`, tournamentId, schoolId, status: 'pending' })
-                        console.log(email)
-                    }}
-                />
-            )}
-
-            {showAddOrgModal && (
-                <AddOrganizerModal
-                    onClose={() => setShowAddOrgModal(false)}
-                    onAdd={(name, email) => 
-                        // TODO: POST /api/tournaments/:id/organizers { name, email }
-                        onAddOrganizer({ id: `o-${Date.now()}`, tournamentId, name, email, role: 'co-organizer' })}
-                />
-            )}
-
-            {confirmRemoveInvite && (() => {
-                const school = dummySchools.find(s => s.id === confirmRemoveInvite.schoolId)
-                return (
-                    <ConfirmRemoveModal
-                        message={`Remove ${school?.name ?? 'this team'} from the tournament?`}
-                        onCancel={() => setConfirmRemoveInvite(null)}
-                        onConfirm={() => { 
-                            // TODO: DELETE /api/tournaments/:id/invites/:inviteId
-                            onRemoveInvite(confirmRemoveInvite.id); setConfirmRemoveInvite(null) }}
-                    />
-                )
-            })()}
-
-            {confirmRemoveOrg && (
-                <ConfirmRemoveModal
-                    message={`Remove ${confirmRemoveOrg.name} as an organizer?`}
-                    onCancel={() => setConfirmRemoveOrg(null)}
-                    onConfirm={() => { 
-                        // TODO: DELETE /api/tournaments/:id/organizers/:orgId
-                        onRemoveOrganizer(confirmRemoveOrg.id); setConfirmRemoveOrg(null) }}
-                />
-            )}
-        </>
-    )
+            </>
+        )
+    }
 }

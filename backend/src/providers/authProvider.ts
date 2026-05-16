@@ -1,60 +1,55 @@
-import { Request } from "express";
-import db from "../db";
-import bcrypt from "bcrypt";
-import crypto from "crypto";
-import { SignJWT, jwtVerify } from 'jose';
-
-interface IUser { userid: string; email: string; }
+import { dbQuery } from '../db';
+import bcrypt from 'bcrypt';
+import { signToken } from '../authUtils';
+import { randomUUID } from 'node:crypto';
+import type { IAuthRow } from '../types/dbtypes';
 interface IStatusResponse { status: number; message: string; }
 
-const JWT_SECRET = new TextEncoder().encode(process.env.JWT_SECRET ?? "JWT_SECRET");
-const JWT_EXPIRY = process.env.JWT_EXPIRY ?? '7d';
-
 export class AuthProvider {
+    async registerUser(email: string, password: string, firstName: string, lastName: string): Promise<IStatusResponse> {
+        const existing = await dbQuery('SELECT user_id FROM auth WHERE email = $1', [email]);
+        if (existing === null) return { status: 500, message: 'Internal error' };
+        if (existing.rows.length > 0) return { status: 409, message: 'Email already in use' };
 
-    async signToken(userId: string, email: string): Promise<string> {
-        return new SignJWT({ userId, email })
-            .setProtectedHeader({ alg: 'HS256' })
-            .setIssuedAt()
-            .setExpirationTime(JWT_EXPIRY)
-            .sign(JWT_SECRET);
-    }
+        const passwordHash = await bcrypt.hash(password, 10);
 
-    async verifyToken(token: string): Promise<{ userId: string; email: string } | null> {
-        try {
-            const { payload } = await jwtVerify(token, JWT_SECRET);
-            return { userId: payload.userId as string, email: payload.email as string };
-        } catch {
-            return null;
-        }
-    }
+        const userID = randomUUID();
 
-    bearerToken(req: Request): string | undefined {
-        const auth = req.headers.authorization;
-        return auth?.startsWith('Bearer ') ? auth.slice(7) : undefined;
-    }
+        const result = await dbQuery(
+            'INSERT INTO auth (user_id, email, password_hash, first_name, last_name) VALUES ($1, $2, $3, $4, $5)',
+            [userID, email, passwordHash, firstName, lastName],
+        );
 
-    async registerUser(email: string, password: string): Promise<IStatusResponse> {
-        const existing = await db.query('SELECT userid FROM auth WHERE email = $1', [email]);
-        if (existing.rows.length > 0) {
-            return { status: 409, message: 'Email already in use' };
-        }
-        const passwordHash : string = await bcrypt.hash(password, 10);
-        await db.query('INSERT INTO auth (userid, email, password) VALUES ($1, $2, $3)',
-            [crypto.randomUUID().toString(), email, passwordHash]).catch(() => {
-                return { status: 500, message: 'Internal error' };
-        })
-        return { status: 201, message: 'User Created' };
+        //Get all pending organizer invites, and add them to the tournament
+        const pendingTournamentInvites = await dbQuery<{tournament: string}>("DELETE from tournament_delegate_invites where email = $1 RETURNING tournament_id", [email]);
+
+        if(!pendingTournamentInvites) return { status: 500, message: 'Internal error' };
+
+        // Add user to all pending tournament organizer invites
+        pendingTournamentInvites.rows.forEach(row => dbQuery("INSERT INTO tournament_owners (tournament_id, delegate_id, role) VALUES ($1, $2, $3)",[row.tournament,email,'delegate']));
+
+        const pendingTeamInvites = await dbQuery<{team_id: string}>("DELETE from team_invites where invite_email = $1 RETURNING team_id", [email]);
+
+        if(!pendingTeamInvites) return { status: 500, message: 'Internal error' };
+
+        pendingTeamInvites.rows.forEach(row => dbQuery("INSERT INTO team_coaches (team_id, coach_id, is_owner) VALUES ($1, $2, $3)",[row.team_id,userID,'delegate']));
+
+
+        return result === null
+            ? { status: 500, message: 'Internal error' }
+            : { status: 201, message: 'User Created' };
     }
 
     async loginUser(email: string, password: string): Promise<IStatusResponse | string> {
-        const result = await db.query<IUser & { password: string }>(
-            'SELECT userid, email, password FROM auth WHERE email = $1', [email]
+        const result = await dbQuery<IAuthRow>(
+            'SELECT user_id, email, password_hash, first_name, last_name FROM auth WHERE email = $1', [email]
         );
+        if (result === null) return { status: 500, message: 'Internal error' };
+
         const user = result.rows[0];
-        if (!user || !(await bcrypt.compare(password, user.password))) {
+        if (!user || !(await bcrypt.compare(password, user.password_hash))) {
             return { status: 401, message: 'Invalid Username / Password' };
         }
-        return this.signToken(user.userid, user.email);
+        return signToken(user.user_id, user.email, user.first_name, user.last_name);
     }
 }

@@ -1,6 +1,7 @@
 import { useState } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
 import { saveToken } from './auth'
+import { isValidEmail } from '../utils/validation'
 import './styles/auth-form.css'
 
 interface LoginPageProps {
@@ -18,6 +19,10 @@ const LoginPage = ({ title, redirect, footerLink }: LoginPageProps) => {
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault()
         setError('')
+        if (!isValidEmail(email)) {
+            setError('Please enter a valid email address.')
+            return
+        }
         try {
             const res = await fetch('/api/auth/login', {
                 method: 'POST',

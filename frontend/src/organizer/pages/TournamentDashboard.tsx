@@ -1,161 +1,134 @@
-import { useState } from 'react'
-import { useNavigate } from 'react-router-dom'
+import { Component } from 'react'
+import { useNavigate, useParams } from 'react-router-dom'
 import '../styles/organizer.css'
 import '../styles/tabs.css'
 import '../styles/rounds.css'
 import '../styles/pairings.css'
 import '../styles/standings.css'
-// TODO: fetch tournament by id from GET /api/tournaments/:id (replace dummyTournaments[0])
-// TODO: fetch teams from GET /api/tournaments/:id/teams (replace dummyTeams)
-// TODO: fetch pairings from GET /api/tournaments/:id/pairings (replace dummyPairings)
-// TODO: fetch invites from GET /api/tournaments/:id/invites (replace dummyInvites)
-// TODO: fetch organizers from GET /api/tournaments/:id/organizers (replace dummyOrganizers)
-// TODO: fetch courtrooms from GET /api/tournaments/:id/courtrooms (replace dummyCourtrooms)
-import { dummyTournaments, dummyTeams, dummyPairings, dummyInvites, dummyOrganizers, dummyCourtrooms, type IInvite, type IOrganizer } from '../data/dummyData'
 import { dateRange } from '../data/utils'
-import OverviewTab from '../tabs/OverviewTab'
+import { apiFetch } from '../../auth/auth'
+import type { ITournament } from '@mock-scores/shared'
 import RoundsTab from '../tabs/RoundsTab'
 import StandingsTab from '../tabs/StandingsTab'
-import SetupTab from '../tabs/SetupTab'
+import WitnessesTab from '../tabs/WitnessesTab'
+import ScoringTab from '../tabs/ScoringTab'
+import TeamsTab from '../tabs/TeamsTab'
+import OrganizersTab from '../tabs/OrganizersTab'
+import ScorersTab from '../tabs/ScorersTab'
+import CourtroomsTab from '../tabs/CourtroomsTab'
+import TournamentSettingsTab from '../tabs/TournamentSettingsTab'
 
-type Tab = 'overview' | 'rounds' | 'standings' | 'setup'
-type SetupSubTab = 'invites' | 'organizers' | 'scorers' | 'courtrooms'
+type Tab = 'tournament' | 'teams' | 'scorers' | 'courtrooms' | 'organizers' | 'witnesses' | 'scoring' | 'rounds' | 'standings'
+type Screen = 'home' | 'structure' | Tab
 
-const TournamentDashboard = () => {
-    const navigate = useNavigate()
-    const tournament = dummyTournaments[0]
+const STRUCTURE_TABS: Tab[] = ['tournament', 'scoring', 'witnesses']
 
-    const [activeTab, setActiveTab] = useState<Tab>('overview')
-    const [setupSubTab, setSetupSubTab] = useState<SetupSubTab>('invites')
+const MAIN_CARDS: { label: string; screen: Screen }[] = [
+    { label: 'Manage Rounds',               screen: 'rounds' },
+    { label: 'See Standings',            screen: 'standings' },
+    { label: 'Manage Teams',                screen: 'teams' },
+    { label: 'Manage Scorers',              screen: 'scorers' },
+    { label: 'Manage Courtrooms',           screen: 'courtrooms' },
+    { label: 'Manage Organizers',           screen: 'organizers' },
+    { label: 'Tournament Structure', screen: 'structure' },
+]
 
-    const [invites, setInvites] = useState<IInvite[]>(() => dummyInvites)
-    const [organizers, setOrganizers] = useState<IOrganizer[]>(() => dummyOrganizers)
-    const [pairings, setPairings] = useState(() => dummyPairings)
-    const [courtroomsState] = useState(() => dummyCourtrooms)
-    const [roundNames] = useState<Record<number, string>>({})
+const STRUCTURE_CARDS: { label: string; tab: Tab }[] = [
+    { label: 'Tournament Details', tab: 'tournament' },
+    { label: 'Manage Scorecard',    tab: 'scoring' },
+    { label: 'Manage Witnesses',  tab: 'witnesses' },
+]
 
-    if (!tournament) {
-        navigate('/organizer/select', { replace: true })
-        return null
+
+interface Props { id: string; navigate: ReturnType<typeof useNavigate> }
+interface State { tournament: ITournament | null; screen: Screen; visitedTabs: Set<Tab> }
+
+class TournamentDashboardClass extends Component<Props, State> {
+    state: State = { tournament: null, screen: 'home', visitedTabs: new Set() }
+
+    componentDidMount() {
+        apiFetch(`/api/organizer/tournament/${this.props.id}`)
+            .then(r => {
+                if (r.status === 403) { this.props.navigate('/403', { replace: true }); return null }
+                return r.ok ? r.json() : null
+            })
+            .then((data: ITournament | null) => { if (data) this.setState({ tournament: data }) })
+            .catch(console.error)
     }
 
-    const teams = dummyTeams
-    const rounds = [...new Set(pairings.map(p => p.round))].sort((a, b) => a - b)
-    const allSheets = pairings.flatMap(p => p.scoresheets)
-    const submitted = allSheets.filter(s => s.status === 'submitted').length
-    const missing   = allSheets.filter(s => s.status === 'missing').length
-    const pending   = allSheets.filter(s => s.status === 'pending').length
-    const id= 't2';
-    return (
+    setTab(tab: Tab) {
+        this.setState(s => ({ screen: tab, visitedTabs: new Set([...s.visitedTabs, tab]) }))
+    }
 
+    goBack() {
+        const { screen } = this.state
+        if (STRUCTURE_TABS.includes(screen as Tab)) this.setState({ screen: 'structure' })
+        else if (screen !== 'home') this.setState({ screen: 'home' })
+        else this.props.navigate('/organizer')
+    }
 
+    render() {
+        const { id } = this.props
+        const { tournament, screen, visitedTabs } = this.state
+        const dates = [tournament?.start_date, tournament?.end_date].filter(Boolean).map(String)
+        const activeTab = (screen !== 'home' && screen !== 'structure') ? screen as Tab : null
+
+        return (
             <main className="org-main">
                 <div className="org-container">
-                    <button className="org-back-btn" onClick={() => navigate('/organizer/select')}>← All tournaments</button>
+                    <button className="org-back-btn" onClick={() => this.goBack()}>
+                        {screen === 'home' ? '← All tournaments' : '← Back'}
+                    </button>
 
                     <div className="org-header">
-                        <h1>{tournament.name}</h1>
-                        <span className={`org-status org-status--${tournament.status}`}>
-                            {tournament.status.charAt(0).toUpperCase() + tournament.status.slice(1)}
-                        </span>
+                        <h1>{tournament?.name ?? ''}</h1>
                     </div>
 
                     <div className="org-meta-row">
-                        <span>{dateRange(tournament.dates)}</span>
-                        <span>{tournament.location}</span>
-                        <span>{tournament.teams} teams</span>
-                        <span>{tournament.rounds} rounds</span>
+                        <span>{dates.length ? dateRange(dates) : ''}</span>
+                        <span>{tournament?.location ?? ''}</span>
+                        {tournament && <span>{tournament.num_teams} teams · {tournament.num_rounds} rounds</span>}
                     </div>
 
-                    <div className="org-dashboard-grid">
-                        <div className="org-dashboard-card"><h2>Teams</h2><p className="org-dashboard-stat">{teams.length || tournament.teams}</p></div>
-                        <div className="org-dashboard-card"><h2>Scoresheets</h2><p className="org-dashboard-stat">{submitted}/{allSheets.length}</p></div>
-                        <div className="org-dashboard-card"><h2>Pending</h2><p className="org-dashboard-stat">{pending}</p></div>
-                        <div className="org-dashboard-card"><h2>Missing</h2><p className="org-dashboard-stat org-dashboard-stat--alert">{missing}</p></div>
-                    </div>
-
-                    <div className="dash-tabs">
-                        {(['overview', 'rounds', 'standings', 'setup'] as const).map(tab => (
-                            <button key={tab} className={`dash-tab${activeTab === tab ? ' dash-tab--active' : ''}`}
-                                onClick={() => setActiveTab(tab)}>
-                                {tab.charAt(0).toUpperCase() + tab.slice(1)}
-                            </button>
-                        ))}
-                    </div>
-
-                    {activeTab === 'setup' && (
-                        <div className="dash-subtabs">
-                            {(['invites', 'organizers', 'scorers', 'courtrooms'] as const).map(sub => (
-                                <button key={sub} className={`dash-subtab${setupSubTab === sub ? ' dash-subtab--active' : ''}`}
-                                    onClick={() => setSetupSubTab(sub)}>
-                                    {sub.charAt(0).toUpperCase() + sub.slice(1)}
+                    {screen === 'home' && (
+                        <div className="dash-card-grid">
+                            {MAIN_CARDS.map(c => (
+                                <button key={c.screen} className="dash-nav-card"
+                                    onClick={() => c.screen === 'structure' ? this.setState({ screen: 'structure' }) : this.setTab(c.screen as Tab)}>
+                                    {c.label}
                                 </button>
                             ))}
                         </div>
                     )}
 
-                    {activeTab === 'overview' && (
-                        <OverviewTab
-                            tournamentId={id!}
-                            rounds={rounds}
-                            pairings={pairings}
-                            roundNames={roundNames}
-                            onAddRound={() => {
-                                // TODO: POST /api/tournaments/:id/rounds to create round, then refetch pairings
-                                const nextRound = rounds.length > 0 ? Math.max(...rounds) + 1 : 1
-                                setPairings(prev => [...prev, {
-                                    id: `p-new-${Date.now()}`,
-                                    tournamentId: id!,
-                                    round: nextRound,
-                                    date: new Date().toISOString().slice(0, 10),
-                                    courtroom: courtroomsState[0]?.name ?? '1A',
-                                    prosecutionTeamId: '',
-                                    defenseTeamId: '',
-                                    scoresheets: [],
-                                    isPublished: false,
-                                    resultsPublished: false,
-                                }])
-                            }}
-                            onTogglePublish={(round, isPublished) =>
-                                // TODO: PATCH /api/tournaments/:id/rounds/:round { isPublished: !isPublished }
-                                setPairings(prev => prev.map(p => p.round === round ? { ...p, isPublished: !isPublished } : p))
-                            }
-                            onToggleResults={(round, resultsPublished) =>
-                                // TODO: PATCH /api/tournaments/:id/rounds/:round { resultsPublished: !resultsPublished }
-                                setPairings(prev => prev.map(p => p.round === round ? { ...p, resultsPublished: !resultsPublished } : p))
-                            }
-                        />
+                    {screen === 'structure' && (
+                        <div className="dash-card-grid">
+                            {STRUCTURE_CARDS.map(c => (
+                                <button key={c.tab} className="dash-nav-card" onClick={() => this.setTab(c.tab)}>
+                                    {c.label}
+                                </button>
+                            ))}
+                        </div>
                     )}
 
-                    {activeTab === 'rounds' && (
-                        <RoundsTab
-                            tournamentId={id!}
-                            rounds={rounds}
-                            pairings={pairings}
-                            roundNames={roundNames}
-                        />
-                    )}
-
-                    {activeTab === 'standings' && <StandingsTab teams={teams} />}
-
-                    {activeTab === 'setup' && (
-                        <SetupTab
-                            tournamentId={id!}
-                            subTab={setupSubTab}
-                            invites={invites}
-                            organizers={organizers}
-                            onAddInvite={inv => setInvites(prev => [...prev, inv])}
-                            onRemoveInvite={invId => setInvites(prev => prev.filter(i => i.id !== invId))}
-                            onAddOrganizer={org => setOrganizers(prev => [...prev, org])}
-                            onRemoveOrganizer={orgId => setOrganizers(prev => prev.filter(o => o.id !== orgId))}
-                            onUpdateOrgEmail={(orgId, email) => setOrganizers(prev => prev.map(o => o.id === orgId ? { ...o, email } : o))}
-                        />
-                    )}
+                    {visitedTabs.has('tournament') && <div hidden={activeTab !== 'tournament'}><TournamentSettingsTab tournamentId={id} /></div>}
+                    {visitedTabs.has('teams')      && <div hidden={activeTab !== 'teams'}><TeamsTab tournamentId={id} /></div>}
+                    {visitedTabs.has('scorers')    && <div hidden={activeTab !== 'scorers'}><ScorersTab tournamentId={id} /></div>}
+                    {visitedTabs.has('courtrooms') && <div hidden={activeTab !== 'courtrooms'}><CourtroomsTab tournamentId={id} /></div>}
+                    {visitedTabs.has('organizers') && <div hidden={activeTab !== 'organizers'}><OrganizersTab tournamentId={id} /></div>}
+                    {visitedTabs.has('witnesses')  && <div hidden={activeTab !== 'witnesses'}><WitnessesTab tournamentId={id} /></div>}
+                    {visitedTabs.has('scoring')    && <div hidden={activeTab !== 'scoring'}><ScoringTab tournamentId={id} /></div>}
+                    {visitedTabs.has('rounds')     && <div hidden={activeTab !== 'rounds'}><RoundsTab tournamentId={id} /></div>}
+                    {visitedTabs.has('standings')  && <div hidden={activeTab !== 'standings'}><StandingsTab tournamentId={id} /></div>}
                 </div>
             </main>
-
-
-    )
+        )
+    }
 }
 
-export default TournamentDashboard
+export default function TournamentDashboard() {
+    const { id } = useParams<{ id: string }>()
+    const navigate = useNavigate()
+    if (!id) { navigate('/organizer', { replace: true }); return null }
+    return <TournamentDashboardClass id={id} navigate={navigate} />
+}

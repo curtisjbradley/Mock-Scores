@@ -434,3 +434,5 @@
     .pc-margin--p { background: #064e3b; color: #6ee7b7; }
     .pc-margin--d { background: #450a0a; color: #fca5a5; }
 }
+
+.rv-date-input--time { width: 7.5rem; }
