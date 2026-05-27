@@ -8,12 +8,4 @@
     <loc>https://curtisjbradley.xyz/about</loc>
     <priority>0.8</priority>
   </url>
-  <url>
-    <loc>https://curtisjbradley.xyz/login</loc>
-    <priority>0.5</priority>
-  </url>
-  <url>
-    <loc>https://curtisjbradley.xyz/register</loc>
-    <priority>0.5</priority>
-  </url>
 </urlset>
