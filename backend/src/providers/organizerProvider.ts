@@ -104,6 +104,69 @@ export class OrganizerProvider {
         return true
     }
 
+    async updateTournamentDetails(tournamentID: string, t: { name: string; location: string; startDate?: string | null; endDate?: string | null }): Promise<boolean> {
+        const result = await dbQuery(
+            'UPDATE tournaments SET name=$1, location=$2, start_date=$3, end_date=$4 WHERE id=$5',
+            [t.name, t.location, t.startDate ?? null, t.endDate ?? null, tournamentID]
+        );
+        return !!(result && result.rowCount === 1);
+    }
+
+    async getStandingsConfig(tournamentID: string): Promise<{ id: string; statsXml: string; standingsXml: string } | null> {
+        const r = await dbQuery<{ id: string; stats_xml: string; standings_xml: string }>(
+            `SELECT sc.id, sc.stats_xml, sc.standings_xml
+             FROM tournaments t JOIN standings_configs sc ON sc.id = t.standings_config_id
+             WHERE t.id = $1`,
+            [tournamentID]
+        );
+        if (!r?.rows[0]) return null;
+        const { id, stats_xml, standings_xml } = r.rows[0];
+        return { id, statsXml: stats_xml, standingsXml: standings_xml };
+    }
+
+    async upsertStandingsConfig(tournamentID: string, statsXml: string, standingsXml: string): Promise<boolean> {
+        const existing = await dbQuery<{ standings_config_id: string | null }>(
+            'SELECT standings_config_id FROM tournaments WHERE id=$1', [tournamentID]
+        );
+        const configId = existing?.rows[0]?.standings_config_id;
+
+        if (configId) {
+            // If this config is a template, create a new one instead of updating in place
+            const isTemplate = !!(await dbQuery<{ id: string }>(
+                'SELECT id FROM standings_templates WHERE config_id=$1 LIMIT 1', [configId]
+            ))?.rows[0];
+
+            if (isTemplate) {
+                const row = (await dbQuery<{ id: string }>(
+                    'INSERT INTO standings_configs (stats_xml, standings_xml) VALUES ($1,$2) RETURNING id',
+                    [statsXml, standingsXml]
+                ))?.rows[0];
+                if (!row) return false;
+                await dbQuery('UPDATE tournaments SET standings_config_id=$1 WHERE id=$2', [row.id, tournamentID]);
+            } else {
+                await dbQuery('UPDATE standings_configs SET stats_xml=$1, standings_xml=$2 WHERE id=$3', [statsXml, standingsXml, configId]);
+            }
+        } else {
+            const row = (await dbQuery<{ id: string }>(
+                'INSERT INTO standings_configs (stats_xml, standings_xml) VALUES ($1,$2) RETURNING id',
+                [statsXml, standingsXml]
+            ))?.rows[0];
+            if (!row) return false;
+            await dbQuery('UPDATE tournaments SET standings_config_id=$1 WHERE id=$2', [row.id, tournamentID]);
+        }
+        return true;
+    }
+
+    async getStandingsTemplates(): Promise<{ id: string; label: string; description: string; config_id: string }[]> {
+        return (await dbQuery<{ id: string; label: string; description: string; config_id: string }>(
+            'SELECT id, label, description, config_id FROM standings_templates ORDER BY label'
+        ))?.rows ?? [];
+    }
+
+    async deleteTournament(tournamentID: string): Promise<boolean> {
+        return !!(await dbQuery('DELETE FROM tournaments WHERE id=$1 RETURNING id', [tournamentID]))?.rows[0];
+    }
+
     async getTournaments(userId: string): Promise<ITournament[] | null> {
         const result = await dbQuery<ITournament>(
             'SELECT * FROM tournaments WHERE id IN (SELECT tournament_id FROM tournament_owners WHERE delegate_id = $1)',
@@ -133,8 +196,8 @@ export class OrganizerProvider {
         if (!formatInsert || formatInsert.rowCount !== 1) return null;
 
         const insertion = await dbQuery(
-            'INSERT INTO tournaments (id, name, location, start_date, end_date, case_format_id) VALUES ($1,$2,$3,$4,$5,$6)',
-            [tournamentID, t.name, t.location, t.startDate, t.endDate, formatID]
+            'INSERT INTO tournaments (id, name, location, start_date, end_date, case_format_id, standings_config_id) VALUES ($1,$2,$3,$4,$5,$6,$7)',
+            [tournamentID, t.name, t.location, t.startDate, t.endDate, formatID, tournament.standingsConfigId ?? null]
         );
         if (!insertion || insertion.rowCount !== 1) return null;
 
@@ -345,5 +408,102 @@ export class OrganizerProvider {
 
     async deleteTeam(teamId: string): Promise<boolean> {
         return !!((await dbQuery('DELETE FROM teams WHERE id=$1 RETURNING *', [teamId]))?.rows[0]);
+    }
+
+    async duplicateTournament(sourceTournamentID: string, options: {
+        scorers: boolean
+        courtrooms: boolean
+        scoringCategories: boolean
+        witnesses: boolean
+        format: boolean
+    }): Promise<ITournament | null> {
+        const source = await this.getTournament(sourceTournamentID);
+        if (!source) return null;
+
+        const newTournamentID = randomUUID();
+        const newFormatID = randomUUID();
+
+        // Copy format data if requested, otherwise use defaults
+        let formatRow: { case_name: string; criminal_case: boolean; p_witnesses_called: number | null; d_witnesses_called: number | null; has_swing: boolean } = {
+            case_name: '', criminal_case: false, p_witnesses_called: null, d_witnesses_called: null, has_swing: false
+        };
+        if (options.format || options.witnesses) {
+            const existing = await dbQuery<{ case_name: string; criminal_case: boolean; p_witnesses_called: number | null; d_witnesses_called: number | null; has_swing: boolean }>(
+                'SELECT case_name, criminal_case, p_witnesses_called, d_witnesses_called, has_swing FROM tournament_format WHERE format_id=$1',
+                [source.case_format_id]
+            );
+            if (existing?.rows[0]) formatRow = existing.rows[0];
+        }
+
+        await dbQuery(
+            'INSERT INTO tournament_format (format_id, case_name, criminal_case, p_witnesses_called, d_witnesses_called, has_swing) VALUES ($1,$2,$3,$4,$5,$6)',
+            [newFormatID, options.format ? formatRow.case_name : '', options.format ? formatRow.criminal_case : false,
+             options.format ? formatRow.p_witnesses_called : null, options.format ? formatRow.d_witnesses_called : null,
+             options.format ? formatRow.has_swing : false]
+        );
+
+        await dbQuery(
+            'INSERT INTO tournaments (id, name, location, start_date, end_date, case_format_id) VALUES ($1,$2,$3,$4,$5,$6)',
+            [newTournamentID, `${source.name} (copy)`, source.location, null, null, newFormatID]
+        );
+
+        if (options.witnesses) {
+            const witnesses = await dbQuery<{ side: string; name: string }>(
+                'SELECT side, name FROM case_witnesses WHERE case_format=$1', [source.case_format_id]
+            );
+            if (witnesses?.rows.length) {
+                await Promise.all(witnesses.rows.map(w =>
+                    dbQuery('INSERT INTO case_witnesses (case_format, side, name) VALUES ($1,$2,$3)', [newFormatID, w.side, w.name])
+                ));
+            }
+        }
+
+        if (options.scoringCategories) {
+            const cats = (await dbQuery<IScoringCategoryRow>(
+                'SELECT id, name, witness_category, position FROM scoring_categories WHERE tournament_id=$1 ORDER BY position', [sourceTournamentID]
+            ))?.rows ?? [];
+            const fields = cats.length > 0
+                ? (await dbQuery<IScoringFieldRow>(
+                    `SELECT category_id, label, min_score, max_score, multiplier, assignable, eligible_for_award, visible_to_scorers, prosecution, defense, calling, crossing, position
+                     FROM scoring_fields WHERE category_id IN (${cats.map((_, i) => `$${i + 1}`).join(',')}) ORDER BY position`,
+                    cats.map(c => c.id)
+                ))?.rows ?? []
+                : [];
+            await Promise.all(cats.map(async cat => {
+                const newCatID = randomUUID();
+                await dbQuery(
+                    'INSERT INTO scoring_categories (id, tournament_id, name, witness_category, position) VALUES ($1,$2,$3,$4,$5)',
+                    [newCatID, newTournamentID, cat.name, cat.witness_category, cat.position]
+                );
+                await Promise.all(fields.filter(f => f.category_id === cat.id).map(f =>
+                    dbQuery(
+                        'INSERT INTO scoring_fields (category_id, label, min_score, max_score, multiplier, assignable, eligible_for_award, visible_to_scorers, prosecution, defense, calling, crossing, position) VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13)',
+                        [newCatID, f.label, f.min_score, f.max_score, f.multiplier, f.assignable, f.eligible_for_award, f.visible_to_scorers, f.prosecution, f.defense, f.calling, f.crossing, f.position]
+                    )
+                ));
+            }));
+        }
+
+        if (options.scorers) {
+            const scorers = await dbQuery<IScorer>('SELECT scorer_id, first_name, last_name, email FROM scorers WHERE tournament_id=$1', [sourceTournamentID]);
+            if (scorers?.rows.length) {
+                await Promise.all(scorers.rows.map(s =>
+                    dbQuery('INSERT INTO scorers (scorer_id, tournament_id, first_name, last_name, email) VALUES ($1,$2,$3,$4,$5)',
+                        [randomUUID(), newTournamentID, s.first_name, s.last_name, s.email])
+                ));
+            }
+        }
+
+        if (options.courtrooms) {
+            const courtrooms = await dbQuery<ICourtroomRow>('SELECT name, location FROM courtrooms WHERE tournament_id=$1', [sourceTournamentID]);
+            if (courtrooms?.rows.length) {
+                await Promise.all(courtrooms.rows.map(c =>
+                    dbQuery('INSERT INTO courtrooms (id, tournament_id, name, location) VALUES ($1,$2,$3,$4)',
+                        [randomUUID(), newTournamentID, c.name, c.location ?? null])
+                ));
+            }
+        }
+
+        return (await dbQuery<ITournament>('SELECT * FROM tournaments WHERE id=$1', [newTournamentID]))?.rows[0] ?? null;
     }
 }

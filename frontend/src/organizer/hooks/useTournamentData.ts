@@ -87,6 +87,32 @@ export async function saveScoringCategories(tournamentId: string, cats: ScoringC
     if (!r.ok) throw new Error(r.statusText)
 }
 
+// ── Standings config ──────────────────────────────────────────────────────────
+
+export interface StandingsTemplateRow {
+    id: string
+    label: string
+    description: string
+    config_id: string
+}
+
+export async function fetchStandingsTemplates(): Promise<StandingsTemplateRow[]> {
+    const r = await apiFetch('/api/organizer/tournament/standings-templates')
+    if (!r.ok) throw new Error('Failed to load standings templates.')
+    return r.json()
+}
+
+export async function fetchStandingsConfig(tournamentId: string): Promise<{ id: string; statsXml: string; standingsXml: string } | null> {
+    const r = await apiFetch(`/api/organizer/tournament/${tournamentId}/standings-config`)
+    if (!r.ok) throw new Error('Failed to load standings config.')
+    return r.json()
+}
+
+export async function saveStandingsConfig(tournamentId: string, config: { statsXml: string; standingsXml: string }): Promise<void> {
+    const r = await apiFetch(`/api/organizer/tournament/${tournamentId}/standings-config`, { method: 'PATCH', body: JSON.stringify(config) })
+    if (!r.ok) throw new Error(r.statusText)
+}
+
 // ── Tournament info (name/location/dates) ─────────────────────────────────────
 
 export async function saveTournamentInfo(tournamentId: string, info: TournamentInfo): Promise<void> {

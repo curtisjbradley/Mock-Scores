@@ -7,13 +7,14 @@
     "build": "npx tsc -b && npx vite build",
     "lint": "eslint .",
     "preview": "vite preview",
-    "prepare": "if [ \"$NODE_ENV\" != \"production\" ]; then cd .. && husky; fi"
+    "prepare": "node -e \"if(process.env.NODE_ENV !== 'production') { require('child_process').execSync('cd .. && husky', {stdio:'inherit'}) }\""
   },
   "lint-staged": {
     "*.{ts,tsx}": "eslint --fix"
   },
   "dependencies": {
     "@mock-scores/shared": "*",
+    "blockly": "12.0.0",
     "react": "^19.2.5",
     "react-dom": "^19.2.5",
     "react-hook-form": "^7.75.0",

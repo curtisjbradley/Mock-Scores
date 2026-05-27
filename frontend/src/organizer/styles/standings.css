@@ -31,3 +31,66 @@
 .dash-team-code { font-weight: 700; }
 .dash-diff--pos { color: #059669; font-weight: 600; }
 .dash-diff--neg { color: var(--danger); font-weight: 600; }
+
+/* ── StandingsBuilder ─────────────────────────────────────────────────────── */
+.sb-workspaces { display: flex; flex-direction: column; gap: 16px; }
+
+.sb-workspace-header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 4px; }
+.sb-workspace-label { margin: 0; font-weight: 600; font-size: 13px; }
+.sb-expand-btn { background: none; border: 1px solid var(--border); border-radius: 4px; padding: 2px 6px; font-size: 11px; cursor: pointer; color: var(--text-muted); }
+.sb-expand-btn:hover { background: var(--surface-muted); }
+
+.sb-workspace { height: 320px; border: 1px solid var(--border); }
+
+.sb-fullscreen-overlay {
+  position: fixed; inset: 0; z-index: 1000;
+  background: var(--background, #fff);
+  display: flex; flex-direction: column;
+}
+.sb-fullscreen-header {
+  display: flex; align-items: center; justify-content: space-between;
+  padding: 8px 12px; border-bottom: 1px solid var(--border);
+  font-weight: 600; font-size: 13px;
+}
+.sb-fullscreen-ws { flex: 1; }
+
+.sb-config-details { margin-top: 8px; }
+
+.sb-config-summary { cursor: pointer; font-size: 12px; color: var(--text-muted); }
+
+.sb-config-body { margin-top: 8px; display: flex; flex-direction: column; gap: 8px; }
+
+.sb-config-body .org-new-btn { align-self: flex-start; }
+
+.sb-config-textarea {
+    font-family: monospace;
+    font-size: 11px;
+    width: 100%;
+    box-sizing: border-box;
+}
+
+.sb-config-hint { margin: 0; font-size: 12px; color: var(--text-muted); }
+
+.sb-config-error { margin: 0; font-size: 12px; color: var(--danger); }
+
+/* ── TiebreakersTab ───────────────────────────────────────────────────────── */
+.tb-title { margin: 0 0 8px; }
+
+.tb-save-bar {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    margin-top: 20px;
+    padding: 14px 16px;
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+}
+
+.tb-save-msg { font-size: 13px; }
+.tb-save-msg--ok  { color: #059669; }
+.tb-save-msg--err { color: var(--danger); }
+
+.tb-unsaved { font-size: 13px; color: var(--text-muted); margin-left: auto; }
+
+.tb-description { font-size: 13px; color: var(--text-muted); margin-bottom: 16px; }

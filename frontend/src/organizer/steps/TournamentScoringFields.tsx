@@ -27,9 +27,10 @@ interface Props {
     onSubmit: () => void
     onBack: () => void
     isEditing?: boolean
+    submitLabel?: string
 }
 
-export default function TournamentScoringFields({ categories, onChange, caseFormat, onSubmit, onBack, isEditing }: Props) {
+export default function TournamentScoringFields({ categories, onChange, caseFormat, onSubmit, onBack, isEditing, submitLabel }: Props) {
     const [submitted, setSubmitted] = useState(false)
     const [selectedTemplate, setSelectedTemplate] = useState('manual')
     const [showModal, setShowModal] = useState(!isEditing)
@@ -141,7 +142,7 @@ export default function TournamentScoringFields({ categories, onChange, caseForm
 
                 <div className="tc-actions">
                     <button type="button" className="tc-cancel-btn" onClick={onBack}>← Back</button>
-                    <button type="submit" className="org-new-btn">{isEditing ? 'Save changes' : 'Create tournament'}</button>
+                    <button type="submit" className="org-new-btn">{submitLabel ?? (isEditing ? 'Save changes' : 'Create tournament')}</button>
                 </div>
             </form>
         </>

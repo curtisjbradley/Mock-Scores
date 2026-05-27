@@ -17,26 +17,28 @@ import OrganizersTab from '../tabs/OrganizersTab'
 import ScorersTab from '../tabs/ScorersTab'
 import CourtroomsTab from '../tabs/CourtroomsTab'
 import TournamentSettingsTab from '../tabs/TournamentSettingsTab'
+import TiebreakersTab from '../tabs/TiebreakersTab'
 
-type Tab = 'tournament' | 'teams' | 'scorers' | 'courtrooms' | 'organizers' | 'witnesses' | 'scoring' | 'rounds' | 'standings'
+type Tab = 'tournament' | 'teams' | 'scorers' | 'courtrooms' | 'organizers' | 'witnesses' | 'scoring' | 'rounds' | 'standings' | 'tiebreakers'
 type Screen = 'home' | 'structure' | Tab
 
-const STRUCTURE_TABS: Tab[] = ['tournament', 'scoring', 'witnesses']
+const STRUCTURE_TABS: Tab[] = ['scoring', 'witnesses', 'tiebreakers']
 
 const MAIN_CARDS: { label: string; screen: Screen }[] = [
-    { label: 'Manage Rounds',               screen: 'rounds' },
-    { label: 'See Standings',            screen: 'standings' },
-    { label: 'Manage Teams',                screen: 'teams' },
-    { label: 'Manage Scorers',              screen: 'scorers' },
-    { label: 'Manage Courtrooms',           screen: 'courtrooms' },
-    { label: 'Manage Organizers',           screen: 'organizers' },
+    { label: 'Manage Rounds',        screen: 'rounds' },
+    { label: 'See Standings',        screen: 'standings' },
+    { label: 'Manage Teams',         screen: 'teams' },
+    { label: 'Manage Scorers',       screen: 'scorers' },
+    { label: 'Manage Courtrooms',    screen: 'courtrooms' },
+    { label: 'Manage Organizers',    screen: 'organizers' },
+    { label: 'Manage Tournament',    screen: 'tournament' },
     { label: 'Tournament Structure', screen: 'structure' },
 ]
 
 const STRUCTURE_CARDS: { label: string; tab: Tab }[] = [
-    { label: 'Tournament Details', tab: 'tournament' },
     { label: 'Manage Scorecard',    tab: 'scoring' },
-    { label: 'Manage Witnesses',  tab: 'witnesses' },
+    { label: 'Manage Witnesses',    tab: 'witnesses' },
+    { label: 'Manage Tiebreakers',  tab: 'tiebreakers' },
 ]
 
 
@@ -119,7 +121,8 @@ class TournamentDashboardClass extends Component<Props, State> {
                     {visitedTabs.has('witnesses')  && <div hidden={activeTab !== 'witnesses'}><WitnessesTab tournamentId={id} /></div>}
                     {visitedTabs.has('scoring')    && <div hidden={activeTab !== 'scoring'}><ScoringTab tournamentId={id} /></div>}
                     {visitedTabs.has('rounds')     && <div hidden={activeTab !== 'rounds'}><RoundsTab tournamentId={id} /></div>}
-                    {visitedTabs.has('standings')  && <div hidden={activeTab !== 'standings'}><StandingsTab tournamentId={id} /></div>}
+                    {visitedTabs.has('standings')   && <div hidden={activeTab !== 'standings'}><StandingsTab tournamentId={id} /></div>}
+                    {visitedTabs.has('tiebreakers') && <div hidden={activeTab !== 'tiebreakers'}><TiebreakersTab tournamentId={id} /></div>}
                 </div>
             </main>
         )

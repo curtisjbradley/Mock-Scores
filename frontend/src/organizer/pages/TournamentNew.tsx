@@ -10,10 +10,11 @@ import TournamentStepper from '../components/TournamentStepper'
 import TournamentDetails from '../steps/TournamentDetails'
 import TournamentCaseFormat from '../steps/TournamentCaseFormat'
 import TournamentScoringFields from '../steps/TournamentScoringFields'
+import TournamentStandings from '../steps/TournamentStandings'
 import { apiFetch } from '../../auth/auth'
 import LoadingPage from "../../layout/LoadingPage.tsx";
 
-function buildPayload(info: TournamentInfo, caseFormat: CaseFormatState, categories: ScoringCategory[]): TournamentPayload {
+function buildPayload(info: TournamentInfo, caseFormat: CaseFormatState, categories: ScoringCategory[], standingsConfigId: string | null): TournamentPayload {
     return {
         tournament: {
             name: info.name,
@@ -52,6 +53,7 @@ function buildPayload(info: TournamentInfo, caseFormat: CaseFormatState, categor
                 position: fPos,
             })),
         })),
+        standingsConfigId,
     }
 }
 
@@ -64,10 +66,10 @@ export default function TournamentNew() {
     const [submitting, setSubmitting] = useState(false)
     const [error, setError] = useState<string | null>(null)
 
-    const titles = ['New tournament', 'Case format', 'Scoring fields']
+    const titles = ['New tournament', 'Case format', 'Scoring fields', 'Standings']
 
-    const handleSubmit  = () => {
-        const payload = buildPayload(info, caseFormat, categories)
+    const handleSubmit = (standingsConfigId: string | null) => {
+        const payload = buildPayload(info, caseFormat, categories, standingsConfigId)
 
         setSubmitting(true)
         apiFetch('/api/organizer/tournament', { method: 'POST', body: JSON.stringify(payload) })
@@ -100,7 +102,8 @@ export default function TournamentNew() {
                     {!submitting && <>
                         {step === 1 && <TournamentDetails info={info} onChange={setInfo} onNext={() => setStep(2)} onBack={() => navigate('/organizer')} />}
                         {step === 2 && <TournamentCaseFormat caseFormat={caseFormat} onChange={setCaseFormat} onNext={() => setStep(3)} onBack={() => setStep(1)} />}
-                        {step === 3 && <TournamentScoringFields categories={categories} onChange={setCategories} caseFormat={caseFormat} onSubmit={handleSubmit} onBack={() => setStep(2)} />}
+                        {step === 3 && <TournamentScoringFields categories={categories} onChange={setCategories} caseFormat={caseFormat} onSubmit={() => setStep(4)} onBack={() => setStep(2)} submitLabel="Next →" />}
+                        {step === 4 && <TournamentStandings onSubmit={handleSubmit} onBack={() => setStep(3)} />}
                     </>}
                 </div>
             </div>

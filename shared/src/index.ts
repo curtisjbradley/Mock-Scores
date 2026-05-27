@@ -36,6 +36,20 @@ export interface TournamentPayload {
             position: number
         }[]
     }[]
+    standingsConfigId: string | null
+}
+
+export interface IStandingsConfig {
+    id: string
+    statsXml: string
+    standingsXml: string
+}
+
+export interface IStandingsTemplate {
+    id: string
+    label: string
+    description: string
+    config_id: string
 }
 
 export interface ScorecardPayload {

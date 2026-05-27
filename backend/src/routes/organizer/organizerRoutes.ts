@@ -1,7 +1,7 @@
 import { Request, Response, Router} from "express";
 import type { TournamentPayload } from '@mock-scores/shared';
 import {OrganizerProvider} from "../../providers/organizerProvider";
-import {verifyTournamentAccess} from "../../authUtils";
+import {verifyTournamentAccess, verifyTournamentOwner} from "../../authUtils";
 
 import subRoutes from "./organizerTournamentRoutes";
 
@@ -28,6 +28,11 @@ router.get("/", async (req: Request, res: Response) => {
 })
 
 
+router.get("/standings-templates", async (req: Request, res: Response) => {
+    if (!req?.session) return res.status(401).json({ message: 'Invalid or expired token' });
+    return res.status(200).json(await tournamentProvider.getStandingsTemplates());
+})
+
 router.post("/", async (req: Request, res: Response) => {
     if (!req?.session) return res.status(401).json({ message: 'Invalid or expired token' });
 
@@ -43,6 +48,23 @@ router.post("/", async (req: Request, res: Response) => {
     return res.status(201).json(tournament);
 })
 
+
+router.post("/duplicate/:tournamentId", verifyTournamentAccess, async (req: Request, res: Response) => {
+    if (!req?.tournament) return res.status(403).json({ message: 'No access to tournament' });
+    const { scorers = false, courtrooms = false, scoringCategories = false, witnesses = false, format = false } = req.body ?? {};
+    const tournament = await tournamentProvider.duplicateTournament(req.tournament, { scorers, courtrooms, scoringCategories, witnesses, format });
+    if (!tournament) return res.status(500).json({ message: 'Unable to duplicate tournament' });
+    if (!req.session) return res.status(401).json({ message: 'Invalid session' });
+    await tournamentProvider.addTournamentOrganizer(tournament.id, req.session.userId, 'owner');
+    return res.status(201).json(tournament);
+})
+
+router.delete("/:tournamentId", verifyTournamentOwner, async (req: Request, res: Response) => {
+    if (!req.tournament) return res.status(403).json({ message: 'No access to tournament' });
+    const ok = await tournamentProvider.deleteTournament(req.tournament);
+    if (!ok) return res.status(500).json({ message: 'Unable to delete tournament' });
+    return res.status(204).send();
+})
 
 router.use("/:tournamentId", verifyTournamentAccess, subRoutes)
 

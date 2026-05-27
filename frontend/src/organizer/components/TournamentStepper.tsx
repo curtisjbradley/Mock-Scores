@@ -1,6 +1,6 @@
 import React from 'react'
 
-const STEPS = [['Details', 1], ['Case format', 2], ['Scoring fields', 3]] as const
+const STEPS = [['Details', 1], ['Case format', 2], ['Scoring fields', 3], ['Standings', 4]] as const
 
 interface Props { current: number; onGoTo: (step: number) => void }
 

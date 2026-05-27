@@ -89,3 +89,18 @@ export async function verifyTournamentAccess(req: Request, res: Response, next: 
     req.tournament = tournament
     next()
 }
+
+export async function verifyTournamentOwner(req: Request, res: Response, next: NextFunction) {
+    const { tournamentId } = req.params
+    const tournament = Array.isArray(tournamentId) ? tournamentId[0] : tournamentId
+    if (!req.session) return res.status(401).json({ message: 'Invalid or expired token' })
+    if (!tournament || !uuidRegex.test(tournament)) return res.status(400).json({ message: 'Invalid tournament id' })
+    const row = (await dbQuery<{ role: string }>(
+        'SELECT role FROM tournament_owners WHERE tournament_id=$1 AND delegate_id=$2',
+        [tournament, req.session.userId]
+    ))?.rows[0]
+    if (!row) return res.status(403).json({ message: 'Not authorized' })
+    if (row.role !== 'owner') return res.status(403).json({ message: 'Only owners can perform this action' })
+    req.tournament = tournament
+    next()
+}
