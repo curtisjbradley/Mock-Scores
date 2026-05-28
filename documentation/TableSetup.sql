@@ -349,6 +349,7 @@ CREATE TRIGGER trg_update_num_rounds
 EXECUTE FUNCTION update_tournament_num_rounds();
 
 
+-- Define AMTA standings template --
 do $$
     declare  template_id uuid  := gen_random_uuid();
     begin
@@ -361,6 +362,8 @@ do $$
 $$;
 
 
+
+--- Define SLO County standings Template ---
 do $$
     declare  template_id uuid  := gen_random_uuid();
     begin
