@@ -7,6 +7,7 @@ import { apiFetch } from '../../auth/auth'
 import PairingCard from '../components/PairingCard'
 import { ConfirmRemoveModal } from '../components/modals'
 import type {ICourtroom, IPairing, IPairingScorer, IRound, IScorer, ITeam} from '@mock-scores/shared'
+import NotFound from '../../error/NotFound'
 
 const RoundView = () => {
     const { id, round: roundId } = useParams<{ id: string; round: string }>()
@@ -19,11 +20,12 @@ const RoundView = () => {
     const [scorers, setScorers] = useState<IScorer[]>([])
     const [pairingScorers, setPairingScorers] = useState<Record<string, IPairingScorer[]>>({})
     const [error, setError] = useState('')
+    const [notFound, setNotFound] = useState(false)
 
     useEffect(() => {
         if (!id || !roundId) { navigate('/'); return }
         Promise.all([
-            apiFetch(`/api/organizer/tournament/${id}/rounds/${roundId}`).then(r => r.json()),
+            apiFetch(`/api/organizer/tournament/${id}/rounds/${roundId}`).then(r => { if (r.status === 404) { setNotFound(true); throw new Error('not found') } if (!r.ok) throw new Error('Round not found'); return r.json() }),
             apiFetch(`/api/organizer/tournament/${id}/teams`).then(r => r.json()),
             apiFetch(`/api/organizer/tournament/${id}/courtrooms`).then(r => r.json()),
             apiFetch(`/api/organizer/tournament/${id}/rounds/${roundId}/pairings`).then(r => r.json()),
@@ -116,6 +118,8 @@ const RoundView = () => {
             ...prev,
             [pairingId]: (prev[pairingId] ?? []).map(s => ({ ...s, is_presider: s.assignment_id === assignmentId })),
         }))
+
+    if (notFound) return <NotFound />
 
     return (
         <main className="org-main">

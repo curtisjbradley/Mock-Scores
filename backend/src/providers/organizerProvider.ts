@@ -351,8 +351,8 @@ export class OrganizerProvider {
         return (await dbQuery<IRoundRow>('SELECT * FROM rounds WHERE tournament_id=$1 ORDER BY round_time', [tournamentId]))?.rows ?? [];
     }
 
-    async getRound(roundID: string): Promise<IRoundRow | undefined> {
-        return (await dbQuery<IRoundRow>('SELECT * FROM rounds WHERE round_id=$1', [roundID]))?.rows[0];
+    async getRound(tournamentID :string, roundID: string): Promise<IRoundRow | undefined> {
+        return (await dbQuery<IRoundRow>('SELECT * FROM rounds WHERE round_id=$1 and tournament_id = $2', [roundID, tournamentID]))?.rows[0];
     }
 
     async getTeams(tournamentID: string): Promise<ITeam[]> {

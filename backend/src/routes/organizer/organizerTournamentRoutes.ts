@@ -330,7 +330,7 @@ async function verifyRound(req: Request, res: Response, next : NextFunction) {
         return res.status(400).json({ message: 'Invalid UUID' });
     }
 
-    const result : IRound | null = await organizerProvider.getRound(roundID).then(round => {
+    const result : IRound | null = await organizerProvider.getRound(req.tournament, roundID).then(round => {
         if(!round){
             return null
         }

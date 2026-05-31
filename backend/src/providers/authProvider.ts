@@ -52,4 +52,16 @@ export class AuthProvider {
         }
         return signToken(user.user_id, user.email, user.first_name, user.last_name);
     }
+
+    async changePassword(userId: string, currentPassword: string, newPassword: string): Promise<IStatusResponse> {
+        const result = await dbQuery<IAuthRow>('SELECT password_hash FROM auth WHERE user_id=$1', [userId]);
+        if (!result) return { status: 500, message: 'Internal error' };
+        const user = result.rows[0];
+        if (!user || !(await bcrypt.compare(currentPassword, user.password_hash))) {
+            return { status: 401, message: 'Current password is incorrect' };
+        }
+        const hash = await bcrypt.hash(newPassword, 10);
+        await dbQuery('UPDATE auth SET password_hash=$1 WHERE user_id=$2', [hash, userId]);
+        return { status: 200, message: 'Password updated' };
+    }
 }

@@ -31,7 +31,7 @@ router.patch("/", async (req: Request, res : Response) => {
     const round : IRound = req.body;
 
 
-    if(round.name == undefined || round.results_public == undefined || round.teams_public == undefined || round.round_time == undefined) {
+    if(round.name == undefined || round.results_public == undefined || round.teams_public == undefined) {
         return res.status(400).json({message: "Missing required fields"})
     }
 
