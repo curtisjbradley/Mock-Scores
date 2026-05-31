@@ -310,3 +310,12 @@
 .modal-input--invalid {
     border-color: var(--danger);
 }
+
+.modal-checkbox-row {
+    display: flex;
+    align-items: center;
+    gap: 0.6rem;
+    font-size: 0.95rem;
+    cursor: pointer;
+    padding: 0.25rem 0;
+}

@@ -3,10 +3,11 @@ import '../../judges/styles/modal.css'
 import { isValidEmail } from '../../utils/validation'
 import type { ITeam } from '@mock-scores/shared'
 
-export function ConfirmRemoveModal({ message, onCancel, onConfirm }: {
+export function ConfirmRemoveModal({ message, onCancel, onConfirm, confirmLabel = 'Remove' }: {
     message: string
     onCancel: () => void
     onConfirm: () => void
+    confirmLabel?: string
 }) {
     return (
         <div className="modal-backdrop" role="presentation" onClick={e => { if (e.target === e.currentTarget) onCancel() }}>
@@ -15,7 +16,7 @@ export function ConfirmRemoveModal({ message, onCancel, onConfirm }: {
                 <p>{message}</p>
                 <div className="confirm-actions">
                     <button type="button" onClick={onCancel}>Cancel</button>
-                    <button type="button" className="confirm-btn-danger" onClick={onConfirm}>Remove</button>
+                    <button type="button" className="confirm-btn-danger" onClick={onConfirm}>{confirmLabel}</button>
                 </div>
             </div>
         </div>

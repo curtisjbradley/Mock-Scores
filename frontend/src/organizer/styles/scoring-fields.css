@@ -196,3 +196,8 @@
     color: var(--primary);
     font-weight: 700;
 }
+
+/* ── TournamentStandings step ─────────────────────────────────────────────── */
+.ts-option-description { display: block; font-size: 12px; margin-top: 4px; font-weight: normal; }
+
+.ts-note { font-size: 13px; color: var(--text-muted); margin: 16px 0; }

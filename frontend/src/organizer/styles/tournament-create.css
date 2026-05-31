@@ -347,3 +347,44 @@
 
 .tc-remove-btn--hidden { visibility: hidden; }
 .tc-step--clickable { cursor: pointer; }
+
+/* ── Danger zone ── */
+.tc-danger-zone {
+    margin-top: 2rem;
+    padding: 1.25rem;
+    border: 1.5px solid var(--danger);
+    border-radius: 0.75rem;
+    background: var(--danger-bg, #fff5f5);
+}
+
+.tc-danger-zone h3 {
+    margin: 0 0 0.4rem;
+    font-size: 0.95rem;
+    font-weight: 700;
+    color: var(--danger);
+}
+
+.tc-danger-zone p {
+    margin: 0 0 1rem;
+    font-size: 0.875rem;
+    color: var(--text);
+}
+
+.tc-delete-btn {
+    height: 2.5rem;
+    padding: 0 1.25rem;
+    border: 1.5px solid var(--danger);
+    border-radius: 0.6rem;
+    background: transparent;
+    color: var(--danger);
+    font-size: 0.9rem;
+    font-weight: 700;
+    font-family: inherit;
+    cursor: pointer;
+    transition: background 140ms ease, color 140ms ease;
+}
+
+.tc-delete-btn:hover {
+    background: var(--danger);
+    color: #fff;
+}

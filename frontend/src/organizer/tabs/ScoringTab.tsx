@@ -45,7 +45,6 @@ export default class ScoringTab extends Component<{ tournamentId: string }, Stat
                     onChange={(cats: ScoringCategory[]) => this.setState({ categories: cats })}
                     caseFormat={caseFormat}
                     onSubmit={this.handleSave}
-                    onBack={() => {}}
                     isEditing
                 />
                 {saving && <p className="dash-saving">Saving…</p>}

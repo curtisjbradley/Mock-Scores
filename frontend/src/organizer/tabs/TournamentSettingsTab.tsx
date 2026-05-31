@@ -4,10 +4,12 @@ import Section from './Section'
 import { fetchFormat, saveFormat, saveTournamentInfo } from '../hooks/useTournamentData'
 import type { TournamentInfo, CaseFormatState } from '../types/tournament'
 import { emptyCaseFormat } from '../types/tournament'
-import type { ITournament } from '@mock-scores/shared'
-import { apiFetch } from '../../auth/auth'
+import type { ITournament, IOrganizer } from '@mock-scores/shared'
+import { apiFetch, getSession } from '../../auth/auth'
+import { ConfirmRemoveModal } from '../components/modals'
+import { useNavigate } from 'react-router-dom'
 
-interface Props { tournamentId: string }
+interface Props { tournamentId: string; navigate: ReturnType<typeof useNavigate> }
 
 const emptyInfo: TournamentInfo = { name: '', location: '', startDate: '', endDate: '', startTbd: false, endTbd: false }
 
@@ -20,16 +22,21 @@ interface State {
     saveError: string | null
     saveSuccess: boolean
     submitted: boolean
+    isOwner: boolean
+    showDeleteModal: boolean
 }
 
-export default class TournamentSettingsTab extends Component<Props, State> {
-    state: State = { info: emptyInfo, caseFormat: emptyCaseFormat, loading: true, error: null, saving: false, saveError: null, saveSuccess: false, submitted: false }
+class TournamentSettingsTabClass extends Component<Props, State> {
+    state: State = { info: emptyInfo, caseFormat: emptyCaseFormat, loading: true, error: null, saving: false, saveError: null, saveSuccess: false, submitted: false, isOwner: false, showDeleteModal: false }
 
     componentDidMount() {
         Promise.all([
             apiFetch(`/api/organizer/tournament/${this.props.tournamentId}`).then(r => r.ok ? r.json() as Promise<ITournament> : Promise.reject()),
             fetchFormat(this.props.tournamentId),
-        ]).then(([t, cf]) => {
+            apiFetch(`/api/organizer/tournament/${this.props.tournamentId}/organizers`).then(r => r.ok ? r.json() as Promise<IOrganizer[]> : Promise.resolve([])),
+            getSession(),
+        ]).then(([t, cf, organizers, session]) => {
+            const isOwner = !!session && organizers.some(o => o.email === session.email && o.role === 'owner')
             this.setState({
                 info: {
                     name: t.name, location: t.location,
@@ -39,6 +46,7 @@ export default class TournamentSettingsTab extends Component<Props, State> {
                 },
                 caseFormat: cf,
                 loading: false,
+                isOwner,
             })
         }).catch(() => this.setState({ loading: false, error: 'Failed to load tournament data.' }))
     }
@@ -73,8 +81,17 @@ export default class TournamentSettingsTab extends Component<Props, State> {
         }
     }
 
+    handleDelete = async () => {
+        const res = await apiFetch(`/api/organizer/tournament/${this.props.tournamentId}`, { method: 'DELETE' })
+        if (res.ok) {
+            this.props.navigate('/organizer', { replace: true })
+        } else {
+            this.setState({ saveError: 'Failed to delete tournament.', showDeleteModal: false })
+        }
+    }
+
     render() {
-        const { info, caseFormat, loading, error, saveError, saveSuccess, saving, submitted } = this.state
+        const { info, caseFormat, loading, error, saveError, saveSuccess, saving, submitted, isOwner, showDeleteModal } = this.state
         const errors = this.getErrors(info, caseFormat)
         const setInfo = (i: TournamentInfo) => this.setState({ info: i })
         const setCf = (cf: CaseFormatState) => this.setState({ caseFormat: cf })
@@ -150,7 +167,31 @@ export default class TournamentSettingsTab extends Component<Props, State> {
                         </button>
                     </div>
                 </form>
+
+                {isOwner && (
+                    <div className="tc-danger-zone">
+                        <h3>Danger zone</h3>
+                        <p>Permanently delete this tournament. All configurations and scorecards will become unavailable and cannot be recovered.</p>
+                        <button type="button" className="tc-delete-btn" onClick={() => this.setState({ showDeleteModal: true })}>
+                            Delete tournament
+                        </button>
+                    </div>
+                )}
+
+                {showDeleteModal && (
+                    <ConfirmRemoveModal
+                        message="This tournament will no longer be accessible. All existing configurations and scorecards will become permanently unavailable. This cannot be undone."
+                        confirmLabel="Delete tournament"
+                        onCancel={() => this.setState({ showDeleteModal: false })}
+                        onConfirm={this.handleDelete}
+                    />
+                )}
             </Section>
         )
     }
+}
+
+export default function TournamentSettingsTab({ tournamentId }: { tournamentId: string }) {
+    const navigate = useNavigate()
+    return <TournamentSettingsTabClass tournamentId={tournamentId} navigate={navigate} />
 }

@@ -4,7 +4,6 @@ import {OrganizerProvider} from "../../providers/organizerProvider";
 import type {IOrganizer, IScorer, ITeam} from "@mock-scores/shared"
 import roundRoutes from "./organizerRoundRoutes";
 import {uuidRegex} from "../../authUtils";
-import {dbQuery} from "../../db";
 
 const router = Router();
 const organizerProvider = new OrganizerProvider();
@@ -20,11 +19,8 @@ router.patch("/", async (req: Request, res: Response) => {
     if (!req?.tournament) return res.status(403).json({ message: 'No access to tournament' });
     const { tournament: t } = req.body as { tournament: TournamentPayload['tournament'] };
     if (!t) return res.status(400).json({ message: 'Missing tournament in body' });
-    const ok = await dbQuery(
-        'UPDATE tournaments SET name=$1, location=$2, start_date=$3, end_date=$4 WHERE id=$5',
-        [t.name, t.location, t.startDate ?? null, t.endDate ?? null, req.tournament]
-    );
-    if (!ok || ok.rowCount !== 1) return res.status(500).json({ message: 'Unable to update tournament' });
+    const ok = await organizerProvider.updateTournamentDetails(req.tournament, t);
+    if (!ok) return res.status(500).json({ message: 'Unable to update tournament' });
     return res.status(200).json({ success: true });
 })
 
@@ -73,6 +69,21 @@ router.patch("/witnesses", async (req: Request, res: Response) => {
     if (allNames.some(n => !n?.trim())) return res.status(400).json({ message: 'Witness names cannot be empty' });
     const ok = await organizerProvider.updateWitnesses(req.tournament, witnesses)
     if (!ok) return res.status(500).json({ message: 'Unable to update witnesses' });
+    return res.status(200).json({ success: true });
+})
+
+router.get("/standings-config", async (req: Request, res: Response) => {
+    if (!req?.tournament) return res.status(403).json({ message: 'No access to tournament' });
+    const config = await organizerProvider.getStandingsConfig(req.tournament);
+    return res.status(200).json(config ?? null);
+})
+
+router.patch("/standings-config", async (req: Request, res: Response) => {
+    if (!req?.tournament) return res.status(403).json({ message: 'No access to tournament' });
+    const { statsXml, standingsXml } = req.body as { statsXml: string; standingsXml: string };
+    if (!statsXml || !standingsXml) return res.status(400).json({ message: 'Missing statsXml or standingsXml' });
+    const ok = await organizerProvider.upsertStandingsConfig(req.tournament, statsXml, standingsXml);
+    if (!ok) return res.status(500).json({ message: 'Unable to update standings config' });
     return res.status(200).json({ success: true });
 })
 
@@ -166,14 +177,6 @@ router.delete("/scorers", async (req: Request, res: Response) => {
         return res.status(500).json({ message: 'Unable to delete scorer' });
     }
     return res.status(204).send();
-});
-
-router.get("/rounds", async (req: Request, res: Response) => {
-    if(!req?.tournament) {
-        return res.status(403).json({ message: 'No access to tournament' });
-    }
-    const rounds = await organizerProvider.getRounds(req.tournament)
-    return res.status(200).json(rounds);
 });
 
 
@@ -327,11 +330,11 @@ async function verifyRound(req: Request, res: Response, next : NextFunction) {
         return res.status(400).json({ message: 'Invalid UUID' });
     }
 
-    const result : IRound | null = await organizerProvider.getRound(roundID).then(round => {
+    const result : IRound | null = await organizerProvider.getRound(req.tournament, roundID).then(round => {
         if(!round){
             return null
         }
-        return {...round, round_time: round.round_time == null ? null : round.round_time.toTimeString()};
+        return {...round, round_time: round.round_time == null ? null : round.round_time.toISOString()};
     })
     if (!result){
         return res.status(404).json({ message: 'No round found' });
@@ -390,7 +393,33 @@ router.delete('/teams', async (req: Request, res: Response) => {
     return res.status(204).send();
 });
 
-router.use('/round/:roundId', verifyRound,  roundRoutes)
+
+router.get("/rounds", async (req: Request, res: Response) => {
+    if(!req?.tournament) {
+        return res.status(403).json({ message: 'No access to tournament' });
+    }
+    const rounds = await organizerProvider.getRounds(req.tournament)
+    return res.status(200).json(rounds);
+});
+
+
+
+router.post("/rounds", async (req: Request, res: Response) => {
+    if(!req?.tournament) {
+        return res.status(403).json({ message: 'No access to tournament' });
+    }
+    const newRound = await organizerProvider.createRound(req.tournament)
+
+    if (!newRound) {
+        return res.status(400).json({message: "Unable to create round"});
+    }
+
+    const out : IRound = {...newRound, round_time : newRound.round_time?.toISOString() ?? null}
+
+    return res.status(201).json(out);
+});
+
+router.use('/rounds/:round', verifyRound,  roundRoutes)
 
 
 

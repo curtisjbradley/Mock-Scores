@@ -186,3 +186,59 @@
     color: var(--danger);
     font-weight: 600;
 }
+
+.dash-round-name-input {
+    height: 2rem;
+    padding: 0 0.5rem;
+    border: 1px solid var(--border-strong);
+    border-radius: 0.5rem;
+    background: var(--surface);
+    color: var(--text);
+    font-size: 0.9rem;
+    font-weight: 700;
+    font-family: inherit;
+    min-width: 8rem;
+    max-width: 14rem;
+    outline: none;
+    transition: border-color 120ms ease, box-shadow 120ms ease;
+}
+
+.dash-round-name-input:focus {
+    border-color: var(--primary);
+    box-shadow: 0 0 0 3px var(--focus);
+}
+
+.dash-round-time-input {
+    height: 2rem;
+    padding: 0 0.5rem;
+    border: 1px solid var(--border-strong);
+    border-radius: 0.5rem;
+    background: var(--surface);
+    color: var(--text);
+    font-size: 0.82rem;
+    font-family: inherit;
+    outline: none;
+    transition: border-color 120ms ease, box-shadow 120ms ease;
+}
+
+.dash-round-time-input:focus {
+    border-color: var(--primary);
+    box-shadow: 0 0 0 3px var(--focus);
+}
+
+.dash-round-save-btn {
+    height: 2rem;
+    padding: 0 1rem;
+    border: 0;
+    border-radius: 0.5rem;
+    background: var(--primary);
+    color: #fff;
+    font-size: 0.85rem;
+    font-weight: 600;
+    font-family: inherit;
+    cursor: pointer;
+    transition: background 140ms ease;
+    flex-shrink: 0;
+}
+
+.dash-round-save-btn:hover { background: var(--primary-dark); }

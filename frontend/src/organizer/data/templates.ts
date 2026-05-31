@@ -152,3 +152,4 @@ export const templates: Template[] = [
 
 export const getTemplate = (id: string): Template =>
     templates.find(t => t.id === id) ?? templates.find(t => t.id === 'manual')!
+

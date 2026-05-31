@@ -55,4 +55,13 @@ router.get('/session', verifyUser, async (req: Request, res: Response) => {
    return res.status(200).json(req.session);
 });
 
+router.post('/change-password', verifyUser, async (req: Request, res: Response) => {
+    if (!req.session) return res.status(401).json({ message: 'Not verified.' });
+    const { currentPassword, newPassword } = req.body as { currentPassword?: string; newPassword?: string };
+    if (!currentPassword || !newPassword) return res.status(400).json({ message: 'Missing required fields' });
+    if (newPassword.length < 8) return res.status(400).json({ message: 'New password must be at least 8 characters' });
+    const result = await authProvider.changePassword(req.session.userId, currentPassword, newPassword);
+    return res.status(result.status).json({ message: result.message });
+});
+
 export default router;
