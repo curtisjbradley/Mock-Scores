@@ -1,6 +1,21 @@
 import { dbQuery } from '../db';
-import type { IScorer, TournamentPayload, ITournament, IOrganizer, IWitnesses, IScoringCategory, ICourtroom, ITeam } from '@mock-scores/shared';
-import type { ICaseWitnessRow, IScoringCategoryRow, IScoringFieldRow, IRoundRow, ITournamentOwnerRow, ITournamentDelegateInviteRow, IAuthRow, ICourtroomRow, ITournamentFormatRow, ITeamRow, ITeamInviteRow } from '../types/dbtypes';
+import type {
+    IScorer, TournamentPayload, ITournament, IOrganizer, IWitnesses, IScoringCategory, ICourtroom, ITeam,
+    IRound
+} from '@mock-scores/shared';
+import type {
+    ICaseWitnessRow,
+    IScoringCategoryRow,
+    IScoringFieldRow,
+    IRoundRow,
+    ITournamentOwnerRow,
+    ITournamentDelegateInviteRow,
+    IAuthRow,
+    ICourtroomRow,
+    ITournamentFormatRow,
+    ITeamRow,
+    IPairingRow
+} from '../types/dbtypes';
 import { randomUUID } from 'node:crypto';
 
 export class OrganizerProvider {
@@ -333,7 +348,7 @@ export class OrganizerProvider {
     }
 
     async getRounds(tournamentId: string): Promise<IRoundRow[]> {
-        return (await dbQuery<IRoundRow>('SELECT * FROM rounds WHERE tournament_id=$1 ORDER BY position', [tournamentId]))?.rows ?? [];
+        return (await dbQuery<IRoundRow>('SELECT * FROM rounds WHERE tournament_id=$1 ORDER BY round_time', [tournamentId]))?.rows ?? [];
     }
 
     async getRound(roundID: string): Promise<IRoundRow | undefined> {
@@ -341,27 +356,33 @@ export class OrganizerProvider {
     }
 
     async getTeams(tournamentID: string): Promise<ITeam[]> {
-        const [active, invited] = await Promise.all([
-            dbQuery<ITeam>(
-                `SELECT t.id, t.tournament_id, t.name, COALESCE(t.code, t.name) AS code, a.email AS coach_email, true AS has_joined
-                 FROM teams t JOIN auth a ON a.user_id = (
-                     SELECT tc.coach_id FROM team_coaches tc WHERE tc.team_id = t.id AND tc.is_owner = true LIMIT 1
-                 ) WHERE t.tournament_id = $1`,
-                [tournamentID]
-            ),
-            dbQuery<ITeam>(
-                `SELECT ti.id, ti.team_id AS tournament_id, t.name, COALESCE(t.code, t.name) AS code, ti.invite_email AS coach_email, false AS has_joined
-                 FROM team_invites ti JOIN teams t ON t.id = ti.team_id WHERE t.tournament_id = $1`,
-                [tournamentID]
-            ),
-        ]);
-        return [...(active?.rows ?? []), ...(invited?.rows ?? [])];
+        // Teams with a joined coach
+        const joined = (await dbQuery<ITeam>(
+            `SELECT t.id, t.tournament_id, t.name, t.code, a.email AS coach_email, true AS has_joined
+             FROM teams t
+             JOIN team_coaches tc ON tc.team_id = t.id AND tc.is_owner = true
+             JOIN auth a ON a.user_id = tc.coach_id
+             WHERE t.tournament_id = $1`,
+            [tournamentID]
+        ))?.rows ?? [];
+
+        // Teams with only an invite (no joined coach)
+        const invited = (await dbQuery<ITeam>(
+            `SELECT t.id, t.tournament_id, t.name, t.code, ti.invite_email AS coach_email, false AS has_joined
+             FROM teams t
+             JOIN team_invites ti ON ti.team_id = t.id
+             WHERE t.tournament_id = $1
+               AND NOT EXISTS (SELECT 1 FROM team_coaches tc WHERE tc.team_id = t.id AND tc.is_owner = true)`,
+            [tournamentID]
+        ))?.rows ?? [];
+
+        return [...joined, ...invited];
     }
 
     async teamNameExists(tournamentID: string, name: string, excludeId?: string): Promise<boolean> {
         const row = (await dbQuery<{ id: string }>(
-            `SELECT id FROM teams WHERE tournament_id=$1 AND LOWER(name)=$2${excludeId ? ' AND id != $3' : ''}`,
-            excludeId ? [tournamentID, name, excludeId] : [tournamentID, name.toLowerCase()]
+            `SELECT id FROM teams WHERE tournament_id=$1 AND LOWER(name)=LOWER($2)${excludeId ? ' AND id != $3' : ''}`,
+            excludeId ? [tournamentID, name, excludeId] : [tournamentID, name]
         ))?.rows[0];
         return !!row;
     }
@@ -374,14 +395,11 @@ export class OrganizerProvider {
         );
         if (!teamInsert?.rows[0]) return undefined;
 
-        const user = (await dbQuery<IAuthRow>('SELECT * FROM auth WHERE LOWER(email) = $1', [coachEmail.toLowerCase()]))?.rows[0];
+        const user = (await dbQuery<IAuthRow>('SELECT * FROM auth WHERE LOWER(email) = LOWER($1)', [coachEmail]))?.rows[0];
 
         if (!user) {
-            const invite = (await dbQuery<ITeamInviteRow>(
-                'INSERT INTO team_invites (team_id, invite_email, name, code) VALUES ($1,$2,$3, $4) RETURNING *',
-                [teamId, coachEmail, name, code]
-            ))?.rows[0];
-            return invite ? { id: invite.id, tournament_id: tournamentID, name, code, coach_email: coachEmail, has_joined: false } : undefined;
+            await dbQuery('INSERT INTO team_invites (team_id, invite_email) VALUES ($1,$2)', [teamId, coachEmail]);
+            return { id: teamId, tournament_id: tournamentID, name, code, coach_email: coachEmail, has_joined: false };
         }
 
         await dbQuery('INSERT INTO team_coaches (coach_id, team_id, is_owner) VALUES ($1,$2,$3)', [user.user_id, teamId, true]);
@@ -394,13 +412,19 @@ export class OrganizerProvider {
 
         await dbQuery('UPDATE teams SET name=$1, code=$2 WHERE id=$3', [name, code || name, teamId]);
 
-        const invite = (await dbQuery<ITeamInviteRow>('SELECT * FROM team_invites WHERE team_id=$1', [teamId]))?.rows[0];
-        if (invite) {
-            const updated = (await dbQuery<ITeamInviteRow>(
-                'UPDATE team_invites SET invite_email=$1, name=$2 WHERE team_id=$3 RETURNING *',
-                [coachEmail, name, teamId]
-            ))?.rows[0];
-            return updated ? { id: updated.id, tournament_id: team.tournament_id, name, code: code || name, coach_email: coachEmail, has_joined: false } : undefined;
+        const hasJoinedCoach = !!(await dbQuery<{ coach_id: string }>(
+            'SELECT coach_id FROM team_coaches WHERE team_id=$1 AND is_owner=true LIMIT 1', [teamId]
+        ))?.rows[0];
+
+        if (!hasJoinedCoach) {
+            // Update or insert invite
+            const existing = (await dbQuery('SELECT id FROM team_invites WHERE team_id=$1', [teamId]))?.rows[0];
+            if (existing) {
+                await dbQuery('UPDATE team_invites SET invite_email=$1 WHERE team_id=$2', [coachEmail, teamId]);
+            } else {
+                await dbQuery('INSERT INTO team_invites (team_id, invite_email) VALUES ($1,$2)', [teamId, coachEmail]);
+            }
+            return { id: teamId, tournament_id: team.tournament_id, name, code: code || name, coach_email: coachEmail, has_joined: false };
         }
 
         return { id: teamId, tournament_id: team.tournament_id, name, code: code || name, coach_email: coachEmail, has_joined: true };
@@ -505,5 +529,113 @@ export class OrganizerProvider {
         }
 
         return (await dbQuery<ITournament>('SELECT * FROM tournaments WHERE id=$1', [newTournamentID]))?.rows[0] ?? null;
+    }
+
+    async createRound(tournamentID: string): Promise<IRoundRow | null> {
+        const length = (await dbQuery<{ num_rounds: string }>("select count(*) as num_rounds from rounds where tournament_id = $1", [tournamentID]))?.rows[0] ?? null;
+
+
+        const pos = parseInt((length?.num_rounds ?? "0")) + 1;
+        console.log(pos)
+        return (await dbQuery<IRoundRow>('INSERT INTO rounds (tournament_id, name) values ($1, $2) returning *', [tournamentID, `Round ${pos}`]))?.rows[0] ?? null
+    }
+
+    async deleteRound(roundID: string): Promise<IRoundRow | null> {
+        const row = (await dbQuery<IRoundRow>("delete from rounds where round_id = $1 returning *", [roundID]))?.rows[0];
+
+        return row ?? null;
+    }
+
+    async updateRound(roundID: string, roundData : IRound) : Promise<IRound | null> {
+
+        return (await dbQuery<IRound>(`UPDATE rounds 
+        set round_time = $1, name = $2, teams_public = $3, results_public = $4 
+        where round_id = $5 returning *`,
+            [roundData.round_time, roundData.name, roundData.teams_public, roundData.results_public, roundID]))?.rows[0] ?? null
+    }
+
+    async createRoundPairing(roundID: string, prosecution: string, defense : string, courtroomID : string) : Promise<IPairingRow | null> {
+
+        return (await dbQuery<IPairingRow>(`INSERT INTO pairings (round_id, p_team, d_team, courtroom) values 
+                                                               ($1, $2, $3,$4) returning *`, [roundID, prosecution, defense, courtroomID]))?.rows[0] ?? null
+    }
+
+    async getPairings(roundID: string): Promise<IPairingRow[]> {
+        return (await dbQuery<IPairingRow>(`Select * from pairings where round_id = $1`, [roundID]))?.rows ?? [];
+    }
+
+    async deletePairing(pairingID: string): Promise<boolean> {
+        return !!(await dbQuery(`DELETE FROM pairings WHERE pairing_id=$1 RETURNING pairing_id`, [pairingID]))?.rows[0];
+    }
+
+    async getPairingScorers(pairingID: string): Promise<{ assignment_id: string; type: 'registered' | 'paper'; scorer_id: string; name: string; is_presider: boolean }[]> {
+        const presiderRow = (await dbQuery<{ scorer_assignment_id: string }>(
+            `SELECT scorer_assignment_id FROM scorer_presider_assignment WHERE pairing_id=$1`, [pairingID]
+        ))?.rows[0];
+        const presiderAssignmentId = presiderRow?.scorer_assignment_id ?? null;
+
+        const registered = (await dbQuery<{ assignment_id: string; scorer_id: string; first_name: string; last_name: string }>(
+            `SELECT spa.assignment_id, s.scorer_id, s.first_name, s.last_name
+             FROM scorer_pairing_assignments spa JOIN scorers s ON spa.registered_scorer_id = s.scorer_id
+             WHERE spa.pairing_id = $1 AND spa.registered_scorer_id IS NOT NULL`,
+            [pairingID]
+        ))?.rows ?? [];
+        const paper = (await dbQuery<{ assignment_id: string; scorer_id: string; name: string }>(
+            `SELECT spa.assignment_id, ps.scorer_id, ps.name
+             FROM scorer_pairing_assignments spa JOIN paper_scorers ps ON spa.paper_scorer_id = ps.scorer_id
+             WHERE spa.pairing_id = $1 AND spa.paper_scorer_id IS NOT NULL`,
+            [pairingID]
+        ))?.rows ?? [];
+        return [
+            ...registered.map(r => ({ assignment_id: r.assignment_id, type: 'registered' as const, scorer_id: r.scorer_id, name: `${r.first_name} ${r.last_name}`, is_presider: r.assignment_id === presiderAssignmentId })),
+            ...paper.map(p => ({ assignment_id: p.assignment_id, type: 'paper' as const, scorer_id: p.scorer_id, name: p.name, is_presider: p.assignment_id === presiderAssignmentId })),
+        ];
+    }
+
+    async assignScorerToPairing(pairingID: string, scorerID: string): Promise<{ assignment_id: string } | null> {
+        return (await dbQuery<{ assignment_id: string }>(
+            `INSERT INTO scorer_pairing_assignments (pairing_id, registered_scorer_id) VALUES ($1,$2) RETURNING assignment_id`,
+            [pairingID, scorerID]
+        ))?.rows[0] ?? null;
+    }
+
+    async addPaperScorer(pairingID: string, name: string): Promise<{ assignment_id: string; scorer_id: string } | null> {
+        const ps = (await dbQuery<{ scorer_id: string }>(
+            `INSERT INTO paper_scorers (pairing_id, name) VALUES ($1,$2) RETURNING scorer_id`,
+            [pairingID, name]
+        ))?.rows[0];
+        if (!ps) return null;
+        return (await dbQuery<{ assignment_id: string; scorer_id: string }>(
+            `INSERT INTO scorer_pairing_assignments (pairing_id, paper_scorer_id) VALUES ($1,$2) RETURNING assignment_id, $2::uuid AS scorer_id`,
+            [pairingID, ps.scorer_id]
+        ))?.rows[0] ?? null;
+    }
+
+    async removeScorerAssignment(assignmentID: string): Promise<boolean> {
+        // Deleting the assignment cascades; also clean up orphaned paper_scorer row
+        const row = (await dbQuery<{ paper_scorer_id: string | null }>(
+            `DELETE FROM scorer_pairing_assignments WHERE assignment_id=$1 RETURNING paper_scorer_id`,
+            [assignmentID]
+        ))?.rows[0];
+        if (!row) return false;
+        if (row.paper_scorer_id) {
+            await dbQuery(`DELETE FROM paper_scorers WHERE scorer_id=$1`, [row.paper_scorer_id]);
+        }
+        return true;
+    }
+
+    async setPresider(pairingID: string, assignmentID: string): Promise<boolean> {
+        // Upsert: one presider per pairing (unique constraint on pairing_id)
+        return !!(await dbQuery(
+            `INSERT INTO scorer_presider_assignment (scorer_assignment_id, pairing_id)
+             VALUES ($1, $2)
+             ON CONFLICT (pairing_id) DO UPDATE SET scorer_assignment_id = EXCLUDED.scorer_assignment_id`,
+            [assignmentID, pairingID]
+        ));
+    }
+
+    async clearPresider(pairingID: string): Promise<boolean> {
+        await dbQuery(`DELETE FROM scorer_presider_assignment WHERE pairing_id=$1`, [pairingID]);
+        return true;
     }
 }

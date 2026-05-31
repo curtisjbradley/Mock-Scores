@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
 import * as Blockly from 'blockly';
-import { standingsBlockDefs } from './standingsBlocks';
+import { standingsBlockDefs, dynamicOptions } from './standingsBlocks';
 import { extractStandingsConfig, type StandingsConfig } from './standingsGenerator';
 
 function buildStatOptions(statDefs: { name: string }[]): [string, string][] {
@@ -19,10 +19,12 @@ function updateDropdowns(ws: Blockly.WorkspaceSvg, colOptions: [string, string][
     const setField = (fieldName: string, options: [string, string][]) => {
       const field = block.getField(fieldName) as Blockly.FieldDropdown | null;
       if (!field) return;
+      const currentValue = field.getValue() as string;
       (field as unknown as { menuGenerator_: [string, string][] }).menuGenerator_ = options;
       const validValues = options.map(o => o[1]);
-      if (!validValues.includes(field.getValue() as string) && validValues.length) {
-        field.setValue(validValues[0]);
+      if (validValues.length && !validValues.includes(currentValue)) {
+        (field as unknown as { value_: string }).value_ = validValues[0];
+        field.forceRerender();
       }
     };
     if (block.type === 'standings_column')     setField('STAT', colOptions);
@@ -94,8 +96,6 @@ function wsToXml(ws: Blockly.WorkspaceSvg): string {
 
 function loadXmlIntoWs(ws: Blockly.WorkspaceSvg, xml: string) {
   ws.clear();
-  console.log('[Blockly] registered blocks:', Object.keys(Blockly.Blocks));
-  console.log('[Blockly] loading xml:', xml);
   Blockly.Xml.domToWorkspace(Blockly.utils.xml.textToDom(xml), ws);
 }
 
@@ -120,6 +120,7 @@ export default function StandingsBuilder({ onChange, initialXml }: Props) {
   const fsStandingsDiv = useRef<HTMLDivElement>(null);
 
   const disposedRef = useRef(false);
+  const loadingRef = useRef(false);
 
   useEffect(() => {
     if (!statsDiv.current || !standingsDiv.current) return;
@@ -174,10 +175,14 @@ export default function StandingsBuilder({ onChange, initialXml }: Props) {
 
     const sync = (e: Blockly.Events.Abstract) => {
       if (e.isUiEvent || e.type === Blockly.Events.FINISHED_LOADING) return;
+      if (loadingRef.current) return;
       const cfg = extractStandingsConfig(sws, dws);
       const colOptions = buildStatOptions(cfg.statDefs.filter(d => !d.intermediate));
       const tbOptions = buildTiebreakerOptions(cfg.statDefs.filter(d => !d.intermediate));
       const intermediateOptions = buildStatOptions(cfg.statDefs.filter(d => d.intermediate));
+      dynamicOptions.col = colOptions;
+      dynamicOptions.tb = tbOptions;
+      dynamicOptions.intermediate = intermediateOptions;
       updateDropdowns(sws, colOptions, tbOptions, intermediateOptions);
       updateDropdowns(dws, colOptions, tbOptions, intermediateOptions);
       const xml = { statsXml: wsToXml(sws), standingsXml: wsToXml(dws) };
@@ -190,15 +195,28 @@ export default function StandingsBuilder({ onChange, initialXml }: Props) {
     dws.addChangeListener(sync);
 
     setWsReady(n => n + 1);
-    return () => { disposedRef.current = true; statsWs.current = null; standingsWs.current = null; sws.dispose(); dws.dispose(); };
+    return () => {
+      disposedRef.current = true; statsWs.current = null; standingsWs.current = null; sws.dispose(); dws.dispose();
+      dynamicOptions.col = [['(none)', '__none__']];
+      dynamicOptions.tb = [['(none)', '__none__']];
+      dynamicOptions.intermediate = [['(none)', '__none__']];
+    };
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   // Load saved config once it arrives from the server
   useEffect(() => {
     if (!initialXml || !statsWs.current || !standingsWs.current || disposedRef.current) return;
+    loadingRef.current = true;
     loadXmlIntoWs(statsWs.current, initialXml.statsXml);
+    // Extract stat defs from the now-loaded stats workspace and populate dynamicOptions
+    // so that when standingsXml is parsed, dropdown validation passes
+    const cfg = extractStandingsConfig(statsWs.current, standingsWs.current);
+    dynamicOptions.col = buildStatOptions(cfg.statDefs.filter(d => !d.intermediate));
+    dynamicOptions.tb = buildTiebreakerOptions(cfg.statDefs.filter(d => !d.intermediate));
+    dynamicOptions.intermediate = buildStatOptions(cfg.statDefs.filter(d => d.intermediate));
     loadXmlIntoWs(standingsWs.current, initialXml.standingsXml);
+    loadingRef.current = false;
     setXmlSnapshot(JSON.stringify({ statsXml: wsToXml(statsWs.current), standingsXml: wsToXml(standingsWs.current) }, null, 2));
   }, [initialXml, wsReady]);
 

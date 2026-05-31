@@ -47,7 +47,7 @@ create table tournaments
     case_format_id      uuid                                not null references tournament_format (format_id),
     num_rounds          smallint  default 0                 not null,
     num_teams           smallint  default 0                 not null,
-    standings_config_id uuid references standings_configs (id) on delete set null,
+    standings_config_id uuid not null references standings_configs (id),
     constraint tournaments_check
         check ((start_date IS NULL) OR (end_date IS NULL) OR (start_date <= end_date))
 );
@@ -190,9 +190,7 @@ create table team_invites
     team_id      uuid                           not null
         references teams
             on delete cascade,
-    invite_email text                           not null,
-    name         text                           not null,
-    code         text                           not null
+    invite_email text                           not null
 );
 
 
@@ -220,10 +218,8 @@ create table rounds
             on delete cascade,
     results_public boolean not null default false,
     teams_public   boolean not null default false,
-    position       smallint         default 1 not null,
     name           text    not null,
-    round_time     timestamp with time zone,
-    unique (tournament_id, position)
+    round_time     timestamp with time zone
 );
 
 
@@ -302,6 +298,18 @@ create table team_rostered_students
     student_name text not null,
     unique (team_id, student_name)
 );
+
+create table ballots (
+    score_id uuid primary key default gen_random_uuid(),
+    scorer_assignment_id uuid references scorer_pairing_assignments(assignment_id) not null,
+    tournament_id uuid references tournaments(id),
+    ballot_json jsonb not null,
+    p_team_id uuid references teams(id),
+    d_team_id uuid references teams(id),
+    d_points int not null,
+    p_points int not null
+);
+
 
 create function update_tournament_num_rounds() returns trigger
     language plpgsql

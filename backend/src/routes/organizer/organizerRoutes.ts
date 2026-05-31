@@ -69,4 +69,6 @@ router.delete("/:tournamentId", verifyTournamentOwner, async (req: Request, res:
 router.use("/:tournamentId", verifyTournamentAccess, subRoutes)
 
 
+
+
 export default router;

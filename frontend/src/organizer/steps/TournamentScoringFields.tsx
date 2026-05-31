@@ -25,12 +25,12 @@ interface Props {
     onChange: (cats: ScoringCategory[]) => void
     caseFormat: CaseFormatState
     onSubmit: () => void
-    onBack: () => void
+    onBack?: () => void
     isEditing?: boolean
     submitLabel?: string
 }
 
-export default function TournamentScoringFields({ categories, onChange, caseFormat, onSubmit, onBack, isEditing, submitLabel }: Props) {
+export default function TournamentScoringFields({ categories, onChange, caseFormat, onSubmit, isEditing, submitLabel }: Props) {
     const [submitted, setSubmitted] = useState(false)
     const [selectedTemplate, setSelectedTemplate] = useState('manual')
     const [showModal, setShowModal] = useState(!isEditing)
@@ -141,7 +141,6 @@ export default function TournamentScoringFields({ categories, onChange, caseForm
                 {pMax !== dMax && <div className="tc-error-banner">Max scores are unequal — P: {pMax}, D: {dMax}.</div>}
 
                 <div className="tc-actions">
-                    <button type="button" className="tc-cancel-btn" onClick={onBack}>← Back</button>
                     <button type="submit" className="org-new-btn">{submitLabel ?? (isEditing ? 'Save changes' : 'Create tournament')}</button>
                 </div>
             </form>

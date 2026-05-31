@@ -1,5 +1,5 @@
 import { Component } from 'react'
-import { useNavigate, useParams } from 'react-router-dom'
+import { useNavigate, useParams, useSearchParams } from 'react-router-dom'
 import '../styles/organizer.css'
 import '../styles/tabs.css'
 import '../styles/rounds.css'
@@ -41,14 +41,23 @@ const STRUCTURE_CARDS: { label: string; tab: Tab }[] = [
     { label: 'Manage Tiebreakers',  tab: 'tiebreakers' },
 ]
 
-
-interface Props { id: string; navigate: ReturnType<typeof useNavigate> }
-interface State { tournament: ITournament | null; screen: Screen; visitedTabs: Set<Tab> }
+interface Props {
+    id: string
+    navigate: ReturnType<typeof useNavigate>
+    screen: Screen
+    setScreen: (s: Screen) => void
+}
+interface State { tournament: ITournament | null; visitedTabs: Set<Tab> }
 
 class TournamentDashboardClass extends Component<Props, State> {
-    state: State = { tournament: null, screen: 'home', visitedTabs: new Set() }
+    state: State = { tournament: null, visitedTabs: new Set() }
 
     componentDidMount() {
+        // If a valid tab is in the URL, mark it visited immediately
+        const { screen } = this.props
+        if (screen !== 'home' && screen !== 'structure') {
+            this.setState(s => ({ visitedTabs: new Set([...s.visitedTabs, screen as Tab]) }))
+        }
         apiFetch(`/api/organizer/tournament/${this.props.id}`)
             .then(r => {
                 if (r.status === 403) { this.props.navigate('/403', { replace: true }); return null }
@@ -59,19 +68,20 @@ class TournamentDashboardClass extends Component<Props, State> {
     }
 
     setTab(tab: Tab) {
-        this.setState(s => ({ screen: tab, visitedTabs: new Set([...s.visitedTabs, tab]) }))
+        this.props.setScreen(tab)
+        this.setState(s => ({ visitedTabs: new Set([...s.visitedTabs, tab]) }))
     }
 
     goBack() {
-        const { screen } = this.state
-        if (STRUCTURE_TABS.includes(screen as Tab)) this.setState({ screen: 'structure' })
-        else if (screen !== 'home') this.setState({ screen: 'home' })
+        const { screen } = this.props
+        if (STRUCTURE_TABS.includes(screen as Tab)) this.props.setScreen('structure')
+        else if (screen !== 'home') this.props.setScreen('home')
         else this.props.navigate('/organizer')
     }
 
     render() {
-        const { id } = this.props
-        const { tournament, screen, visitedTabs } = this.state
+        const { id, screen } = this.props
+        const { tournament, visitedTabs } = this.state
         const dates = [tournament?.start_date, tournament?.end_date].filter(Boolean).map(String)
         const activeTab = (screen !== 'home' && screen !== 'structure') ? screen as Tab : null
 
@@ -96,7 +106,7 @@ class TournamentDashboardClass extends Component<Props, State> {
                         <div className="dash-card-grid">
                             {MAIN_CARDS.map(c => (
                                 <button key={c.screen} className="dash-nav-card"
-                                    onClick={() => c.screen === 'structure' ? this.setState({ screen: 'structure' }) : this.setTab(c.screen as Tab)}>
+                                    onClick={() => c.screen === 'structure' ? this.props.setScreen('structure') : this.setTab(c.screen as Tab)}>
                                     {c.label}
                                 </button>
                             ))}
@@ -129,9 +139,22 @@ class TournamentDashboardClass extends Component<Props, State> {
     }
 }
 
+const VALID_SCREENS = new Set(['home', 'structure', 'tournament', 'teams', 'scorers', 'courtrooms', 'organizers', 'witnesses', 'scoring', 'rounds', 'standings', 'tiebreakers'])
+
 export default function TournamentDashboard() {
     const { id } = useParams<{ id: string }>()
     const navigate = useNavigate()
+    const [searchParams, setSearchParams] = useSearchParams()
+
     if (!id) { navigate('/organizer', { replace: true }); return null }
-    return <TournamentDashboardClass id={id} navigate={navigate} />
+
+    const pageParam = searchParams.get('page') ?? 'home'
+    const screen: Screen = VALID_SCREENS.has(pageParam) ? pageParam as Screen : 'home'
+
+    const setScreen = (s: Screen) => {
+        if (s === 'home') setSearchParams({}, { replace: true })
+        else setSearchParams({ page: s }, { replace: true })
+    }
+
+    return <TournamentDashboardClass id={id} navigate={navigate} screen={screen} setScreen={setScreen} />
 }

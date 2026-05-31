@@ -179,14 +179,6 @@ router.delete("/scorers", async (req: Request, res: Response) => {
     return res.status(204).send();
 });
 
-router.get("/rounds", async (req: Request, res: Response) => {
-    if(!req?.tournament) {
-        return res.status(403).json({ message: 'No access to tournament' });
-    }
-    const rounds = await organizerProvider.getRounds(req.tournament)
-    return res.status(200).json(rounds);
-});
-
 
 
 
@@ -342,7 +334,7 @@ async function verifyRound(req: Request, res: Response, next : NextFunction) {
         if(!round){
             return null
         }
-        return {...round, round_time: round.round_time == null ? null : round.round_time.toTimeString()};
+        return {...round, round_time: round.round_time == null ? null : round.round_time.toISOString()};
     })
     if (!result){
         return res.status(404).json({ message: 'No round found' });
@@ -401,7 +393,33 @@ router.delete('/teams', async (req: Request, res: Response) => {
     return res.status(204).send();
 });
 
-router.use('/round/:roundId', verifyRound,  roundRoutes)
+
+router.get("/rounds", async (req: Request, res: Response) => {
+    if(!req?.tournament) {
+        return res.status(403).json({ message: 'No access to tournament' });
+    }
+    const rounds = await organizerProvider.getRounds(req.tournament)
+    return res.status(200).json(rounds);
+});
+
+
+
+router.post("/rounds", async (req: Request, res: Response) => {
+    if(!req?.tournament) {
+        return res.status(403).json({ message: 'No access to tournament' });
+    }
+    const newRound = await organizerProvider.createRound(req.tournament)
+
+    if (!newRound) {
+        return res.status(400).json({message: "Unable to create round"});
+    }
+
+    const out : IRound = {...newRound, round_time : newRound.round_time?.toISOString() ?? null}
+
+    return res.status(201).json(out);
+});
+
+router.use('/rounds/:round', verifyRound,  roundRoutes)
 
 
 

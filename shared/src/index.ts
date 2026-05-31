@@ -39,6 +39,12 @@ export interface TournamentPayload {
     standingsConfigId: string | null
 }
 
+export interface IPairingCreationPayload {
+    prosectionID: string,
+    defenseID: string,
+    courtroomID: string
+}
+
 export interface IStandingsConfig {
     id: string
     statsXml: string
@@ -79,11 +85,27 @@ export interface IRound {
     round_time: string | null
 }
 
+export interface IPairing {
+    pairing_id: string
+    round_id: string
+    p_team: string
+    d_team: string
+    courtroom: string | null
+}
+
 export interface IScorer {
     scorer_id: string;
     first_name: string
     last_name: string
     email: string;
+}
+
+export interface IPairingScorer {
+    assignment_id: string;
+    type: 'registered' | 'paper';
+    scorer_id: string;
+    name: string;
+    is_presider: boolean;
 }
 
 export interface IScoringFieldFull {

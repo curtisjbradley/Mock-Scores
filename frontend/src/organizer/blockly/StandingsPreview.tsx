@@ -24,7 +24,7 @@ export default function StandingsPreview({ config }: Props) {
             <thead>
               <tr>
                 <th>#</th><th>Code</th><th>Team</th>
-                {cols.map(c => <th key={c.stat + c.label}>{c.label}</th>)}
+                {cols.map((c, i) => <th key={i}>{c.label}</th>)}
               </tr>
             </thead>
             <tbody>
@@ -33,11 +33,11 @@ export default function StandingsPreview({ config }: Props) {
                   <td>{i + 1}</td>
                   <td className="dash-team-code">{row.code}</td>
                   <td>{row.name}</td>
-                  {cols.map(c => {
+                  {cols.map((c, i) => {
                     const val = row[c.stat];
                     const num = typeof val === 'number' ? val : NaN;
                     const display = isNaN(num) ? '—' : Number.isInteger(num) ? num : num.toFixed(3);
-                    return <td key={c.stat + c.label}>{display}</td>;
+                    return <td key={i}>{display}</td>;
                   })}
                 </tr>
               ))}

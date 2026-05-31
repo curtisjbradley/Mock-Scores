@@ -85,11 +85,18 @@ const trimmedStat = {
   tooltip: 'Aggregate after dropping the N highest and N lowest per-ballot values. Used for AMTA trimmed PD/raw points tiebreakers.',
 };
 
+// Shared mutable options — updated by StandingsBuilder after loading XML
+export const dynamicOptions = {
+  col: [['(none)', '__none__']] as [string, string][],
+  tb: [['(none)', '__none__']] as [string, string][],
+  intermediate: [['(none)', '__none__']] as [string, string][],
+};
+
 // Reference a user-defined stat by name — returns Number
 const statRef = {
   type: 'stat_ref',
   message0: 'stat %1',
-  args0: [{ type: 'field_dropdown', name: 'NAME', options: [['(none)', '__none__']] }],
+  args0: [{ type: 'field_dropdown', name: 'NAME', options: () => dynamicOptions.col }],
   output: 'Number',
   colour: 290,
   tooltip: 'Reference a previously defined stat.',
@@ -99,7 +106,7 @@ const statRef = {
 const opponentStat = {
   type: 'opponent_stat',
   message0: "opponent's %1",
-  args0: [{ type: 'field_dropdown', name: 'NAME', options: [['(none)', '__none__']] }],
+  args0: [{ type: 'field_dropdown', name: 'NAME', options: () => dynamicOptions.col }],
   output: 'Number',
   colour: 180,
   tooltip: "The opponent's value for a defined stat in this pairing. Use with sum to compute Combined Strength.",
@@ -109,7 +116,7 @@ const standingsColumn = {
   type: 'standings_column',
   message0: 'show column %1 labeled %2',
   args0: [
-    { type: 'field_dropdown', name: 'STAT',  options: [['(none)', '__none__']] },
+    { type: 'field_dropdown', name: 'STAT',  options: () => dynamicOptions.col },
     { type: 'field_input',    name: 'LABEL', text: '' },
   ],
   previousStatement: null,
@@ -122,7 +129,7 @@ const standingsTiebreaker = {
   type: 'standings_tiebreaker',
   message0: 'break ties by %1 %2',
   args0: [
-    { type: 'field_dropdown', name: 'STAT',  options: [['(none)', '__none__']] },
+    { type: 'field_dropdown', name: 'STAT',  options: () => dynamicOptions.tb },
     { type: 'field_dropdown', name: 'ORDER', options: [['highest first', 'desc'], ['lowest first', 'asc']] },
   ],
   previousStatement: null,
@@ -135,7 +142,7 @@ const standingsH2h = {
   type: 'standings_h2h_conditional',
   message0: 'if 2-way tie: head-to-head %1 %2',
   args0: [
-    { type: 'field_dropdown', name: 'STAT',  options: [['(none)', '__none__']] },
+    { type: 'field_dropdown', name: 'STAT',  options: () => dynamicOptions.intermediate },
     { type: 'field_dropdown', name: 'ORDER', options: [['higher wins', 'desc'], ['lower wins', 'asc']] },
   ],
   previousStatement: null,
@@ -176,7 +183,7 @@ const intermediateStatHat = {
 const intermediateRef = {
   type: 'intermediate_ref',
   message0: 'intermediate %1',
-  args0: [{ type: 'field_dropdown', name: 'NAME', options: [['(none)', '__none__']] }],
+  args0: [{ type: 'field_dropdown', name: 'NAME', options: () => dynamicOptions.intermediate }],
   output: 'Number',
   colour: 210,
   tooltip: 'Reference an intermediate pairing-level stat defined by a "Define Intermediate Stat" block.',
