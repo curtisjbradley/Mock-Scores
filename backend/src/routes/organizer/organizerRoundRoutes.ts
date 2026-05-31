@@ -35,7 +35,7 @@ router.patch("/", async (req: Request, res : Response) => {
         return res.status(400).json({message: "Missing required fields"})
     }
 
-    const result = organizerProvider.updateRound(req.round.round_id, round as IRound);
+    const result = await organizerProvider.updateRound(req.round.round_id, round as IRound);
 
     if (!result) {
         return res.status(404).json({message: "Unable to update round with round id not found"});

@@ -270,7 +270,7 @@ router.delete("/organizers", verifyOrganizerPayload, async (req: Request, res: R
         return res.status(400).json({ message: 'Invalid organizer ID' });
     }
 
-    const result = organizerProvider.deleteOrganizer(org)
+    const result = await organizerProvider.deleteOrganizer(org)
 
     if(!result){
         return res.status(500).json({ message: 'Unable to delete organizer' });
