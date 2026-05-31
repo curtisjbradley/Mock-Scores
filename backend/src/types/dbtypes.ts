@@ -1,3 +1,4 @@
+
 // Row interfaces for all database tables
 
 export interface IAuthRow {

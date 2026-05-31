@@ -1,0 +1,29 @@
+import express, { Request, Response } from "express";
+import path from "path";
+import dotenv from 'dotenv';
+dotenv.config({ path: path.resolve(__dirname, '../.env') });
+import authRouter from './routes/authRoutes';
+import organizerTournamentRouter from './routes/organizer/organizerRoutes';
+import { verifyUser} from "./authUtils";
+
+const app = express();
+
+const STATIC_DIR = path.resolve(__dirname, "../../frontend/dist");
+const PUBLIC_DIR = path.resolve(__dirname, "../../frontend/public");
+
+app.use(express.urlencoded({ extended: true }));
+app.use(express.json());
+
+app.use('/api/auth', authRouter);
+app.use('/api/organizer/tournament',verifyUser, organizerTournamentRouter);
+
+
+
+app.use(express.static(PUBLIC_DIR));
+app.use(express.static(STATIC_DIR));
+
+app.get(/(.*)/, (_req: Request, res: Response) => {
+    res.sendFile(path.join(STATIC_DIR, "index.html"));
+});
+
+export default app

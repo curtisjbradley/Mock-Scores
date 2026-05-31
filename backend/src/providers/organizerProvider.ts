@@ -536,7 +536,6 @@ export class OrganizerProvider {
 
 
         const pos = parseInt((length?.num_rounds ?? "0")) + 1;
-        console.log(pos)
         return (await dbQuery<IRoundRow>('INSERT INTO rounds (tournament_id, name) values ($1, $2) returning *', [tournamentID, `Round ${pos}`]))?.rows[0] ?? null
     }
 
