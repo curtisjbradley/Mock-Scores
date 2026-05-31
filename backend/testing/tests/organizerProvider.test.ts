@@ -1,4 +1,4 @@
-import { OrganizerProvider } from '../../src/providers/organizerProvider';
+import { OrganizerProvider, DuplicateDelegateError } from '../../src/providers/organizerProvider';
 import { dbQuery } from '../../src/db';
 
 const mockDbQuery = dbQuery as jest.MockedFunction<typeof dbQuery>;
@@ -175,6 +175,7 @@ describe('OrganizerProvider.addOrganizer', () => {
         const inviteRow = { id: 'inv1', tournament_id: 't1', name: 'Bob', email: 'b@c.com' };
         mockDbQuery
             .mockResolvedValueOnce({ rows: [], rowCount: 0 } as any)       // SELECT auth
+            .mockResolvedValueOnce({ rows: [], rowCount: 0 } as any)       // SELECT duplicate invite check
             .mockResolvedValueOnce({ rows: [inviteRow], rowCount: 1 } as any); // INSERT invite
         const result = await provider.addOrganizer('t1', 'Bob', 'b@c.com', 'delegate');
         expect(result).toMatchObject({ email: 'b@c.com', role: 'delegate', has_joined: false });
@@ -185,6 +186,7 @@ describe('OrganizerProvider.addOrganizer', () => {
         const ownerRow = { tournament_id: 't1', delegate_id: 'u1', role: 'delegate' };
         mockDbQuery
             .mockResolvedValueOnce({ rows: [user], rowCount: 1 } as any)       // SELECT auth
+            .mockResolvedValueOnce({ rows: [], rowCount: 0 } as any)           // SELECT duplicate owner check
             .mockResolvedValueOnce({ rows: [ownerRow], rowCount: 1 } as any);  // INSERT owners
         const result = await provider.addOrganizer('t1', 'Alice Smith', 'a@b.com', 'delegate');
         expect(result).toMatchObject({ email: 'a@b.com', has_joined: true });
@@ -193,8 +195,24 @@ describe('OrganizerProvider.addOrganizer', () => {
     it('returns undefined when invite insert fails', async () => {
         mockDbQuery
             .mockResolvedValueOnce({ rows: [], rowCount: 0 } as any)
+            .mockResolvedValueOnce({ rows: [], rowCount: 0 } as any)
             .mockResolvedValueOnce({ rows: [], rowCount: 0 } as any);
         expect(await provider.addOrganizer('t1', 'Bob', 'b@c.com', 'delegate')).toBeUndefined();
+    });
+
+    it('throws DuplicateDelegateError when invite already exists for email', async () => {
+        mockDbQuery
+            .mockResolvedValueOnce({ rows: [], rowCount: 0 } as any)                              // SELECT auth
+            .mockResolvedValueOnce({ rows: [{ id: 'inv1' }], rowCount: 1 } as any);              // SELECT duplicate invite
+        await expect(provider.addOrganizer('t1', 'Bob', 'b@c.com', 'delegate')).rejects.toThrow(DuplicateDelegateError);
+    });
+
+    it('throws DuplicateDelegateError when user is already an owner', async () => {
+        const user = { user_id: 'u1', first_name: 'Alice', last_name: 'Smith', email: 'a@b.com' };
+        mockDbQuery
+            .mockResolvedValueOnce({ rows: [user], rowCount: 1 } as any)                         // SELECT auth
+            .mockResolvedValueOnce({ rows: [{ tournament_id: 't1' }], rowCount: 1 } as any);     // SELECT duplicate owner
+        await expect(provider.addOrganizer('t1', 'Alice Smith', 'a@b.com', 'delegate')).rejects.toThrow(DuplicateDelegateError);
     });
 });
 

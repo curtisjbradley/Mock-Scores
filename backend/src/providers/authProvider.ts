@@ -14,7 +14,7 @@ export class AuthProvider {
 
 
         const result = (await dbQuery<{user_id : string}>(
-            'INSERT INTO auth ( email, password_hash, first_name, last_name) VALUES ( $2, $3, $4, $5) returning  user_id',
+            'INSERT INTO auth ( email, password_hash, first_name, last_name) VALUES ( $1, $2, $3, $4) returning  user_id',
             [email, passwordHash, firstName, lastName],
         ))?.rows[0];
 
@@ -23,12 +23,12 @@ export class AuthProvider {
         }
 
         //Get all pending organizer invites, and add them to the tournament
-        const pendingTournamentInvites = await dbQuery<{tournament: string}>("DELETE from tournament_delegate_invites where email = $1 RETURNING tournament_id", [email]);
+        const pendingTournamentInvites = await dbQuery<{tournament_id: string}>("DELETE from tournament_delegate_invites where email = $1 RETURNING tournament_id", [email]);
 
         if(!pendingTournamentInvites) return { status: 500, message: 'Internal error' };
 
         // Add user to all pending tournament organizer invites
-        pendingTournamentInvites.rows.forEach(row => dbQuery("INSERT INTO tournament_owners (tournament_id, delegate_id, role) VALUES ($1, $2, $3)",[row.tournament, result.user_id,'delegate']));
+        pendingTournamentInvites.rows.forEach(row => dbQuery("INSERT INTO tournament_owners (tournament_id, delegate_id, role) VALUES ($1, $2, $3)",[row.tournament_id, result.user_id,'delegate']));
 
         const pendingTeamInvites = await dbQuery<{team_id: string}>("DELETE from team_invites where invite_email = $1 RETURNING team_id", [email]);
 

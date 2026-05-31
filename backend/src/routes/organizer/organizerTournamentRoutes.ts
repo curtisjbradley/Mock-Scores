@@ -1,6 +1,6 @@
 import {NextFunction, Request, Response, Router} from "express";
 import {IRound, TournamentPayload, IWitnesses} from "@mock-scores/shared";
-import {OrganizerProvider} from "../../providers/organizerProvider";
+import {DuplicateDelegateError, OrganizerProvider} from "../../providers/organizerProvider";
 import type {IOrganizer, IScorer, ITeam} from "@mock-scores/shared"
 import roundRoutes from "./organizerRoundRoutes";
 import {uuidRegex} from "../../authUtils";
@@ -223,7 +223,13 @@ router.post("/organizers", verifyOrganizerPayload, async (req: Request, res: Res
 
     const org : IOrganizer =  req.selectedOrganizer
 
-    const createdOrganizer = await organizerProvider.addOrganizer(req.tournament, org.name, org.email, org.role)
+    let createdOrganizer;
+    try {
+        createdOrganizer = await organizerProvider.addOrganizer(req.tournament, org.name, org.email, org.role)
+    } catch (e) {
+        if (e instanceof DuplicateDelegateError) return res.status(409).json({ message: 'Email is already a delegate' });
+        throw e;
+    }
 
     if (!createdOrganizer){
         return res.status(500).json({ message: 'Unable to speak to database' });

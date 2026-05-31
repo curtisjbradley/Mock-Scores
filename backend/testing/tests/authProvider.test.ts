@@ -3,6 +3,10 @@ import { dbQuery } from '../../src/db';
 import bcrypt from 'bcrypt';
 
 jest.mock('bcrypt');
+jest.mock('../../src/authUtils', () => ({
+    ...jest.requireActual('../../src/authUtils'),
+    signToken: jest.fn().mockResolvedValue('mock.jwt.token'),
+}));
 
 const mockDbQuery = dbQuery as jest.MockedFunction<typeof dbQuery>;
 const mockBcryptHash = bcrypt.hash as jest.MockedFunction<typeof bcrypt.hash>;
@@ -28,10 +32,10 @@ describe('AuthProvider.registerUser', () => {
 
     it('returns 201 on successful registration', async () => {
         mockDbQuery
-            .mockResolvedValueOnce({ rows: [], rowCount: 0 } as any)   // SELECT
-            .mockResolvedValueOnce({ rows: [], rowCount: 1 } as any)   // INSERT auth
-            .mockResolvedValueOnce({ rows: [], rowCount: 0 } as any)   // DELETE tournament invites
-            .mockResolvedValueOnce({ rows: [], rowCount: 0 } as any);  // DELETE team invites
+            .mockResolvedValueOnce({ rows: [], rowCount: 0 } as any)                          // SELECT
+            .mockResolvedValueOnce({ rows: [{ user_id: 'u1' }], rowCount: 1 } as any)        // INSERT auth
+            .mockResolvedValueOnce({ rows: [], rowCount: 0 } as any)                          // DELETE tournament invites
+            .mockResolvedValueOnce({ rows: [], rowCount: 0 } as any);                         // DELETE team invites
         (mockBcryptHash as jest.Mock).mockResolvedValueOnce('hashed');
 
         expect(await provider.registerUser('new@b.com', 'pass', 'New', 'User')).toEqual({ status: 201, message: 'User Created' });
@@ -49,7 +53,7 @@ describe('AuthProvider.registerUser', () => {
     it('returns 500 when tournament invite DELETE fails', async () => {
         mockDbQuery
             .mockResolvedValueOnce({ rows: [], rowCount: 0 } as any)
-            .mockResolvedValueOnce({ rows: [], rowCount: 1 } as any)
+            .mockResolvedValueOnce({ rows: [{ user_id: 'u1' }], rowCount: 1 } as any)
             .mockResolvedValueOnce(null);
         (mockBcryptHash as jest.Mock).mockResolvedValueOnce('hashed');
 
@@ -59,7 +63,7 @@ describe('AuthProvider.registerUser', () => {
     it('returns 500 when team invite DELETE fails', async () => {
         mockDbQuery
             .mockResolvedValueOnce({ rows: [], rowCount: 0 } as any)
-            .mockResolvedValueOnce({ rows: [], rowCount: 1 } as any)
+            .mockResolvedValueOnce({ rows: [{ user_id: 'u1' }], rowCount: 1 } as any)
             .mockResolvedValueOnce({ rows: [], rowCount: 0 } as any)
             .mockResolvedValueOnce(null);
         (mockBcryptHash as jest.Mock).mockResolvedValueOnce('hashed');
