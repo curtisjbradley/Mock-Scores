@@ -18,6 +18,8 @@ import type {
 } from '../types/dbtypes';
 import { randomUUID } from 'node:crypto';
 
+export class DuplicateDelegateError extends Error {}
+
 export class OrganizerProvider {
 
     private async insertWitnesses(formatID: string, cf: TournamentPayload['caseFormat']): Promise<void> {
@@ -295,12 +297,24 @@ export class OrganizerProvider {
         const user = (await dbQuery<IAuthRow>('SELECT * FROM auth WHERE LOWER(email) = $1', [email.toLowerCase()]))?.rows[0];
 
         if (!user) {
+            const existing = (await dbQuery<ITournamentDelegateInviteRow>(
+                'SELECT id FROM tournament_delegate_invites WHERE tournament_id=$1 AND LOWER(email)=$2',
+                [tournamentID, email.toLowerCase()]
+            ))?.rows[0];
+            if (existing) throw new DuplicateDelegateError();
+
             const row = (await dbQuery<ITournamentDelegateInviteRow>(
                 'INSERT INTO tournament_delegate_invites (tournament_id, name, email) VALUES ($1,$2,$3) RETURNING *',
                 [tournamentID, name, email]
             ))?.rows[0];
             return row ? { ...row, role: 'delegate', has_joined: false } : undefined;
         }
+
+        const existing = (await dbQuery<ITournamentOwnerRow>(
+            'SELECT tournament_id FROM tournament_owners WHERE tournament_id=$1 AND delegate_id=$2',
+            [tournamentID, user.user_id]
+        ))?.rows[0];
+        if (existing) throw new DuplicateDelegateError();
 
         const row = (await dbQuery<ITournamentOwnerRow>(
             'INSERT INTO tournament_owners (tournament_id, delegate_id, role) VALUES ($1,$2,$3) RETURNING *',

@@ -45,7 +45,7 @@ describe('POST /api/auth/register', () => {
     it('returns 201 on successful registration', async () => {
         mockDbQuery
             .mockResolvedValueOnce({ rows: [], rowCount: 0 } as any)
-            .mockResolvedValueOnce({ rows: [], rowCount: 1 } as any)
+            .mockResolvedValueOnce({ rows: [{ user_id: 'u1' }], rowCount: 1 } as any)
             .mockResolvedValueOnce({ rows: [], rowCount: 0 } as any)
             .mockResolvedValueOnce({ rows: [], rowCount: 0 } as any);
         (mockBcryptHash as jest.Mock).mockResolvedValueOnce('hashed');

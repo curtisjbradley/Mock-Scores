@@ -192,6 +192,7 @@ describe('POST /api/organizer/tournament/:tournamentId/organizers', () => {
         const inviteRow = { id: ORG_ID, tournament_id: TOURNAMENT_ID, name: 'Bob', email: 'b@c.com' };
         mockDbQuery
             .mockResolvedValueOnce({ rows: [], rowCount: 0 } as any)           // SELECT auth (user not found)
+            .mockResolvedValueOnce({ rows: [], rowCount: 0 } as any)           // SELECT duplicate invite check
             .mockResolvedValueOnce({ rows: [inviteRow], rowCount: 1 } as any); // INSERT invite
         const res = await request(app)
             .post(`/api/organizer/tournament/${TOURNAMENT_ID}/organizers`)
