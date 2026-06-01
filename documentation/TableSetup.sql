@@ -311,6 +311,24 @@ create table ballots (
 );
 
 
+create table email_complaints (
+    complaint_id uuid primary key default gen_random_uuid(),
+    email text not null
+);
+
+create table unsubscribed_emails (
+    unsub_id uuid primary key default gen_random_uuid(),
+    email text not null
+);
+
+create table bounced_emails (
+     bounce_id uuid primary key default gen_random_uuid(),
+     email text not null,
+     type text not null,
+    subtype text
+);
+
+
 create function update_tournament_num_rounds() returns trigger
     language plpgsql
 as

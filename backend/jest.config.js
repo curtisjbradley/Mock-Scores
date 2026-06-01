@@ -23,6 +23,7 @@ module.exports = {
   ],
   coveragePathIgnorePatterns: [
       'src/db.ts',
-      'src/app.ts'
+      'src/app.ts',
+      'testing/**/*.ts',
       ]
 };
