@@ -34,25 +34,8 @@ jobs:
       - name: Run tests with coverage
         run: npm run backend-coverage
 
-      - name: Upload coverage report to github pages
-        uses: actions/upload-pages-artifact@v4
-        with:
-          path: backend/coverage/lcov-report
-
       - name: Upload coverage reports to Codecov
         uses: codecov/codecov-action@v5
         with:
           token: ${{ secrets.CODECOV_TOKEN }}
           files: backend/coverage/lcov-report/lcov.info
-
-  deploy:
-    environment:
-      name: github-pages
-      url: ${{ steps.deployment.outputs.page_url }}
-    needs: coverage
-    runs-on: ubuntu-latest
-
-    steps:
-      - name: Deploy to GitHub Pages
-        id: deployment
-        uses: actions/deploy-pages@v4
