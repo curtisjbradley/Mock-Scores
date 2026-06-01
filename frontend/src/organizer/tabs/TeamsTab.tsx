@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react'
+import { Link } from 'react-router-dom'
 import type { ITeam } from '@mock-scores/shared'
 import { ConfirmRemoveModal, EditTeamModal } from '../components/modals'
 import Section from './Section'
@@ -72,7 +73,7 @@ export default function TeamsTab({ tournamentId }: { tournamentId: string }) {
                     <tbody>
                         {teams.map(team => (
                             <tr key={team.id}>
-                                <td>{team.name}</td>
+                                <td><Link className="dash-table-link" to={`/organizer/${tournamentId}/school/${team.id}`}>{team.name}</Link></td>
                                 <td>{team.code}</td>
                                 <td>
                                     {editingEmailId === team.id ? (

@@ -23,9 +23,12 @@ export function ConfirmRemoveModal({ message, onCancel, onConfirm, confirmLabel 
     )
 }
 
-export function AddOrganizerModal({ onClose, onAdd }: {
+export function AddOrganizerModal({ onClose, onAdd, title = 'Add organizer', description = 'They will be added as a co-organizer for this tournament.', submitLabel = 'Add organizer' }: {
     onClose: () => void
     onAdd: (name: string, email: string) => void
+    title?: string
+    description?: string
+    submitLabel?: string
 }) {
     const [name, setName] = useState('')
     const [email, setEmail] = useState('')
@@ -39,8 +42,8 @@ export function AddOrganizerModal({ onClose, onAdd }: {
     return (
         <div className="modal-backdrop" role="presentation" onClick={e => { if (e.target === e.currentTarget) onClose() }}>
             <div className="confirm-modal" role="dialog" aria-modal="true" aria-labelledby="add-org-title">
-                <h2 id="add-org-title">Add organizer</h2>
-                <p>They will be added as a co-organizer for this tournament.</p>
+                <h2 id="add-org-title">{title}</h2>
+                <p>{description}</p>
                 <form onSubmit={handleSubmit} noValidate className="modal-form">
                     <label htmlFor="org-name" className="modal-label">Name</label>
                     <input id="org-name" type="text" required autoFocus className="modal-input" value={name} onChange={e => setName(e.target.value)} placeholder="Full name" />
@@ -49,7 +52,7 @@ export function AddOrganizerModal({ onClose, onAdd }: {
                         className={`modal-input${email && !isValidEmail(email) ? ' modal-input--invalid' : ''}`} />
                     <div className="confirm-actions">
                         <button type="button" onClick={onClose}>Cancel</button>
-                        <button type="submit" disabled={!valid}>Add organizer</button>
+                        <button type="submit" disabled={!valid}>{submitLabel}</button>
                     </div>
                 </form>
             </div>

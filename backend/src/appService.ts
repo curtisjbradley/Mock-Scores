@@ -5,6 +5,7 @@ dotenv.config({ path: path.resolve(__dirname, '../.env') });
 import authRouter from './routes/authRoutes';
 import webhookRouter from "./routes/webhookRouter";
 import organizerTournamentRouter from './routes/organizer/organizerRoutes';
+import coachRouter from "./routes/coach/coachRoutes";
 import { verifyUser} from "./authUtils";
 
 const app = express();
@@ -17,6 +18,7 @@ app.use(express.json());
 
 app.use('/api/auth', authRouter);
 app.use('/api/organizer/tournament',verifyUser, organizerTournamentRouter);
+app.use('/api/coach', verifyUser, coachRouter);
 
 
 

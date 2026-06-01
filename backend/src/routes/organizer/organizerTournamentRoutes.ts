@@ -5,6 +5,7 @@ import {OrganizerProvider} from "../../providers/organizerProvider";
 import type {IOrganizer, IScorer, ITeam} from "@mock-scores/shared"
 import roundRoutes from "./organizerRoundRoutes";
 import {uuidRegex} from "../../authUtils";
+import { transferOwnership } from "../../providers/coachProvider";
 
 const router = Router();
 const organizerProvider = new OrganizerProvider();
@@ -440,6 +441,17 @@ router.delete('/teams', async (req: Request, res: Response) => {
     return res.status(204).send();
 });
 
+router.put('/teams/:teamId/owner', async (req: Request, res: Response) => {
+    if (!req?.tournament) return res.status(403).json({ message: 'No access to tournament' });
+    const teamId = req.params.teamId as string;
+    if (!uuidRegex.test(teamId)) return res.status(400).json({ message: 'Invalid team ID' });
+    const { coachId } = req.body as { coachId?: string };
+    if (!coachId || !uuidRegex.test(coachId)) return res.status(400).json({ message: 'Missing or invalid coachId' });
+    const ok = await transferOwnership(teamId, coachId);
+    if (!ok) return res.status(404).json({ message: 'Coach not found on this team' });
+    return res.status(204).send();
+});
+
 
 router.get("/rounds", async (req: Request, res: Response) => {
     if(!req?.tournament) {
@@ -469,5 +481,75 @@ router.post("/rounds", async (req: Request, res: Response) => {
 router.use('/rounds/:round', verifyRound,  roundRoutes)
 
 
+
+// ── Organizer view of team management (mirrors coach team routes) ─────────────
+import * as coachProvider from '../../providers/coachProvider';
+
+router.get('/teams/:teamId/coaches', async (req: Request, res: Response) => {
+    if (!req?.tournament) return res.status(403).json({ message: 'No access to tournament' });
+    return res.status(200).json(await coachProvider.getCoaches(req.params.teamId as string));
+});
+
+router.post('/teams/:teamId/coaches', async (req: Request, res: Response) => {
+    if (!req?.tournament) return res.status(403).json({ message: 'No access to tournament' });
+    const { email } = req.body as { email?: string };
+    if (!email) return res.status(400).json({ message: 'Missing email' });
+    return res.status(201).json(await coachProvider.addCoach(req.params.teamId as string, email));
+});
+
+router.delete('/teams/:teamId/coaches/:coachId', async (req: Request, res: Response) => {
+    if (!req?.tournament) return res.status(403).json({ message: 'No access to tournament' });
+    const ok = await coachProvider.removeCoach(req.params.teamId as string, req.params.coachId as string);
+    if (!ok) return res.status(404).json({ message: 'Coach not found or is team owner' });
+    return res.status(204).send();
+});
+
+router.get('/teams/:teamId/students', async (req: Request, res: Response) => {
+    if (!req?.tournament) return res.status(403).json({ message: 'No access to tournament' });
+    return res.status(200).json(await coachProvider.getStudents(req.params.teamId as string));
+});
+
+router.post('/teams/:teamId/students', async (req: Request, res: Response) => {
+    if (!req?.tournament) return res.status(403).json({ message: 'No access to tournament' });
+    const { student_name, pronouns } = req.body as { student_name?: string; pronouns?: string };
+    if (!student_name?.trim()) return res.status(400).json({ message: 'Missing student_name' });
+    const result = await coachProvider.addStudent(req.params.teamId as string, student_name.trim(), pronouns ?? null);
+    if (!result) return res.status(409).json({ message: 'Student already on roster' });
+    return res.status(201).json(result);
+});
+
+router.delete('/teams/:teamId/students/:studentId', async (req: Request, res: Response) => {
+    if (!req?.tournament) return res.status(403).json({ message: 'No access to tournament' });
+    const ok = await coachProvider.removeStudent(req.params.studentId as string);
+    if (!ok) return res.status(404).json({ message: 'Student not found' });
+    return res.status(204).send();
+});
+
+router.get('/teams/:teamId/pairings/:pairingId/witness-order', async (req: Request, res: Response) => {
+    if (!req?.tournament) return res.status(403).json({ message: 'No access to tournament' });
+    return res.status(200).json(await coachProvider.getWitnessCallOrder(req.params.pairingId as string, req.params.teamId as string));
+});
+
+router.put('/teams/:teamId/pairings/:pairingId/witness-order', async (req: Request, res: Response) => {
+    if (!req?.tournament) return res.status(403).json({ message: 'No access to tournament' });
+    const { witness_ids } = req.body as { witness_ids?: string[] };
+    if (!Array.isArray(witness_ids)) return res.status(400).json({ message: 'witness_ids must be an array' });
+    await coachProvider.setWitnessCallOrder(req.params.pairingId as string, req.params.teamId as string, witness_ids);
+    return res.status(200).json({ success: true });
+});
+
+router.get('/teams/:teamId/pairings/:pairingId/assignments', async (req: Request, res: Response) => {
+    if (!req?.tournament) return res.status(403).json({ message: 'No access to tournament' });
+    return res.status(200).json(await coachProvider.getStudentAssignments(req.params.pairingId as string, req.params.teamId as string));
+});
+
+router.put('/teams/:teamId/pairings/:pairingId/assignments', async (req: Request, res: Response) => {
+    if (!req?.tournament) return res.status(403).json({ message: 'No access to tournament' });
+    const { field_id, student_id } = req.body as { field_id?: string; student_id?: string };
+    if (!field_id || !student_id) return res.status(400).json({ message: 'Missing field_id or student_id' });
+    const result = await coachProvider.upsertStudentAssignment(req.params.pairingId as string, req.params.teamId as string, field_id, student_id);
+    if (!result) return res.status(500).json({ message: 'Unable to save assignment' });
+    return res.status(200).json(result);
+});
 
 export default router;

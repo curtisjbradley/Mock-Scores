@@ -296,13 +296,15 @@ create table team_rostered_students
     student_id   uuid primary key default gen_random_uuid(),
     team_id      uuid not null references teams (id) on delete cascade,
     student_name text not null,
+    pronouns     text,
     unique (team_id, student_name)
 );
 
 create table ballots (
-    score_id uuid primary key default gen_random_uuid(),
+    ballot_id uuid primary key default gen_random_uuid(),
     scorer_assignment_id uuid references scorer_pairing_assignments(assignment_id) not null,
     tournament_id uuid references tournaments(id),
+    pairing_id uuid references pairings(pairing_id),
     ballot_json jsonb not null,
     p_team_id uuid references teams(id),
     d_team_id uuid references teams(id),
@@ -407,4 +409,22 @@ create table scorer_conflicts (
     scorer_id  uuid not null references scorers (scorer_id) on delete cascade,
     team_id    uuid not null references teams (id) on delete cascade,
     unique (scorer_id, team_id)
+);
+
+create table witness_call_order (
+    id         uuid primary key default gen_random_uuid(),
+    pairing_id uuid not null references pairings(pairing_id) on delete cascade,
+    team_id    uuid not null references teams(id) on delete cascade,
+    witness_id uuid not null references case_witnesses(id) on delete cascade,
+    position   smallint not null,
+    unique (pairing_id, team_id, position)
+);
+
+create table student_assignments (
+    id         uuid primary key default gen_random_uuid(),
+    pairing_id uuid not null references pairings(pairing_id) on delete cascade,
+    team_id    uuid not null references teams(id) on delete cascade,
+    field_id   uuid not null references scoring_fields(id) on delete cascade,
+    student_id uuid not null references team_rostered_students(student_id) on delete cascade,
+    unique (pairing_id, team_id, field_id)
 );

@@ -7,6 +7,8 @@ module.exports = {
   moduleNameMapper: {
     '^../db$': '<rootDir>/testing/mocks/db.ts',
     '^./db$': '<rootDir>/testing/mocks/db.ts',
+    '^../../db$': '<rootDir>/testing/mocks/db.ts',
+    '^../../src/db$': '<rootDir>/testing/mocks/db.ts',
     '^.*/src/db$': '<rootDir>/testing/mocks/db.ts',
   },
   // Transform jose (ESM) through ts-jest
