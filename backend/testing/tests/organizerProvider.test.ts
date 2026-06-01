@@ -1,4 +1,5 @@
-import { OrganizerProvider, DuplicateDelegateError } from '../../src/providers/organizerProvider';
+import { OrganizerProvider } from '../../src/providers/organizerProvider';
+import { DuplicateDelegateError, OrganizerAlreadyJoinedError } from '../../src/errors';
 import { dbQuery } from '../../src/db';
 
 const mockDbQuery = dbQuery as jest.MockedFunction<typeof dbQuery>;
@@ -220,7 +221,7 @@ describe('OrganizerProvider.addOrganizer', () => {
 describe('OrganizerProvider.updateOrganizer', () => {
     it('throws when organizer has already joined', async () => {
         const org = { id: 'u1', name: 'Alice', email: 'a@b.com', role: 'delegate', has_joined: true } as any;
-        await expect(provider.updateOrganizer(org)).rejects.toThrow('Organizer has already created an account');
+        await expect(provider.updateOrganizer(org)).rejects.toThrow(OrganizerAlreadyJoinedError);
     });
 
     it('returns updated organizer for invite', async () => {

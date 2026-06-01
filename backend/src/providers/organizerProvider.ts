@@ -17,8 +17,7 @@ import type {
     IPairingRow
 } from '../types/dbtypes';
 import { randomUUID } from 'node:crypto';
-
-export class DuplicateDelegateError extends Error {}
+import { DuplicateDelegateError, NotFoundError, OrganizerAlreadyJoinedError } from '../errors';
 
 export class OrganizerProvider {
 
@@ -324,7 +323,7 @@ export class OrganizerProvider {
     }
 
     async updateOrganizer(organizer: IOrganizer): Promise<IOrganizer | undefined> {
-        if (organizer.has_joined) throw new Error('Organizer has already created an account');
+        if (organizer.has_joined) throw new OrganizerAlreadyJoinedError();
         const row = (await dbQuery<ITournamentDelegateInviteRow>(
             'UPDATE tournament_delegate_invites SET email=$1, name=$2 WHERE id=$3 RETURNING *',
             [organizer.email, organizer.name, organizer.id]
@@ -422,7 +421,7 @@ export class OrganizerProvider {
 
     async updateTeam(teamId: string, name: string, coachEmail: string, code: string): Promise<ITeam | undefined> {
         const team = (await dbQuery<ITeamRow>('SELECT * FROM teams WHERE id=$1', [teamId]))?.rows[0];
-        if (!team) return undefined;
+        if (!team) throw new NotFoundError();
 
         await dbQuery('UPDATE teams SET name=$1, code=$2 WHERE id=$3', [name, code || name, teamId]);
 

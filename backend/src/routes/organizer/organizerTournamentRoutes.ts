@@ -1,6 +1,7 @@
 import {NextFunction, Request, Response, Router} from "express";
 import {IRound, TournamentPayload, IWitnesses} from "@mock-scores/shared";
-import {DuplicateDelegateError, OrganizerProvider} from "../../providers/organizerProvider";
+import {DuplicateDelegateError, OrganizerAlreadyJoinedError, NotFoundError} from "../../errors";
+import {OrganizerProvider} from "../../providers/organizerProvider";
 import type {IOrganizer, IScorer, ITeam} from "@mock-scores/shared"
 import roundRoutes from "./organizerRoundRoutes";
 import {uuidRegex} from "../../authUtils";
@@ -253,7 +254,10 @@ router.put("/organizers", verifyOrganizerPayload, async (req: Request, res: Resp
         return res.status(400).json({ message: 'Invalid organizer ID' });
     }
 
-    const result = await organizerProvider.updateOrganizer(org);
+    const result = await organizerProvider.updateOrganizer(org).catch(e => {
+        if (e instanceof OrganizerAlreadyJoinedError) return res.status(409).json({ message: 'Organizer has already joined' });
+        throw e;
+    });
 
     if(!result){
         return res.status(500).json({ message: 'Unable to update organizer' });
@@ -384,7 +388,10 @@ router.put('/teams', verifyTeamPayload, async (req: Request, res: Response) => {
     if (!id) return res.status(400).json({ message: 'Missing id field' });
     if (!uuidRegex.test(id)) return res.status(400).json({ message: 'Invalid team ID' });
     if (req.tournament && await organizerProvider.teamNameExists(req.tournament, name, id)) return res.status(409).json({ message: 'A team with that name already exists' });
-    const result = await organizerProvider.updateTeam(id, name, coach_email, code || name);
+    const result = await organizerProvider.updateTeam(id, name, coach_email, code || name).catch(e => {
+        if (e instanceof NotFoundError) return res.status(404).json({ message: 'Team not found' });
+        throw e;
+    });
     if (!result) return res.status(500).json({ message: 'Unable to update team' });
     return res.status(200).json(result);
 });
