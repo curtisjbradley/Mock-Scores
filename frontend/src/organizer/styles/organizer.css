@@ -24,6 +24,12 @@
     font-size: 1.75rem;
 }
 
+.org-header-sub {
+    margin: 0;
+    font-size: 0.85rem;
+    color: var(--text-muted);
+}
+
 .org-new-btn {
     height: 2.5rem;
     padding: 0 1.25rem;
@@ -228,4 +234,60 @@
 .scorecard-note {
     margin-top: 1rem;
     font-style: italic;
+}
+
+/* ── Roster tab ─────────────────────────────────────────────────────────────── */
+.roster-tab {
+    display: flex;
+    flex-direction: column;
+    gap: 1.25rem;
+}
+
+.roster-add-form {
+    display: flex;
+    gap: 0.5rem;
+}
+
+.roster-add-form input {
+    flex: 1;
+}
+
+.roster-add-form input,
+.roster-add-form .org-new-btn {
+    height: 2.25rem;
+    border-radius: 0.6rem;
+    white-space: nowrap;
+}
+
+
+.roster-list {
+    list-style: none;
+    margin: 0;
+    padding: 0;
+    display: flex;
+    flex-direction: column;
+    gap: 0.4rem;
+}
+
+.roster-item {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 0.6rem 0.9rem;
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 0.6rem;
+}
+
+.roster-name {
+    font-size: 0.95rem;
+    font-weight: 500;
+    color: var(--text);
+}
+
+.roster-pronouns {
+    margin-left: 0.4rem;
+    font-size: 0.82rem;
+    font-weight: 400;
+    color: var(--text-muted);
 }

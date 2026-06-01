@@ -319,3 +319,10 @@
     flex-wrap: wrap;
     gap: 0.75rem;
 }
+
+.dash-table-link {
+    color: var(--primary);
+    text-decoration: none;
+    font-weight: 500;
+}
+.dash-table-link:hover { text-decoration: underline; }

@@ -1,4 +1,7 @@
-import type { DummyTeam, Pairing } from './dummyTeams';
+import type { IStandingsTeam, IStandingsPairing } from '@mock-scores/shared';
+// Local aliases so the rest of the file is unchanged
+type DummyTeam = IStandingsTeam;
+type Pairing = IStandingsPairing;
 import type { StandingsConfig, StatDef, TiebreakerRule } from './standingsGenerator';
 
 export interface TeamStats {

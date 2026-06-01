@@ -1,16 +1,87 @@
 import { useEffect, useState } from 'react'
-import type { IScorer } from '@mock-scores/shared'
+import type { IScorer, ITeam, IConflict } from '@mock-scores/shared'
 import { apiFetch } from '../../auth/auth'
 import { isValidEmail } from '../../utils/validation'
 import { ConfirmRemoveModal } from '../components/modals'
 import Section from './Section'
 import { v4 as randomUUID } from 'uuid'
 
+function ManageConflictsModal({ scorer, tournamentId, onClose }: {
+    scorer: IScorer
+    tournamentId: string
+    onClose: () => void
+}) {
+    const [conflicts, setConflicts] = useState<IConflict[]>([])
+    const [teams, setTeams] = useState<ITeam[]>([])
+
+    useEffect(() => {
+        apiFetch(`/api/organizer/tournament/${tournamentId}/scorers/${scorer.scorer_id}/conflicts`)
+            .then(r => r.ok ? r.json() : []).then(setConflicts).catch(() => {})
+        apiFetch(`/api/organizer/tournament/${tournamentId}/teams`)
+            .then(r => r.ok ? r.json() : []).then(setTeams).catch(() => {})
+    }, [tournamentId, scorer.scorer_id])
+
+    const conflictTeamIds = new Set(conflicts.map(c => c.team_id))
+    const available = teams.filter(t => !conflictTeamIds.has(t.id))
+
+    const addConflict = (team: ITeam) => {
+        apiFetch(`/api/organizer/tournament/${tournamentId}/scorers/${scorer.scorer_id}/conflicts`, {
+            method: 'POST', body: JSON.stringify({ team_id: team.id })
+        }).then(r => r.ok ? r.json() : null).then(c => {
+            if (c) setConflicts(prev => [...prev, c])
+        }).catch(() => {})
+    }
+
+    const removeConflict = (conflict: IConflict) => {
+        apiFetch(`/api/organizer/tournament/${tournamentId}/scorers/${scorer.scorer_id}/conflicts`, {
+            method: 'DELETE', body: JSON.stringify({ team_id: conflict.team_id })
+        }).then(r => { if (r.ok) setConflicts(prev => prev.filter(c => c.team_id !== conflict.team_id)) }).catch(() => {})
+    }
+
+    return (
+        <div className="modal-backdrop" role="presentation" onClick={e => { if (e.target === e.currentTarget) onClose() }}>
+            <div className="confirm-modal" role="dialog" aria-modal="true" aria-labelledby="conflicts-title">
+                <h2 id="conflicts-title">Conflicts — {scorer.first_name} {scorer.last_name}</h2>
+                {conflicts.length > 0 && (
+                    <ul style={{ listStyle: 'none', padding: 0, margin: '0 0 12px' }}>
+                        {conflicts.map(c => (
+                            <li key={c.team_id} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '4px 0' }}>
+                                <span>{c.team_name}</span>
+                                <button className="dash-remove-btn" onClick={() => removeConflict(c)}>Remove</button>
+                            </li>
+                        ))}
+                    </ul>
+                )}
+                {available.length > 0 ? (
+                    <div className="tc-field">
+                        <label className="tc-label">Add conflicting team</label>
+                        <select className="tc-input" defaultValue="" onChange={e => {
+                            const team = teams.find(t => t.id === e.target.value)
+                            if (team) { addConflict(team); e.target.value = '' }
+                        }}>
+                            <option value="" disabled>Select a team…</option>
+                            {available.map(t => <option key={t.id} value={t.id}>{t.name}</option>)}
+                        </select>
+                    </div>
+                ) : (
+                    <p style={{ opacity: 0.6, fontSize: '0.9em' }}>
+                        {teams.length === 0 ? 'No teams in this tournament yet.' : 'All teams are already listed as conflicts.'}
+                    </p>
+                )}
+                <div className="confirm-actions">
+                    <button type="button" onClick={onClose}>Done</button>
+                </div>
+            </div>
+        </div>
+    )
+}
+
 export default function ScorersTab({ tournamentId }: { tournamentId: string }) {
     const [scorers, setScorers] = useState<IScorer[]>([])
     const [showModal, setShowModal] = useState(false)
     const [editingId, setEditingId] = useState<string | null>(null)
     const [confirmRemove, setConfirmRemove] = useState<IScorer | null>(null)
+    const [conflictsScorer, setConflictsScorer] = useState<IScorer | null>(null)
     const [firstName, setFirstName] = useState('')
     const [lastName, setLastName] = useState('')
     const [email, setEmail] = useState('')
@@ -73,6 +144,7 @@ export default function ScorersTab({ tournamentId }: { tournamentId: string }) {
                                 <td>
                                     <div className="dash-actions-cell">
                                         <button className="dash-remove-btn" onClick={() => openEditModal(scorer)}>Edit</button>
+                                        <button className="dash-remove-btn" onClick={() => setConflictsScorer(scorer)}>Manage Conflicts</button>
                                         <button className="dash-remove-btn" onClick={() => setConfirmRemove(scorer)}>Remove</button>
                                     </div>
                                 </td>
@@ -120,6 +192,14 @@ export default function ScorersTab({ tournamentId }: { tournamentId: string }) {
                     message={`Remove ${confirmRemove.first_name} ${confirmRemove.last_name} from the scorer list?`}
                     onCancel={() => setConfirmRemove(null)}
                     onConfirm={handleRemove}
+                />
+            )}
+
+            {conflictsScorer && (
+                <ManageConflictsModal
+                    scorer={conflictsScorer}
+                    tournamentId={tournamentId}
+                    onClose={() => setConflictsScorer(null)}
                 />
             )}
         </Section>

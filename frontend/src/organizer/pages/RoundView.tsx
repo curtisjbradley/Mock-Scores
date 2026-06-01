@@ -19,6 +19,7 @@ const RoundView = () => {
     const [pairings, setPairings] = useState<IPairing[]>([])
     const [scorers, setScorers] = useState<IScorer[]>([])
     const [pairingScorers, setPairingScorers] = useState<Record<string, IPairingScorer[]>>({})
+    const [conflictSet, setConflictSet] = useState<Set<string>>(new Set())
     const [error, setError] = useState('')
     const [notFound, setNotFound] = useState(false)
 
@@ -36,14 +37,17 @@ const RoundView = () => {
             setCourtrooms(courtroomsData)
             setPairings(pairingsData)
             setScorers(Array.isArray(scorersData) ? scorersData : [])
-            // Fetch scorers for each pairing
-            return Promise.all((pairingsData as IPairing[]).map((p: IPairing) =>
-                apiFetch(`/api/organizer/tournament/${id}/rounds/${roundId}/pairings/${p.pairing_id}/scorers`)
-                    .then(r => r.json())
-                    .then((s: IPairingScorer[]) => [p.pairing_id, s] as [string, IPairingScorer[]])
-            ))
-        }).then(entries => {
-            setPairingScorers(Object.fromEntries(entries))
+            return Promise.all([
+                Promise.all((pairingsData as IPairing[]).map((p: IPairing) =>
+                    apiFetch(`/api/organizer/tournament/${id}/rounds/${roundId}/pairings/${p.pairing_id}/scorers`)
+                        .then(r => r.json())
+                        .then((s: IPairingScorer[]) => [p.pairing_id, s] as [string, IPairingScorer[]])
+                )),
+                apiFetch(`/api/organizer/tournament/${id}/scorer-conflicts`).then(r => r.ok ? r.json() : []),
+            ])
+        }).then(([entries, conflicts]) => {
+            setPairingScorers(Object.fromEntries(entries as [string, IPairingScorer[]][]))
+            setConflictSet(new Set((conflicts as { scorer_id: string; team_id: string }[]).map(c => `${c.scorer_id}:${c.team_id}`)))
         }).catch(() => setError('Failed to load round data.'))
     }, [id, roundId, navigate])
 
@@ -211,6 +215,7 @@ const RoundView = () => {
                             assignedScorers={pairingScorers[pairing.pairing_id] ?? []}
                             tournamentId={id!}
                             roundId={roundId!}
+                            conflictSet={conflictSet}
                             onRemove={() => setConfirmRemove(pairing)}
                             onUpdate={updatePairing}
                             onScorerAssigned={s => onScorerAssigned(pairing.pairing_id, s)}

@@ -10,6 +10,7 @@ interface Props {
     assignedScorers: IPairingScorer[]
     tournamentId: string
     roundId: string
+    conflictSet: Set<string>
     onRemove: () => void
     onUpdate: (updated: IPairing) => void
     onScorerAssigned: (scorer: IPairingScorer) => void
@@ -17,7 +18,7 @@ interface Props {
     onPresiderChanged: (assignmentId: string | null) => void
 }
 
-export default function PairingCard({ pairing, teams, courtrooms, scorers, assignedScorers, tournamentId, roundId, onRemove, onUpdate, onScorerAssigned, onScorerRemoved, onPresiderChanged }: Props) {
+export default function PairingCard({ pairing, teams, courtrooms, scorers, assignedScorers, tournamentId, roundId, conflictSet, onRemove, onUpdate, onScorerAssigned, onScorerRemoved, onPresiderChanged }: Props) {
     const [editingCourtroom, setEditingCourtroom] = useState(false)
     const [courtroomDraft, setCourtroomDraft] = useState(pairing.courtroom ?? '')
 
@@ -179,7 +180,12 @@ export default function PairingCard({ pairing, teams, courtrooms, scorers, assig
                     )}
                 </div>
 
-                {assignedScorers.map(s => (
+                {assignedScorers.map(s => {
+                    const hasConflict = s.type === 'registered' && (
+                        conflictSet.has(`${s.scorer_id}:${pairing.p_team}`) ||
+                        conflictSet.has(`${s.scorer_id}:${pairing.d_team}`)
+                    )
+                    return (
                     <div key={s.assignment_id} className="pc-scorer-add-row">
                         <label className="pc-presider-radio">
                             <input type="radio" name={`presider-${pairing.pairing_id}`}
@@ -187,14 +193,20 @@ export default function PairingCard({ pairing, teams, courtrooms, scorers, assig
                                 onChange={() => setPresider(s.assignment_id)} />
                             Presider
                         </label>
-                        <span style={{ flex: 1, fontSize: '0.875rem' }}>{s.name}{s.type === 'paper' ? ' (paper)' : ''}</span>
+                        <span style={{ flex: 1, fontSize: '0.875rem' }}>
+                            {s.name}{s.type === 'paper' ? ' (paper)' : ''}
+                            {hasConflict && (
+                                <span style={{ marginLeft: 6, background: 'red', color: '#fff', fontSize: '0.7rem', fontWeight: 700, padding: '1px 5px', borderRadius: 3 }}>CONFLICT</span>
+                            )}
+                        </span>
                         {s.type === 'paper' && (
                             // TODO: open score input for paper scorer
                             <button className="pc-save-btn" onClick={() => {}}>Input scores</button>
                         )}
                         <button className="dash-remove-btn" onClick={() => removeScorer(s.assignment_id)}>Remove</button>
                     </div>
-                ))}
+                    )
+                })}
 
                 {showScorerAdd && (
                     <div className="pc-scorer-add-row">

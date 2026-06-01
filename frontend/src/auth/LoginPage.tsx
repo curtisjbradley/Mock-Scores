@@ -1,17 +1,17 @@
 import { useState } from 'react'
-import { Link, useNavigate } from 'react-router-dom'
+import {Link, useNavigate, useParams} from 'react-router-dom'
 import { saveToken } from './auth'
 import { isValidEmail } from '../utils/validation'
 import './styles/auth-form.css'
 
 interface LoginPageProps {
     title: string
-    redirect: string
     footerLink?: { text: string; label: string; to: string }
 }
 
-const LoginPage = ({ title, redirect, footerLink }: LoginPageProps) => {
+const LoginPage = ({ title, footerLink }: LoginPageProps) => {
     const navigate = useNavigate()
+    const { redirect } = useParams()
     const [email, setEmail] = useState('')
     const [password, setPassword] = useState('')
     const [error, setError] = useState('')
@@ -36,7 +36,7 @@ const LoginPage = ({ title, redirect, footerLink }: LoginPageProps) => {
                 return
             }
             saveToken(data.token)
-            navigate(redirect)
+            navigate(redirect ?? "/")
         } catch {
             setError('Something went wrong. Please try again.')
         }

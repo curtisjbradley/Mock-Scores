@@ -33,7 +33,7 @@ function App() {
 
               <Route index element={<Home />} />
 
-              <Route path="login" element={<LoginPage title="Sign in" redirect="/organizer" footerLink={{ text: "Don't have an account?", label: "Register", to: "/register" }} />} />
+              <Route path="login" element={<LoginPage title="Sign in" footerLink={{ text: "Don't have an account?", label: "Register", to: "/register" }} />} />
               <Route path="register" element={<Register />} />
               <Route path="account" element={<Account />} />
 
@@ -51,6 +51,7 @@ function App() {
               <Route path="coach" element={<ProtectedRoute />}>
                 <Route index element={<CoachHome />} />
                 <Route path=":id" element={<CoachDashboard />} />
+                <Route path=":id/:tab" element={<CoachDashboard />} />
                   <Route path=":id/*" element={<NotFound />} />
               </Route>
 
