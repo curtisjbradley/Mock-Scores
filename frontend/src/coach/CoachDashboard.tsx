@@ -84,7 +84,8 @@ export default function CoachDashboard({ isOrganizerView = false }: Props) {
         if (tab === 'standings' && standingsRows.length === 0) {
             apiFetch(`/api/coach/tournaments/${id}/standings`).then(r => r.ok ? r.json() : null).then(data => {
                 if (!data?.config) return
-                standingsBlockDefs(); tiebreakerBlockDefs()
+                Blockly.common.defineBlocks(standingsBlockDefs)
+                Blockly.common.defineBlocks(tiebreakerBlockDefs)
                 const statsWs = new Blockly.Workspace()
                 const standingsWs = new Blockly.Workspace()
                 Blockly.Xml.domToWorkspace(Blockly.utils.xml.textToDom(data.config.statsXml), statsWs)
