@@ -22,8 +22,8 @@ module.exports = {
     'testing/**/*.ts'
   ],
   coveragePathIgnorePatterns: [
-      'src/db.ts',
-      'src/app.ts',
-      'testing/**/*.ts',
+      'src/db\\.ts',
+      'src/app\\.ts',
+      'testing/.*\\.ts',
       ]
 };

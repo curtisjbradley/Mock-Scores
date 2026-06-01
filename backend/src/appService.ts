@@ -23,10 +23,14 @@ app.use('/api/organizer/tournament',verifyUser, organizerTournamentRouter);
 app.use(express.static(PUBLIC_DIR));
 app.use(express.static(STATIC_DIR));
 
+
+app.use('/webhooks', express.text({ type: '*/*' }))
+app.use("/webhooks", webhookRouter);
+
+
 app.get(/(.*)/, (_req: Request, res: Response) => {
     res.sendFile(path.join(STATIC_DIR, "index.html"));
 });
 
-app.use("/webhooks", webhookRouter);
 
 export default app
