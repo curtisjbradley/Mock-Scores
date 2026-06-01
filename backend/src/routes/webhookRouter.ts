@@ -32,7 +32,8 @@ interface SESEvent {
 }
 
 router.post("/ses-bounce", async (req: Request, res: Response) => {
-    const snsMessage = req.body as SNSBase;
+    const raw = typeof req.body === 'string' ? req.body : JSON.stringify(req.body)
+    const snsMessage = JSON.parse(raw) as SNSBase;
 
     if (snsMessage.Type === "SubscriptionConfirmation") {
         console.log("Confirming SNS subscription:", snsMessage.SubscribeURL);
@@ -65,5 +66,9 @@ router.post("/ses-bounce", async (req: Request, res: Response) => {
 
     res.status(200).send("Ignored");
 });
+
+router.get("/", async (req: Request, res: Response) => {
+    res.status(404).json({message: "Not Found"});
+})
 
 export default router;
