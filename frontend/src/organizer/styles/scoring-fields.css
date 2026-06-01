@@ -1,5 +1,9 @@
 .sf-form {
-    max-width: 56rem;
+    max-width: 80rem;
+}
+
+.tc-form.sf-form {
+    max-width: 80rem;
 }
 
 .sf-category-card {
@@ -12,7 +16,6 @@
     background: var(--surface);
     transition: opacity 140ms ease, box-shadow 140ms ease;
     min-width: 0;
-    overflow: hidden;
 }
 
 .sf-category-card--dragging {
@@ -56,7 +59,7 @@
 }
 
 .sf-table thead th {
-    padding: 0.4rem 0.5rem;
+    padding: 0.4rem 0.6rem;
     font-size: 0.75rem;
     font-weight: 700;
     letter-spacing: 0.05em;
@@ -65,6 +68,11 @@
     text-align: left;
     border-bottom: 1px solid var(--border);
     white-space: nowrap;
+    min-width: 3.5rem;
+}
+
+.sf-table thead th:first-child {
+    min-width: 10rem;
 }
 
 .sf-table thead th:not(:first-child) {
@@ -72,7 +80,7 @@
 }
 
 .sf-row td {
-    padding: 0.35rem 0.5rem;
+    padding: 0.35rem 0.6rem;
     vertical-align: middle;
     border-bottom: 1px solid var(--border);
 }
@@ -83,11 +91,11 @@
 
 .sf-label-input {
     width: 100%;
-    min-width: 8rem;
+    min-width: 10rem;
 }
 
 .sf-num {
-    width: 5rem;
+    width: 5.5rem;
     height: 2.25rem;
     text-align: center;
     padding: 0 0.4rem;

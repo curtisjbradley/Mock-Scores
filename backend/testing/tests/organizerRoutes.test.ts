@@ -605,6 +605,62 @@ describe('POST /api/organizer/tournament/duplicate/:tournamentId', () => {
         const res = await request(app).post(`/api/organizer/tournament/duplicate/${TOURNAMENT_ID}`).set(auth()).send({});
         expect(res.status).toBe(201);
     });
+
+    it('returns 500 when source tournament not found', async () => {
+        mockAccess();
+        mockDbQuery.mockResolvedValueOnce({ rows: [], rowCount: 0 } as any); // getTournament returns nothing
+        const res = await request(app).post(`/api/organizer/tournament/duplicate/${TOURNAMENT_ID}`).set(auth()).send({});
+        expect(res.status).toBe(500);
+    });
+
+    it('returns 201 with scorers option', async () => {
+        mockAccess();
+        const source = { id: TOURNAMENT_ID, name: 'Test', case_format_id: 'fmt1' };
+        const newT = { id: 'new1d000-0000-0000-0000-000000000000', name: 'Test (copy)' };
+        mockDbQuery
+            .mockResolvedValueOnce({ rows: [source], rowCount: 1 } as any)  // getTournament
+            .mockResolvedValueOnce({ rows: [], rowCount: 1 } as any)         // INSERT format
+            .mockResolvedValueOnce({ rows: [], rowCount: 1 } as any)         // INSERT tournament
+            .mockResolvedValueOnce({ rows: [{ scorer_id: 's1', first_name: 'A', last_name: 'B', email: 'a@b.com' }], rowCount: 1 } as any) // SELECT scorers
+            .mockResolvedValueOnce({ rows: [], rowCount: 1 } as any)         // INSERT scorer
+            .mockResolvedValueOnce({ rows: [newT], rowCount: 1 } as any)     // SELECT new tournament
+            .mockResolvedValueOnce({ rows: [], rowCount: 1 } as any);        // addTournamentOrganizer
+        const res = await request(app).post(`/api/organizer/tournament/duplicate/${TOURNAMENT_ID}`).set(auth()).send({ scorers: true });
+        expect(res.status).toBe(201);
+    });
+
+    it('returns 201 with courtrooms option', async () => {
+        mockAccess();
+        const source = { id: TOURNAMENT_ID, name: 'Test', case_format_id: 'fmt1' };
+        const newT = { id: 'new1d000-0000-0000-0000-000000000000', name: 'Test (copy)' };
+        mockDbQuery
+            .mockResolvedValueOnce({ rows: [source], rowCount: 1 } as any)
+            .mockResolvedValueOnce({ rows: [], rowCount: 1 } as any)         // INSERT format
+            .mockResolvedValueOnce({ rows: [], rowCount: 1 } as any)         // INSERT tournament
+            .mockResolvedValueOnce({ rows: [{ name: 'Room 1', location: null }], rowCount: 1 } as any) // SELECT courtrooms
+            .mockResolvedValueOnce({ rows: [], rowCount: 1 } as any)         // INSERT courtroom
+            .mockResolvedValueOnce({ rows: [newT], rowCount: 1 } as any)
+            .mockResolvedValueOnce({ rows: [], rowCount: 1 } as any);
+        const res = await request(app).post(`/api/organizer/tournament/duplicate/${TOURNAMENT_ID}`).set(auth()).send({ courtrooms: true });
+        expect(res.status).toBe(201);
+    });
+
+    it('returns 201 with witnesses option', async () => {
+        mockAccess();
+        const source = { id: TOURNAMENT_ID, name: 'Test', case_format_id: 'fmt1' };
+        const newT = { id: 'new1d000-0000-0000-0000-000000000000', name: 'Test (copy)' };
+        mockDbQuery
+            .mockResolvedValueOnce({ rows: [source], rowCount: 1 } as any)
+            .mockResolvedValueOnce({ rows: [{ case_name: 'C', criminal_case: false, p_witnesses_called: 2, d_witnesses_called: 2, has_swing: false }], rowCount: 1 } as any) // SELECT format
+            .mockResolvedValueOnce({ rows: [], rowCount: 1 } as any)         // INSERT format
+            .mockResolvedValueOnce({ rows: [], rowCount: 1 } as any)         // INSERT tournament
+            .mockResolvedValueOnce({ rows: [{ side: 'P', name: 'W1' }], rowCount: 1 } as any) // SELECT witnesses
+            .mockResolvedValueOnce({ rows: [], rowCount: 1 } as any)         // INSERT witness
+            .mockResolvedValueOnce({ rows: [newT], rowCount: 1 } as any)
+            .mockResolvedValueOnce({ rows: [], rowCount: 1 } as any);
+        const res = await request(app).post(`/api/organizer/tournament/duplicate/${TOURNAMENT_ID}`).set(auth()).send({ witnesses: true });
+        expect(res.status).toBe(201);
+    });
 });
 
 // ─── Round sub-routes ─────────────────────────────────────────────────────────
@@ -697,6 +753,24 @@ describe('POST /api/organizer/tournament/:tournamentId/rounds/:round/pairings', 
         mockDbQuery.mockResolvedValueOnce({ rows: [pairing], rowCount: 1 } as any);
         const res = await request(app).post(PAIRINGS_URL).set(auth()).send({ prosectionID: TEAM_A, defenseID: TEAM_B, courtroomID: COURTROOM_ID });
         expect(res.status).toBe(201);
+    });
+
+    it('returns 409 when prosecution team already assigned this round', async () => {
+        mockRoundAccess(ROUND_BASE);
+        const err = Object.assign(new Error(), { detail: 'Key (round_id, p_team)=(r1, team1) already exists.' });
+        mockDbQuery.mockRejectedValueOnce(err);
+        const res = await request(app).post(PAIRINGS_URL).set(auth()).send({ prosectionID: TEAM_A, defenseID: TEAM_B, courtroomID: COURTROOM_ID });
+        expect(res.status).toBe(409);
+        expect(res.body.message).toMatch(/prosecution/i);
+    });
+
+    it('returns 409 when defense team already assigned this round', async () => {
+        mockRoundAccess(ROUND_BASE);
+        const err = Object.assign(new Error(), { detail: 'Key (round_id, d_team)=(r1, team2) already exists.' });
+        mockDbQuery.mockRejectedValueOnce(err);
+        const res = await request(app).post(PAIRINGS_URL).set(auth()).send({ prosectionID: TEAM_A, defenseID: TEAM_B, courtroomID: COURTROOM_ID });
+        expect(res.status).toBe(409);
+        expect(res.body.message).toMatch(/defense/i);
     });
 });
 
@@ -794,6 +868,288 @@ describe('DELETE /api/organizer/tournament/:tournamentId/rounds/:round/pairings/
         mockRoundAccess(ROUND_BASE);
         mockDbQuery.mockResolvedValueOnce({ rows: [], rowCount: 0 } as any);
         const res = await request(app).delete(`${PAIRINGS_URL}/${PAIRING_ID}/presider`).set(auth());
+        expect(res.status).toBe(204);
+    });
+});
+
+// ─── PATCH /format — witness count validation ─────────────────────────────────
+describe('PATCH /api/organizer/tournament/:tournamentId/format — witness validation', () => {
+    it('returns 400 when pWitnessesCalled exceeds available', async () => {
+        mockAccess();
+        mockDbQuery
+            .mockResolvedValueOnce({ rows: [{ case_format_id: 'fmt1' }], rowCount: 1 } as any) // SELECT formatID
+            .mockResolvedValueOnce({ rows: [{ side: 'P', name: 'W1' }], rowCount: 1 } as any); // getWitnesses
+        const res = await request(app).patch(`/api/organizer/tournament/${TOURNAMENT_ID}/format`).set(auth()).send({ pWitnessesCalled: 5, dWitnessesCalled: null });
+        expect(res.status).toBe(400);
+        expect(res.body.message).toMatch(/P witnesses called exceeds/i);
+    });
+
+    it('returns 400 when dWitnessesCalled exceeds available', async () => {
+        mockAccess();
+        mockDbQuery
+            .mockResolvedValueOnce({ rows: [{ case_format_id: 'fmt1' }], rowCount: 1 } as any)
+            .mockResolvedValueOnce({ rows: [{ side: 'D', name: 'W1' }], rowCount: 1 } as any);
+        const res = await request(app).patch(`/api/organizer/tournament/${TOURNAMENT_ID}/format`).set(auth()).send({ pWitnessesCalled: null, dWitnessesCalled: 5 });
+        expect(res.status).toBe(400);
+        expect(res.body.message).toMatch(/D witnesses called exceeds/i);
+    });
+
+    it('returns 500 when updateFormat fails', async () => {
+        mockAccess();
+        mockDbQuery.mockResolvedValueOnce({ rows: [], rowCount: 0 } as any); // SELECT formatID returns nothing
+        const res = await request(app).patch(`/api/organizer/tournament/${TOURNAMENT_ID}/format`).set(auth()).send({ caseName: 'C' });
+        expect(res.status).toBe(500);
+    });
+});
+
+// ─── GET /standings-config ────────────────────────────────────────────────────
+describe('GET /api/organizer/tournament/:tournamentId/standings-config', () => {
+    it('returns 200 with config', async () => {
+        mockAccess();
+        mockDbQuery.mockResolvedValueOnce({ rows: [{ id: 'sc1', stats_xml: '<s/>', standings_xml: '<st/>' }], rowCount: 1 } as any);
+        const res = await request(app).get(`/api/organizer/tournament/${TOURNAMENT_ID}/standings-config`).set(auth());
+        expect(res.status).toBe(200);
+    });
+});
+
+// ─── PATCH /standings-config ──────────────────────────────────────────────────
+describe('PATCH /api/organizer/tournament/:tournamentId/standings-config', () => {
+    it('returns 400 when body missing', async () => {
+        mockAccess();
+        const res = await request(app).patch(`/api/organizer/tournament/${TOURNAMENT_ID}/standings-config`).set(auth()).send({});
+        expect(res.status).toBe(400);
+    });
+
+    it('returns 200 on success', async () => {
+        mockAccess();
+        mockDbQuery
+            .mockResolvedValueOnce({ rows: [{ standings_config_id: null }], rowCount: 1 } as any)
+            .mockResolvedValueOnce({ rows: [{ id: 'sc1' }], rowCount: 1 } as any)
+            .mockResolvedValueOnce({ rows: [], rowCount: 1 } as any);
+        const res = await request(app).patch(`/api/organizer/tournament/${TOURNAMENT_ID}/standings-config`).set(auth()).send({ statsXml: '<s/>', standingsXml: '<st/>' });
+        expect(res.status).toBe(200);
+    });
+
+    it('returns 500 when upsert fails', async () => {
+        mockAccess();
+        mockDbQuery
+            .mockResolvedValueOnce({ rows: [{ standings_config_id: null }], rowCount: 1 } as any)
+            .mockResolvedValueOnce({ rows: [], rowCount: 0 } as any); // INSERT fails
+        const res = await request(app).patch(`/api/organizer/tournament/${TOURNAMENT_ID}/standings-config`).set(auth()).send({ statsXml: '<s/>', standingsXml: '<st/>' });
+        expect(res.status).toBe(500);
+    });
+});
+
+// ─── PATCH /scoring-categories ────────────────────────────────────────────────
+describe('PATCH /api/organizer/tournament/:tournamentId/scoring-categories', () => {
+    it('returns 200 on success', async () => {
+        mockAccess();
+        mockDbQuery
+            .mockResolvedValueOnce({ rows: [], rowCount: 1 } as any) // DELETE fields
+            .mockResolvedValueOnce({ rows: [], rowCount: 1 } as any); // DELETE categories
+        const res = await request(app).patch(`/api/organizer/tournament/${TOURNAMENT_ID}/scoring-categories`).set(auth()).send([]);
+        expect(res.status).toBe(200);
+    });
+});
+
+// ─── PUT /scorers ─────────────────────────────────────────────────────────────
+describe('PUT /api/organizer/tournament/:tournamentId/scorers', () => {
+    const scorer = { scorer_id: SCORER_ID, first_name: 'A', last_name: 'B', email: 'a@b.com' };
+
+    it('returns 200 on success', async () => {
+        mockAccess();
+        mockDbQuery.mockResolvedValueOnce({ rows: [], rowCount: 1 } as any);
+        const res = await request(app).put(`/api/organizer/tournament/${TOURNAMENT_ID}/scorers`).set(auth()).send(scorer);
+        expect(res.status).toBe(200);
+    });
+
+});
+
+// ─── PUT /organizers ──────────────────────────────────────────────────────────
+describe('PUT /api/organizer/tournament/:tournamentId/organizers', () => {
+    const base = { name: 'Bob', email: 'b@c.com', role: 'delegate' };
+
+    it('returns 400 when id missing', async () => {
+        mockAccess();
+        const res = await request(app).put(`/api/organizer/tournament/${TOURNAMENT_ID}/organizers`).set(auth()).send({ organizer: base });
+        expect(res.status).toBe(400);
+    });
+
+    it('returns 400 when id is invalid uuid', async () => {
+        mockAccess();
+        const res = await request(app).put(`/api/organizer/tournament/${TOURNAMENT_ID}/organizers`).set(auth()).send({ organizer: { ...base, id: 'not-a-uuid' } });
+        expect(res.status).toBe(400);
+    });
+
+    it('returns 409 when organizer already joined', async () => {
+        mockAccess();
+        const res = await request(app).put(`/api/organizer/tournament/${TOURNAMENT_ID}/organizers`).set(auth()).send({ organizer: { ...base, id: ORG_ID, has_joined: true } });
+        expect(res.status).toBe(409);
+    });
+
+    it('returns 500 when update fails', async () => {
+        mockAccess();
+        mockDbQuery.mockResolvedValueOnce({ rows: [], rowCount: 0 } as any);
+        const res = await request(app).put(`/api/organizer/tournament/${TOURNAMENT_ID}/organizers`).set(auth()).send({ organizer: { ...base, id: ORG_ID, has_joined: false } });
+        expect(res.status).toBe(500);
+    });
+
+    it('returns 201 on success', async () => {
+        mockAccess();
+        const row = { id: ORG_ID, tournament_id: TOURNAMENT_ID, name: 'Bob', email: 'new@c.com' };
+        mockDbQuery.mockResolvedValueOnce({ rows: [row], rowCount: 1 } as any);
+        const res = await request(app).put(`/api/organizer/tournament/${TOURNAMENT_ID}/organizers`).set(auth()).send({ organizer: { ...base, id: ORG_ID, has_joined: false } });
+        expect(res.status).toBe(201);
+    });
+});
+
+// ─── DELETE /organizers — error cases ─────────────────────────────────────────
+describe('DELETE /api/organizer/tournament/:tournamentId/organizers — error cases', () => {
+    const base = { name: 'Bob', email: 'b@c.com', role: 'delegate' };
+
+    it('returns 400 when id is invalid uuid', async () => {
+        mockAccess();
+        const res = await request(app).delete(`/api/organizer/tournament/${TOURNAMENT_ID}/organizers`).set(auth()).send({ organizer: { ...base, id: 'not-a-uuid' } });
+        expect(res.status).toBe(400);
+    });
+
+    it('returns 500 when delete fails', async () => {
+        mockAccess();
+        mockDbQuery.mockResolvedValueOnce({ rows: [], rowCount: 0 } as any);
+        const res = await request(app).delete(`/api/organizer/tournament/${TOURNAMENT_ID}/organizers`).set(auth()).send({ organizer: { ...base, id: ORG_ID, has_joined: false } });
+        expect(res.status).toBe(500);
+    });
+});
+
+// ─── POST /organizers — 500 case ──────────────────────────────────────────────
+describe('POST /api/organizer/tournament/:tournamentId/organizers — 500', () => {
+    it('returns 500 when addOrganizer returns undefined', async () => {
+        mockAccess();
+        mockDbQuery
+            .mockResolvedValueOnce({ rows: [], rowCount: 0 } as any) // SELECT auth
+            .mockResolvedValueOnce({ rows: [], rowCount: 0 } as any) // duplicate check
+            .mockResolvedValueOnce({ rows: [], rowCount: 0 } as any); // INSERT fails
+        const res = await request(app).post(`/api/organizer/tournament/${TOURNAMENT_ID}/organizers`).set(auth()).send({ organizer: { name: 'Bob', email: 'b@c.com', role: 'delegate' } });
+        expect(res.status).toBe(500);
+    });
+});
+
+// ─── PUT /courtrooms ──────────────────────────────────────────────────────────
+describe('PUT /api/organizer/tournament/:tournamentId/courtrooms', () => {
+    it('returns 400 when id or name missing', async () => {
+        mockAccess();
+        const res = await request(app).put(`/api/organizer/tournament/${TOURNAMENT_ID}/courtrooms`).set(auth()).send({ name: 'Room 1' });
+        expect(res.status).toBe(400);
+    });
+
+    it('returns 200 on success', async () => {
+        mockAccess();
+        const row = { id: 'c1', name: 'Updated' };
+        mockDbQuery.mockResolvedValueOnce({ rows: [row], rowCount: 1 } as any);
+        const res = await request(app).put(`/api/organizer/tournament/${TOURNAMENT_ID}/courtrooms`).set(auth()).send({ id: 'c1', name: 'Updated' });
+        expect(res.status).toBe(200);
+    });
+
+    it('returns 500 when update fails', async () => {
+        mockAccess();
+        mockDbQuery.mockResolvedValueOnce({ rows: [], rowCount: 0 } as any);
+        const res = await request(app).put(`/api/organizer/tournament/${TOURNAMENT_ID}/courtrooms`).set(auth()).send({ id: 'c1', name: 'Updated' });
+        expect(res.status).toBe(500);
+    });
+});
+
+// ─── DELETE /courtrooms ───────────────────────────────────────────────────────
+describe('DELETE /api/organizer/tournament/:tournamentId/courtrooms', () => {
+    it('returns 400 when id missing', async () => {
+        mockAccess();
+        const res = await request(app).delete(`/api/organizer/tournament/${TOURNAMENT_ID}/courtrooms`).set(auth()).send({});
+        expect(res.status).toBe(400);
+    });
+
+    it('returns 204 on success', async () => {
+        mockAccess();
+        mockDbQuery.mockResolvedValueOnce({ rows: [{ id: 'c1' }], rowCount: 1 } as any);
+        const res = await request(app).delete(`/api/organizer/tournament/${TOURNAMENT_ID}/courtrooms`).set(auth()).send({ id: 'c1' });
+        expect(res.status).toBe(204);
+    });
+
+    it('returns 500 when delete fails', async () => {
+        mockAccess();
+        mockDbQuery.mockResolvedValueOnce({ rows: [], rowCount: 0 } as any);
+        const res = await request(app).delete(`/api/organizer/tournament/${TOURNAMENT_ID}/courtrooms`).set(auth()).send({ id: 'c1' });
+        expect(res.status).toBe(500);
+    });
+});
+
+// ─── PUT /teams ───────────────────────────────────────────────────────────────
+describe('PUT /api/organizer/tournament/:tournamentId/teams', () => {
+    const base = { name: 'Eagles', coach_email: 'c@d.com', code: 'E' };
+
+    it('returns 400 when id missing', async () => {
+        mockAccess();
+        const res = await request(app).put(`/api/organizer/tournament/${TOURNAMENT_ID}/teams`).set(auth()).send({ team: base });
+        expect(res.status).toBe(400);
+    });
+
+    it('returns 400 when id is invalid uuid', async () => {
+        mockAccess();
+        const res = await request(app).put(`/api/organizer/tournament/${TOURNAMENT_ID}/teams`).set(auth()).send({ team: { ...base, id: 'not-a-uuid' } });
+        expect(res.status).toBe(400);
+    });
+
+    it('returns 409 when team name already exists', async () => {
+        mockAccess();
+        mockDbQuery.mockResolvedValueOnce({ rows: [{ id: 'other' }], rowCount: 1 } as any); // teamNameExists
+        const res = await request(app).put(`/api/organizer/tournament/${TOURNAMENT_ID}/teams`).set(auth()).send({ team: { ...base, id: ROUND_ID } });
+        expect(res.status).toBe(409);
+    });
+
+    it('returns 404 when team not found', async () => {
+        mockAccess();
+        mockDbQuery
+            .mockResolvedValueOnce({ rows: [], rowCount: 0 } as any) // teamNameExists (no duplicate)
+            .mockResolvedValueOnce({ rows: [], rowCount: 0 } as any); // SELECT team (not found)
+        const res = await request(app).put(`/api/organizer/tournament/${TOURNAMENT_ID}/teams`).set(auth()).send({ team: { ...base, id: ROUND_ID } });
+        expect(res.status).toBe(404);
+    });
+
+    it('returns 200 on success', async () => {
+        mockAccess();
+        mockDbQuery
+            .mockResolvedValueOnce({ rows: [], rowCount: 0 } as any) // teamNameExists
+            .mockResolvedValueOnce({ rows: [{ id: ROUND_ID, tournament_id: TOURNAMENT_ID }], rowCount: 1 } as any) // SELECT team
+            .mockResolvedValueOnce({ rows: [], rowCount: 1 } as any) // UPDATE teams
+            .mockResolvedValueOnce({ rows: [{ coach_id: 'u1' }], rowCount: 1 } as any); // SELECT coach
+        const res = await request(app).put(`/api/organizer/tournament/${TOURNAMENT_ID}/teams`).set(auth()).send({ team: { ...base, id: ROUND_ID } });
+        expect(res.status).toBe(200);
+    });
+});
+
+// ─── DELETE /teams ────────────────────────────────────────────────────────────
+describe('DELETE /api/organizer/tournament/:tournamentId/teams', () => {
+    it('returns 400 when id missing', async () => {
+        mockAccess();
+        const res = await request(app).delete(`/api/organizer/tournament/${TOURNAMENT_ID}/teams`).set(auth()).send({});
+        expect(res.status).toBe(400);
+    });
+
+    it('returns 400 when id is invalid uuid', async () => {
+        mockAccess();
+        const res = await request(app).delete(`/api/organizer/tournament/${TOURNAMENT_ID}/teams`).set(auth()).send({ id: 'not-a-uuid' });
+        expect(res.status).toBe(400);
+    });
+
+    it('returns 500 when delete fails', async () => {
+        mockAccess();
+        mockDbQuery.mockResolvedValueOnce({ rows: [], rowCount: 0 } as any);
+        const res = await request(app).delete(`/api/organizer/tournament/${TOURNAMENT_ID}/teams`).set(auth()).send({ id: ROUND_ID });
+        expect(res.status).toBe(500);
+    });
+
+    it('returns 204 on success', async () => {
+        mockAccess();
+        mockDbQuery.mockResolvedValueOnce({ rows: [{ id: ROUND_ID }], rowCount: 1 } as any);
+        const res = await request(app).delete(`/api/organizer/tournament/${TOURNAMENT_ID}/teams`).set(auth()).send({ id: ROUND_ID });
         expect(res.status).toBe(204);
     });
 });

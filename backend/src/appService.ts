@@ -3,6 +3,7 @@ import path from "path";
 import dotenv from 'dotenv';
 dotenv.config({ path: path.resolve(__dirname, '../.env') });
 import authRouter from './routes/authRoutes';
+import webhookRouter from "./routes/webhookRouter";
 import organizerTournamentRouter from './routes/organizer/organizerRoutes';
 import { verifyUser} from "./authUtils";
 
@@ -25,5 +26,7 @@ app.use(express.static(STATIC_DIR));
 app.get(/(.*)/, (_req: Request, res: Response) => {
     res.sendFile(path.join(STATIC_DIR, "index.html"));
 });
+
+app.use("/webhooks", webhookRouter);
 
 export default app
