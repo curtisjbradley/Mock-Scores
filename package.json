@@ -19,7 +19,8 @@
     "lint": "npm run lint -w frontend && npm run lint -w backend",
     "start": "npm run start -w backend",
     "prepare": "node -e \"if(process.env.NODE_ENV !== 'production') require('child_process').execSync('husky', {stdio:'inherit'})\"",
-    "backend-coverage": "cd backend && npm run test:coverage"
+    "backend-coverage": "cd backend && npm run test:coverage",
+    "test": "npm run test -w backend"
   },
   "workspaces": [
     "frontend",
