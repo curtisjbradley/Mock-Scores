@@ -329,6 +329,7 @@ create table bounced_emails (
 );
 
 
+
 create function update_tournament_num_rounds() returns trigger
     language plpgsql
 as
@@ -400,3 +401,10 @@ do $$
             (gen_random_uuid(), 'SLO County', 'Wins (Raw Points -> Presider Tiebreak) -> Head to Head -> Cumulative % Points ', template_id);
     end;
 $$;
+
+create table scorer_conflicts (
+    id         uuid default gen_random_uuid() not null primary key,
+    scorer_id  uuid not null references scorers (scorer_id) on delete cascade,
+    team_id    uuid not null references teams (id) on delete cascade,
+    unique (scorer_id, team_id)
+);

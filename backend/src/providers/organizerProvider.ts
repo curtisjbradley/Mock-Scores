@@ -274,6 +274,42 @@ export class OrganizerProvider {
         return !!(await dbQuery('DELETE FROM scorers WHERE scorer_id=$1', [scorerId]));
     }
 
+    async getAllConflicts(tournamentId: string): Promise<{ scorer_id: string; team_id: string }[]> {
+        return (await dbQuery<{ scorer_id: string; team_id: string }>(
+            `SELECT sc.scorer_id, sc.team_id FROM scorer_conflicts sc
+             JOIN scorers s ON s.scorer_id = sc.scorer_id
+             WHERE s.tournament_id = $1`,
+            [tournamentId]
+        ))?.rows ?? [];
+    }
+
+    async getConflicts(scorerId: string): Promise<{ id: string; scorer_id: string; team_id: string; team_name: string }[]> {
+        return (await dbQuery<{ id: string; scorer_id: string; team_id: string; team_name: string }>(
+            `SELECT sc.id, sc.scorer_id, sc.team_id, t.name AS team_name
+             FROM scorer_conflicts sc JOIN teams t ON t.id = sc.team_id
+             WHERE sc.scorer_id = $1`,
+            [scorerId]
+        ))?.rows ?? [];
+    }
+
+    async addConflict(scorerId: string, teamId: string): Promise<{ id: string; scorer_id: string; team_id: string; team_name: string } | null> {
+        const row = (await dbQuery<{ id: string; scorer_id: string; team_id: string; team_name: string }>(
+            `INSERT INTO scorer_conflicts (scorer_id, team_id) VALUES ($1, $2)
+             ON CONFLICT DO NOTHING
+             RETURNING id, scorer_id, team_id,
+               (SELECT name FROM teams WHERE id = $2) AS team_name`,
+            [scorerId, teamId]
+        ))?.rows[0];
+        return row ?? null;
+    }
+
+    async removeConflict(scorerId: string, teamId: string): Promise<boolean> {
+        return !!(await dbQuery(
+            'DELETE FROM scorer_conflicts WHERE scorer_id=$1 AND team_id=$2',
+            [scorerId, teamId]
+        ));
+    }
+
     async getOrganizers(tournamentID: string): Promise<IOrganizer[]> {
         const [active, invited] = await Promise.all([
             dbQuery<IOrganizer>(

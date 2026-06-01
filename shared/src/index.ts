@@ -178,3 +178,10 @@ export interface ITeam {
     coach_email: string;
     has_joined: boolean;
 }
+
+export interface IConflict {
+    id: string;
+    scorer_id: string;
+    team_id: string;
+    team_name: string;
+}

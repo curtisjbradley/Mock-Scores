@@ -180,6 +180,40 @@ router.delete("/scorers", async (req: Request, res: Response) => {
     return res.status(204).send();
 });
 
+router.get('/scorer-conflicts', async (req: Request, res: Response) => {
+    if (!req?.tournament) return res.status(403).json({ message: 'No access to tournament' });
+    const conflicts = await organizerProvider.getAllConflicts(req.tournament);
+    return res.status(200).json(conflicts);
+});
+
+router.get('/scorers/:scorerId/conflicts', async (req: Request, res: Response) => {
+    if (!req?.tournament) return res.status(403).json({ message: 'No access to tournament' });
+    const scorerId = req.params.scorerId as string;
+    if (!uuidRegex.test(scorerId)) return res.status(400).json({ message: 'Invalid scorer ID' });
+    const conflicts = await organizerProvider.getConflicts(scorerId);
+    return res.status(200).json(conflicts);
+});
+
+router.post('/scorers/:scorerId/conflicts', async (req: Request, res: Response) => {
+    if (!req?.tournament) return res.status(403).json({ message: 'No access to tournament' });
+    const scorerId = req.params.scorerId as string;
+    const { team_id } = req.body;
+    if (!uuidRegex.test(scorerId) || !uuidRegex.test(team_id)) return res.status(400).json({ message: 'Invalid ID' });
+    const result = await organizerProvider.addConflict(scorerId, team_id);
+    if (!result) return res.status(409).json({ message: 'Conflict already exists' });
+    return res.status(201).json(result);
+});
+
+router.delete('/scorers/:scorerId/conflicts', async (req: Request, res: Response) => {
+    if (!req?.tournament) return res.status(403).json({ message: 'No access to tournament' });
+    const scorerId = req.params.scorerId as string;
+    const { team_id } = req.body;
+    if (!uuidRegex.test(scorerId) || !uuidRegex.test(team_id)) return res.status(400).json({ message: 'Invalid ID' });
+    const ok = await organizerProvider.removeConflict(scorerId, team_id);
+    if (!ok) return res.status(404).json({ message: 'Conflict not found' });
+    return res.status(204).send();
+});
+
 
 
 
