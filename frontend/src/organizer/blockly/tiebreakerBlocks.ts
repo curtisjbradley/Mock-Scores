@@ -9,12 +9,6 @@ const tiebreakerRule = {
       type: 'field_dropdown',
       name: 'STAT',
       options: [
-        ['Wins', 'wins'],
-        ['Ballots', 'ballots'],
-        ['Point Differential', 'pd'],
-        ['Combined Strength', 'cs'],
-        ['Cumulative % Points', 'cumulative_pct'],
-        ['Head-to-Head (2-way)', 'head_to_head'],
       ],
     },
     {

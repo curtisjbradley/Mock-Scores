@@ -1,5 +1,3 @@
-import { useState } from 'react'
-import { createPortal } from 'react-dom'
 import type { computeStandings } from '../../organizer/blockly/standingsEngine'
 import TiebreakerViewer from '../../organizer/blockly/TiebreakerViewer'
 
@@ -10,16 +8,9 @@ interface Props {
 }
 
 export default function StandingsTab({ rows, cols, standingsXml }: Props) {
-    const [showTiebreakers, setShowTiebreakers] = useState(false)
-
     if (rows.length === 0) return <p className="coach-empty">No standings available yet.</p>
     return (
         <>
-            {standingsXml && (
-                <div className="tab-actions">
-                    <button className="sb-expand-btn" onClick={() => setShowTiebreakers(true)}>⚖ See Tiebreakers</button>
-                </div>
-            )}
             <table className="dash-standings-table">
                 <thead><tr>
                     <th>#</th><th>Code</th><th>Team</th>
@@ -38,9 +29,10 @@ export default function StandingsTab({ rows, cols, standingsXml }: Props) {
                     </tr>
                 ))}</tbody>
             </table>
-            {showTiebreakers && standingsXml && createPortal(
-                <TiebreakerViewer standingsXml={standingsXml} onClose={() => setShowTiebreakers(false)} />,
-                document.body
+            {standingsXml && (
+                <div style={{ marginTop: '24px' }}>
+                    <TiebreakerViewer standingsXml={standingsXml} />
+                </div>
             )}
         </>
     )

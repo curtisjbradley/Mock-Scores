@@ -20,7 +20,6 @@ function updateDropdowns(ws: Blockly.WorkspaceSvg, colOptions: [string, string][
       const field = block.getField(fieldName) as Blockly.FieldDropdown | null;
       if (!field) return;
       const currentValue = field.getValue() as string;
-      (field as unknown as { menuGenerator_: [string, string][] }).menuGenerator_ = options;
       const validValues = options.map(o => o[1]);
       if (validValues.length && !validValues.includes(currentValue)) {
         (field as unknown as { value_: string }).value_ = validValues[0];
@@ -227,10 +226,14 @@ export default function StandingsBuilder({ onChange, initialXml }: Props) {
         throw new Error('Missing or invalid statsXml');
       if (typeof parsed?.standingsXml !== 'string' || !parsed.standingsXml.trim())
         throw new Error('Missing or invalid standingsXml');
-      // Validate XML is parseable before touching workspaces
       Blockly.utils.xml.textToDom(parsed.statsXml);
       Blockly.utils.xml.textToDom(parsed.standingsXml);
       loadXmlIntoWs(statsWs.current!, parsed.statsXml);
+      // Repopulate dynamicOptions from freshly-loaded stats before loading standings
+      const cfg = extractStandingsConfig(statsWs.current!, standingsWs.current!);
+      dynamicOptions.col = buildStatOptions(cfg.statDefs.filter(d => !d.intermediate));
+      dynamicOptions.tb = buildTiebreakerOptions(cfg.statDefs.filter(d => !d.intermediate));
+      dynamicOptions.intermediate = buildStatOptions(cfg.statDefs.filter(d => d.intermediate));
       loadXmlIntoWs(standingsWs.current!, parsed.standingsXml);
       setPasteError('');
       setPasteValue('');

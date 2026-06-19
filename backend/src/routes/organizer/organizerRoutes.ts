@@ -51,8 +51,8 @@ router.post("/", async (req: Request, res: Response) => {
 
 router.post("/duplicate/:tournamentId", verifyTournamentAccess, async (req: Request, res: Response) => {
     if (!req?.tournament) return res.status(403).json({ message: 'No access to tournament' });
-    const { scorers = false, courtrooms = false, scoringCategories = false, witnesses = false, format = false } = req.body ?? {};
-    const tournament = await tournamentProvider.duplicateTournament(req.tournament, { scorers, courtrooms, scoringCategories, witnesses, format });
+    const { scorers = false, courtrooms = false, scoringCategories = false, witnesses = false, format = false, tiebreaker = false } = req.body ?? {};
+    const tournament = await tournamentProvider.duplicateTournament(req.tournament, { scorers, courtrooms, scoringCategories, witnesses, format, tiebreaker });
     if (!tournament) return res.status(500).json({ message: 'Unable to duplicate tournament' });
     if (!req.session) return res.status(401).json({ message: 'Invalid session' });
     await tournamentProvider.addTournamentOrganizer(tournament.id, req.session.userId, 'owner');

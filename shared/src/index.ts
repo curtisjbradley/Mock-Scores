@@ -58,6 +58,15 @@ export interface IStandingsTemplate {
     config_id: string
 }
 
+export interface IDuplicateOptions {
+    scorers: boolean
+    courtrooms: boolean
+    scoringCategories: boolean
+    witnesses: boolean
+    format: boolean
+    tiebreaker: boolean
+}
+
 export interface ScorecardPayload {
     pairingID: string
     scores: ScoreSection[]

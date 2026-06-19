@@ -120,10 +120,10 @@ export function extractStandingsConfig(
   const columns: ColumnConfig[] = [];
   for (const b of walkFromHat(statsWs, 'define_visible_stats')) {
     if (b.type === 'standings_column') {
-      columns.push({
-        stat: b.getFieldValue('STAT') as string,
-        label: (b.getFieldValue('LABEL') as string) || b.getFieldValue('STAT'),
-      });
+      const stat = b.getFieldValue('STAT') as string;
+      if (stat && stat !== '__none__') {
+        columns.push({ stat, label: (b.getFieldValue('LABEL') as string) || stat });
+      }
     }
   }
 
@@ -141,4 +141,26 @@ export function extractStandingsConfig(
   }
 
   return { statDefs, columns, tiebreakers };
+}
+
+/** Parse columns directly from statsXml DOM — avoids FieldDropdown fallback in headless workspaces */
+export function parseColumnsFromXml(statsXml: string): ColumnConfig[] {
+  try {
+    const dom = (new DOMParser()).parseFromString(statsXml, 'text/xml')
+    const hat = dom.querySelector('block[type="define_visible_stats"]')
+    if (!hat) return []
+    const cols: ColumnConfig[] = []
+    let next = hat.querySelector(':scope > next > block')
+    while (next) {
+      if (next.getAttribute('type') === 'standings_column') {
+        const stat = next.querySelector(':scope > field[name="STAT"]')?.textContent ?? ''
+        const label = next.querySelector(':scope > field[name="LABEL"]')?.textContent ?? stat
+        if (stat && stat !== '__none__') cols.push({ stat, label: label || stat })
+      }
+      next = next.querySelector(':scope > next > block')
+    }
+    return cols
+  } catch {
+    return []
+  }
 }

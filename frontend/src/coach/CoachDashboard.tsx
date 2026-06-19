@@ -5,9 +5,9 @@ import '../organizer/styles/organizer.css'
 import '../organizer/styles/tabs.css'
 import '../organizer/styles/standings.css'
 import '../organizer/styles/pairings.css'
-import { apiFetch, getSession } from '../auth/auth'
+import { apiFetch } from '../auth/auth'
 import { computeStandings } from '../organizer/blockly/standingsEngine'
-import { extractStandingsConfig } from '../organizer/blockly/standingsGenerator'
+import { extractStandingsConfig, parseColumnsFromXml } from '../organizer/blockly/standingsGenerator'
 import { standingsBlockDefs } from '../organizer/blockly/standingsBlocks'
 import { tiebreakerBlockDefs } from '../organizer/blockly/tiebreakerBlocks'
 import type {
@@ -42,9 +42,7 @@ export default function CoachDashboard({ isOrganizerView = false }: Props) {
     const [standingsRows, setStandingsRows] = useState<ReturnType<typeof computeStandings>>([])
     const [standingsCols, setStandingsCols] = useState<{ stat: string; label: string }[]>([])
     const [standingsXml, setStandingsXml] = useState<string | null>(null)
-    const [currentUserId, setCurrentUserId] = useState<string | null>(null)
 
-    useEffect(() => { getSession().then(s => s && setCurrentUserId(s.userId)) }, [])
 
     useEffect(() => {
         if (!id) return
@@ -84,8 +82,8 @@ export default function CoachDashboard({ isOrganizerView = false }: Props) {
         if (tab === 'standings' && standingsRows.length === 0) {
             apiFetch(`/api/coach/tournaments/${id}/standings`).then(r => r.ok ? r.json() : null).then(data => {
                 if (!data?.config) return
-                Blockly.common.defineBlocks(standingsBlockDefs)
-                Blockly.common.defineBlocks(tiebreakerBlockDefs)
+                try { Blockly.common.defineBlocks(standingsBlockDefs) } catch { /* already defined */ }
+                try { Blockly.common.defineBlocks(tiebreakerBlockDefs) } catch { /* already defined */ }
                 const statsWs = new Blockly.Workspace()
                 const standingsWs = new Blockly.Workspace()
                 Blockly.Xml.domToWorkspace(Blockly.utils.xml.textToDom(data.config.statsXml), statsWs)
@@ -108,10 +106,10 @@ export default function CoachDashboard({ isOrganizerView = false }: Props) {
                         dTeam.pairings.push({ opponent: pTeam.code, ballots: [{ pointsFor: dPts, pointsAgainst: pPts }], won_presider_tiebreaker: false })
                     }
                 }
-                setStandingsCols(config.columns)
+                setStandingsCols(parseColumnsFromXml(data.config.statsXml))
                 setStandingsRows(computeStandings([...teamMap.values()], config))
                 setStandingsXml(data.config.standingsXml)
-            }).catch(() => {})
+            }).catch((e) => { console.error('Standings computation failed:', e) })
         }
     // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [tab, id, tournament])
@@ -182,7 +180,6 @@ export default function CoachDashboard({ isOrganizerView = false }: Props) {
                 {tab === 'coaches' && (
                     <CoachesTab
                         coaches={coaches}
-                        currentUserId={currentUserId}
                         isOrganizerView={isOrganizerView}
                         onAdd={addCoach}
                         onRemove={removeCoach}

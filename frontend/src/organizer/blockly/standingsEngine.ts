@@ -22,6 +22,7 @@ interface PairingCtx {
   ballot_pa: number;       // sum of ballot pa
   ballot_pd: number;       // sum of (pf - pa) per ballot
   ballot_raw: number;      // sum of pf per ballot (same as ballot_pf, alias for clarity)
+  num_ballots: number;
 }
 
 function pairingCtx(p: Pairing): PairingCtx {
@@ -31,12 +32,15 @@ function pairingCtx(p: Pairing): PairingCtx {
   const pf = p.ballots.reduce((s, b) => s + b.pointsFor, 0);
   const pa = p.ballots.reduce((s, b) => s + b.pointsAgainst, 0);
   const pd = p.ballots.reduce((s, b) => s + (b.pointsFor - b.pointsAgainst), 0);
+  const nb = p.ballots.length;
+
   return {
     ballots_won: bw, ballots_lost: bl, ballots_tied: bt,
     points_for: pf, points_against: pa,
     won_presider_tb: p.won_presider_tiebreaker ? 1 : 0,
     ballot_pf: pf, ballot_pa: pa,
     ballot_pd: pd, ballot_raw: pf,
+    num_ballots: nb
   };
 }
 

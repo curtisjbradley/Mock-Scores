@@ -8,14 +8,14 @@ export default function ScheduleTab({ schedule }: { schedule: ICoachScheduleRoun
         <>
             {schedule.map(round => (
                 <div key={round.round_id} style={{ marginBottom: 16 }}>
-                    <h3 style={{ margin: '8px 0 6px' }}>{round.name}{round.round_time ? ` — ${fmt(round.round_time)}` : ''}</h3>
+                    <h3 style={{ margin: '8px 0 6px' }}>{round.name} {round.round_time ? ` — ${fmt(round.round_time)}` : '(Time TBD)'}</h3>
                     <table className="dash-standings-table">
                         <thead><tr><th>Prosecution</th><th>Defense</th><th>Courtroom</th></tr></thead>
                         <tbody>{round.pairings.map(p => (
                             <tr key={p.pairing_id}>
                                 <td>{p.p_team_code} — {p.p_team_name}</td>
                                 <td>{p.d_team_code} — {p.d_team_name}</td>
-                                <td>{p.courtroom_name ?? '—'}</td>
+                                <td>{p.courtroom_name ?? 'TBD'}</td>
                             </tr>
                         ))}</tbody>
                     </table>

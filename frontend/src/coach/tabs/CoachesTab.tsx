@@ -4,14 +4,13 @@ import { ConfirmRemoveModal, AddOrganizerModal } from '../../organizer/component
 
 interface Props {
     coaches: ICoach[]
-    currentUserId: string | null
     isOrganizerView: boolean
     onAdd: (email: string) => void
     onRemove: (coachId: string) => void
     onMakeOwner: (coachId: string) => void
 }
 
-export default function CoachesTab({ coaches, currentUserId, isOrganizerView, onAdd, onRemove, onMakeOwner }: Props) {
+export default function CoachesTab({ coaches, isOrganizerView, onAdd, onRemove, onMakeOwner }: Props) {
     const [showAdd, setShowAdd] = useState(false)
     const [confirmRemove, setConfirmRemove] = useState<ICoach | null>(null)
     const [confirmOwner, setConfirmOwner] = useState<ICoach | null>(null)
@@ -30,7 +29,7 @@ export default function CoachesTab({ coaches, currentUserId, isOrganizerView, on
                             <td><span className="dash-judge-name">{c.email}</span></td>
                             <td><span className={`ss-chip ss-chip--${c.is_owner ? 'submitted' : 'pending'}`}>{c.is_owner ? 'Owner' : 'Coach'}</span></td>
                             <td><span className={`ss-chip ss-chip--${c.has_joined ? 'submitted' : 'pending'}`}>{c.has_joined ? 'Joined' : 'Invited'}</span></td>
-                            <td>{!c.is_owner && c.coach_id !== currentUserId && (
+                            <td>{!c.is_owner  && (
                                 <div className="dash-actions-cell">
                                     {isOrganizerView && c.has_joined && (
                                         <button className="dash-remove-btn" onClick={() => setConfirmOwner(c)}>Make Owner</button>
@@ -63,6 +62,7 @@ export default function CoachesTab({ coaches, currentUserId, isOrganizerView, on
                     message={`Make ${confirmOwner.name} the new team owner? The current owner will become a regular coach.`}
                     onCancel={() => setConfirmOwner(null)}
                     onConfirm={() => { onMakeOwner(confirmOwner.coach_id); setConfirmOwner(null) }}
+                    confirmLabel="Confirm"
                 />
             )}
         </>
