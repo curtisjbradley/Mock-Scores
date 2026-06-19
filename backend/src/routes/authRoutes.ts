@@ -1,9 +1,17 @@
 import { Router, Request, Response } from 'express';
+import rateLimit from 'express-rate-limit';
 import {AuthProvider} from "../providers/authProvider";
 
 import {verifyUser} from "../authUtils";
 
 const router = Router();
+
+const changePasswordLimiter = rateLimit({
+    windowMs: 15 * 60 * 1000,
+    max: 5,
+    standardHeaders: true,
+    legacyHeaders: false,
+});
 
 
 const authProvider = new AuthProvider();
@@ -55,7 +63,7 @@ router.get('/session', verifyUser, async (req: Request, res: Response) => {
    return res.status(200).json(req.session);
 });
 
-router.post('/change-password', verifyUser, async (req: Request, res: Response) => {
+router.post('/change-password', changePasswordLimiter, verifyUser, async (req: Request, res: Response) => {
     if (!req.session) return res.status(401).json({ message: 'Not verified.' });
     const { currentPassword, newPassword } = req.body as { currentPassword?: string; newPassword?: string };
     if (!currentPassword || !newPassword) return res.status(400).json({ message: 'Missing required fields' });
