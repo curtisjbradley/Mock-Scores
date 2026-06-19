@@ -25,10 +25,10 @@ export async function getSchedule(tournamentId: string): Promise<ICoachScheduleR
         round_id: r.round_id,
         name: r.name,
         round_time: r.round_time?.toISOString() ?? null,
-        pairings: (await dbQuery<{ pairing_id: string; p_team_name: string; p_team_code: string; d_team_name: string; d_team_code: string; courtroom_name: string | null }>(
+        pairings: (await dbQuery<{ pairing_id: string; p_team_id: string; p_team_name: string; p_team_code: string; d_team_id: string; d_team_name: string; d_team_code: string; courtroom_name: string | null }>(
             `SELECT p.pairing_id,
-                    pt.name AS p_team_name, pt.code AS p_team_code,
-                    dt.name AS d_team_name, dt.code AS d_team_code,
+                    pt.id AS p_team_id, pt.name AS p_team_name, pt.code AS p_team_code,
+                    dt.id AS d_team_id, dt.name AS d_team_name, dt.code AS d_team_code,
                     c.name AS courtroom_name
              FROM pairings p
              JOIN teams pt ON pt.id = p.p_team
@@ -66,7 +66,6 @@ export async function getResults(tournamentId: string): Promise<ICoachResultRoun
     })));
 }
 
-// 1. Coaches
 export async function getCoaches(teamId: string): Promise<ICoach[]> {
     const joined = (await dbQuery<ICoach>(
         `SELECT tc.coach_id, a.first_name || ' ' || a.last_name AS name, a.email, tc.is_owner, true AS has_joined
@@ -131,7 +130,6 @@ export async function transferOwnership(teamId: string, newOwnerCoachId: string)
     return true;
 }
 
-// 2. Student roster
 export async function getStudents(teamId: string): Promise<IStudent[]> {
     return (await dbQuery<IStudent>(
         `SELECT student_id, team_id, student_name, pronouns FROM team_rostered_students WHERE team_id=$1 ORDER BY student_name`,
@@ -151,7 +149,6 @@ export async function removeStudent(studentId: string): Promise<boolean> {
     return !!(await dbQuery(`DELETE FROM team_rostered_students WHERE student_id=$1`, [studentId]));
 }
 
-// 3. Witness call order
 export async function getWitnessCallOrder(pairingId: string, teamId: string): Promise<IWitnessCallOrder[]> {
     return (await dbQuery<IWitnessCallOrder>(
         `SELECT w.id, w.pairing_id, w.team_id, w.witness_id, cw.name AS witness_name, w.position
@@ -173,11 +170,10 @@ export async function setWitnessCallOrder(pairingId: string, teamId: string, wit
     return true;
 }
 
-// 4. Student assignments
 export async function getStudentAssignments(pairingId: string, teamId: string): Promise<IStudentAssignment[]> {
     return (await dbQuery<IStudentAssignment>(
         `SELECT sa.id, sa.pairing_id, sa.team_id, sa.field_id, sf.label AS field_label,
-                sa.student_id, trs.student_name
+                sa.witness_id, sa.student_id, trs.student_name
          FROM student_assignments sa
          JOIN scoring_fields sf ON sf.id = sa.field_id
          JOIN team_rostered_students trs ON trs.student_id = sa.student_id
@@ -186,20 +182,19 @@ export async function getStudentAssignments(pairingId: string, teamId: string): 
     ))?.rows ?? [];
 }
 
-export async function upsertStudentAssignment(pairingId: string, teamId: string, fieldId: string, studentId: string): Promise<IStudentAssignment | null> {
+export async function upsertStudentAssignment(pairingId: string, teamId: string, fieldId: string, studentId: string, witnessId?: string | null): Promise<IStudentAssignment | null> {
     return (await dbQuery<IStudentAssignment>(
-        `INSERT INTO student_assignments (pairing_id, team_id, field_id, student_id)
-         VALUES ($1,$2,$3,$4)
-         ON CONFLICT (pairing_id, team_id, field_id) DO UPDATE SET student_id=EXCLUDED.student_id
+        `INSERT INTO student_assignments (pairing_id, team_id, field_id, witness_id, student_id)
+         VALUES ($1,$2,$3,$4,$5)
+         ON CONFLICT (pairing_id, team_id, field_id, witness_id) DO UPDATE SET student_id=EXCLUDED.student_id
          RETURNING id, pairing_id, team_id, field_id,
            (SELECT label FROM scoring_fields WHERE id=$3) AS field_label,
-           student_id,
-           (SELECT student_name FROM team_rostered_students WHERE student_id=$4) AS student_name`,
-        [pairingId, teamId, fieldId, studentId]
+           witness_id, student_id,
+           (SELECT student_name FROM team_rostered_students WHERE student_id=$5) AS student_name`,
+        [pairingId, teamId, fieldId, witnessId ?? null, studentId]
     ))?.rows[0] ?? null;
 }
 
-// 5. Competition field
 export async function getCompetitionField(tournamentId: string): Promise<ICompetitionTeam[]> {
     return (await dbQuery<ICompetitionTeam>(
         `SELECT id, name, code FROM teams WHERE tournament_id=$1 ORDER BY name`,
@@ -207,7 +202,27 @@ export async function getCompetitionField(tournamentId: string): Promise<ICompet
     ))?.rows ?? [];
 }
 
-// 6. Standings data (raw ballots + config for client-side computation)
+export async function getWitnessesForTournament(tournamentId: string): Promise<{ id: string; name: string; side: string }[]> {
+    return (await dbQuery<{ id: string; name: string; side: string }>(
+        `SELECT cw.id, cw.name, cw.side
+         FROM case_witnesses cw
+         JOIN tournament_format tf ON tf.format_id = cw.case_format
+         JOIN tournaments t ON t.case_format_id = tf.format_id
+         WHERE t.id = $1`,
+        [tournamentId]
+    ))?.rows ?? [];
+}
+
+export async function getFormatForTournament(tournamentId: string): Promise<{ p_witnesses_called: number; d_witnesses_called: number } | null> {
+    return (await dbQuery<{ p_witnesses_called: number; d_witnesses_called: number }>(
+        `SELECT tf.p_witnesses_called, tf.d_witnesses_called
+         FROM tournament_format tf
+         JOIN tournaments t ON t.case_format_id = tf.format_id
+         WHERE t.id = $1`,
+        [tournamentId]
+    ))?.rows[0] ?? null;
+}
+
 export async function getStandingsData(tournamentId: string): Promise<{
     config: { statsXml: string; standingsXml: string } | null;
     teams: { id: string; name: string; code: string }[];

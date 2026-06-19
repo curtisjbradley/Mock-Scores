@@ -60,7 +60,7 @@ export default function TiebreakersTab({ tournamentId, onConfigChange }: Props) 
             <StandingsBuilder onChange={handleChange} initialXml={initialXml} />
 
             <div className="tb-save-bar">
-                <button className="org-new-btn" onClick={handleSave} disabled={saving || !dirty}>
+                <button className="btn-confirm" onClick={handleSave} disabled={saving || !dirty}>
                     {saving ? 'Saving…' : 'Save changes'}
                 </button>
                 {saveMsg && <span className={`tb-save-msg ${saveMsg === 'Saved!' ? 'tb-save-msg--ok' : 'tb-save-msg--err'}`}>{saveMsg}</span>}

@@ -141,7 +141,7 @@ export default class WitnessesTab extends Component<{ tournamentId: string }, St
                 )}
 
                 <div className="tc-actions">
-                    <button type="button" className="org-new-btn" onClick={this.handleSave} disabled={saving}>
+                    <button type="button" className="btn-confirm" onClick={this.handleSave} disabled={saving}>
                         {saving ? 'Saving…' : 'Save'}
                     </button>
                 </div>

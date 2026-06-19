@@ -141,7 +141,7 @@ export default function TournamentScoringFields({ categories, onChange, caseForm
                 {pMax !== dMax && <div className="tc-error-banner">Max scores are unequal — P: {pMax}, D: {dMax}.</div>}
 
                 <div className="tc-actions">
-                    <button type="submit" className="org-new-btn">{submitLabel ?? (isEditing ? 'Save changes' : 'Create tournament')}</button>
+                    <button type="submit" className="btn-confirm">{submitLabel ?? (isEditing ? 'Save changes' : 'Create tournament')}</button>
                 </div>
             </form>
         </>

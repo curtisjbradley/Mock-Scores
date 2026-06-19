@@ -87,9 +87,9 @@ router.get("/pairings/:pairingId/assignments", async (req: Request, res: Respons
 router.put("/pairings/:pairingId/assignments", async (req: Request, res: Response) => {
     const pairingId = req.params.pairingId as string;
     if (!uuidRegex.test(pairingId)) return res.status(400).json({ message: "Invalid pairing ID" });
-    const { field_id, student_id } = req.body as { field_id?: string; student_id?: string };
+    const { field_id, student_id, witness_id } = req.body as { field_id?: string; student_id?: string; witness_id?: string };
     if (!field_id || !student_id) return res.status(400).json({ message: "Missing field_id or student_id" });
-    const result = await coach.upsertStudentAssignment(pairingId, req.params.teamId as string, field_id, student_id);
+    const result = await coach.upsertStudentAssignment(pairingId, req.params.teamId as string, field_id, student_id, witness_id ?? null);
     if (!result) return res.status(500).json({ message: "Unable to save assignment" });
     return res.status(200).json(result);
 });

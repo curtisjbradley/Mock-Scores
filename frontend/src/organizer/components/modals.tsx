@@ -15,7 +15,7 @@ export function ConfirmRemoveModal({ message, onCancel, onConfirm, confirmLabel 
                 <h2>Are you sure?</h2>
                 <p>{message}</p>
                 <div className="confirm-actions">
-                    <button type="button" onClick={onCancel}>Cancel</button>
+                    <button type="button" className="btn-cancel" onClick={onCancel}>Cancel</button>
                     <button type="button" className="confirm-btn-danger" onClick={onConfirm}>{confirmLabel}</button>
                 </div>
             </div>
@@ -51,8 +51,8 @@ export function AddOrganizerModal({ onClose, onAdd, title = 'Add organizer', des
                     <input id="org-email" type="email" required value={email} onChange={e => setEmail(e.target.value)} placeholder="organizer@crf.org"
                         className={`modal-input${email && !isValidEmail(email) ? ' modal-input--invalid' : ''}`} />
                     <div className="confirm-actions">
-                        <button type="button" onClick={onClose}>Cancel</button>
-                        <button type="submit" disabled={!valid}>{submitLabel}</button>
+                        <button type="button" className="btn-cancel" onClick={onClose}>Cancel</button>
+                        <button type="submit" className="btn-confirm" disabled={!valid}>{submitLabel}</button>
                     </div>
                 </form>
             </div>
@@ -95,8 +95,8 @@ export function EditTeamModal({ team, existingNames, onClose, onSave }: {
                         value={code} onChange={e => setCode(e.target.value)}
                         placeholder={name.trim() || team.name} />
                     <div className="confirm-actions">
-                        <button type="button" onClick={onClose}>Cancel</button>
-                        <button type="submit" disabled={!valid}>Save</button>
+                        <button type="button" className="btn-cancel" onClick={onClose}>Cancel</button>
+                        <button type="submit" className="btn-confirm" disabled={!valid}>Save</button>
                     </div>
                 </form>
             </div>

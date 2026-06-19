@@ -76,8 +76,8 @@ export default function TournamentDetails({ info, onChange, onNext, onBack }: Pr
             </div>
 
             <div className="tc-actions">
-                <button type="button" className="tc-cancel-btn" onClick={onBack}>← Back</button>
-                <button type="submit" className="org-new-btn">Next →</button>
+                <button type="button" className="btn-cancel" onClick={onBack}>← Back</button>
+                <button type="submit" className="btn-confirm">Next →</button>
             </div>
         </form>
     )

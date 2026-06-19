@@ -175,7 +175,22 @@ export default function CoachDashboard({ isOrganizerView = false }: Props) {
                     ))}
                 </div>
 
-                {tab === 'schedule' && <ScheduleTab schedule={schedule} />}
+                {tab === 'schedule' && <ScheduleTab
+                    schedule={schedule}
+                    teamId={teamId}
+                    onAssignRoles={(pairingId, side) => navigate(
+                        isOrganizerView
+                            ? `/organizer/${id}/school/${teamId}/assign-roles/${pairingId}/${side}`
+                            : `/coach/${id}/assign-roles/${teamId}/${pairingId}/${side}`
+                    )}
+                    onWitnessOrder={(pairingId) => {
+                        const pairing = schedule.flatMap(r => r.pairings).find(p => p.pairing_id === pairingId)
+                        const side = pairing?.d_team_code === tournament.team_code ? 'd' : 'p'
+                        navigate(isOrganizerView
+                            ? `/organizer/${id}/school/${teamId}/witness-order/${pairingId}?side=${side}`
+                            : `/coach/${id}/witness-order/${teamId}/${pairingId}?side=${side}`)
+                    }}
+                />}
                 {tab === 'results' && <ResultsTab results={results} />}
                 {tab === 'coaches' && (
                     <CoachesTab

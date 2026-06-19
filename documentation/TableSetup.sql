@@ -425,6 +425,7 @@ create table student_assignments (
     pairing_id uuid not null references pairings(pairing_id) on delete cascade,
     team_id    uuid not null references teams(id) on delete cascade,
     field_id   uuid not null references scoring_fields(id) on delete cascade,
+    witness_id uuid references case_witnesses(id) on delete cascade,
     student_id uuid not null references team_rostered_students(student_id) on delete cascade,
-    unique (pairing_id, team_id, field_id)
+    unique (pairing_id, team_id, field_id, witness_id)
 );

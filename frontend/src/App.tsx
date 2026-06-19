@@ -17,6 +17,8 @@ const ScorecardViewer = lazy(() => import('./organizer/pages/ScorecardViewer.tsx
 const RoundView = lazy(() => import('./organizer/pages/RoundView.tsx'));
 const CoachHome = lazy(() => import('./coach/CoachHome.tsx'));
 const CoachDashboard = lazy(() => import('./coach/CoachDashboard.tsx'));
+const AssignRoles = lazy(() => import('./coach/pages/AssignRoles.tsx'));
+const WitnessCallOrder = lazy(() => import('./coach/pages/WitnessCallOrder.tsx'));
 const Account = lazy(() => import('./auth/Account.tsx').then(m => ({ default: m.Account })));
 const LoginPage = lazy(() => import('./auth/LoginPage.tsx'));
 const Register = lazy(() => import('./auth/Register.tsx'));
@@ -43,6 +45,8 @@ function App() {
                   <Route path=":id" element={<TournamentDashboard />} />
                   <Route path=":id/round/:round" element={<RoundView />} />
                   <Route path=":id/school/:schoolId" element={<CoachDashboard isOrganizerView />} />
+                  <Route path=":id/school/:teamId/assign-roles/:pairingId/:side" element={<AssignRoles />} />
+                  <Route path=":id/school/:teamId/witness-order/:pairingId" element={<WitnessCallOrder />} />
                   <Route path=":id/scoresheet/:pairingId/:judgeId" element={<ScorecardViewer />} />
                   <Route path=":id/*" element={<NotFound />} />
 
@@ -51,6 +55,8 @@ function App() {
               <Route path="coach" element={<ProtectedRoute />}>
                 <Route index element={<CoachHome />} />
                 <Route path=":id" element={<CoachDashboard />} />
+                <Route path=":id/assign-roles/:teamId/:pairingId/:side" element={<AssignRoles />} />
+                <Route path=":id/witness-order/:teamId/:pairingId" element={<WitnessCallOrder />} />
                 <Route path=":id/:tab" element={<CoachDashboard />} />
                   <Route path=":id/*" element={<NotFound />} />
               </Route>
