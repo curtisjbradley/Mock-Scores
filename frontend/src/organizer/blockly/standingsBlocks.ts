@@ -7,6 +7,7 @@ export const PAIRING_FIELDS: [string, string][] = [
   ['Ballots Tied',             'ballots_tied'],
   ['Points For (sum)',         'points_for'],
   ['Points Against (sum)',     'points_against'],
+  ['Number of Ballots', 'num_ballots'],
   ['Won Presider Tiebreaker',  'won_presider_tb'],  // 1 or 0
 ];
 
@@ -76,7 +77,7 @@ const trimmedStat = {
   type: 'trimmed_stat',
   message0: 'Define Stat %1 = %2 of %3 dropping %4 best and worst',
   args0: [
-    { type: 'field_input',    name: 'NAME',  text: 'Trimmed PD' },
+    { type: 'field_input',    name: 'NAME',  text: 'Trimmed Stat' },
     { type: 'field_dropdown', name: 'AGG',   options: AGGREGATES },
     { type: 'input_value',    name: 'VALUE', check: 'Number' },
     { type: 'field_number',   name: 'TRIM',  value: 1, min: 1, max: 10, precision: 1 },
@@ -172,7 +173,7 @@ const intermediateStatHat = {
   type: 'intermediate_stat_hat',
   message0: 'Define Intermediate Stat %1 = %2',
   args0: [
-    { type: 'field_input', name: 'NAME', text: 'Win' },
+    { type: 'field_input', name: 'NAME', text: 'My Intermediate Stat' },
     { type: 'input_value', name: 'VALUE', check: 'Number' },
   ],
   colour: 210,

@@ -1,28 +1,22 @@
 import { useState } from 'react'
 import '../../judges/styles/modal.css'
-
-interface DuplicateOptions {
-    scorers: boolean
-    courtrooms: boolean
-    scoringCategories: boolean
-    witnesses: boolean
-    format: boolean
-}
+import type { IDuplicateOptions } from '@mock-scores/shared'
 
 export function DuplicateTournamentModal({ tournamentName, onClose, onDuplicate }: {
     tournamentName: string
     onClose: () => void
-    onDuplicate: (options: DuplicateOptions) => void
+    onDuplicate: (options: IDuplicateOptions) => void
 }) {
-    const [options, setOptions] = useState<DuplicateOptions>({
+    const [options, setOptions] = useState<IDuplicateOptions>({
         scorers: true,
         courtrooms: true,
         scoringCategories: true,
         witnesses: true,
         format: true,
+        tiebreaker: true,
     })
 
-    const toggle = (key: keyof DuplicateOptions) =>
+    const toggle = (key: keyof IDuplicateOptions) =>
         setOptions(prev => ({ ...prev, [key]: !prev[key] }))
 
     const handleSubmit = (e: React.FormEvent) => {
@@ -31,12 +25,13 @@ export function DuplicateTournamentModal({ tournamentName, onClose, onDuplicate 
         onClose()
     }
 
-    const items: { key: keyof DuplicateOptions; label: string }[] = [
+    const items: { key: keyof IDuplicateOptions; label: string }[] = [
         { key: 'format', label: 'Case format' },
         { key: 'witnesses', label: 'Witnesses' },
         { key: 'scoringCategories', label: 'Scoring categories' },
         { key: 'scorers', label: 'Scorers' },
         { key: 'courtrooms', label: 'Courtrooms' },
+        { key: 'tiebreaker', label: 'Tiebreakers + Standings' },
     ]
 
     return (

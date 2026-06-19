@@ -58,6 +58,15 @@ export interface IStandingsTemplate {
     config_id: string
 }
 
+export interface IDuplicateOptions {
+    scorers: boolean
+    courtrooms: boolean
+    scoringCategories: boolean
+    witnesses: boolean
+    format: boolean
+    tiebreaker: boolean
+}
+
 export interface ScorecardPayload {
     pairingID: string
     scores: ScoreSection[]
@@ -201,8 +210,10 @@ export interface ICoachTournament {
 
 export interface ICoachSchedulePairing {
     pairing_id: string;
+    p_team_id: string;
     p_team_name: string;
     p_team_code: string;
+    d_team_id: string;
     d_team_name: string;
     d_team_code: string;
     courtroom_name: string | null;
@@ -262,6 +273,7 @@ export interface IStudentAssignment {
     team_id: string;
     field_id: string;
     field_label: string;
+    witness_id: string | null;
     student_id: string;
     student_name: string;
 }

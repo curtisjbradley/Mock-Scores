@@ -1,7 +1,7 @@
 import { dbQuery } from '../db';
 import type {
     IScorer, TournamentPayload, ITournament, IOrganizer, IWitnesses, IScoringCategory, ICourtroom, ITeam,
-    IRound
+    IRound, IDuplicateOptions
 } from '@mock-scores/shared';
 import type {
     ICaseWitnessRow,
@@ -483,13 +483,7 @@ export class OrganizerProvider {
         return !!((await dbQuery('DELETE FROM teams WHERE id=$1 RETURNING *', [teamId]))?.rows[0]);
     }
 
-    async duplicateTournament(sourceTournamentID: string, options: {
-        scorers: boolean
-        courtrooms: boolean
-        scoringCategories: boolean
-        witnesses: boolean
-        format: boolean
-    }): Promise<ITournament | null> {
+    async duplicateTournament(sourceTournamentID: string, options: IDuplicateOptions): Promise<ITournament | null> {
         const source = await this.getTournament(sourceTournamentID);
         if (!source) return null;
 
@@ -574,6 +568,31 @@ export class OrganizerProvider {
                     dbQuery('INSERT INTO courtrooms (id, tournament_id, name, location) VALUES ($1,$2,$3,$4)',
                         [randomUUID(), newTournamentID, c.name, c.location ?? null])
                 ));
+            }
+        }
+
+        if (options.tiebreaker) {
+            const sourceConfig = await dbQuery<{ id: string; stats_xml: string; standings_xml: string }>(
+                `SELECT sc.id, sc.stats_xml, sc.standings_xml
+                 FROM tournaments t JOIN standings_configs sc ON sc.id = t.standings_config_id
+                 WHERE t.id = $1`,
+                [sourceTournamentID]
+            );
+            const cfg = sourceConfig?.rows[0];
+            if (cfg) {
+                const isTemplate = !!(await dbQuery<{ id: string }>(
+                    'SELECT id FROM standings_templates WHERE config_id=$1 LIMIT 1', [cfg.id]
+                ))?.rows[0];
+
+                if (isTemplate) {
+                    await dbQuery('UPDATE tournaments SET standings_config_id=$1 WHERE id=$2', [cfg.id, newTournamentID]);
+                } else {
+                    const newCfg = (await dbQuery<{ id: string }>(
+                        'INSERT INTO standings_configs (stats_xml, standings_xml) VALUES ($1,$2) RETURNING id',
+                        [cfg.stats_xml, cfg.standings_xml]
+                    ))?.rows[0];
+                    if (newCfg) await dbQuery('UPDATE tournaments SET standings_config_id=$1 WHERE id=$2', [newCfg.id, newTournamentID]);
+                }
             }
         }
 

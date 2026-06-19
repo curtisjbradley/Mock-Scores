@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import '../styles/organizer.css'
-import type { ITournament } from '@mock-scores/shared'
+import type { ITournament, IDuplicateOptions } from '@mock-scores/shared'
 import { apiFetch } from '../../auth/auth'
 import { fmt } from '../data/utils'
 import { DuplicateTournamentModal } from '../components/DuplicateTournamentModal'
@@ -20,9 +20,7 @@ const OrganizerHome = () => {
             .catch(console.error)
     }, [])
 
-    const handleDuplicate = async (options: {
-        scorers: boolean; courtrooms: boolean; scoringCategories: boolean; witnesses: boolean; format: boolean
-    }) => {
+    const handleDuplicate = async (options: IDuplicateOptions) => {
         if (!duplicating) return
         const res = await apiFetch(`/api/organizer/tournament/duplicate/${duplicating.id}`, {
             method: 'POST',

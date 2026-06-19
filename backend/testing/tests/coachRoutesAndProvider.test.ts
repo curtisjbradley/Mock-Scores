@@ -7,6 +7,7 @@ import {
     removeCoach, getStudents, removeStudent, getWitnessCallOrder,
     setWitnessCallOrder, getStudentAssignments, upsertStudentAssignment,
     getCompetitionField, getStandingsData,
+    getWitnessesForTournament, getFormatForTournament,
 } from '../../src/providers/coachProvider';
 
 const mockDbQuery = dbQuery as jest.MockedFunction<typeof dbQuery>;
@@ -416,5 +417,83 @@ describe('PUT /api/coach/teams/:teamId/pairings/:pairingId/assignments', () => {
         mockDbQuery.mockResolvedValueOnce({ rows: [assignment], rowCount: 1 } as any);
         const res = await request(app).put(`/api/coach/teams/${TEAM}/pairings/${PID}/assignments`).set(auth()).send({ field_id: FID, student_id: SID });
         expect(res.status).toBe(200);
+    });
+});
+
+// ─── New routes ───────────────────────────────────────────────────────────────
+
+describe('GET /api/coach/tournaments/:id/scoring-categories', () => {
+    it('returns 400 for invalid id', async () => {
+        const res = await request(app).get('/api/coach/tournaments/bad/scoring-categories').set(auth());
+        expect(res.status).toBe(400);
+    });
+    it('returns 200 with categories', async () => {
+        mockDbQuery.mockResolvedValueOnce({ rows: [], rowCount: 0 } as any);
+        const res = await request(app).get(`/api/coach/tournaments/${TID}/scoring-categories`).set(auth());
+        expect(res.status).toBe(200);
+        expect(res.body).toEqual([]);
+    });
+});
+
+describe('GET /api/coach/tournaments/:id/witnesses', () => {
+    it('returns 400 for invalid id', async () => {
+        const res = await request(app).get('/api/coach/tournaments/bad/witnesses').set(auth());
+        expect(res.status).toBe(400);
+    });
+    it('returns 200 with witnesses', async () => {
+        mockDbQuery.mockResolvedValueOnce({ rows: [{ id: 'w1', name: 'Alice', side: 'P' }], rowCount: 1 } as any);
+        const res = await request(app).get(`/api/coach/tournaments/${TID}/witnesses`).set(auth());
+        expect(res.status).toBe(200);
+        expect(res.body[0].name).toBe('Alice');
+    });
+    it('returns 200 empty when no witnesses', async () => {
+        mockDbQuery.mockResolvedValueOnce({ rows: [], rowCount: 0 } as any);
+        const res = await request(app).get(`/api/coach/tournaments/${TID}/witnesses`).set(auth());
+        expect(res.status).toBe(200);
+        expect(res.body).toEqual([]);
+    });
+});
+
+describe('GET /api/coach/tournaments/:id/format', () => {
+    it('returns 400 for invalid id', async () => {
+        const res = await request(app).get('/api/coach/tournaments/bad/format').set(auth());
+        expect(res.status).toBe(400);
+    });
+    it('returns 200 with format', async () => {
+        mockDbQuery.mockResolvedValueOnce({ rows: [{ p_witnesses_called: 2, d_witnesses_called: 2 }], rowCount: 1 } as any);
+        const res = await request(app).get(`/api/coach/tournaments/${TID}/format`).set(auth());
+        expect(res.status).toBe(200);
+        expect(res.body.p_witnesses_called).toBe(2);
+    });
+    it('returns 200 null when not found', async () => {
+        mockDbQuery.mockResolvedValueOnce({ rows: [], rowCount: 0 } as any);
+        const res = await request(app).get(`/api/coach/tournaments/${TID}/format`).set(auth());
+        expect(res.status).toBe(200);
+        expect(res.body).toBeNull();
+    });
+});
+
+describe('getWitnessesForTournament', () => {
+    it('returns witnesses with id/name/side', async () => {
+        mockDbQuery.mockResolvedValueOnce({ rows: [{ id: 'w1', name: 'Alice', side: 'P' }, { id: 'w2', name: 'Bob', side: 'S' }], rowCount: 2 } as any);
+        const result = await getWitnessesForTournament(TID);
+        expect(result).toHaveLength(2);
+        expect(result[0].side).toBe('P');
+    });
+    it('returns [] on null', async () => {
+        mockDbQuery.mockResolvedValueOnce(null);
+        expect(await getWitnessesForTournament(TID)).toEqual([]);
+    });
+});
+
+describe('getFormatForTournament', () => {
+    it('returns format counts', async () => {
+        mockDbQuery.mockResolvedValueOnce({ rows: [{ p_witnesses_called: 3, d_witnesses_called: 2 }], rowCount: 1 } as any);
+        const result = await getFormatForTournament(TID);
+        expect(result?.p_witnesses_called).toBe(3);
+    });
+    it('returns null when not found', async () => {
+        mockDbQuery.mockResolvedValueOnce({ rows: [], rowCount: 0 } as any);
+        expect(await getFormatForTournament(TID)).toBeNull();
     });
 });

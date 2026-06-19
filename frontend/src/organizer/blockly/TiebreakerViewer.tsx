@@ -1,35 +1,64 @@
-import { useEffect, useRef } from 'react'
+import { useMemo } from 'react'
 import * as Blockly from 'blockly'
-import { tiebreakerBlockDefs } from './tiebreakerBlocks'
-import { standingsBlockDefs } from './standingsBlocks'
-
-Blockly.common.defineBlocks(tiebreakerBlockDefs)
-Blockly.common.defineBlocks(standingsBlockDefs)
 
 interface Props {
     standingsXml: string
-    onClose: () => void
+    onClose?: () => void
 }
 
 export default function TiebreakerViewer({ standingsXml, onClose }: Props) {
-    const divRef = useRef<HTMLDivElement>(null)
-    const wsRef = useRef<Blockly.WorkspaceSvg | null>(null)
-
-    useEffect(() => {
-        if (!divRef.current || wsRef.current) return
-        const ws = Blockly.inject(divRef.current, { readOnly: true, scrollbars: true })
-        wsRef.current = ws
-        Blockly.Xml.domToWorkspace(Blockly.utils.xml.textToDom(standingsXml), ws)
-        return () => { ws.dispose(); wsRef.current = null }
+    const tiebreakers = useMemo(() => {
+        try {
+            const dom = Blockly.utils.xml.textToDom(standingsXml)
+            // Walk the linked chain from tiebreaker_order hat
+            const hat = Array.from(dom.querySelectorAll('block[type="tiebreaker_order"]'))[0]
+            if (!hat) return []
+            const rules: { type: string; stat: string; order: string }[] = []
+            let next = hat.querySelector(':scope > next > block')
+            while (next) {
+                const type = next.getAttribute('type')
+                const stat = next.querySelector(':scope > field[name="STAT"]')?.textContent ?? ''
+                const order = next.querySelector(':scope > field[name="ORDER"]')?.textContent ?? 'desc'
+                if (type === 'standings_tiebreaker' || type === 'standings_h2h_conditional') {
+                    rules.push({ type, stat, order })
+                }
+                next = next.querySelector(':scope > next > block')
+            }
+            return rules
+        } catch {
+            return []
+        }
     }, [standingsXml])
 
-    return (
-        <div className="sb-fullscreen-overlay">
-            <div className="sb-fullscreen-header">
-                <span>Tiebreakers</span>
-                <button className="sb-expand-btn" onClick={onClose}>✕ Close</button>
+    const content = (
+        <>
+            <div className="sb-workspace-header">
+                <h4 className="sb-workspace-label">Tiebreakers</h4>
+                {onClose && <button className="sb-expand-btn" onClick={onClose}>✕ Close</button>}
             </div>
-            <div ref={divRef} className="sb-fullscreen-ws" />
-        </div>
+            {tiebreakers.length === 0
+                ? <p style={{ fontSize: '13px', color: 'var(--text-muted)' }}>No tiebreakers configured.</p>
+                : <ol style={{ margin: '8px 0 0', paddingLeft: '20px', fontSize: '13px', lineHeight: '1.8' }}>
+                    {tiebreakers.map((t, i) => (
+                        <li key={i}>
+                            {t.type === 'standings_h2h_conditional'
+                                ? <>If 2-way tie: head-to-head <strong>{t.stat}</strong> ({t.order === 'desc' ? 'higher wins' : 'lower wins'})</>
+                                : <>Break ties by <strong>{t.stat}</strong> ({t.order === 'desc' ? 'highest first' : 'lowest first'})</>
+                            }
+                        </li>
+                    ))}
+                </ol>
+            }
+        </>
     )
+
+    if (onClose) {
+        return (
+            <div className="sb-fullscreen-overlay">
+                <div style={{ padding: '16px' }}>{content}</div>
+            </div>
+        )
+    }
+
+    return <div>{content}</div>
 }

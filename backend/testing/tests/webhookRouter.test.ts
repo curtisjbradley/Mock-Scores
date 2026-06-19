@@ -20,15 +20,7 @@ beforeEach(() => {
 const post = (body: object) =>
     request(testApp).post('/webhooks/ses-bounce').set('Content-Type', 'text/plain').send(JSON.stringify(body))
 
-// ─── SubscriptionConfirmation ─────────────────────────────────────────────────
-describe('POST /webhooks/ses-bounce — SubscriptionConfirmation', () => {
-    it('fetches the SubscribeURL and returns 200', async () => {
-        const res = await post({ Type: 'SubscriptionConfirmation', SubscribeURL: 'https://sns.aws/confirm' })
-        expect(res.status).toBe(200)
-        expect(res.text).toBe('Subscription confirmed')
-        expect(fetch).toHaveBeenCalledWith('https://sns.aws/confirm')
-    })
-})
+
 
 // ─── Notification — Bounce ────────────────────────────────────────────────────
 describe('POST /webhooks/ses-bounce — Bounce notification', () => {

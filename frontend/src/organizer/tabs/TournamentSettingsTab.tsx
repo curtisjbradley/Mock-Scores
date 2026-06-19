@@ -162,7 +162,7 @@ class TournamentSettingsTabClass extends Component<Props, State> {
                     </label>
 
                     <div className="tc-actions">
-                        <button type="submit" className="org-new-btn" disabled={saving}>
+                        <button type="submit" className="btn-confirm" disabled={saving}>
                             {saving ? 'Saving…' : 'Save'}
                         </button>
                     </div>

@@ -1,7 +1,7 @@
 import { apiFetch } from '../../auth/auth'
 import { emptyCaseFormat, defaultWitnessCategory } from '../types/tournament'
 import type { TournamentInfo, CaseFormatState, ScoringCategory } from '../types/tournament'
-import type { TournamentPayload, ITournamentDetails, IWitnesses, IScoringCategory } from '@mock-scores/shared'
+import type { TournamentPayload, ITournamentDetails, IWitnesses, IScoringCategory, IStandingsTemplate } from '@mock-scores/shared'
 
 export interface TournamentState {
     info: TournamentInfo
@@ -89,14 +89,7 @@ export async function saveScoringCategories(tournamentId: string, cats: ScoringC
 
 // ── Standings config ──────────────────────────────────────────────────────────
 
-export interface StandingsTemplateRow {
-    id: string
-    label: string
-    description: string
-    config_id: string
-}
-
-export async function fetchStandingsTemplates(): Promise<StandingsTemplateRow[]> {
+export async function fetchStandingsTemplates(): Promise<IStandingsTemplate[]> {
     const r = await apiFetch('/api/organizer/tournament/standings-templates')
     if (!r.ok) throw new Error('Failed to load standings templates.')
     return r.json()

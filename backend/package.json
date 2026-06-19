@@ -33,6 +33,7 @@
     "bcrypt": "^6.0.0",
     "dotenv": "^17.4.2",
     "express": "^5.2.1",
+    "express-rate-limit": "^8.5.2",
     "jose": "^6.2.3",
     "nodemailer": "^8.0.10",
     "nodemon": "^3.1.14",

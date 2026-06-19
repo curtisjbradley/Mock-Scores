@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react'
-import { fetchStandingsTemplates, type StandingsTemplateRow } from '../hooks/useTournamentData'
+import { fetchStandingsTemplates } from '../hooks/useTournamentData'
+import type { IStandingsTemplate } from '@mock-scores/shared'
 
 interface Props {
     onSubmit: (standingsConfigId: string | null) => void
@@ -7,7 +8,7 @@ interface Props {
 }
 
 export default function TournamentStandings({ onSubmit, onBack }: Props) {
-    const [templates, setTemplates] = useState<StandingsTemplateRow[]>([])
+    const [templates, setTemplates] = useState<IStandingsTemplate[]>([])
     const [selected, setSelected] = useState<string | null>(null)
     const [loading, setLoading] = useState(true)
 
@@ -52,8 +53,8 @@ export default function TournamentStandings({ onSubmit, onBack }: Props) {
                 Standings configuration can be fully customized from the tournament dashboard after creation.
             </p>
             <div className="tc-actions">
-                <button type="button" className="tc-cancel-btn" onClick={onBack}>← Back</button>
-                <button type="submit" className="org-new-btn" disabled={loading}>Create tournament →</button>
+                <button type="button" className="btn-cancel" onClick={onBack}>← Back</button>
+                <button type="submit" className="btn-confirm" disabled={loading}>Create tournament →</button>
             </div>
         </form>
     )
