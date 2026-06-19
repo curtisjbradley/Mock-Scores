@@ -10,8 +10,8 @@ import '../../organizer/styles/standings.css'
 interface Witness { id: string; name: string; side: string }
 
 interface RoleRow {
-    key: string       // field_id or field_id:witness_id
-    label: string     // e.g. "Alice - Direct" or "Opening Statement"
+    key: string
+    label: string
     fieldId: string
     witnessId: string | null
     categoryName: string
@@ -59,11 +59,10 @@ export default function AssignRoles() {
     const rows: RoleRow[] = categories.flatMap(cat =>
         cat.fields.filter(f => f.assignable && (
             cat.witnessCategory || (isP ? f.prosecution : f.defense)
-        )).flatMap(f => {
+        )).flatMap((f): RoleRow[] => {
             if (!cat.witnessCategory) {
                 return [{ key: f.id, label: f.label, fieldId: f.id, witnessId: null, categoryName: cat.name }]
             }
-            // calling fields → own witnesses; crossing fields → opponent witnesses
             const applicableWitnesses = f.crossing ? oppSideWitnesses : ownSideWitnesses
             return applicableWitnesses.map(w => ({
                 key: `${f.id}:${w.id}`,
