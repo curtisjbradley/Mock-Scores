@@ -3,29 +3,27 @@ import * as organizer from "../../providers/organizerProvider";
 import { IPairingCreationPayload, IRound } from "@mock-scores/shared";
 import { DbError, NotFoundError } from "../../errors";
 import { uuidRegex } from "../../authUtils";
+import { roundHandler } from "../../types/handlers";
 
 const router = Router();
 
-router.get("/", async (req: Request, res: Response) => {
-    if (!req.round) return res.status(404).json({ message: "No Round specified" });
+router.get("/", roundHandler(async (req, res) => {
     return res.status(200).json(req.round);
-});
+}));
 
-router.patch("/", async (req: Request, res: Response) => {
-    if (!req.round) return res.status(404).json({ message: "No Round specified" });
-    const round: IRound = req.body;
-    if (round.name == undefined || round.results_public == undefined || round.teams_public == undefined)
+router.patch("/", roundHandler(async (req, res) => {
+    const body: IRound = req.body;
+    if (body.name == undefined || body.results_public == undefined || body.teams_public == undefined)
         return res.status(400).json({ message: "Missing required fields" });
     try {
-        return res.status(200).json(await organizer.updateRound(req.round.round_id, round));
+        return res.status(200).json(await organizer.updateRound(req.round.round_id, body));
     } catch (e) {
         if (e instanceof NotFoundError) return res.status(404).json({ message: e.message });
         throw e;
     }
-});
+}));
 
-router.delete("/", async (req: Request, res: Response) => {
-    if (!req.round) return res.status(404).json({ message: "No Round specified" });
+router.delete("/", roundHandler(async (req, res) => {
     try {
         const row = await organizer.deleteRound(req.round.round_id);
         return res.status(204).json({ ...row, round_time: row.round_time?.toISOString() ?? null });
@@ -33,20 +31,18 @@ router.delete("/", async (req: Request, res: Response) => {
         if (e instanceof NotFoundError) return res.status(404).json({ message: e.message });
         throw e;
     }
-});
+}));
 
-router.get('/pairings', async (req: Request, res: Response) => {
-    if (!req.round) return res.status(404).json({ message: "No Round specified" });
+router.get('/pairings', roundHandler(async (req, res) => {
     try {
         return res.status(200).json(await organizer.getPairings(req.round.round_id));
     } catch (e) {
         if (e instanceof DbError) return res.status(500).json({ message: 'Database error' });
         throw e;
     }
-});
+}));
 
-router.post('/pairings', async (req: Request, res: Response) => {
-    if (!req.round || !req.tournament) return res.status(404).json({ message: "No Round specified" });
+router.post('/pairings', roundHandler(async (req, res) => {
     const { prosectionID, defenseID, courtroomID }: IPairingCreationPayload = req.body;
     if (!prosectionID || !defenseID || !courtroomID) return res.status(400).json({ message: "Missing required fields" });
     if (prosectionID === defenseID) return res.status(400).json({ message: "Prosecution and defense teams must differ" });
@@ -59,7 +55,7 @@ router.post('/pairings', async (req: Request, res: Response) => {
         if (e instanceof DbError) return res.status(500).json({ message: 'Unable to create pairing' });
         throw e;
     }
-});
+}));
 
 router.delete('/pairings/:pairing', async (req: Request, res: Response) => {
     const pairing = req.params.pairing as string;

@@ -1,64 +1,57 @@
-import { Router, Request, Response } from "express";
+import { Router } from "express";
 import * as coach from "../../providers/coachProvider";
 import { getScoringCategories } from "../../providers/organizerProvider";
 import { uuidRegex } from "../../authUtils";
+import { authedHandler } from "../../types/handlers";
 import teamRoutes from "./coachTeamRoutes";
 
 const router = Router();
 
-router.get("/tournaments", async (req: Request, res: Response) => {
-    if (!req.session) return res.status(401).json({ message: "not authenticated" });
+router.get("/tournaments", authedHandler(async (req, res) => {
     return res.status(200).json(await coach.getAllTournaments(req.session.userId));
-});
+}));
 
-router.get("/tournaments/:tournamentId/schedule", async (req: Request, res: Response) => {
-    if (!req.session) return res.status(401).json({ message: "not authenticated" });
+router.get("/tournaments/:tournamentId/schedule", authedHandler(async (req, res) => {
     const id = req.params.tournamentId as string;
     if (!uuidRegex.test(id)) return res.status(400).json({ message: "Invalid tournament ID" });
     return res.status(200).json(await coach.getSchedule(id));
-});
+}));
 
-router.get("/tournaments/:tournamentId/results", async (req: Request, res: Response) => {
-    if (!req.session) return res.status(401).json({ message: "not authenticated" });
+router.get("/tournaments/:tournamentId/results", authedHandler(async (req, res) => {
     const id = req.params.tournamentId as string;
     if (!uuidRegex.test(id)) return res.status(400).json({ message: "Invalid tournament ID" });
     return res.status(200).json(await coach.getResults(id));
-});
+}));
 
-router.get("/tournaments/:tournamentId/field", async (req: Request, res: Response) => {
-    if (!req.session) return res.status(401).json({ message: "not authenticated" });
+router.get("/tournaments/:tournamentId/field", authedHandler(async (req, res) => {
     const id = req.params.tournamentId as string;
     if (!uuidRegex.test(id)) return res.status(400).json({ message: "Invalid tournament ID" });
     return res.status(200).json(await coach.getCompetitionField(id));
-});
+}));
 
-router.get("/tournaments/:tournamentId/standings", async (req: Request, res: Response) => {
-    if (!req.session) return res.status(401).json({ message: "not authenticated" });
+router.get("/tournaments/:tournamentId/standings", authedHandler(async (req, res) => {
     const id = req.params.tournamentId as string;
     if (!uuidRegex.test(id)) return res.status(400).json({ message: "Invalid tournament ID" });
     return res.status(200).json(await coach.getStandingsData(id));
-});
+}));
 
-router.get("/tournaments/:tournamentId/scoring-categories", async (req: Request, res: Response) => {
-    if (!req.session) return res.status(401).json({ message: "not authenticated" });
+router.get("/tournaments/:tournamentId/scoring-categories", authedHandler(async (req, res) => {
     const id = req.params.tournamentId as string;
     if (!uuidRegex.test(id)) return res.status(400).json({ message: "Invalid tournament ID" });
     return res.status(200).json(await getScoringCategories(id));
-});
+}));
 
-router.get("/tournaments/:tournamentId/witnesses", async (req: Request, res: Response) => {
-    if (!req.session) return res.status(401).json({ message: "not authenticated" });
+router.get("/tournaments/:tournamentId/witnesses", authedHandler(async (req, res) => {
     const id = req.params.tournamentId as string;
     if (!uuidRegex.test(id)) return res.status(400).json({ message: "Invalid tournament ID" });
     return res.status(200).json(await coach.getWitnessesForTournament(id));
-});
+}));
 
-router.get("/tournaments/:tournamentId/format", async (req: Request, res: Response) => {
-    if (!req.session) return res.status(401).json({ message: "not authenticated" });
+router.get("/tournaments/:tournamentId/format", authedHandler(async (req, res) => {
     const id = req.params.tournamentId as string;
     if (!uuidRegex.test(id)) return res.status(400).json({ message: "Invalid tournament ID" });
     return res.status(200).json(await coach.getFormatForTournament(id));
-});
+}));
 
 router.use("/teams/:teamId", teamRoutes);
 
