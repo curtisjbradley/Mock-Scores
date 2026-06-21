@@ -70,6 +70,9 @@ export default defineConfig({
           if (/[\\/]node_modules[\\/](react|react-dom|scheduler)[\\/]/.test(id)) {
             return 'react'
           }
+          if (/[\\/]node_modules[\\/](blockly)[\\/]/.test(id)) {
+            return 'blockly'
+          }
         },
       },
     },

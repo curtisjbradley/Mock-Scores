@@ -1,7 +1,8 @@
-import { useEffect, useState } from 'react'
-import StandingsBuilder from '../blockly/StandingsBuilder'
-import StandingsPreview from '../blockly/StandingsPreview'
+import { lazy, useEffect, useState } from 'react'
 import type { StandingsConfig } from '../blockly/standingsGenerator'
+
+const StandingsBuilder = lazy(() => import('../blockly/StandingsBuilder'))
+const StandingsPreview = lazy(() => import('../blockly/StandingsPreview'))
 import { fetchStandingsConfig, saveStandingsConfig } from '../hooks/useTournamentData'
 
 interface Props {
