@@ -2,6 +2,8 @@ import express, { NextFunction, Request, Response } from "express";
 import path from "path";
 import dotenv from 'dotenv';
 dotenv.config({ path: path.resolve(__dirname, '../.env') });
+import swaggerUi from 'swagger-ui-express';
+import { swaggerSpec } from './swaggerConfig';
 import authRouter from './routes/authRoutes';
 import webhookRouter from "./routes/webhookRouter";
 import organizerTournamentRouter from './routes/organizer/organizerRoutes';
@@ -16,6 +18,9 @@ const PUBLIC_DIR = path.resolve(__dirname, "../../frontend/public");
 
 app.use(express.urlencoded({ extended: true }));
 app.use(express.json());
+
+app.use('/api/docs', swaggerUi.serve, swaggerUi.setup(swaggerSpec));
+app.get('/api/docs-json', (_req: Request, res: Response) => res.json(swaggerSpec));
 
 app.use('/api/auth', authRouter);
 app.use('/api/organizer/tournament',verifyUser, organizerTournamentRouter);

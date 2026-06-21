@@ -8,6 +8,16 @@ import subRoutes from "./organizerTournamentRoutes";
 
 const router = Router();
 
+/**
+ * @swagger
+ * /api/organizer/tournament:
+ *   get:
+ *     summary: List tournaments for the authenticated organizer
+ *     tags: [Organizer - Tournaments]
+ *     responses:
+ *       200: { description: Array of tournaments }
+ *       500: { description: Database error }
+ */
 router.get("/", authedHandler(async (req, res) => {
     try {
         return res.status(200).json(await organizer.getTournaments(req.session.userId));
@@ -17,6 +27,16 @@ router.get("/", authedHandler(async (req, res) => {
     }
 }));
 
+/**
+ * @swagger
+ * /api/organizer/tournament/standings-templates:
+ *   get:
+ *     summary: Get available standings templates
+ *     tags: [Organizer - Tournaments]
+ *     responses:
+ *       200: { description: Array of templates }
+ *       500: { description: Database error }
+ */
 router.get("/standings-templates", async (req: Request, res: Response) => {
     try {
         return res.status(200).json(await organizer.getStandingsTemplates());
@@ -26,6 +46,23 @@ router.get("/standings-templates", async (req: Request, res: Response) => {
     }
 });
 
+/**
+ * @swagger
+ * /api/organizer/tournament:
+ *   post:
+ *     summary: Create a new tournament
+ *     tags: [Organizer - Tournaments]
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             description: TournamentPayload
+ *     responses:
+ *       201: { description: Created tournament }
+ *       500: { description: Unable to create tournament }
+ */
 router.post("/", authedHandler(async (req, res) => {
     try {
         const tournament = await organizer.createTournament(req.body as TournamentPayload);
@@ -37,6 +74,34 @@ router.post("/", authedHandler(async (req, res) => {
     }
 }));
 
+/**
+ * @swagger
+ * /api/organizer/tournament/duplicate/{tournamentId}:
+ *   post:
+ *     summary: Duplicate an existing tournament
+ *     tags: [Organizer - Tournaments]
+ *     parameters:
+ *       - in: path
+ *         name: tournamentId
+ *         required: true
+ *         schema: { type: string, format: uuid }
+ *     requestBody:
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             properties:
+ *               scorers: { type: boolean }
+ *               courtrooms: { type: boolean }
+ *               scoringCategories: { type: boolean }
+ *               witnesses: { type: boolean }
+ *               format: { type: boolean }
+ *               tiebreaker: { type: boolean }
+ *     responses:
+ *       201: { description: Duplicated tournament }
+ *       404: { description: Tournament not found }
+ *       500: { description: Unable to duplicate tournament }
+ */
 router.post("/duplicate/:tournamentId", verifyTournamentAccess, tournamentHandler(async (req, res) => {
     const { scorers = false, courtrooms = false, scoringCategories = false, witnesses = false, format = false, tiebreaker = false } = req.body ?? {};
     try {
@@ -50,6 +115,22 @@ router.post("/duplicate/:tournamentId", verifyTournamentAccess, tournamentHandle
     }
 }));
 
+/**
+ * @swagger
+ * /api/organizer/tournament/{tournamentId}:
+ *   delete:
+ *     summary: Delete a tournament (owner only)
+ *     tags: [Organizer - Tournaments]
+ *     parameters:
+ *       - in: path
+ *         name: tournamentId
+ *         required: true
+ *         schema: { type: string, format: uuid }
+ *     responses:
+ *       204: { description: Deleted }
+ *       404: { description: Not found }
+ *       500: { description: Unable to delete tournament }
+ */
 router.delete("/:tournamentId", verifyTournamentOwner, tournamentHandler(async (req, res) => {
     try {
         await organizer.deleteTournament(req.tournament);
