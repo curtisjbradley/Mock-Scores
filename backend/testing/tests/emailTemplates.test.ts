@@ -5,7 +5,7 @@ import {
     organizerAddedEmail,
     teamAddedEmail,
     roundResultsPublicEmail,
-} from '../../src/emailTemplates'
+} from '../../src/email'
 
 describe('welcomeEmail', () => {
     it('includes the first name and a login link', () => {

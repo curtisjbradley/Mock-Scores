@@ -1,4 +1,4 @@
-import './about/styles/about.css'
+import './styles/about.css'
 
 const About = () => (
     <main className="about-main">

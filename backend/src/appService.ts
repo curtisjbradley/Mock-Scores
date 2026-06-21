@@ -1,4 +1,4 @@
-import express, { Request, Response } from "express";
+import express, { NextFunction, Request, Response } from "express";
 import path from "path";
 import dotenv from 'dotenv';
 dotenv.config({ path: path.resolve(__dirname, '../.env') });
@@ -6,7 +6,8 @@ import authRouter from './routes/authRoutes';
 import webhookRouter from "./routes/webhookRouter";
 import organizerTournamentRouter from './routes/organizer/organizerRoutes';
 import coachRouter from "./routes/coach/coachRoutes";
-import { verifyUser} from "./authUtils";
+import { verifyUser } from "./authUtils";
+import { DbError } from "./errors";
 
 const app = express();
 
@@ -34,5 +35,15 @@ app.get(/(.*)/, (_req: Request, res: Response) => {
     res.sendFile(path.join(STATIC_DIR, "index.html"));
 });
 
+// Global error handler — catches anything thrown from route handlers
+// eslint-disable-next-line @typescript-eslint/no-unused-vars
+app.use((err: unknown, _req: Request, res: Response, _next: NextFunction) => {
+    if (err instanceof DbError) {
+        console.error(err.message);
+        return res.status(500).json({ message: 'Database error' });
+    }
+    console.error(err);
+    return res.status(500).json({ message: 'Internal server error' });
+});
 
 export default app

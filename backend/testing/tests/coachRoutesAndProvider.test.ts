@@ -2,9 +2,10 @@ import request from 'supertest';
 import app from '../../src/appService';
 import { dbQuery } from '../../src/db';
 import { signToken } from '../../src/authUtils';
+import { DbError, NotFoundError, AlreadyExistsError } from '../../src/errors';
 import {
     getAllTournaments, getSchedule, getResults, getCoaches, addCoach,
-    removeCoach, getStudents, removeStudent, getWitnessCallOrder,
+    removeCoach, getStudents, addStudent, removeStudent, getWitnessCallOrder,
     setWitnessCallOrder, getStudentAssignments, upsertStudentAssignment,
     getCompetitionField, getStandingsData,
     getWitnessesForTournament, getFormatForTournament,
@@ -33,9 +34,9 @@ describe('getAllTournaments', () => {
         mockDbQuery.mockResolvedValueOnce({ rows: [{ id: TID }], rowCount: 1 } as any);
         expect(await getAllTournaments('u1')).toEqual([{ id: TID }]);
     });
-    it('returns [] on null', async () => {
+    it('throws DbError when query fails', async () => {
         mockDbQuery.mockResolvedValueOnce(null);
-        expect(await getAllTournaments('u1')).toEqual([]);
+        await expect(getAllTournaments('u1')).rejects.toThrow(DbError);
     });
 });
 
@@ -100,19 +101,19 @@ describe('addCoach', () => {
 describe('removeCoach', () => {
     it('removes registered coach', async () => {
         mockDbQuery.mockResolvedValueOnce({ rows: [], rowCount: 1 } as any);
-        expect(await removeCoach(TEAM, UID)).toBe(true);
+        await expect(removeCoach(TEAM, UID)).resolves.toBeUndefined();
     });
     it('falls back to invite removal', async () => {
         mockDbQuery
             .mockResolvedValueOnce({ rows: [], rowCount: 0 } as any)
             .mockResolvedValueOnce({ rows: [], rowCount: 1 } as any);
-        expect(await removeCoach(TEAM, 'inv1')).toBe(true);
+        await expect(removeCoach(TEAM, 'inv1')).resolves.toBeUndefined();
     });
-    it('returns false when not found', async () => {
+    it('throws NotFoundError when not found', async () => {
         mockDbQuery
             .mockResolvedValueOnce({ rows: [], rowCount: 0 } as any)
             .mockResolvedValueOnce({ rows: [], rowCount: 0 } as any);
-        expect(await removeCoach(TEAM, 'nobody')).toBe(false);
+        await expect(removeCoach(TEAM, 'nobody')).rejects.toThrow(NotFoundError);
     });
 });
 
@@ -123,10 +124,30 @@ describe('getStudents', () => {
     });
 });
 
+describe('addStudent', () => {
+    it('returns the new student', async () => {
+        const row = { student_id: SID, team_id: TEAM, student_name: 'Bob', pronouns: null };
+        mockDbQuery.mockResolvedValueOnce({ rows: [row], rowCount: 1 } as any);
+        expect(await addStudent(TEAM, 'Bob', null)).toEqual(row);
+    });
+    it('throws AlreadyExistsError on duplicate (ON CONFLICT DO NOTHING returns empty)', async () => {
+        mockDbQuery.mockResolvedValueOnce({ rows: [], rowCount: 0 } as any);
+        await expect(addStudent(TEAM, 'Bob', null)).rejects.toThrow(AlreadyExistsError);
+    });
+});
+
 describe('removeStudent', () => {
-    it('returns true on success', async () => {
-        mockDbQuery.mockResolvedValueOnce({ rows: [], rowCount: 1 } as any);
-        expect(await removeStudent(SID)).toBe(true);
+    it('resolves on success', async () => {
+        mockDbQuery.mockResolvedValueOnce({ rows: [{ student_id: SID }], rowCount: 1 } as any);
+        await expect(removeStudent(SID)).resolves.toBeUndefined();
+    });
+    it('throws NotFoundError when not found', async () => {
+        mockDbQuery.mockResolvedValueOnce({ rows: [], rowCount: 0 } as any);
+        await expect(removeStudent(SID)).rejects.toThrow(NotFoundError);
+    });
+    it('throws DbError when query fails', async () => {
+        mockDbQuery.mockResolvedValueOnce(null);
+        await expect(removeStudent(SID)).rejects.toThrow(DbError);
     });
 });
 
@@ -138,16 +159,16 @@ describe('getWitnessCallOrder', () => {
 });
 
 describe('setWitnessCallOrder', () => {
-    it('returns true with empty list (just deletes)', async () => {
+    it('resolves with empty list (just deletes)', async () => {
         mockDbQuery.mockResolvedValueOnce({ rows: [], rowCount: 0 } as any);
-        expect(await setWitnessCallOrder(PID, TEAM, [])).toBe(true);
+        await expect(setWitnessCallOrder(PID, TEAM, [])).resolves.toBeUndefined();
     });
     it('inserts witnesses', async () => {
         mockDbQuery
             .mockResolvedValueOnce({ rows: [], rowCount: 0 } as any) // DELETE
             .mockResolvedValueOnce({ rows: [], rowCount: 1 } as any) // INSERT w1
             .mockResolvedValueOnce({ rows: [], rowCount: 1 } as any); // INSERT w2
-        expect(await setWitnessCallOrder(PID, TEAM, ['w1', 'w2'])).toBe(true);
+        await expect(setWitnessCallOrder(PID, TEAM, ['w1', 'w2'])).resolves.toBeUndefined();
     });
 });
 
@@ -164,9 +185,9 @@ describe('upsertStudentAssignment', () => {
         mockDbQuery.mockResolvedValueOnce({ rows: [assignment], rowCount: 1 } as any);
         expect(await upsertStudentAssignment(PID, TEAM, FID, SID)).toEqual(assignment);
     });
-    it('returns null on failure', async () => {
-        mockDbQuery.mockResolvedValueOnce({ rows: [], rowCount: 0 } as any);
-        expect(await upsertStudentAssignment(PID, TEAM, FID, SID)).toBeNull();
+    it('throws DbError when query fails', async () => {
+        mockDbQuery.mockResolvedValueOnce(null);
+        await expect(upsertStudentAssignment(PID, TEAM, FID, SID)).rejects.toThrow(DbError);
     });
 });
 
@@ -333,15 +354,21 @@ describe('DELETE /api/coach/teams/:teamId/students/:studentId', () => {
         const res = await request(app).delete(`/api/coach/teams/${TEAM}/students/bad`).set(auth());
         expect(res.status).toBe(400);
     });
-    it('returns 404 when query fails', async () => {
+    it('returns 500 when query throws DbError', async () => {
         mockTeamAccess();
         mockDbQuery.mockResolvedValueOnce(null);
+        const res = await request(app).delete(`/api/coach/teams/${TEAM}/students/${SID}`).set(auth());
+        expect(res.status).toBe(500);
+    });
+    it('returns 404 when student not found', async () => {
+        mockTeamAccess();
+        mockDbQuery.mockResolvedValueOnce({ rows: [], rowCount: 0 } as any);
         const res = await request(app).delete(`/api/coach/teams/${TEAM}/students/${SID}`).set(auth());
         expect(res.status).toBe(404);
     });
     it('returns 204 on success', async () => {
         mockTeamAccess();
-        mockDbQuery.mockResolvedValueOnce({ rows: [], rowCount: 1 } as any);
+        mockDbQuery.mockResolvedValueOnce({ rows: [{ student_id: SID }], rowCount: 1 } as any);
         const res = await request(app).delete(`/api/coach/teams/${TEAM}/students/${SID}`).set(auth());
         expect(res.status).toBe(204);
     });

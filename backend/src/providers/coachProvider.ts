@@ -3,9 +3,10 @@ import type {
     ICoachTournament, ICoachScheduleRound, ICoachResultRound,
     ICoach, IStudent, IWitnessCallOrder, IStudentAssignment, ICompetitionTeam
 } from '@mock-scores/shared';
+import { AlreadyExistsError, DbError, NotFoundError } from '../errors';
 
 export async function getAllTournaments(userId: string): Promise<ICoachTournament[]> {
-    return (await dbQuery<ICoachTournament>(
+    const result = await dbQuery<ICoachTournament>(
         `SELECT t.id, t.name, t.location, t.start_date, t.end_date, t.num_teams, t.num_rounds,
                 teams.id AS team_id, teams.name AS team_name, teams.code AS team_code
          FROM tournaments t
@@ -13,7 +14,9 @@ export async function getAllTournaments(userId: string): Promise<ICoachTournamen
          JOIN team_coaches ON team_coaches.team_id = teams.id
          WHERE team_coaches.coach_id = $1`,
         [userId]
-    ))?.rows ?? [];
+    );
+    if (!result) throw new DbError('getAllTournaments');
+    return result.rows;
 }
 
 export async function getSchedule(tournamentId: string): Promise<ICoachScheduleRound[]> {
@@ -73,13 +76,11 @@ export async function getCoaches(teamId: string): Promise<ICoach[]> {
          WHERE tc.team_id = $1`,
         [teamId]
     ))?.rows ?? [];
-
     const invited = (await dbQuery<ICoach>(
         `SELECT ti.id AS coach_id, ti.invite_email AS name, ti.invite_email AS email, false AS is_owner, false AS has_joined
          FROM team_invites ti WHERE ti.team_id = $1`,
         [teamId]
     ))?.rows ?? [];
-
     return [...joined, ...invited];
 }
 
@@ -87,7 +88,6 @@ export async function addCoach(teamId: string, email: string): Promise<ICoach> {
     const user = (await dbQuery<{ user_id: string; first_name: string; last_name: string; email: string }>(
         `SELECT user_id, first_name, last_name, email FROM auth WHERE LOWER(email)=LOWER($1)`, [email]
     ))?.rows[0];
-
     if (user) {
         await dbQuery(
             `INSERT INTO team_coaches (coach_id, team_id, is_owner) VALUES ($1,$2,false) ON CONFLICT DO NOTHING`,
@@ -95,39 +95,31 @@ export async function addCoach(teamId: string, email: string): Promise<ICoach> {
         );
         return { coach_id: user.user_id, name: `${user.first_name} ${user.last_name}`, email: user.email, is_owner: false, has_joined: true };
     }
-
     const row = (await dbQuery<{ id: string }>(
-        `INSERT INTO team_invites (team_id, invite_email) VALUES ($1,$2)
-         ON CONFLICT DO NOTHING RETURNING id`,
+        `INSERT INTO team_invites (team_id, invite_email) VALUES ($1,$2) ON CONFLICT DO NOTHING RETURNING id`,
         [teamId, email]
     ))?.rows[0];
     return { coach_id: row?.id ?? '', name: email, email, is_owner: false, has_joined: false };
 }
 
-export async function removeCoach(teamId: string, coachId: string): Promise<boolean> {
-    // Try registered coach first (non-owner only)
+export async function removeCoach(teamId: string, coachId: string): Promise<void> {
     const r1 = await dbQuery(
         `DELETE FROM team_coaches WHERE team_id=$1 AND coach_id=$2 AND is_owner=false`,
         [teamId, coachId]
     );
-    if (r1 && (r1.rowCount ?? 0) > 0) return true;
-    // Fall back to invite
-    const r2 = await dbQuery(
-        `DELETE FROM team_invites WHERE team_id=$1 AND id=$2`,
-        [teamId, coachId]
-    );
-    return !!(r2 && (r2.rowCount ?? 0) > 0);
+    if (r1 && (r1.rowCount ?? 0) > 0) return;
+    const r2 = await dbQuery(`DELETE FROM team_invites WHERE team_id=$1 AND id=$2`, [teamId, coachId]);
+    if (!r2 || (r2.rowCount ?? 0) === 0) throw new NotFoundError('coach');
 }
 
-export async function transferOwnership(teamId: string, newOwnerCoachId: string): Promise<boolean> {
+export async function transferOwnership(teamId: string, newOwnerCoachId: string): Promise<void> {
     const member = (await dbQuery<{ coach_id: string }>(
         `SELECT coach_id FROM team_coaches WHERE team_id=$1 AND coach_id=$2`,
         [teamId, newOwnerCoachId]
     ))?.rows[0];
-    if (!member) return false;
+    if (!member) throw new NotFoundError('coach on team');
     await dbQuery(`UPDATE team_coaches SET is_owner=false WHERE team_id=$1`, [teamId]);
     await dbQuery(`UPDATE team_coaches SET is_owner=true WHERE team_id=$1 AND coach_id=$2`, [teamId, newOwnerCoachId]);
-    return true;
 }
 
 export async function getStudents(teamId: string): Promise<IStudent[]> {
@@ -137,16 +129,20 @@ export async function getStudents(teamId: string): Promise<IStudent[]> {
     ))?.rows ?? [];
 }
 
-export async function addStudent(teamId: string, studentName: string, pronouns?: string | null): Promise<IStudent | null> {
-    return (await dbQuery<IStudent>(
+export async function addStudent(teamId: string, studentName: string, pronouns?: string | null): Promise<IStudent> {
+    const row = (await dbQuery<IStudent>(
         `INSERT INTO team_rostered_students (team_id, student_name, pronouns) VALUES ($1, $2, $3)
          ON CONFLICT DO NOTHING RETURNING student_id, team_id, student_name, pronouns`,
         [teamId, studentName, pronouns ?? null]
-    ))?.rows[0] ?? null;
+    ))?.rows[0];
+    if (!row) throw new AlreadyExistsError('student');
+    return row;
 }
 
-export async function removeStudent(studentId: string): Promise<boolean> {
-    return !!(await dbQuery(`DELETE FROM team_rostered_students WHERE student_id=$1`, [studentId]));
+export async function removeStudent(studentId: string): Promise<void> {
+    const result = await dbQuery(`DELETE FROM team_rostered_students WHERE student_id=$1 RETURNING student_id`, [studentId]);
+    if (!result) throw new DbError('removeStudent');
+    if (!result.rows[0]) throw new NotFoundError('student');
 }
 
 export async function getWitnessCallOrder(pairingId: string, teamId: string): Promise<IWitnessCallOrder[]> {
@@ -158,16 +154,16 @@ export async function getWitnessCallOrder(pairingId: string, teamId: string): Pr
     ))?.rows ?? [];
 }
 
-export async function setWitnessCallOrder(pairingId: string, teamId: string, witnessIds: string[]): Promise<boolean> {
+export async function setWitnessCallOrder(pairingId: string, teamId: string, witnessIds: string[]): Promise<void> {
     await dbQuery(`DELETE FROM witness_call_order WHERE pairing_id=$1 AND team_id=$2`, [pairingId, teamId]);
-    if (!witnessIds.length) return true;
-    await Promise.all(witnessIds.map((wid, i) =>
-        dbQuery(
-            `INSERT INTO witness_call_order (pairing_id, team_id, witness_id, position) VALUES ($1,$2,$3,$4)`,
-            [pairingId, teamId, wid, i + 1]
-        )
-    ));
-    return true;
+    if (witnessIds.length) {
+        await Promise.all(witnessIds.map((wid, i) =>
+            dbQuery(
+                `INSERT INTO witness_call_order (pairing_id, team_id, witness_id, position) VALUES ($1,$2,$3,$4)`,
+                [pairingId, teamId, wid, i + 1]
+            )
+        ));
+    }
 }
 
 export async function getStudentAssignments(pairingId: string, teamId: string): Promise<IStudentAssignment[]> {
@@ -182,8 +178,8 @@ export async function getStudentAssignments(pairingId: string, teamId: string): 
     ))?.rows ?? [];
 }
 
-export async function upsertStudentAssignment(pairingId: string, teamId: string, fieldId: string, studentId: string, witnessId?: string | null): Promise<IStudentAssignment | null> {
-    return (await dbQuery<IStudentAssignment>(
+export async function upsertStudentAssignment(pairingId: string, teamId: string, fieldId: string, studentId: string, witnessId?: string | null): Promise<IStudentAssignment> {
+    const row = (await dbQuery<IStudentAssignment>(
         `INSERT INTO student_assignments (pairing_id, team_id, field_id, witness_id, student_id)
          VALUES ($1,$2,$3,$4,$5)
          ON CONFLICT (pairing_id, team_id, field_id, witness_id) DO UPDATE SET student_id=EXCLUDED.student_id
@@ -192,7 +188,9 @@ export async function upsertStudentAssignment(pairingId: string, teamId: string,
            witness_id, student_id,
            (SELECT student_name FROM team_rostered_students WHERE student_id=$5) AS student_name`,
         [pairingId, teamId, fieldId, witnessId ?? null, studentId]
-    ))?.rows[0] ?? null;
+    ))?.rows[0];
+    if (!row) throw new DbError('upsertStudentAssignment');
+    return row;
 }
 
 export async function getCompetitionField(tournamentId: string): Promise<ICompetitionTeam[]> {
@@ -216,8 +214,7 @@ export async function getWitnessesForTournament(tournamentId: string): Promise<{
 export async function getFormatForTournament(tournamentId: string): Promise<{ p_witnesses_called: number; d_witnesses_called: number } | null> {
     return (await dbQuery<{ p_witnesses_called: number; d_witnesses_called: number }>(
         `SELECT tf.p_witnesses_called, tf.d_witnesses_called
-         FROM tournament_format tf
-         JOIN tournaments t ON t.case_format_id = tf.format_id
+         FROM tournament_format tf JOIN tournaments t ON t.case_format_id = tf.format_id
          WHERE t.id = $1`,
         [tournamentId]
     ))?.rows[0] ?? null;
@@ -235,8 +232,7 @@ export async function getStandingsData(tournamentId: string): Promise<{
             [tournamentId]
         ),
         dbQuery<{ p_team_id: string; d_team_id: string; p_points: number; d_points: number; pairing_id: string }>(
-            `SELECT b.p_team_id, b.d_team_id, b.p_points, b.d_points, b.pairing_id
-             FROM ballots b WHERE b.tournament_id=$1`,
+            `SELECT b.p_team_id, b.d_team_id, b.p_points, b.d_points, b.pairing_id FROM ballots b WHERE b.tournament_id=$1`,
             [tournamentId]
         ),
         dbQuery<{ id: string; name: string; code: string }>(

@@ -1,7 +1,8 @@
 // TODO: fetch from GET /api/organizer/tournament/:id/standings
 import { useState, useEffect } from 'react'
-import type { ITeam } from '../data/dummyData'
 import { apiFetch } from '../../auth/auth'
+
+interface ITeam { id: string; code: string; team: string; wins: number; losses: number; pointsFor: number; pointsAgainst: number }
 
 export default function StandingsTab({ tournamentId }: { tournamentId: string }) {
     const [teams] = useState<ITeam[]>([])

@@ -47,10 +47,10 @@ describe('GET /api/organizer/tournament/', () => {
         expect(res.body).toEqual(tournaments);
     });
 
-    it('returns 401 when getTournaments returns null', async () => {
+    it('returns 500 when getTournaments throws DbError', async () => {
         mockDbQuery.mockResolvedValueOnce(null);
         const res = await request(app).get('/api/organizer/tournament/').set(auth());
-        expect(res.status).toBe(401);
+        expect(res.status).toBe(500);
     });
 });
 
@@ -153,15 +153,15 @@ describe('POST /api/organizer/tournament/:tournamentId/scorers', () => {
 
 // ─── DELETE /api/organizer/tournament/:tournamentId/scorers ───────────────────
 describe('DELETE /api/organizer/tournament/:tournamentId/scorers', () => {
-    it('returns 409 when scorer_id missing', async () => {
+    it('returns 400 when scorer_id missing', async () => {
         mockAccess();
         const res = await request(app).delete(`/api/organizer/tournament/${TOURNAMENT_ID}/scorers`).set(auth()).send({});
-        expect(res.status).toBe(409);
+        expect(res.status).toBe(400);
     });
 
     it('returns 204 on success', async () => {
         mockAccess();
-        mockDbQuery.mockResolvedValueOnce({ rows: [], rowCount: 1 } as any);
+        mockDbQuery.mockResolvedValueOnce({ rows: [{ scorer_id: SCORER_ID }], rowCount: 1 } as any);
         const res = await request(app).delete(`/api/organizer/tournament/${TOURNAMENT_ID}/scorers`).set(auth()).send({ scorer_id: SCORER_ID });
         expect(res.status).toBe(204);
     });
@@ -495,12 +495,12 @@ describe('PUT /api/organizer/tournament/:tournamentId/organizers', () => {
         expect(res.status).toBe(400);
     });
 
-    it('returns 201 on success', async () => {
+    it('returns 200 on success', async () => {
         mockAccess();
         const updated = { id: ORG_ID, name: 'Bob', email: 'b@c.com', role: 'delegate' };
         mockDbQuery.mockResolvedValueOnce({ rows: [updated], rowCount: 1 } as any);
         const res = await request(app).put(`/api/organizer/tournament/${TOURNAMENT_ID}/organizers`).set(auth()).send({ organizer: { id: ORG_ID, name: 'Bob', email: 'b@c.com', role: 'delegate' } });
-        expect(res.status).toBe(201);
+        expect(res.status).toBe(200);
     });
 });
 
@@ -606,11 +606,11 @@ describe('POST /api/organizer/tournament/duplicate/:tournamentId', () => {
         expect(res.status).toBe(201);
     });
 
-    it('returns 500 when source tournament not found', async () => {
+    it('returns 404 when source tournament not found', async () => {
         mockAccess();
-        mockDbQuery.mockResolvedValueOnce({ rows: [], rowCount: 0 } as any); // getTournament returns nothing
+        mockDbQuery.mockResolvedValueOnce({ rows: [], rowCount: 0 } as any); // getTournament throws NotFoundError
         const res = await request(app).post(`/api/organizer/tournament/duplicate/${TOURNAMENT_ID}`).set(auth()).send({});
-        expect(res.status).toBe(500);
+        expect(res.status).toBe(404);
     });
 
     it('returns 201 with scorers option', async () => {
@@ -702,11 +702,11 @@ describe('PATCH /api/organizer/tournament/:tournamentId/rounds/:round', () => {
         expect(res.status).toBe(400);
     });
 
-    it('returns 201 on success', async () => {
+    it('returns 200 on success', async () => {
         mockRoundAccess(ROUND_BASE);
         mockDbQuery.mockResolvedValueOnce({ rows: [ROUND_BASE], rowCount: 1 } as any);
         const res = await request(app).patch(ROUND_URL).set(auth()).send({ name: 'R1', results_public: false, teams_public: false });
-        expect(res.status).toBe(201);
+        expect(res.status).toBe(200);
     });
 });
 
@@ -894,11 +894,11 @@ describe('PATCH /api/organizer/tournament/:tournamentId/format — witness valid
         expect(res.body.message).toMatch(/D witnesses called exceeds/i);
     });
 
-    it('returns 500 when updateFormat fails', async () => {
+    it('returns 404 when format not found', async () => {
         mockAccess();
-        mockDbQuery.mockResolvedValueOnce({ rows: [], rowCount: 0 } as any); // SELECT formatID returns nothing
+        mockDbQuery.mockResolvedValueOnce({ rows: [], rowCount: 0 } as any); // getTournamentFormatId -> NotFoundError
         const res = await request(app).patch(`/api/organizer/tournament/${TOURNAMENT_ID}/format`).set(auth()).send({ caseName: 'C' });
-        expect(res.status).toBe(500);
+        expect(res.status).toBe(404);
     });
 });
 
@@ -987,19 +987,19 @@ describe('PUT /api/organizer/tournament/:tournamentId/organizers', () => {
         expect(res.status).toBe(409);
     });
 
-    it('returns 500 when update fails', async () => {
+    it('returns 404 when organizer invite not found', async () => {
         mockAccess();
         mockDbQuery.mockResolvedValueOnce({ rows: [], rowCount: 0 } as any);
         const res = await request(app).put(`/api/organizer/tournament/${TOURNAMENT_ID}/organizers`).set(auth()).send({ organizer: { ...base, id: ORG_ID, has_joined: false } });
-        expect(res.status).toBe(500);
+        expect(res.status).toBe(404);
     });
 
-    it('returns 201 on success', async () => {
+    it('returns 200 on success', async () => {
         mockAccess();
         const row = { id: ORG_ID, tournament_id: TOURNAMENT_ID, name: 'Bob', email: 'new@c.com' };
         mockDbQuery.mockResolvedValueOnce({ rows: [row], rowCount: 1 } as any);
         const res = await request(app).put(`/api/organizer/tournament/${TOURNAMENT_ID}/organizers`).set(auth()).send({ organizer: { ...base, id: ORG_ID, has_joined: false } });
-        expect(res.status).toBe(201);
+        expect(res.status).toBe(200);
     });
 });
 
@@ -1013,22 +1013,22 @@ describe('DELETE /api/organizer/tournament/:tournamentId/organizers — error ca
         expect(res.status).toBe(400);
     });
 
-    it('returns 500 when delete fails', async () => {
+    it('returns 404 when organizer not found', async () => {
         mockAccess();
         mockDbQuery.mockResolvedValueOnce({ rows: [], rowCount: 0 } as any);
         const res = await request(app).delete(`/api/organizer/tournament/${TOURNAMENT_ID}/organizers`).set(auth()).send({ organizer: { ...base, id: ORG_ID, has_joined: false } });
-        expect(res.status).toBe(500);
+        expect(res.status).toBe(404);
     });
 });
 
 // ─── POST /organizers — 500 case ──────────────────────────────────────────────
 describe('POST /api/organizer/tournament/:tournamentId/organizers — 500', () => {
-    it('returns 500 when addOrganizer returns undefined', async () => {
+    it('returns 500 when addOrganizer invite insert fails', async () => {
         mockAccess();
         mockDbQuery
             .mockResolvedValueOnce({ rows: [], rowCount: 0 } as any) // SELECT auth
             .mockResolvedValueOnce({ rows: [], rowCount: 0 } as any) // duplicate check
-            .mockResolvedValueOnce({ rows: [], rowCount: 0 } as any); // INSERT fails
+            .mockResolvedValueOnce(null);                            // INSERT throws DbError
         const res = await request(app).post(`/api/organizer/tournament/${TOURNAMENT_ID}/organizers`).set(auth()).send({ organizer: { name: 'Bob', email: 'b@c.com', role: 'delegate' } });
         expect(res.status).toBe(500);
     });
@@ -1050,11 +1050,11 @@ describe('PUT /api/organizer/tournament/:tournamentId/courtrooms', () => {
         expect(res.status).toBe(200);
     });
 
-    it('returns 500 when update fails', async () => {
+    it('returns 404 when courtroom not found', async () => {
         mockAccess();
         mockDbQuery.mockResolvedValueOnce({ rows: [], rowCount: 0 } as any);
         const res = await request(app).put(`/api/organizer/tournament/${TOURNAMENT_ID}/courtrooms`).set(auth()).send({ id: 'c1', name: 'Updated' });
-        expect(res.status).toBe(500);
+        expect(res.status).toBe(404);
     });
 });
 
@@ -1073,11 +1073,11 @@ describe('DELETE /api/organizer/tournament/:tournamentId/courtrooms', () => {
         expect(res.status).toBe(204);
     });
 
-    it('returns 500 when delete fails', async () => {
+    it('returns 404 when courtroom not found', async () => {
         mockAccess();
         mockDbQuery.mockResolvedValueOnce({ rows: [], rowCount: 0 } as any);
         const res = await request(app).delete(`/api/organizer/tournament/${TOURNAMENT_ID}/courtrooms`).set(auth()).send({ id: 'c1' });
-        expect(res.status).toBe(500);
+        expect(res.status).toBe(404);
     });
 });
 
@@ -1139,11 +1139,11 @@ describe('DELETE /api/organizer/tournament/:tournamentId/teams', () => {
         expect(res.status).toBe(400);
     });
 
-    it('returns 500 when delete fails', async () => {
+    it('returns 404 when team not found', async () => {
         mockAccess();
         mockDbQuery.mockResolvedValueOnce({ rows: [], rowCount: 0 } as any);
         const res = await request(app).delete(`/api/organizer/tournament/${TOURNAMENT_ID}/teams`).set(auth()).send({ id: ROUND_ID });
-        expect(res.status).toBe(500);
+        expect(res.status).toBe(404);
     });
 
     it('returns 204 on success', async () => {
