@@ -7,6 +7,8 @@
     "build": "npx tsc -b && npx vite build",
     "lint": "eslint .",
     "preview": "vite preview",
+    "cy:open": "cypress open",
+    "cy:run": "cypress run",
     "prepare": "node -e \"if(process.env.NODE_ENV !== 'production') { require('child_process').execSync('cd .. && husky', {stdio:'inherit'}) }\""
   },
   "lint-staged": {
@@ -31,6 +33,7 @@
     "@types/react-dom": "^19.2.3",
     "@vitejs/plugin-react": "^6.0.1",
     "babel-plugin-react-compiler": "^1.0.0",
+    "cypress": "^14.4.0",
     "eslint": "^10.2.1",
     "eslint-plugin-react-hooks": "^7.1.1",
     "eslint-plugin-react-refresh": "^0.5.2",

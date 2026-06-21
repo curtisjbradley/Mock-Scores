@@ -1,5 +1,10 @@
 name: Deploy to EC2 (Dev Branch)
 
+
+concurrency:
+  group: production-deploy
+
+
 on:
   push:
     branches: ["dev"]
@@ -7,6 +12,8 @@ on:
 jobs:
   deploy:
     runs-on: ubuntu-latest
+    permissions:
+      contents: read
 
     steps:
       - name: Checkout repo

@@ -1,15 +1,17 @@
-name: Testing
+name: Backend Testing
 
 on:
   push:
-    branches: [main]
+    branches: [main, dev]
   pull_request:
     branches: [main]
 
 jobs:
   test:
-    name: Run Tests
+    name: Run Jests Tests
     runs-on: ubuntu-latest
+    permissions:
+      contents: read
 
     steps:
       - name: Checkout repository
@@ -25,4 +27,4 @@ jobs:
         run: npm ci
 
       - name: Run tests
-        run: npm test
+        run: npm run test -w backend

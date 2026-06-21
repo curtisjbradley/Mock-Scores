@@ -1,5 +1,7 @@
+import { lazy } from 'react'
 import type { computeStandings } from '../../organizer/blockly/standingsEngine'
-import TiebreakerViewer from '../../organizer/blockly/TiebreakerViewer'
+
+const TiebreakerViewer = lazy(() => import('../../organizer/blockly/TiebreakerViewer'))
 
 interface Props {
     rows: ReturnType<typeof computeStandings>
