@@ -5,7 +5,7 @@ on:
     branches: [main, dev]
   workflow_dispatch:
 
-permissions:gi
+permissions:
   contents: read
   pages: write
   id-token: write
