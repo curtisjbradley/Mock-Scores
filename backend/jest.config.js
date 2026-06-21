@@ -5,11 +5,7 @@ module.exports = {
   roots: ['<rootDir>/src', '<rootDir>/testing'],
   testMatch: ['**/testing/**/*.test.ts', '**/__tests__/**/*.test.ts'],
   moduleNameMapper: {
-    '^../db$': '<rootDir>/testing/mocks/db.ts',
-    '^./db$': '<rootDir>/testing/mocks/db.ts',
-    '^../../db$': '<rootDir>/testing/mocks/db.ts',
-    '^../../src/db$': '<rootDir>/testing/mocks/db.ts',
-    '^.*/src/db$': '<rootDir>/testing/mocks/db.ts',
+    '^.*/db$': '<rootDir>/testing/mocks/db.ts',
   },
   // Transform jose (ESM) through ts-jest
   transformIgnorePatterns: [

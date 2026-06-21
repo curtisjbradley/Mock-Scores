@@ -1,5 +1,5 @@
 import { useNavigate } from 'react-router-dom'
-import './home/styles/home.css'
+import './styles/home.css'
 
 const roles = [
     { label: 'Organizer', path: '/organizer' },

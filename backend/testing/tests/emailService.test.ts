@@ -8,7 +8,7 @@ jest.mock('nodemailer', () => ({
     })),
 }))
 
-import { sendEmail } from '../../src/emailService'
+import { sendEmail } from '../../src/email'
 
 beforeEach(() => jest.clearAllMocks())
 

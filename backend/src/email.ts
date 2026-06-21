@@ -1,8 +1,28 @@
-interface EmailTemplate {
-    subject: string
-    html: string
-    text: string
+import { createTransport } from 'nodemailer'
+
+const transporter = createTransport({
+    host: process.env.SES_SMTP_HOST,
+    port: Number(process.env.SES_SMTP_PORT || 465),
+    secure: true,
+    auth: {
+        user: process.env.SES_SMTP_USER,
+        pass: process.env.SES_SMTP_PASS,
+    },
+})
+
+transporter.verify().then(() => console.log('SMTP ready')).catch(console.error)
+
+const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
+
+export async function sendEmail(to: string, subject: string, html: string, text: string): Promise<void> {
+    if (!EMAIL_RE.test(to)) throw new Error(`Invalid email address: ${to}`)
+    const info = await transporter.sendMail({ from: process.env.MAIL_FROM, to, subject, html, text })
+    console.log(`Email sent to ${to} — MessageId: ${info.messageId}`)
 }
+
+// ── Templates ──────────────────────────────────────────────────────────────────
+
+interface EmailTemplate { subject: string; html: string; text: string }
 
 const BASE_URL = process.env.FRONTEND_URL ?? 'http://localhost:5173'
 
@@ -34,8 +54,7 @@ export function welcomeEmail(firstName: string): EmailTemplate {
         <p>Your Mock Scores account has been created. You can now log in and start managing tournaments.</p>
         <a class="btn" href="${BASE_URL}/login">Go to Mock Scores</a>
     `)
-    const text = `Hi ${firstName},\n\nYour Mock Scores account has been created.\n\nLog in at: ${BASE_URL}/login`
-    return { subject, html, text }
+    return { subject, html, text: `Hi ${firstName},\n\nYour Mock Scores account has been created.\n\nLog in at: ${BASE_URL}/login` }
 }
 
 export function passwordChangedEmail(firstName: string): EmailTemplate {
@@ -45,8 +64,7 @@ export function passwordChangedEmail(firstName: string): EmailTemplate {
         <p>Your Mock Scores password was recently changed. If you made this change, no action is needed.</p>
         <p>If you did not change your password, please contact us immediately.</p>
     `)
-    const text = `Hi ${firstName},\n\nYour Mock Scores password was recently changed. If you did not do this, please contact us immediately.`
-    return { subject, html, text }
+    return { subject, html, text: `Hi ${firstName},\n\nYour Mock Scores password was recently changed. If you did not do this, please contact us immediately.` }
 }
 
 export function organizerAddedEmail(firstName: string, tournamentName: string): EmailTemplate {
@@ -56,8 +74,7 @@ export function organizerAddedEmail(firstName: string, tournamentName: string): 
         <p>You have been added as an organizer for <strong>${tournamentName}</strong>.</p>
         <a class="btn" href="${BASE_URL}/organizer">Go to Dashboard</a>
     `)
-    const text = `Hi ${firstName},\n\nYou have been added as an organizer for ${tournamentName}.\n\nDashboard: ${BASE_URL}/organizer`
-    return { subject, html, text }
+    return { subject, html, text: `Hi ${firstName},\n\nYou have been added as an organizer for ${tournamentName}.\n\nDashboard: ${BASE_URL}/organizer` }
 }
 
 export function teamAddedEmail(teamName: string, tournamentName: string): EmailTemplate {
@@ -67,8 +84,7 @@ export function teamAddedEmail(teamName: string, tournamentName: string): EmailT
         <p>The team <strong>${teamName}</strong> has been successfully registered for <strong>${tournamentName}</strong>.</p>
         <p>You will receive further updates as the tournament progresses.</p>
     `)
-    const text = `Hi,\n\n${teamName} has been registered for ${tournamentName}.\n\nYou will receive further updates as the tournament progresses.`
-    return { subject, html, text }
+    return { subject, html, text: `Hi,\n\n${teamName} has been registered for ${tournamentName}.\n\nYou will receive further updates as the tournament progresses.` }
 }
 
 export function roundResultsPublicEmail(tournamentName: string, roundName: string, standingsUrl: string): EmailTemplate {
@@ -77,8 +93,7 @@ export function roundResultsPublicEmail(tournamentName: string, roundName: strin
         <p>The results for <strong>${roundName}</strong> at <strong>${tournamentName}</strong> have been published.</p>
         <a class="btn" href="${standingsUrl}">View Standings</a>
     `)
-    const text = `Results for ${roundName} at ${tournamentName} have been published.\n\nView standings: ${standingsUrl}`
-    return { subject, html, text }
+    return { subject, html, text: `Results for ${roundName} at ${tournamentName} have been published.\n\nView standings: ${standingsUrl}` }
 }
 
 export function scorerInviteEmail(tournamentName: string, scorecardUrl: string): EmailTemplate {
@@ -89,6 +104,5 @@ export function scorerInviteEmail(tournamentName: string, scorecardUrl: string):
         <a class="btn" href="${scorecardUrl}">Open Scorecard</a>
         <p>If you have any questions, please contact the tournament organizer.</p>
     `)
-    const text = `You have been assigned as a scorer at ${tournamentName}.\n\nOpen your scorecard: ${scorecardUrl}`
-    return { subject, html, text }
+    return { subject, html, text: `You have been assigned as a scorer at ${tournamentName}.\n\nOpen your scorecard: ${scorecardUrl}` }
 }

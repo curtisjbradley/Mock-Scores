@@ -1,48 +1,142 @@
-import {NextFunction, Request, Response, Router} from "express";
-import {IRound, TournamentPayload, IWitnesses} from "@mock-scores/shared";
-import {DuplicateDelegateError, OrganizerAlreadyJoinedError, NotFoundError} from "../../errors";
-import {OrganizerProvider} from "../../providers/organizerProvider";
-import type {IOrganizer, IScorer, ITeam} from "@mock-scores/shared"
+import { NextFunction, Request, Response, Router } from "express";
+import { IRound, TournamentPayload, IWitnesses, IOrganizer, IScorer, ITeam } from "@mock-scores/shared";
+import { AlreadyExistsError, DbError, NotFoundError, OrganizerAlreadyJoinedError } from "../../errors";
+import * as organizer from "../../providers/organizerProvider";
+import * as coachProvider from "../../providers/coachProvider";
 import roundRoutes from "./organizerRoundRoutes";
-import {uuidRegex} from "../../authUtils";
+import { uuidRegex } from "../../authUtils";
 import { transferOwnership } from "../../providers/coachProvider";
+import { TournamentRequest } from "../../types/express";
+import { tournamentHandler, scorerHandler, organizerHandler, teamHandler } from "../../types/handlers";
 
 const router = Router();
-const organizerProvider = new OrganizerProvider();
 
-router.get("/", async (req: Request, res: Response) => {
-    if (!req?.tournament) return res.status(403).json({ message: 'No access to tournament' });
-    const tournament = await organizerProvider.getTournament(req.tournament)
-    if (!tournament) return res.status(404).json({ message: 'No tournament found' });
-    return res.status(200).json(tournament);
-})
+// ── Tournament ────────────────────────────────────────────────────────────────
 
-router.patch("/", async (req: Request, res: Response) => {
-    if (!req?.tournament) return res.status(403).json({ message: 'No access to tournament' });
+/**
+ * @swagger
+ * /api/organizer/tournament/{tournamentId}:
+ *   get:
+ *     summary: Get tournament details
+ *     tags: [Organizer - Tournament]
+ *     parameters:
+ *       - in: path
+ *         name: tournamentId
+ *         required: true
+ *         schema: { type: string, format: uuid }
+ *     responses:
+ *       200: { description: Tournament object }
+ *       404: { description: Not found }
+ */
+router.get("/", tournamentHandler(async (req, res) => {
+    try {
+        return res.status(200).json(await organizer.getTournament(req.tournament));
+    } catch (e) {
+        if (e instanceof NotFoundError) return res.status(404).json({ message: e.message });
+        throw e;
+    }
+}));
+
+/**
+ * @swagger
+ * /api/organizer/tournament/{tournamentId}:
+ *   patch:
+ *     summary: Update tournament details
+ *     tags: [Organizer - Tournament]
+ *     parameters:
+ *       - in: path
+ *         name: tournamentId
+ *         required: true
+ *         schema: { type: string, format: uuid }
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             required: [tournament]
+ *             properties:
+ *               tournament: { type: object }
+ *     responses:
+ *       200: { description: Updated }
+ *       400: { description: Missing tournament in body }
+ *       404: { description: Not found }
+ *       500: { description: Unable to update tournament }
+ */
+router.patch("/", tournamentHandler(async (req, res) => {
     const { tournament: t } = req.body as { tournament: TournamentPayload['tournament'] };
     if (!t) return res.status(400).json({ message: 'Missing tournament in body' });
-    const ok = await organizerProvider.updateTournamentDetails(req.tournament, t);
-    if (!ok) return res.status(500).json({ message: 'Unable to update tournament' });
-    return res.status(200).json({ success: true });
-})
+    try {
+        await organizer.updateTournamentDetails(req.tournament, t);
+        return res.status(200).json({ success: true });
+    } catch (e) {
+        if (e instanceof NotFoundError) return res.status(404).json({ message: e.message });
+        if (e instanceof DbError) return res.status(500).json({ message: 'Unable to update tournament' });
+        throw e;
+    }
+}));
 
-router.get("/format", async (req: Request, res: Response) => {
-    if (!req?.tournament) return res.status(403).json({ message: 'No access to tournament' });
-    const format = await organizerProvider.getFormat(req.tournament)
-    if (!format) return res.status(404).json({ message: 'Format not found' });
-    return res.status(200).json(format);
-})
+// ── Format & Witnesses ────────────────────────────────────────────────────────
 
-router.patch("/format", async (req: Request, res: Response) => {
-    if (!req?.tournament) return res.status(403).json({ message: 'No access to tournament' });
+/**
+ * @swagger
+ * /api/organizer/tournament/{tournamentId}/format:
+ *   get:
+ *     summary: Get case format
+ *     tags: [Organizer - Tournament]
+ *     parameters:
+ *       - in: path
+ *         name: tournamentId
+ *         required: true
+ *         schema: { type: string, format: uuid }
+ *     responses:
+ *       200: { description: Case format }
+ *       404: { description: Not found }
+ */
+router.get("/format", tournamentHandler(async (req, res) => {
+    try {
+        return res.status(200).json(await organizer.getFormat(req.tournament));
+    } catch (e) {
+        if (e instanceof NotFoundError) return res.status(404).json({ message: e.message });
+        throw e;
+    }
+}));
+
+/**
+ * @swagger
+ * /api/organizer/tournament/{tournamentId}/format:
+ *   patch:
+ *     summary: Update case format
+ *     tags: [Organizer - Tournament]
+ *     parameters:
+ *       - in: path
+ *         name: tournamentId
+ *         required: true
+ *         schema: { type: string, format: uuid }
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             properties:
+ *               pWitnessesCalled: { type: integer }
+ *               dWitnessesCalled: { type: integer }
+ *               isCriminal: { type: boolean }
+ *     responses:
+ *       200: { description: Updated }
+ *       400: { description: Validation error }
+ *       404: { description: Not found }
+ *       500: { description: Unable to update format }
+ */
+router.patch("/format", tournamentHandler(async (req, res) => {
     const format = req.body as TournamentPayload['caseFormat'];
     if ((format.pWitnessesCalled != null && format.pWitnessesCalled < 0) ||
-        (format.dWitnessesCalled != null && format.dWitnessesCalled < 0)) {
+        (format.dWitnessesCalled != null && format.dWitnessesCalled < 0))
         return res.status(400).json({ message: 'Witnesses called cannot be negative' });
-    }
     if (format.pWitnessesCalled != null || format.dWitnessesCalled != null) {
-        const witnesses = await organizerProvider.getWitnesses(req.tournament);
-        if (witnesses) {
+        try {
+            const witnesses = await organizer.getWitnesses(req.tournament);
             const swing = witnesses.swingWitnessNames.length;
             if (format.pWitnessesCalled != null && witnesses.pWitnessNames.length + swing > 0 &&
                 format.pWitnessesCalled > witnesses.pWitnessNames.length + swing)
@@ -50,356 +144,808 @@ router.patch("/format", async (req: Request, res: Response) => {
             if (format.dWitnessesCalled != null && witnesses.dWitnessNames.length + swing > 0 &&
                 format.dWitnessesCalled > witnesses.dWitnessNames.length + swing)
                 return res.status(400).json({ message: 'D witnesses called exceeds available witnesses' });
+        } catch (e) {
+            if (e instanceof NotFoundError) return res.status(404).json({ message: e.message });
+            throw e;
         }
     }
-    const ok = await organizerProvider.updateFormat(req.tournament, format)
-    if (!ok) return res.status(500).json({ message: 'Unable to update format' });
-    return res.status(200).json({ success: true });
-})
+    try {
+        await organizer.updateFormat(req.tournament, format);
+        return res.status(200).json({ success: true });
+    } catch (e) {
+        if (e instanceof NotFoundError) return res.status(404).json({ message: e.message });
+        if (e instanceof DbError) return res.status(500).json({ message: 'Unable to update format' });
+        throw e;
+    }
+}));
 
-router.get("/witnesses", async (req: Request, res: Response) => {
-    if (!req?.tournament) return res.status(403).json({ message: 'No access to tournament' });
-    const witnesses = await organizerProvider.getWitnesses(req.tournament)
-    if (!witnesses) return res.status(404).json({ message: 'Witnesses not found' });
-    return res.status(200).json(witnesses);
-})
+/**
+ * @swagger
+ * /api/organizer/tournament/{tournamentId}/witnesses:
+ *   get:
+ *     summary: Get witnesses
+ *     tags: [Organizer - Tournament]
+ *     parameters:
+ *       - in: path
+ *         name: tournamentId
+ *         required: true
+ *         schema: { type: string, format: uuid }
+ *     responses:
+ *       200: { description: Witnesses }
+ *       404: { description: Not found }
+ */
+router.get("/witnesses", tournamentHandler(async (req, res) => {
+    try {
+        return res.status(200).json(await organizer.getWitnesses(req.tournament));
+    } catch (e) {
+        if (e instanceof NotFoundError) return res.status(404).json({ message: e.message });
+        throw e;
+    }
+}));
 
-router.patch("/witnesses", async (req: Request, res: Response) => {
-    if (!req?.tournament) return res.status(403).json({ message: 'No access to tournament' });
+/**
+ * @swagger
+ * /api/organizer/tournament/{tournamentId}/witnesses:
+ *   patch:
+ *     summary: Update witnesses
+ *     tags: [Organizer - Tournament]
+ *     parameters:
+ *       - in: path
+ *         name: tournamentId
+ *         required: true
+ *         schema: { type: string, format: uuid }
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             properties:
+ *               pWitnessNames: { type: array, items: { type: string } }
+ *               dWitnessNames: { type: array, items: { type: string } }
+ *               swingWitnessNames: { type: array, items: { type: string } }
+ *     responses:
+ *       200: { description: Updated }
+ *       400: { description: Empty witness name }
+ *       404: { description: Not found }
+ *       500: { description: Unable to update witnesses }
+ */
+router.patch("/witnesses", tournamentHandler(async (req, res) => {
     const witnesses = req.body as IWitnesses;
     const allNames = [...witnesses.pWitnessNames, ...witnesses.dWitnessNames, ...witnesses.swingWitnessNames];
     if (allNames.some(n => !n?.trim())) return res.status(400).json({ message: 'Witness names cannot be empty' });
-    const ok = await organizerProvider.updateWitnesses(req.tournament, witnesses)
-    if (!ok) return res.status(500).json({ message: 'Unable to update witnesses' });
-    return res.status(200).json({ success: true });
-})
+    try {
+        await organizer.updateWitnesses(req.tournament, witnesses);
+        return res.status(200).json({ success: true });
+    } catch (e) {
+        if (e instanceof NotFoundError) return res.status(404).json({ message: e.message });
+        if (e instanceof DbError) return res.status(500).json({ message: 'Unable to update witnesses' });
+        throw e;
+    }
+}));
 
-router.get("/standings-config", async (req: Request, res: Response) => {
-    if (!req?.tournament) return res.status(403).json({ message: 'No access to tournament' });
-    const config = await organizerProvider.getStandingsConfig(req.tournament);
-    return res.status(200).json(config ?? null);
-})
+// ── Standings Config ──────────────────────────────────────────────────────────
 
-router.patch("/standings-config", async (req: Request, res: Response) => {
-    if (!req?.tournament) return res.status(403).json({ message: 'No access to tournament' });
+/**
+ * @swagger
+ * /api/organizer/tournament/{tournamentId}/standings-config:
+ *   get:
+ *     summary: Get standings configuration
+ *     tags: [Organizer - Tournament]
+ *     parameters:
+ *       - in: path
+ *         name: tournamentId
+ *         required: true
+ *         schema: { type: string, format: uuid }
+ *     responses:
+ *       200: { description: Standings config or null }
+ *       500: { description: Database error }
+ */
+router.get("/standings-config", tournamentHandler(async (req, res) => {
+    try {
+        return res.status(200).json((await organizer.getStandingsConfig(req.tournament)) ?? null);
+    } catch (e) {
+        if (e instanceof DbError) return res.status(500).json({ message: 'Database error' });
+        throw e;
+    }
+}));
+
+/**
+ * @swagger
+ * /api/organizer/tournament/{tournamentId}/standings-config:
+ *   patch:
+ *     summary: Upsert standings configuration
+ *     tags: [Organizer - Tournament]
+ *     parameters:
+ *       - in: path
+ *         name: tournamentId
+ *         required: true
+ *         schema: { type: string, format: uuid }
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             required: [statsXml, standingsXml]
+ *             properties:
+ *               statsXml: { type: string }
+ *               standingsXml: { type: string }
+ *     responses:
+ *       200: { description: Updated }
+ *       400: { description: Missing statsXml or standingsXml }
+ *       500: { description: Unable to update standings config }
+ */
+router.patch("/standings-config", tournamentHandler(async (req, res) => {
     const { statsXml, standingsXml } = req.body as { statsXml: string; standingsXml: string };
     if (!statsXml || !standingsXml) return res.status(400).json({ message: 'Missing statsXml or standingsXml' });
-    const ok = await organizerProvider.upsertStandingsConfig(req.tournament, statsXml, standingsXml);
-    if (!ok) return res.status(500).json({ message: 'Unable to update standings config' });
-    return res.status(200).json({ success: true });
-})
-
-router.get("/scoring-categories", async (req: Request, res: Response) => {
-    if (!req?.tournament) return res.status(403).json({ message: 'No access to tournament' });
-    const categories = await organizerProvider.getScoringCategories(req.tournament)
-    return res.status(200).json(categories);
-})
-
-router.patch("/scoring-categories", async (req: Request, res: Response) => {
-    if (!req?.tournament) return res.status(403).json({ message: 'No access to tournament' });
-    const ok = await organizerProvider.updateScoringCategories(req.tournament, req.body as TournamentPayload['scoringCategories'])
-    if (!ok) return res.status(500).json({ message: 'Unable to update scoring categories' });
-    return res.status(200).json({ success: true });
-})
-
-
-router.get("/scorers", async (req: Request, res: Response) => {
-
-    if(!req?.tournament) {
-        return res.status(403).json({ message: 'No access to tournament' });
+    try {
+        await organizer.upsertStandingsConfig(req.tournament, statsXml, standingsXml);
+        return res.status(200).json({ success: true });
+    } catch (e) {
+        if (e instanceof DbError) return res.status(500).json({ message: 'Unable to update standings config' });
+        throw e;
     }
+}));
 
+// ── Scoring Categories ────────────────────────────────────────────────────────
 
-    const scorers = await organizerProvider.getScorers(req.tournament);
+/**
+ * @swagger
+ * /api/organizer/tournament/{tournamentId}/scoring-categories:
+ *   get:
+ *     summary: Get scoring categories
+ *     tags: [Organizer - Tournament]
+ *     parameters:
+ *       - in: path
+ *         name: tournamentId
+ *         required: true
+ *         schema: { type: string, format: uuid }
+ *     responses:
+ *       200: { description: Scoring categories }
+ */
+router.get("/scoring-categories", tournamentHandler(async (req, res) => {
+    return res.status(200).json(await organizer.getScoringCategories(req.tournament));
+}));
 
-
-    if(!scorers) return res.status(500).json({ message: 'Unable to reach backend' });
-
-    return res.status(200).json(scorers);
-
-})
-
-function verifyScorer(req: Request, res: Response, next : NextFunction) {
-    if(!req?.tournament) {
-        return res.status(403).json({ message: 'No access to tournament' });
+/**
+ * @swagger
+ * /api/organizer/tournament/{tournamentId}/scoring-categories:
+ *   patch:
+ *     summary: Update scoring categories
+ *     tags: [Organizer - Tournament]
+ *     parameters:
+ *       - in: path
+ *         name: tournamentId
+ *         required: true
+ *         schema: { type: string, format: uuid }
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: array
+ *             items: { type: object }
+ *     responses:
+ *       200: { description: Updated }
+ *       500: { description: Unable to update scoring categories }
+ */
+router.patch("/scoring-categories", tournamentHandler(async (req, res) => {
+    try {
+        await organizer.updateScoringCategories(req.tournament, req.body as TournamentPayload['scoringCategories']);
+        return res.status(200).json({ success: true });
+    } catch (e) {
+        if (e instanceof DbError) return res.status(500).json({ message: 'Unable to update scoring categories' });
+        throw e;
     }
-    const scorer : IScorer = req.body
+}));
 
-    if(!scorer?.email || !scorer?.first_name || !scorer?.last_name || !scorer?.scorer_id) {
+// ── Scorers ───────────────────────────────────────────────────────────────────
+
+/**
+ * @swagger
+ * /api/organizer/tournament/{tournamentId}/scorers:
+ *   get:
+ *     summary: List scorers for a tournament
+ *     tags: [Organizer - Scorers]
+ *     parameters:
+ *       - in: path
+ *         name: tournamentId
+ *         required: true
+ *         schema: { type: string, format: uuid }
+ *     responses:
+ *       200: { description: Array of scorers }
+ *       500: { description: Database error }
+ */
+router.get("/scorers", tournamentHandler(async (req, res) => {
+    try {
+        return res.status(200).json(await organizer.getScorers(req.tournament));
+    } catch (e) {
+        if (e instanceof DbError) return res.status(500).json({ message: 'Unable to reach backend' });
+        throw e;
+    }
+}));
+
+function verifyScorer(req: Request, res: Response, next: NextFunction) {
+    const scorer: IScorer = req.body;
+    if (!scorer?.email || !scorer?.first_name || !scorer?.last_name || !scorer?.scorer_id)
         return res.status(409).json({ message: 'Missing required field(s)' });
-    }
     req.scorer = scorer;
     next();
 }
 
-router.post("/scorers", verifyScorer, async (req: Request, res: Response) => {
-    if (!req?.scorer){
-        return res.status(400).json({ message: 'Unable to get scorer' });
+/**
+ * @swagger
+ * /api/organizer/tournament/{tournamentId}/scorers:
+ *   post:
+ *     summary: Add a scorer to the tournament
+ *     tags: [Organizer - Scorers]
+ *     parameters:
+ *       - in: path
+ *         name: tournamentId
+ *         required: true
+ *         schema: { type: string, format: uuid }
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             required: [email, first_name, last_name, scorer_id]
+ *             properties:
+ *               email: { type: string, format: email }
+ *               first_name: { type: string }
+ *               last_name: { type: string }
+ *               scorer_id: { type: string, format: uuid }
+ *     responses:
+ *       200: { description: Scorer added }
+ *       409: { description: Missing required fields }
+ *       500: { description: Database error }
+ */
+router.post("/scorers", verifyScorer, scorerHandler(async (req, res) => {
+    try {
+        await organizer.addScorer(req.scorer, req.tournament);
+        return res.status(200).json(req.scorer);
+    } catch (e) {
+        if (e instanceof DbError) return res.status(500).json({ message: 'Unable to communicate with database' });
+        throw e;
     }
-    if (!req.tournament) {
-        return res.status(400).json({ message: 'Unable to parse tournament' });
+}));
 
+/**
+ * @swagger
+ * /api/organizer/tournament/{tournamentId}/scorers:
+ *   put:
+ *     summary: Update a scorer
+ *     tags: [Organizer - Scorers]
+ *     parameters:
+ *       - in: path
+ *         name: tournamentId
+ *         required: true
+ *         schema: { type: string, format: uuid }
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             required: [email, first_name, last_name, scorer_id]
+ *             properties:
+ *               email: { type: string, format: email }
+ *               first_name: { type: string }
+ *               last_name: { type: string }
+ *               scorer_id: { type: string, format: uuid }
+ *     responses:
+ *       200: { description: Updated }
+ *       404: { description: Not found }
+ *       500: { description: Database error }
+ */
+router.put("/scorers", verifyScorer, scorerHandler(async (req, res) => {
+    try {
+        await organizer.updateScorer(req.scorer, req.tournament);
+        return res.status(200).json(req.scorer);
+    } catch (e) {
+        if (e instanceof NotFoundError) return res.status(404).json({ message: e.message });
+        if (e instanceof DbError) return res.status(500).json({ message: 'Unable to communicate with database' });
+        throw e;
     }
-    const result = await organizerProvider.addScorer(req.scorer, req.tournament);
+}));
 
-    if (!result) {
-        return res.status(500).json({ message: 'Unable to communicate with database' });
+/**
+ * @swagger
+ * /api/organizer/tournament/{tournamentId}/scorers:
+ *   delete:
+ *     summary: Remove a scorer from the tournament
+ *     tags: [Organizer - Scorers]
+ *     parameters:
+ *       - in: path
+ *         name: tournamentId
+ *         required: true
+ *         schema: { type: string, format: uuid }
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             required: [scorer_id]
+ *             properties:
+ *               scorer_id: { type: string, format: uuid }
+ *     responses:
+ *       204: { description: Deleted }
+ *       400: { description: Missing scorer_id }
+ *       404: { description: Not found }
+ *       500: { description: Database error }
+ */
+router.delete("/scorers", tournamentHandler(async (req, res) => {
+    const { scorer_id } = req.body;
+    if (!scorer_id) return res.status(400).json({ message: 'Did not provide a scorer_id' });
+    try {
+        await organizer.deleteScorer(scorer_id);
+        return res.status(204).send();
+    } catch (e) {
+        if (e instanceof NotFoundError) return res.status(404).json({ message: e.message });
+        if (e instanceof DbError) return res.status(500).json({ message: 'Unable to delete scorer' });
+        throw e;
     }
+}));
 
-    return res.status(200).json(req.scorer);
-});
-
-router.put("/scorers", verifyScorer, async (req: Request, res: Response) => {
-    if (!req?.scorer){
-        return res.status(400).json({ message: 'Unable to get scorer' });
+/**
+ * @swagger
+ * /api/organizer/tournament/{tournamentId}/scorer-conflicts:
+ *   get:
+ *     summary: Get all scorer conflicts for the tournament
+ *     tags: [Organizer - Scorers]
+ *     parameters:
+ *       - in: path
+ *         name: tournamentId
+ *         required: true
+ *         schema: { type: string, format: uuid }
+ *     responses:
+ *       200: { description: All conflicts }
+ *       500: { description: Database error }
+ */
+router.get('/scorer-conflicts', tournamentHandler(async (req, res) => {
+    try {
+        return res.status(200).json(await organizer.getAllConflicts(req.tournament));
+    } catch (e) {
+        if (e instanceof DbError) return res.status(500).json({ message: 'Database error' });
+        throw e;
     }
-    if(!req?.tournament){
-        return res.status(400).json({ message: 'Unable to get tournament' });
-    }
+}));
 
-
-    const result = await organizerProvider.updateScorer(req.scorer, req.tournament );
-
-    if (!result) {
-        return res.status(500).json({ message: 'Unable to communicate with database' });
-    }
-
-    return res.status(200).json(req.scorer);
-});
-
-router.delete("/scorers", async (req: Request, res: Response) => {
-    const {scorer_id} = req.body;
-
-    if(!scorer_id){
-        return res.status(409).json({ message: 'Did not provide a scorer_id' });
-    }
-
-    const result = await organizerProvider.deleteScorer(scorer_id);
-    if (!result) {
-        return res.status(500).json({ message: 'Unable to delete scorer' });
-    }
-    return res.status(204).send();
-});
-
-router.get('/scorer-conflicts', async (req: Request, res: Response) => {
-    if (!req?.tournament) return res.status(403).json({ message: 'No access to tournament' });
-    const conflicts = await organizerProvider.getAllConflicts(req.tournament);
-    return res.status(200).json(conflicts);
-});
-
+/**
+ * @swagger
+ * /api/organizer/tournament/{tournamentId}/scorers/{scorerId}/conflicts:
+ *   get:
+ *     summary: Get conflicts for a specific scorer
+ *     tags: [Organizer - Scorers]
+ *     parameters:
+ *       - in: path
+ *         name: tournamentId
+ *         required: true
+ *         schema: { type: string, format: uuid }
+ *       - in: path
+ *         name: scorerId
+ *         required: true
+ *         schema: { type: string, format: uuid }
+ *     responses:
+ *       200: { description: Conflicts }
+ *       400: { description: Invalid scorer ID }
+ *       500: { description: Database error }
+ */
 router.get('/scorers/:scorerId/conflicts', async (req: Request, res: Response) => {
-    if (!req?.tournament) return res.status(403).json({ message: 'No access to tournament' });
     const scorerId = req.params.scorerId as string;
     if (!uuidRegex.test(scorerId)) return res.status(400).json({ message: 'Invalid scorer ID' });
-    const conflicts = await organizerProvider.getConflicts(scorerId);
-    return res.status(200).json(conflicts);
-});
-
-router.post('/scorers/:scorerId/conflicts', async (req: Request, res: Response) => {
-    if (!req?.tournament) return res.status(403).json({ message: 'No access to tournament' });
-    const scorerId = req.params.scorerId as string;
-    const { team_id } = req.body;
-    if (!uuidRegex.test(scorerId) || !uuidRegex.test(team_id)) return res.status(400).json({ message: 'Invalid ID' });
-    const result = await organizerProvider.addConflict(scorerId, team_id);
-    if (!result) return res.status(409).json({ message: 'Conflict already exists' });
-    return res.status(201).json(result);
-});
-
-router.delete('/scorers/:scorerId/conflicts', async (req: Request, res: Response) => {
-    if (!req?.tournament) return res.status(403).json({ message: 'No access to tournament' });
-    const scorerId = req.params.scorerId as string;
-    const { team_id } = req.body;
-    if (!uuidRegex.test(scorerId) || !uuidRegex.test(team_id)) return res.status(400).json({ message: 'Invalid ID' });
-    const ok = await organizerProvider.removeConflict(scorerId, team_id);
-    if (!ok) return res.status(404).json({ message: 'Conflict not found' });
-    return res.status(204).send();
-});
-
-
-
-
-
-
-router.get("/organizers", async (req: Request, res: Response) => {
-    if(!req?.tournament) {
-        return res.status(403).json({ message: 'No access to tournament' });
+    try {
+        return res.status(200).json(await organizer.getConflicts(scorerId));
+    } catch (e) {
+        if (e instanceof DbError) return res.status(500).json({ message: 'Database error' });
+        throw e;
     }
-    const organizers = await organizerProvider.getOrganizers(req.tournament)
-    return res.status(200).json(organizers);
 });
 
+/**
+ * @swagger
+ * /api/organizer/tournament/{tournamentId}/scorers/{scorerId}/conflicts:
+ *   post:
+ *     summary: Add a conflict between a scorer and a team
+ *     tags: [Organizer - Scorers]
+ *     parameters:
+ *       - in: path
+ *         name: tournamentId
+ *         required: true
+ *         schema: { type: string, format: uuid }
+ *       - in: path
+ *         name: scorerId
+ *         required: true
+ *         schema: { type: string, format: uuid }
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             required: [team_id]
+ *             properties:
+ *               team_id: { type: string, format: uuid }
+ *     responses:
+ *       201: { description: Conflict added }
+ *       400: { description: Invalid ID }
+ *       409: { description: Conflict already exists }
+ */
+router.post('/scorers/:scorerId/conflicts', async (req: Request, res: Response) => {
+    const scorerId = req.params.scorerId as string;
+    const { team_id } = req.body;
+    if (!uuidRegex.test(scorerId) || !uuidRegex.test(team_id)) return res.status(400).json({ message: 'Invalid ID' });
+    try {
+        return res.status(201).json(await organizer.addConflict(scorerId, team_id));
+    } catch (e) {
+        if (e instanceof AlreadyExistsError) return res.status(409).json({ message: 'Conflict already exists' });
+        throw e;
+    }
+});
+
+/**
+ * @swagger
+ * /api/organizer/tournament/{tournamentId}/scorers/{scorerId}/conflicts:
+ *   delete:
+ *     summary: Remove a conflict between a scorer and a team
+ *     tags: [Organizer - Scorers]
+ *     parameters:
+ *       - in: path
+ *         name: tournamentId
+ *         required: true
+ *         schema: { type: string, format: uuid }
+ *       - in: path
+ *         name: scorerId
+ *         required: true
+ *         schema: { type: string, format: uuid }
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             required: [team_id]
+ *             properties:
+ *               team_id: { type: string, format: uuid }
+ *     responses:
+ *       204: { description: Removed }
+ *       400: { description: Invalid ID }
+ *       404: { description: Not found }
+ */
+router.delete('/scorers/:scorerId/conflicts', async (req: Request, res: Response) => {
+    const scorerId = req.params.scorerId as string;
+    const { team_id } = req.body;
+    if (!uuidRegex.test(scorerId) || !uuidRegex.test(team_id)) return res.status(400).json({ message: 'Invalid ID' });
+    try {
+        await organizer.removeConflict(scorerId, team_id);
+        return res.status(204).send();
+    } catch (e) {
+        if (e instanceof NotFoundError) return res.status(404).json({ message: e.message });
+        throw e;
+    }
+});
+
+// ── Organizers ────────────────────────────────────────────────────────────────
+
+/**
+ * @swagger
+ * /api/organizer/tournament/{tournamentId}/organizers:
+ *   get:
+ *     summary: List organizers/delegates for a tournament
+ *     tags: [Organizer - Delegates]
+ *     parameters:
+ *       - in: path
+ *         name: tournamentId
+ *         required: true
+ *         schema: { type: string, format: uuid }
+ *     responses:
+ *       200: { description: Array of organizers }
+ *       500: { description: Database error }
+ */
+router.get("/organizers", tournamentHandler(async (req, res) => {
+    try {
+        return res.status(200).json(await organizer.getOrganizers(req.tournament));
+    } catch (e) {
+        if (e instanceof DbError) return res.status(500).json({ message: 'Database error' });
+        throw e;
+    }
+}));
 
 async function verifyOrganizerPayload(req: Request, res: Response, next: NextFunction) {
-    if(!req?.tournament) {
-        return res.status(403).json({ message: 'No access to tournament' });
-    }
-    const {organizer} = req.body
-
-    if (!organizer){
-        return res.status(400).json({ message: 'No organizer in body' });
-    }
-    const org : IOrganizer = organizer
-
-    if (!org.name || !org.email || !org.role){
-        return res.status(400).json({ message: 'Missing required fields' });
-    }
-
-    req.selectedOrganizer = org
-
-    next()
-}
-
-router.post("/organizers", verifyOrganizerPayload, async (req: Request, res: Response) => {
-    if (!req?.selectedOrganizer) {
-        return res.status(400).json({ message: 'Missing required fields' });
-    }
-    if (!req?.tournament) {
-        return res.status(404).json({ message: 'How did you even get here?' });
-    }
-
-    const org : IOrganizer =  req.selectedOrganizer
-
-    let createdOrganizer;
-    try {
-        createdOrganizer = await organizerProvider.addOrganizer(req.tournament, org.name, org.email, org.role)
-    } catch (e) {
-        if (e instanceof DuplicateDelegateError) return res.status(409).json({ message: 'Email is already a delegate' });
-        throw e;
-    }
-
-    if (!createdOrganizer){
-        return res.status(500).json({ message: 'Unable to speak to database' });
-    }
-
-    return res.status(201).json(createdOrganizer);
-});
-
-router.put("/organizers", verifyOrganizerPayload, async (req: Request, res: Response) => {
-    if (!req?.selectedOrganizer) {
-        return res.status(400).json({ message: 'Missing required fields' });
-    }
-
-    const org : IOrganizer =  req.selectedOrganizer
-
-    if (!org.id){
-        return res.status(400).json({ message: 'Missing id field' });
-    }
-
-    if(!uuidRegex.test(org.id)){
-        return res.status(400).json({ message: 'Invalid organizer ID' });
-    }
-
-    const result = await organizerProvider.updateOrganizer(org).catch(e => {
-        if (e instanceof OrganizerAlreadyJoinedError) return res.status(409).json({ message: 'Organizer has already joined' });
-        throw e;
-    });
-
-    if(!result){
-        return res.status(500).json({ message: 'Unable to update organizer' });
-    }
-    return res.status(201).json(result);
-})
-
-router.delete("/organizers", verifyOrganizerPayload, async (req: Request, res: Response) => {
-    if (!req?.selectedOrganizer) {
-        return res.status(400).json({ message: 'Missing required fields' });
-    }
-
-    const org : IOrganizer =  req.selectedOrganizer
-
-    if (!org.id){
-        return res.status(400).json({ message: 'Missing id field in body' });
-    }
-
-    if(!uuidRegex.test(org.id)){
-        return res.status(400).json({ message: 'Invalid organizer ID' });
-    }
-
-    const result = await organizerProvider.deleteOrganizer(org)
-
-    if(!result){
-        return res.status(500).json({ message: 'Unable to delete organizer' });
-    }
-    return res.status(204).json(result);
-})
-
-router.get('/courtrooms', async (req: Request, res: Response) => {
-    if (!req?.tournament) return res.status(400).json({ message: 'Invalid tournament' });
-    const result = await organizerProvider.getCourtrooms(req.tournament)
-    if (!result) return res.status(500).json({ message: 'Unable to get courtrooms' });
-    return res.status(200).json(result);
-})
-
-router.post('/courtrooms', async (req: Request, res: Response) => {
-    if (!req?.tournament) return res.status(403).json({ message: 'No access to tournament' });
-    const courtroom = req.body
-    if (!courtroom?.name) return res.status(400).json({ message: 'Missing name' });
-    const result = await organizerProvider.addCourtroom(req.tournament, courtroom)
-    if (!result) return res.status(500).json({ message: 'Unable to add courtroom' });
-    return res.status(201).json(result);
-})
-
-router.put('/courtrooms', async (req: Request, res: Response) => {
-    if (!req?.tournament) return res.status(403).json({ message: 'No access to tournament' });
-    const courtroom = req.body
-    if (!courtroom?.id || !courtroom?.name) return res.status(400).json({ message: 'Missing id or name' });
-    const result = await organizerProvider.updateCourtroom(courtroom)
-    if (!result) return res.status(500).json({ message: 'Unable to update courtroom' });
-    return res.status(200).json(result);
-})
-
-router.delete('/courtrooms', async (req: Request, res: Response) => {
-    if (!req?.tournament) return res.status(403).json({ message: 'No access to tournament' });
-    const { id } = req.body
-    if (!id) return res.status(400).json({ message: 'Missing id' });
-    const result = await organizerProvider.deleteCourtroom(id)
-    if (!result) return res.status(500).json({ message: 'Unable to delete courtroom' });
-    return res.status(204).send();
-})
-
-
-
-async function verifyRound(req: Request, res: Response, next : NextFunction) {
-    if(!req?.tournament) {
-        return res.status(403).json({ message: 'No access to tournament' });
-    }
-
-    const {round} = req.params
-    if(!round){
-        return res.status(400).json({ message: 'No round id provided' });
-    }
-
-    const roundID = Array.isArray(round) ? round[0] : round;
-
-    if(!uuidRegex.test(roundID)){
-        return res.status(400).json({ message: 'Invalid UUID' });
-    }
-
-    const result : IRound | null = await organizerProvider.getRound(req.tournament, roundID).then(round => {
-        if(!round){
-            return null
-        }
-        return {...round, round_time: round.round_time == null ? null : round.round_time.toISOString()};
-    })
-    if (!result){
-        return res.status(404).json({ message: 'No round found' });
-    }
-
-    req.round = result;
-
+    const { organizer: org } = req.body;
+    if (!org) return res.status(400).json({ message: 'No organizer in body' });
+    const o: IOrganizer = org;
+    if (!o.name || !o.email || !o.role) return res.status(400).json({ message: 'Missing required fields' });
+    req.selectedOrganizer = o;
     next();
-
 }
 
+/**
+ * @swagger
+ * /api/organizer/tournament/{tournamentId}/organizers:
+ *   post:
+ *     summary: Add a delegate to the tournament
+ *     tags: [Organizer - Delegates]
+ *     parameters:
+ *       - in: path
+ *         name: tournamentId
+ *         required: true
+ *         schema: { type: string, format: uuid }
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             required: [organizer]
+ *             properties:
+ *               organizer:
+ *                 type: object
+ *                 required: [name, email, role]
+ *                 properties:
+ *                   name: { type: string }
+ *                   email: { type: string, format: email }
+ *                   role: { type: string }
+ *     responses:
+ *       201: { description: Delegate added }
+ *       400: { description: Missing fields }
+ *       409: { description: Already a delegate }
+ *       500: { description: Database error }
+ */
+router.post("/organizers", verifyOrganizerPayload, organizerHandler(async (req, res) => {
+    try {
+        return res.status(201).json(await organizer.addOrganizer(req.tournament, req.selectedOrganizer.name, req.selectedOrganizer.email, req.selectedOrganizer.role));
+    } catch (e) {
+        if (e instanceof AlreadyExistsError) return res.status(409).json({ message: 'Email is already a delegate' });
+        if (e instanceof DbError) return res.status(500).json({ message: 'Unable to speak to database' });
+        throw e;
+    }
+}));
 
-router.get('/teams', async (req: Request, res: Response) => {
-    if (!req?.tournament) return res.status(403).json({ message: 'No access to tournament' });
-    const teams = await organizerProvider.getTeams(req.tournament);
-    return res.status(200).json(teams);
+/**
+ * @swagger
+ * /api/organizer/tournament/{tournamentId}/organizers:
+ *   put:
+ *     summary: Update a delegate
+ *     tags: [Organizer - Delegates]
+ *     parameters:
+ *       - in: path
+ *         name: tournamentId
+ *         required: true
+ *         schema: { type: string, format: uuid }
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             required: [organizer]
+ *             properties:
+ *               organizer:
+ *                 type: object
+ *                 required: [id, name, email, role]
+ *                 properties:
+ *                   id: { type: string, format: uuid }
+ *                   name: { type: string }
+ *                   email: { type: string, format: email }
+ *                   role: { type: string }
+ *     responses:
+ *       200: { description: Updated }
+ *       400: { description: Missing or invalid fields }
+ *       404: { description: Not found }
+ *       409: { description: Organizer already joined }
+ */
+router.put("/organizers", verifyOrganizerPayload, organizerHandler(async (req, res) => {
+    if (!req.selectedOrganizer.id) return res.status(400).json({ message: 'Missing id field' });
+    if (!uuidRegex.test(req.selectedOrganizer.id)) return res.status(400).json({ message: 'Invalid organizer ID' });
+    try {
+        return res.status(200).json(await organizer.updateOrganizer(req.selectedOrganizer));
+    } catch (e) {
+        if (e instanceof OrganizerAlreadyJoinedError) return res.status(409).json({ message: 'Organizer has already joined' });
+        if (e instanceof NotFoundError) return res.status(404).json({ message: e.message });
+        throw e;
+    }
+}));
+
+/**
+ * @swagger
+ * /api/organizer/tournament/{tournamentId}/organizers:
+ *   delete:
+ *     summary: Remove a delegate from the tournament
+ *     tags: [Organizer - Delegates]
+ *     parameters:
+ *       - in: path
+ *         name: tournamentId
+ *         required: true
+ *         schema: { type: string, format: uuid }
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             required: [organizer]
+ *             properties:
+ *               organizer:
+ *                 type: object
+ *                 required: [id]
+ *                 properties:
+ *                   id: { type: string, format: uuid }
+ *     responses:
+ *       204: { description: Removed }
+ *       400: { description: Missing or invalid id }
+ *       404: { description: Not found }
+ */
+router.delete("/organizers", verifyOrganizerPayload, organizerHandler(async (req, res) => {
+    if (!req.selectedOrganizer.id) return res.status(400).json({ message: 'Missing id field in body' });
+    if (!uuidRegex.test(req.selectedOrganizer.id)) return res.status(400).json({ message: 'Invalid organizer ID' });
+    try {
+        await organizer.deleteOrganizer(req.selectedOrganizer);
+        return res.status(204).send();
+    } catch (e) {
+        if (e instanceof NotFoundError) return res.status(404).json({ message: e.message });
+        throw e;
+    }
+}));
+
+// ── Courtrooms ────────────────────────────────────────────────────────────────
+
+/**
+ * @swagger
+ * /api/organizer/tournament/{tournamentId}/courtrooms:
+ *   get:
+ *     summary: List courtrooms
+ *     tags: [Organizer - Courtrooms]
+ *     parameters:
+ *       - in: path
+ *         name: tournamentId
+ *         required: true
+ *         schema: { type: string, format: uuid }
+ *     responses:
+ *       200: { description: Array of courtrooms }
+ *       500: { description: Database error }
+ */
+router.get('/courtrooms', tournamentHandler(async (req, res) => {
+    try {
+        return res.status(200).json(await organizer.getCourtrooms(req.tournament));
+    } catch (e) {
+        if (e instanceof DbError) return res.status(500).json({ message: 'Unable to get courtrooms' });
+        throw e;
+    }
+}));
+
+/**
+ * @swagger
+ * /api/organizer/tournament/{tournamentId}/courtrooms:
+ *   post:
+ *     summary: Add a courtroom
+ *     tags: [Organizer - Courtrooms]
+ *     parameters:
+ *       - in: path
+ *         name: tournamentId
+ *         required: true
+ *         schema: { type: string, format: uuid }
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             required: [name]
+ *             properties:
+ *               name: { type: string }
+ *     responses:
+ *       201: { description: Courtroom created }
+ *       400: { description: Missing name }
+ *       500: { description: Database error }
+ */
+router.post('/courtrooms', tournamentHandler(async (req, res) => {
+    if (!req.body?.name) return res.status(400).json({ message: 'Missing name' });
+    try {
+        return res.status(201).json(await organizer.addCourtroom(req.tournament, req.body));
+    } catch (e) {
+        if (e instanceof DbError) return res.status(500).json({ message: 'Unable to add courtroom' });
+        throw e;
+    }
+}));
+
+/**
+ * @swagger
+ * /api/organizer/tournament/{tournamentId}/courtrooms:
+ *   put:
+ *     summary: Update a courtroom
+ *     tags: [Organizer - Courtrooms]
+ *     parameters:
+ *       - in: path
+ *         name: tournamentId
+ *         required: true
+ *         schema: { type: string, format: uuid }
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             required: [id, name]
+ *             properties:
+ *               id: { type: string, format: uuid }
+ *               name: { type: string }
+ *     responses:
+ *       200: { description: Updated }
+ *       400: { description: Missing id or name }
+ *       404: { description: Not found }
+ */
+router.put('/courtrooms', async (req: Request, res: Response) => {
+    if (!req.body?.id || !req.body?.name) return res.status(400).json({ message: 'Missing id or name' });
+    try {
+        return res.status(200).json(await organizer.updateCourtroom(req.body));
+    } catch (e) {
+        if (e instanceof NotFoundError) return res.status(404).json({ message: e.message });
+        throw e;
+    }
 });
+
+/**
+ * @swagger
+ * /api/organizer/tournament/{tournamentId}/courtrooms:
+ *   delete:
+ *     summary: Delete a courtroom
+ *     tags: [Organizer - Courtrooms]
+ *     parameters:
+ *       - in: path
+ *         name: tournamentId
+ *         required: true
+ *         schema: { type: string, format: uuid }
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             required: [id]
+ *             properties:
+ *               id: { type: string, format: uuid }
+ *     responses:
+ *       204: { description: Deleted }
+ *       400: { description: Missing id }
+ *       404: { description: Not found }
+ */
+router.delete('/courtrooms', async (req: Request, res: Response) => {
+    const { id } = req.body;
+    if (!id) return res.status(400).json({ message: 'Missing id' });
+    try {
+        await organizer.deleteCourtroom(id);
+        return res.status(204).send();
+    } catch (e) {
+        if (e instanceof NotFoundError) return res.status(404).json({ message: e.message });
+        throw e;
+    }
+});
+
+// ── Teams ─────────────────────────────────────────────────────────────────────
+
+/**
+ * @swagger
+ * /api/organizer/tournament/{tournamentId}/teams:
+ *   get:
+ *     summary: List teams in the tournament
+ *     tags: [Organizer - Teams]
+ *     parameters:
+ *       - in: path
+ *         name: tournamentId
+ *         required: true
+ *         schema: { type: string, format: uuid }
+ *     responses:
+ *       200: { description: Array of teams }
+ */
+router.get('/teams', tournamentHandler(async (req, res) => {
+    return res.status(200).json(await organizer.getTeams(req.tournament));
+}));
 
 function verifyTeamPayload(req: Request, res: Response, next: NextFunction) {
-    if (!req?.tournament) return res.status(403).json({ message: 'No access to tournament' });
     const { team } = req.body;
     if (!team) return res.status(400).json({ message: 'No team in body' });
     const t: ITeam = team;
@@ -408,148 +954,572 @@ function verifyTeamPayload(req: Request, res: Response, next: NextFunction) {
     next();
 }
 
-router.post('/teams', verifyTeamPayload, async (req: Request, res: Response) => {
-    if (!req.selectedTeam || !req.tournament) return res.status(400).json({ message: 'Missing required fields' });
+/**
+ * @swagger
+ * /api/organizer/tournament/{tournamentId}/teams:
+ *   post:
+ *     summary: Add a team to the tournament
+ *     tags: [Organizer - Teams]
+ *     parameters:
+ *       - in: path
+ *         name: tournamentId
+ *         required: true
+ *         schema: { type: string, format: uuid }
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             required: [team]
+ *             properties:
+ *               team:
+ *                 type: object
+ *                 required: [name, coach_email]
+ *                 properties:
+ *                   name: { type: string }
+ *                   coach_email: { type: string, format: email }
+ *                   code: { type: string }
+ *     responses:
+ *       201: { description: Team created }
+ *       400: { description: Missing fields }
+ *       409: { description: Team name already exists }
+ *       500: { description: Database error }
+ */
+router.post('/teams', verifyTeamPayload, teamHandler(async (req, res) => {
     const { name, coach_email, code } = req.selectedTeam;
-    if (await organizerProvider.teamNameExists(req.tournament, name)) return res.status(409).json({ message: 'A team with that name already exists' });
-    const result = await organizerProvider.addTeam(req.tournament, name, coach_email, code || name);
-    if (!result) return res.status(500).json({ message: 'Unable to add team' });
-    return res.status(201).json(result);
-});
+    if (await organizer.teamNameExists(req.tournament, name)) return res.status(409).json({ message: 'A team with that name already exists' });
+    try {
+        return res.status(201).json(await organizer.addTeam(req.tournament, name, coach_email, code || name));
+    } catch (e) {
+        if (e instanceof DbError) return res.status(500).json({ message: 'Unable to add team' });
+        throw e;
+    }
+}));
 
-router.put('/teams', verifyTeamPayload, async (req: Request, res: Response) => {
-    if (!req.selectedTeam) return res.status(400).json({ message: 'Missing required fields' });
+/**
+ * @swagger
+ * /api/organizer/tournament/{tournamentId}/teams:
+ *   put:
+ *     summary: Update a team
+ *     tags: [Organizer - Teams]
+ *     parameters:
+ *       - in: path
+ *         name: tournamentId
+ *         required: true
+ *         schema: { type: string, format: uuid }
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             required: [team]
+ *             properties:
+ *               team:
+ *                 type: object
+ *                 required: [id, name, coach_email]
+ *                 properties:
+ *                   id: { type: string, format: uuid }
+ *                   name: { type: string }
+ *                   coach_email: { type: string, format: email }
+ *                   code: { type: string }
+ *     responses:
+ *       200: { description: Updated }
+ *       400: { description: Missing or invalid fields }
+ *       404: { description: Not found }
+ *       409: { description: Name already taken }
+ *       500: { description: Database error }
+ */
+router.put('/teams', verifyTeamPayload, teamHandler(async (req, res) => {
     const { id, name, coach_email, code } = req.selectedTeam;
     if (!id) return res.status(400).json({ message: 'Missing id field' });
     if (!uuidRegex.test(id)) return res.status(400).json({ message: 'Invalid team ID' });
-    if (req.tournament && await organizerProvider.teamNameExists(req.tournament, name, id)) return res.status(409).json({ message: 'A team with that name already exists' });
-    const result = await organizerProvider.updateTeam(id, name, coach_email, code || name).catch(e => {
-        if (e instanceof NotFoundError) return res.status(404).json({ message: 'Team not found' });
+    if (await organizer.teamNameExists(req.tournament, name, id))
+        return res.status(409).json({ message: 'A team with that name already exists' });
+    try {
+        return res.status(200).json(await organizer.updateTeam(id, name, coach_email, code || name));
+    } catch (e) {
+        if (e instanceof NotFoundError) return res.status(404).json({ message: e.message });
+        if (e instanceof DbError) return res.status(500).json({ message: 'Unable to update team' });
         throw e;
-    });
-    if (!result) return res.status(500).json({ message: 'Unable to update team' });
-    return res.status(200).json(result);
-});
+    }
+}));
 
+/**
+ * @swagger
+ * /api/organizer/tournament/{tournamentId}/teams:
+ *   delete:
+ *     summary: Delete a team
+ *     tags: [Organizer - Teams]
+ *     parameters:
+ *       - in: path
+ *         name: tournamentId
+ *         required: true
+ *         schema: { type: string, format: uuid }
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             required: [id]
+ *             properties:
+ *               id: { type: string, format: uuid }
+ *     responses:
+ *       204: { description: Deleted }
+ *       400: { description: Missing or invalid id }
+ *       404: { description: Not found }
+ */
 router.delete('/teams', async (req: Request, res: Response) => {
-    if (!req?.tournament) return res.status(403).json({ message: 'No access to tournament' });
     const { id } = req.body;
     if (!id) return res.status(400).json({ message: 'Missing id' });
     if (!uuidRegex.test(id)) return res.status(400).json({ message: 'Invalid team ID' });
-    const result = await organizerProvider.deleteTeam(id);
-    if (!result) return res.status(500).json({ message: 'Unable to delete team' });
-    return res.status(204).send();
+    try {
+        await organizer.deleteTeam(id);
+        return res.status(204).send();
+    } catch (e) {
+        if (e instanceof NotFoundError) return res.status(404).json({ message: e.message });
+        throw e;
+    }
 });
 
+/**
+ * @swagger
+ * /api/organizer/tournament/{tournamentId}/teams/{teamId}/owner:
+ *   put:
+ *     summary: Transfer team ownership to another coach
+ *     tags: [Organizer - Teams]
+ *     parameters:
+ *       - in: path
+ *         name: tournamentId
+ *         required: true
+ *         schema: { type: string, format: uuid }
+ *       - in: path
+ *         name: teamId
+ *         required: true
+ *         schema: { type: string, format: uuid }
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             required: [coachId]
+ *             properties:
+ *               coachId: { type: string, format: uuid }
+ *     responses:
+ *       204: { description: Ownership transferred }
+ *       400: { description: Invalid ID }
+ *       404: { description: Not found }
+ */
 router.put('/teams/:teamId/owner', async (req: Request, res: Response) => {
-    if (!req?.tournament) return res.status(403).json({ message: 'No access to tournament' });
     const teamId = req.params.teamId as string;
     if (!uuidRegex.test(teamId)) return res.status(400).json({ message: 'Invalid team ID' });
     const { coachId } = req.body as { coachId?: string };
     if (!coachId || !uuidRegex.test(coachId)) return res.status(400).json({ message: 'Missing or invalid coachId' });
-    const ok = await transferOwnership(teamId, coachId);
-    if (!ok) return res.status(404).json({ message: 'Coach not found on this team' });
-    return res.status(204).send();
+    try {
+        await transferOwnership(teamId, coachId);
+        return res.status(204).send();
+    } catch (e) {
+        if (e instanceof NotFoundError) return res.status(404).json({ message: e.message });
+        throw e;
+    }
 });
 
+// ── Organizer view of team roster (delegates to coachProvider) ────────────────
 
-router.get("/rounds", async (req: Request, res: Response) => {
-    if(!req?.tournament) {
-        return res.status(403).json({ message: 'No access to tournament' });
-    }
-    const rounds = await organizerProvider.getRounds(req.tournament)
-    return res.status(200).json(rounds);
-});
-
-
-
-router.post("/rounds", async (req: Request, res: Response) => {
-    if(!req?.tournament) {
-        return res.status(403).json({ message: 'No access to tournament' });
-    }
-    const newRound = await organizerProvider.createRound(req.tournament)
-
-    if (!newRound) {
-        return res.status(400).json({message: "Unable to create round"});
-    }
-
-    const out : IRound = {...newRound, round_time : newRound.round_time?.toISOString() ?? null}
-
-    return res.status(201).json(out);
-});
-
-router.use('/rounds/:round', verifyRound,  roundRoutes)
-
-
-
-// ── Organizer view of team management (mirrors coach team routes) ─────────────
-import * as coachProvider from '../../providers/coachProvider';
-
+/**
+ * @swagger
+ * /api/organizer/tournament/{tournamentId}/teams/{teamId}/coaches:
+ *   get:
+ *     summary: List coaches on a team
+ *     tags: [Organizer - Teams]
+ *     parameters:
+ *       - in: path
+ *         name: tournamentId
+ *         required: true
+ *         schema: { type: string, format: uuid }
+ *       - in: path
+ *         name: teamId
+ *         required: true
+ *         schema: { type: string, format: uuid }
+ *     responses:
+ *       200: { description: Array of coaches }
+ */
 router.get('/teams/:teamId/coaches', async (req: Request, res: Response) => {
-    if (!req?.tournament) return res.status(403).json({ message: 'No access to tournament' });
     return res.status(200).json(await coachProvider.getCoaches(req.params.teamId as string));
 });
 
+/**
+ * @swagger
+ * /api/organizer/tournament/{tournamentId}/teams/{teamId}/coaches:
+ *   post:
+ *     summary: Add a coach to a team by email
+ *     tags: [Organizer - Teams]
+ *     parameters:
+ *       - in: path
+ *         name: tournamentId
+ *         required: true
+ *         schema: { type: string, format: uuid }
+ *       - in: path
+ *         name: teamId
+ *         required: true
+ *         schema: { type: string, format: uuid }
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             required: [email]
+ *             properties:
+ *               email: { type: string, format: email }
+ *     responses:
+ *       201: { description: Coach added }
+ *       400: { description: Missing email }
+ */
 router.post('/teams/:teamId/coaches', async (req: Request, res: Response) => {
-    if (!req?.tournament) return res.status(403).json({ message: 'No access to tournament' });
     const { email } = req.body as { email?: string };
     if (!email) return res.status(400).json({ message: 'Missing email' });
     return res.status(201).json(await coachProvider.addCoach(req.params.teamId as string, email));
 });
 
+/**
+ * @swagger
+ * /api/organizer/tournament/{tournamentId}/teams/{teamId}/coaches/{coachId}:
+ *   delete:
+ *     summary: Remove a coach from a team
+ *     tags: [Organizer - Teams]
+ *     parameters:
+ *       - in: path
+ *         name: tournamentId
+ *         required: true
+ *         schema: { type: string, format: uuid }
+ *       - in: path
+ *         name: teamId
+ *         required: true
+ *         schema: { type: string, format: uuid }
+ *       - in: path
+ *         name: coachId
+ *         required: true
+ *         schema: { type: string, format: uuid }
+ *     responses:
+ *       204: { description: Removed }
+ *       404: { description: Not found }
+ */
 router.delete('/teams/:teamId/coaches/:coachId', async (req: Request, res: Response) => {
-    if (!req?.tournament) return res.status(403).json({ message: 'No access to tournament' });
-    const ok = await coachProvider.removeCoach(req.params.teamId as string, req.params.coachId as string);
-    if (!ok) return res.status(404).json({ message: 'Coach not found or is team owner' });
-    return res.status(204).send();
+    try {
+        await coachProvider.removeCoach(req.params.teamId as string, req.params.coachId as string);
+        return res.status(204).send();
+    } catch (e) {
+        if (e instanceof NotFoundError) return res.status(404).json({ message: e.message });
+        throw e;
+    }
 });
 
+/**
+ * @swagger
+ * /api/organizer/tournament/{tournamentId}/teams/{teamId}/students:
+ *   get:
+ *     summary: List students on a team
+ *     tags: [Organizer - Teams]
+ *     parameters:
+ *       - in: path
+ *         name: tournamentId
+ *         required: true
+ *         schema: { type: string, format: uuid }
+ *       - in: path
+ *         name: teamId
+ *         required: true
+ *         schema: { type: string, format: uuid }
+ *     responses:
+ *       200: { description: Array of students }
+ */
 router.get('/teams/:teamId/students', async (req: Request, res: Response) => {
-    if (!req?.tournament) return res.status(403).json({ message: 'No access to tournament' });
     return res.status(200).json(await coachProvider.getStudents(req.params.teamId as string));
 });
 
+/**
+ * @swagger
+ * /api/organizer/tournament/{tournamentId}/teams/{teamId}/students:
+ *   post:
+ *     summary: Add a student to a team roster
+ *     tags: [Organizer - Teams]
+ *     parameters:
+ *       - in: path
+ *         name: tournamentId
+ *         required: true
+ *         schema: { type: string, format: uuid }
+ *       - in: path
+ *         name: teamId
+ *         required: true
+ *         schema: { type: string, format: uuid }
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             required: [student_name]
+ *             properties:
+ *               student_name: { type: string }
+ *               pronouns: { type: string }
+ *     responses:
+ *       201: { description: Student added }
+ *       400: { description: Missing student_name }
+ *       409: { description: Student already on roster }
+ */
 router.post('/teams/:teamId/students', async (req: Request, res: Response) => {
-    if (!req?.tournament) return res.status(403).json({ message: 'No access to tournament' });
     const { student_name, pronouns } = req.body as { student_name?: string; pronouns?: string };
     if (!student_name?.trim()) return res.status(400).json({ message: 'Missing student_name' });
-    const result = await coachProvider.addStudent(req.params.teamId as string, student_name.trim(), pronouns ?? null);
-    if (!result) return res.status(409).json({ message: 'Student already on roster' });
-    return res.status(201).json(result);
+    try {
+        return res.status(201).json(await coachProvider.addStudent(req.params.teamId as string, student_name.trim(), pronouns ?? null));
+    } catch (e) {
+        if (e instanceof AlreadyExistsError) return res.status(409).json({ message: 'Student already on roster' });
+        throw e;
+    }
 });
 
+/**
+ * @swagger
+ * /api/organizer/tournament/{tournamentId}/teams/{teamId}/students/{studentId}:
+ *   delete:
+ *     summary: Remove a student from a team roster
+ *     tags: [Organizer - Teams]
+ *     parameters:
+ *       - in: path
+ *         name: tournamentId
+ *         required: true
+ *         schema: { type: string, format: uuid }
+ *       - in: path
+ *         name: teamId
+ *         required: true
+ *         schema: { type: string, format: uuid }
+ *       - in: path
+ *         name: studentId
+ *         required: true
+ *         schema: { type: string, format: uuid }
+ *     responses:
+ *       204: { description: Removed }
+ *       404: { description: Not found }
+ */
 router.delete('/teams/:teamId/students/:studentId', async (req: Request, res: Response) => {
-    if (!req?.tournament) return res.status(403).json({ message: 'No access to tournament' });
-    const ok = await coachProvider.removeStudent(req.params.studentId as string);
-    if (!ok) return res.status(404).json({ message: 'Student not found' });
-    return res.status(204).send();
+    try {
+        await coachProvider.removeStudent(req.params.studentId as string);
+        return res.status(204).send();
+    } catch (e) {
+        if (e instanceof NotFoundError) return res.status(404).json({ message: e.message });
+        throw e;
+    }
 });
 
+/**
+ * @swagger
+ * /api/organizer/tournament/{tournamentId}/teams/{teamId}/pairings/{pairingId}/witness-order:
+ *   get:
+ *     summary: Get witness call order for a team in a pairing
+ *     tags: [Organizer - Teams]
+ *     parameters:
+ *       - in: path
+ *         name: tournamentId
+ *         required: true
+ *         schema: { type: string, format: uuid }
+ *       - in: path
+ *         name: teamId
+ *         required: true
+ *         schema: { type: string, format: uuid }
+ *       - in: path
+ *         name: pairingId
+ *         required: true
+ *         schema: { type: string, format: uuid }
+ *     responses:
+ *       200: { description: Witness call order }
+ */
 router.get('/teams/:teamId/pairings/:pairingId/witness-order', async (req: Request, res: Response) => {
-    if (!req?.tournament) return res.status(403).json({ message: 'No access to tournament' });
     return res.status(200).json(await coachProvider.getWitnessCallOrder(req.params.pairingId as string, req.params.teamId as string));
 });
 
+/**
+ * @swagger
+ * /api/organizer/tournament/{tournamentId}/teams/{teamId}/pairings/{pairingId}/witness-order:
+ *   put:
+ *     summary: Set witness call order for a team in a pairing
+ *     tags: [Organizer - Teams]
+ *     parameters:
+ *       - in: path
+ *         name: tournamentId
+ *         required: true
+ *         schema: { type: string, format: uuid }
+ *       - in: path
+ *         name: teamId
+ *         required: true
+ *         schema: { type: string, format: uuid }
+ *       - in: path
+ *         name: pairingId
+ *         required: true
+ *         schema: { type: string, format: uuid }
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             required: [witness_ids]
+ *             properties:
+ *               witness_ids:
+ *                 type: array
+ *                 items: { type: string, format: uuid }
+ *     responses:
+ *       200: { description: Updated }
+ *       400: { description: witness_ids must be an array }
+ */
 router.put('/teams/:teamId/pairings/:pairingId/witness-order', async (req: Request, res: Response) => {
-    if (!req?.tournament) return res.status(403).json({ message: 'No access to tournament' });
     const { witness_ids } = req.body as { witness_ids?: string[] };
     if (!Array.isArray(witness_ids)) return res.status(400).json({ message: 'witness_ids must be an array' });
     await coachProvider.setWitnessCallOrder(req.params.pairingId as string, req.params.teamId as string, witness_ids);
     return res.status(200).json({ success: true });
 });
 
+/**
+ * @swagger
+ * /api/organizer/tournament/{tournamentId}/teams/{teamId}/pairings/{pairingId}/assignments:
+ *   get:
+ *     summary: Get student assignments for a team in a pairing
+ *     tags: [Organizer - Teams]
+ *     parameters:
+ *       - in: path
+ *         name: tournamentId
+ *         required: true
+ *         schema: { type: string, format: uuid }
+ *       - in: path
+ *         name: teamId
+ *         required: true
+ *         schema: { type: string, format: uuid }
+ *       - in: path
+ *         name: pairingId
+ *         required: true
+ *         schema: { type: string, format: uuid }
+ *     responses:
+ *       200: { description: Assignments }
+ */
 router.get('/teams/:teamId/pairings/:pairingId/assignments', async (req: Request, res: Response) => {
-    if (!req?.tournament) return res.status(403).json({ message: 'No access to tournament' });
     return res.status(200).json(await coachProvider.getStudentAssignments(req.params.pairingId as string, req.params.teamId as string));
 });
 
+/**
+ * @swagger
+ * /api/organizer/tournament/{tournamentId}/teams/{teamId}/pairings/{pairingId}/assignments:
+ *   put:
+ *     summary: Upsert a student assignment for a scoring field
+ *     tags: [Organizer - Teams]
+ *     parameters:
+ *       - in: path
+ *         name: tournamentId
+ *         required: true
+ *         schema: { type: string, format: uuid }
+ *       - in: path
+ *         name: teamId
+ *         required: true
+ *         schema: { type: string, format: uuid }
+ *       - in: path
+ *         name: pairingId
+ *         required: true
+ *         schema: { type: string, format: uuid }
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             required: [field_id, student_id]
+ *             properties:
+ *               field_id: { type: string, format: uuid }
+ *               student_id: { type: string, format: uuid }
+ *     responses:
+ *       200: { description: Assignment saved }
+ *       400: { description: Missing field_id or student_id }
+ *       500: { description: Unable to save assignment }
+ */
 router.put('/teams/:teamId/pairings/:pairingId/assignments', async (req: Request, res: Response) => {
-    if (!req?.tournament) return res.status(403).json({ message: 'No access to tournament' });
     const { field_id, student_id } = req.body as { field_id?: string; student_id?: string };
     if (!field_id || !student_id) return res.status(400).json({ message: 'Missing field_id or student_id' });
-    const result = await coachProvider.upsertStudentAssignment(req.params.pairingId as string, req.params.teamId as string, field_id, student_id);
-    if (!result) return res.status(500).json({ message: 'Unable to save assignment' });
-    return res.status(200).json(result);
+    try {
+        return res.status(200).json(await coachProvider.upsertStudentAssignment(req.params.pairingId as string, req.params.teamId as string, field_id, student_id));
+    } catch (e) {
+        if (e instanceof DbError) return res.status(500).json({ message: 'Unable to save assignment' });
+        throw e;
+    }
 });
+
+// ── Rounds ────────────────────────────────────────────────────────────────────
+
+/**
+ * @swagger
+ * /api/organizer/tournament/{tournamentId}/rounds:
+ *   get:
+ *     summary: List rounds for a tournament
+ *     tags: [Organizer - Rounds]
+ *     parameters:
+ *       - in: path
+ *         name: tournamentId
+ *         required: true
+ *         schema: { type: string, format: uuid }
+ *     responses:
+ *       200: { description: Array of rounds }
+ *       500: { description: Database error }
+ */
+router.get("/rounds", tournamentHandler(async (req, res) => {
+    try {
+        return res.status(200).json(await organizer.getRounds(req.tournament));
+    } catch (e) {
+        if (e instanceof DbError) return res.status(500).json({ message: 'Database error' });
+        throw e;
+    }
+}));
+
+/**
+ * @swagger
+ * /api/organizer/tournament/{tournamentId}/rounds:
+ *   post:
+ *     summary: Create a new round
+ *     tags: [Organizer - Rounds]
+ *     parameters:
+ *       - in: path
+ *         name: tournamentId
+ *         required: true
+ *         schema: { type: string, format: uuid }
+ *     responses:
+ *       201: { description: Round created }
+ *       500: { description: Unable to create round }
+ */
+router.post("/rounds", tournamentHandler(async (req, res) => {
+    try {
+        const newRound = await organizer.createRound(req.tournament);
+        const out: IRound = { ...newRound, round_time: newRound.round_time?.toISOString() ?? null };
+        return res.status(201).json(out);
+    } catch (e) {
+        if (e instanceof DbError) return res.status(500).json({ message: 'Unable to create round' });
+        throw e;
+    }
+}));
+
+async function verifyRound(req: Request, res: Response, next: NextFunction) {
+    const { tournament } = req as TournamentRequest;
+    const { round } = req.params;
+    if (!round) return res.status(400).json({ message: 'No round id provided' });
+    const roundID = Array.isArray(round) ? round[0] : round;
+    if (!uuidRegex.test(roundID)) return res.status(400).json({ message: 'Invalid UUID' });
+    try {
+        const r = await organizer.getRound(tournament, roundID);
+        req.round = { ...r, round_time: r.round_time == null ? null : r.round_time.toISOString() };
+        next();
+    } catch (e) {
+        if (e instanceof NotFoundError) return res.status(404).json({ message: 'No round found' });
+        throw e;
+    }
+}
+
+router.use('/rounds/:round', verifyRound, roundRoutes);
 
 export default router;
