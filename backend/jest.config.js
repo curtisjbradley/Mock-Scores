@@ -15,6 +15,7 @@ module.exports = {
     '^.+\\.tsx?$': ['ts-jest', {}],
     '^.+\\.js$': ['ts-jest', {}],
   },
+  setupFilesAfterEnv: ['<rootDir>/testing/setup.ts'],
   collectCoverageFrom: [
     'src/**/*.ts',
     'testing/**/*.ts'

@@ -10,11 +10,19 @@ import organizerTournamentRouter from './routes/organizer/organizerRoutes';
 import coachRouter from "./routes/coach/coachRoutes";
 import { verifyUser } from "./authUtils";
 import { DbError } from "./errors";
+import RateLimit from 'express-rate-limit';
 
 const app = express();
 
 const STATIC_DIR = path.resolve(__dirname, "../../frontend/dist");
 const PUBLIC_DIR = path.resolve(__dirname, "../../frontend/public");
+
+// Global rate limit applied before all routes
+const globalLimiter = RateLimit({ windowMs: 500, max: 20, skip: () => process.env.NODE_ENV === 'test' });
+app.use(globalLimiter);
+
+// Stricter limit for auth endpoints to mitigate brute-force attacks
+const authLimiter = RateLimit({ windowMs: 30 * 1000, max: 20, skip: () => process.env.NODE_ENV === 'test' });
 
 app.use(express.urlencoded({ extended: true }));
 app.use(express.json());
@@ -22,7 +30,7 @@ app.use(express.json());
 app.use('/api/docs', swaggerUi.serve, swaggerUi.setup(swaggerSpec));
 app.get('/api/docs-json', (_req: Request, res: Response) => res.json(swaggerSpec));
 
-app.use('/api/auth', authRouter);
+app.use('/api/auth', authLimiter, authRouter);
 app.use('/api/organizer/tournament',verifyUser, organizerTournamentRouter);
 app.use('/api/coach', verifyUser, coachRouter);
 
