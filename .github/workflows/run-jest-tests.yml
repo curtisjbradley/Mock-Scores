@@ -1,4 +1,4 @@
-name: Testing
+name: Backend Testing
 
 on:
   push:
@@ -8,7 +8,7 @@ on:
 
 jobs:
   test:
-    name: Run Tests
+    name: Run Jests Tests
     runs-on: ubuntu-latest
     permissions:
       contents: read
@@ -27,4 +27,4 @@ jobs:
         run: npm ci
 
       - name: Run tests
-        run: npm test
+        run: npm run test -w backend
