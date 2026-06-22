@@ -51,7 +51,7 @@ describe('POST /api/auth/register — DbError', () => {
     it('returns 500 when db throws on register', async () => {
         mockDbQuery.mockResolvedValueOnce(null); // email check fails → DbError
         const res = await request(app).post('/api/auth/register')
-            .send({ email: 'a@b.com', password: 'pass', firstName: 'A', lastName: 'B' });
+            .send({ email: 'a@b.com', password: 'Password1', firstName: 'A', lastName: 'B' });
         expect(res.status).toBe(500);
     });
 });
@@ -60,7 +60,7 @@ describe('POST /api/auth/login — DbError', () => {
     it('returns 500 when db throws on login', async () => {
         mockDbQuery.mockResolvedValueOnce(null); // user lookup fails
         const res = await request(app).post('/api/auth/login')
-            .send({ email: 'a@b.com', password: 'pass' });
+            .send({ email: 'a@b.com', password: 'Password1' });
         expect(res.status).toBe(500);
     });
 });
@@ -70,7 +70,7 @@ describe('POST /api/auth/change-password — DbError', () => {
         mockDbQuery.mockResolvedValueOnce(null); // user lookup fails
         const res = await request(app).post('/api/auth/change-password')
             .set(auth())
-            .send({ currentPassword: 'old', newPassword: 'newpass123' });
+            .send({ currentPassword: 'old', newPassword: 'Newpass123' });
         expect(res.status).toBe(500);
     });
 });

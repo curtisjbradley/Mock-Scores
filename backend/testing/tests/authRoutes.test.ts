@@ -38,7 +38,7 @@ describe('POST /api/auth/register', () => {
 
     it('returns 409 when email already in use', async () => {
         mockDbQuery.mockResolvedValueOnce({ rows: [{ user_id: 'existing' }], rowCount: 1 } as any);
-        const res = await request(testApp).post('/api/auth/register').send({ email: 'a@b.com', password: 'pass', firstName: 'A', lastName: 'B' });
+        const res = await request(testApp).post('/api/auth/register').send({ email: 'a@b.com', password: 'Password1', firstName: 'A', lastName: 'B' });
         expect(res.status).toBe(409);
     });
 
@@ -50,7 +50,7 @@ describe('POST /api/auth/register', () => {
             .mockResolvedValueOnce({ rows: [], rowCount: 0 } as any);
         (mockBcryptHash as jest.Mock).mockResolvedValueOnce('hashed');
 
-        const res = await request(testApp).post('/api/auth/register').send({ email: 'new@b.com', password: 'pass', firstName: 'New', lastName: 'User' });
+        const res = await request(testApp).post('/api/auth/register').send({ email: 'new@b.com', password: 'Password1', firstName: 'New', lastName: 'User' });
         expect(res.status).toBe(201);
     });
 });
@@ -77,7 +77,7 @@ describe('POST /api/auth/login', () => {
         mockDbQuery.mockResolvedValueOnce({ rows: [{ user_id: 'u1', email: 'a@b.com', password_hash: 'hash', first_name: 'Alice', last_name: 'Smith' }], rowCount: 1 } as any);
         (mockBcryptCompare as jest.Mock).mockResolvedValueOnce(true);
 
-        const res = await request(testApp).post('/api/auth/login').send({ email: 'a@b.com', password: 'correct' });
+        const res = await request(testApp).post('/api/auth/login').send({ email: 'a@b.com', password: 'Password1' });
         expect(res.status).toBe(200);
         expect(typeof res.body.token).toBe('string');
     });
@@ -129,7 +129,7 @@ describe('POST /api/auth/change-password', () => {
         mockDbQuery.mockResolvedValueOnce({ rows: [{ password_hash: 'hash' }], rowCount: 1 } as any);
         (mockBcryptCompare as jest.Mock).mockResolvedValueOnce(false);
 
-        const res = await request(testApp).post('/api/auth/change-password').set('Authorization', `Bearer ${token}`).send({ currentPassword: 'wrong', newPassword: 'newpass123' });
+        const res = await request(testApp).post('/api/auth/change-password').set('Authorization', `Bearer ${token}`).send({ currentPassword: 'wrong', newPassword: 'Newpass123' });
         expect(res.status).toBe(401);
     });
 
@@ -141,7 +141,7 @@ describe('POST /api/auth/change-password', () => {
         (mockBcryptCompare as jest.Mock).mockResolvedValueOnce(true);
         (mockBcryptHash as jest.Mock).mockResolvedValueOnce('newhash');
 
-        const res = await request(testApp).post('/api/auth/change-password').set('Authorization', `Bearer ${token}`).send({ currentPassword: 'oldpass', newPassword: 'newpass123' });
+        const res = await request(testApp).post('/api/auth/change-password').set('Authorization', `Bearer ${token}`).send({ currentPassword: 'oldpass', newPassword: 'Newpass123' });
         expect(res.status).toBe(200);
         expect(res.body.message).toMatch(/password updated/i);
     });
