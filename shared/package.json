@@ -2,10 +2,18 @@
   "name": "@mock-scores/shared",
   "version": "1.0.0",
   "type": "module",
-  "main": "dist/index.js",
+  "main": "dist/cjs/index.js",
+  "module": "dist/index.js",
   "types": "dist/index.d.ts",
+  "exports": {
+    ".": {
+      "import": "./dist/index.js",
+      "require": "./dist/cjs/index.js",
+      "types": "./dist/index.d.ts"
+    }
+  },
   "scripts": {
-    "build": "npx tsc"
+    "build": "npx tsc && npx tsc -p tsconfig.cjs.json && echo '{\"type\":\"commonjs\"}' > dist/cjs/package.json"
   },
   "devDependencies": {
     "typescript": "^6.0.3"

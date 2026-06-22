@@ -3,7 +3,7 @@ import { type Dispatch, type SetStateAction, useEffect, useMemo, useRef, useStat
 import type { ScorecardPayload } from '@mock-scores/shared';
 import type { IScoreSheetFormat } from "../types.ts";
 import type { Nominee, NomineeRanks, ScoreResults } from "./ScoreSheet.tsx";
-import type {ScoreSection} from "@mock-scores/shared/src";
+import type {ScoreSection} from "@mock-scores/shared";
 
 interface IConfirmSubmitModalProps {
     nominees: Nominee[];

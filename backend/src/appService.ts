@@ -13,6 +13,7 @@ import { DbError } from "./errors";
 import RateLimit from 'express-rate-limit';
 
 const app = express();
+app.set('trust proxy', 1);
 
 const STATIC_DIR = path.resolve(__dirname, "../../frontend/dist");
 const PUBLIC_DIR = path.resolve(__dirname, "../../frontend/public");
