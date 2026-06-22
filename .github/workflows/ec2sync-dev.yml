@@ -64,7 +64,7 @@ jobs:
           host: ${{ steps.ec2.outputs.host }}
           username: ${{ secrets.EC2_USER }}
           key: ${{ secrets.EC2_SSH_KEY }}
-          source: "package.json,package-lock.json,backend/dist,backend/package.json,frontend/dist,frontend/package.json"
+          source: "package.json,package-lock.json,backend/dist,backend/package.json,frontend/dist,frontend/package.json,shared/src,shared/package.json"
           target: "/opt/mock-scores-dev-release"
 
       - name: Restart app on EC2
