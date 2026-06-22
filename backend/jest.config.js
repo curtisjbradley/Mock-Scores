@@ -6,7 +6,6 @@ module.exports = {
   testMatch: ['**/testing/**/*.test.ts', '**/__tests__/**/*.test.ts'],
   moduleNameMapper: {
     '^.*/db$': '<rootDir>/testing/mocks/db.ts',
-    '^@mock-scores/shared$': '<rootDir>/../shared/src/index.ts',
   },
   // Transform jose (ESM) through ts-jest
   transformIgnorePatterns: [
