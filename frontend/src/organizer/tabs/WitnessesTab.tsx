@@ -122,7 +122,7 @@ export default class WitnessesTab extends Component<{ tournamentId: string }, St
                             this.setState({ witnesses: { ...witnesses, swingWitnessNames: hasSwing ? [] : [''] } })
                             setFmt({ hasSwing: !hasSwing })
                         }} />
-                    Case has swing witnesses
+                    <span>Case has swing witnesses</span>
                 </label>
 
                 {hasSwing && (
