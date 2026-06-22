@@ -94,3 +94,42 @@
 .auth-footer-text a:hover {
     text-decoration: underline;
 }
+
+.auth-divider {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    color: var(--text-muted);
+    font-size: 0.8rem;
+}
+
+.auth-divider::before,
+.auth-divider::after {
+    content: '';
+    flex: 1;
+    height: 1px;
+    background: var(--border);
+}
+
+.auth-google {
+    display: flex;
+    justify-content: center;
+}
+
+.auth-google > div,
+.auth-google iframe {
+    width: 100% !important;
+}
+
+.pw-requirements {
+    list-style: none;
+    margin: 0;
+    padding: 0;
+    display: flex;
+    flex-direction: column;
+    gap: 0.25rem;
+    font-size: 0.8rem;
+}
+
+.pw-req--met  { color: var(--text-muted); }
+.pw-req--unmet { color: var(--danger); }

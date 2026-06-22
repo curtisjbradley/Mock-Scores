@@ -1,5 +1,7 @@
 import { useEffect, useState } from 'react'
 import { getSession, logout, apiFetch } from './auth'
+import { validatePassword } from '../utils/validation'
+import PasswordRequirements from './PasswordRequirements'
 import { useNavigate } from 'react-router-dom'
 import './styles/account.css'
 
@@ -31,7 +33,8 @@ export function Account() {
         setSubmitted(true)
         setPwError(''); setPwSuccess('')
         if (!currentPassword || !newPassword || !confirmPassword) return
-        if (newPassword.length < 8) { setPwError('New password must be at least 8 characters'); return }
+        const pwValidationError = validatePassword(newPassword)
+        if (pwValidationError) { setPwError(pwValidationError); return }
         if (newPassword !== confirmPassword) { setPwError('Passwords do not match'); return }
         apiFetch('/api/auth/change-password', { method: 'POST', body: JSON.stringify({ currentPassword, newPassword }) })
             .then(r => r.json().then(d => ({ ok: r.ok, message: d.message })))
@@ -64,8 +67,9 @@ export function Account() {
                     </div>
                     <div className="account-field">
                         <label className="account-info-label" htmlFor="new-pw">New password</label>
-                        <input id="new-pw" type="password" className={`account-input${submitted && newPassword.length > 0 && newPassword.length < 8 ? ' account-input--invalid' : ''}`}
+                        <input id="new-pw" type="password" className={`account-input${submitted && newPassword.length > 0 && validatePassword(newPassword) !== null ? ' account-input--invalid' : ''}`}
                             value={newPassword} onChange={e => setNewPassword(e.target.value)} autoComplete="new-password" />
+                        {newPassword && <PasswordRequirements password={newPassword} />}
                     </div>
                     <div className="account-field">
                         <label className="account-info-label" htmlFor="confirm-pw">Confirm new password</label>

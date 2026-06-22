@@ -1,7 +1,11 @@
 import { useState } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
-import { isValidEmail } from '../utils/validation'
+import { isValidEmail, validatePassword } from '../utils/validation'
 import './styles/auth-form.css'
+import { GoogleLogin } from '@react-oauth/google'
+import { GoogleOAuthProvider } from '@react-oauth/google'
+import { GOOGLE_CLIENT_ID, saveToken, apiFetch } from './auth'
+import PasswordRequirements from './PasswordRequirements'
 
 const Register = () => {
     const navigate = useNavigate()
@@ -23,6 +27,8 @@ const Register = () => {
             setError('Passwords do not match.')
             return
         }
+        const pwError = validatePassword(password)
+        if (pwError) { setError(pwError); return }
         try {
             const res = await fetch('/api/auth/register', {
                 method: 'POST',
@@ -46,6 +52,7 @@ const Register = () => {
     }
 
     return (
+        <GoogleOAuthProvider clientId={GOOGLE_CLIENT_ID}>
         <main className="auth-main">
             <div className="auth-card">
                 <h1>Create account</h1>
@@ -86,6 +93,7 @@ const Register = () => {
                         value={password}
                         onChange={e => setPassword(e.target.value)}
                     />
+                    {password && <PasswordRequirements password={password} />}
                     <label htmlFor="confirm">Confirm password</label>
                     <input
                         id="confirm"
@@ -98,11 +106,23 @@ const Register = () => {
                     {error && <p className="auth-error">{error}</p>}
                     <button type="submit">Create account</button>
                 </form>
+                <div className="auth-divider"><span>or</span></div>
+                <div className="auth-google">
+                    <GoogleLogin onSuccess={async (credentialResponse) => {
+                        if (!credentialResponse.credential) return
+                        const res = await apiFetch('/api/auth/google/login', { method: 'POST', body: JSON.stringify({ token: credentialResponse.credential }) })
+                        const data = await res.json().catch(() => ({}))
+                        if (!res.ok) { setError(data.message ?? 'Unable to sign up with Google.'); return }
+                        saveToken(data.token)
+                        navigate('/')
+                    }} />
+                </div>
                 <p className="auth-footer-text">
                     Already have an account? <Link to="/login">Sign in</Link>
                 </p>
             </div>
         </main>
+        </GoogleOAuthProvider>
     )
 }
 
