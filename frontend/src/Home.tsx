@@ -23,7 +23,7 @@ const Home = () => {
                     />
                 </picture>
                 <main className="main-content">
-                    <h1>Welcome</h1>
+                    <h1>Mock Trial Scoring & Tabulation</h1>
                     <p>Who are you?</p>
                     <div className="role-buttons">
                         {roles.map(({ label, path }) => (

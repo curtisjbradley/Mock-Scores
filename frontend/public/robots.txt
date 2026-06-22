@@ -1,4 +1,8 @@
 User-agent: *
-Allow: /
+Disallow: /score/
+Disallow: /organizer/
+Disallow: /coach/
+Disallow: /login
+Disallow: /register
 
-Sitemap: https://curtisjbradley.xyz/sitemap.xml
+Sitemap: https://www.mockscores.org/sitemap.xml
