@@ -2,9 +2,13 @@ import { Router, Request, Response } from 'express';
 import { AuthProvider } from "../providers/authProvider";
 import { verifyUser } from "../authUtils";
 import { AlreadyExistsError, DbError } from '../errors';
+import { OAuth2Client } from 'google-auth-library';
+import {GOOGLE_CLIENT_ID} from '@mock-scores/shared'
 
 const router = Router();
 const authProvider = new AuthProvider();
+
+const oathClient = new OAuth2Client(GOOGLE_CLIENT_ID);
 
 /**
  * @swagger
@@ -37,6 +41,9 @@ router.post('/register', async (req: Request, res: Response) => {
     };
     if (!email || !password) return res.status(400).json({ message: 'Email and password are required.' });
     if (!firstName?.trim() || !lastName?.trim()) return res.status(400).json({ message: 'First and last name are required.' });
+    if (password.length < 8) return res.status(400).json({ message: 'Password must be at least 8 characters.' });
+    if (!/[A-Z]/.test(password)) return res.status(400).json({ message: 'Password must contain at least one uppercase letter.' });
+    if (!/[0-9]/.test(password)) return res.status(400).json({ message: 'Password must contain at least one number.' });
     try {
         const response = await authProvider.registerUser(email, password, firstName.trim(), lastName.trim());
         return res.status(response.status).json({ message: response.message });
@@ -141,7 +148,9 @@ router.post('/change-password', verifyUser, async (req: Request, res: Response) 
     if (!req.session) return res.status(401).json({ message: 'Not verified.' });
     const { currentPassword, newPassword } = req.body as { currentPassword?: string; newPassword?: string };
     if (!currentPassword || !newPassword) return res.status(400).json({ message: 'Missing required fields' });
-    if (newPassword.length < 8) return res.status(400).json({ message: 'New password must be at least 8 characters' });
+    if (newPassword.length < 8) return res.status(400).json({ message: 'Password must be at least 8 characters.' });
+    if (!/[A-Z]/.test(newPassword)) return res.status(400).json({ message: 'Password must contain at least one uppercase letter.' });
+    if (!/[0-9]/.test(newPassword)) return res.status(400).json({ message: 'Password must contain at least one number.' });
     try {
         const result = await authProvider.changePassword(req.session.userId, currentPassword, newPassword);
         return res.status(result.status).json({ message: result.message });
@@ -151,4 +160,53 @@ router.post('/change-password', verifyUser, async (req: Request, res: Response) 
     }
 });
 
+
+
+/**
+ * @swagger
+ * /api/auth/google/login:
+ *   post:
+ *     summary: Log in using Google OAUTH
+ *     tags: [Auth]
+ *     security: []
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             required: [token]
+ *             properties:
+ *               token: { type: string }
+ *     responses:
+ *       200:
+ *         description: JWT token
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 token: { type: string }
+ *       400: { description: Missing OAUTH Token }
+ *       401: { description: Invalid credentials }
+ *       500: { description: Internal error }
+ */
+router.post('/google/login', async (req: Request, res: Response) => {
+    const { token } = req.body as { token?: string };
+    if (!token) return res.status(400).json({ message: 'OAUTH Token is required.' });
+    try {
+        const ticket = await oathClient.verifyIdToken({ idToken: token, audience: GOOGLE_CLIENT_ID });
+        const payload = ticket.getPayload();
+        if (!payload?.email) return res.status(401).json({ message: 'Could not get email from OAuth.' });
+
+        const firstName = payload.given_name ?? payload.name?.split(' ')[0] ?? '';
+        const lastName = payload.family_name ?? payload.name?.split(' ').slice(1).join(' ') ?? '';
+
+        const jwtToken = await authProvider.googleAuth(payload.email, firstName, lastName);
+        return res.status(200).json({ token: jwtToken });
+    } catch (e) {
+        if (e instanceof DbError) return res.status(500).json({ message: 'Internal error' });
+        return res.status(401).json({ message: 'Invalid OAuth token.' });
+    }
+});
 export default router;

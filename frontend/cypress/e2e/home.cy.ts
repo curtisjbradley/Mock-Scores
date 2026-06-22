@@ -5,7 +5,7 @@ describe('Home page', () => {
   })
 
   it('renders the welcome heading and role buttons', () => {
-    cy.contains('h1', 'Welcome').should('be.visible')
+    cy.contains('h1', 'Mock Trial Scoring & Tabulation').should('be.visible')
     cy.contains('button', 'Organizer').should('be.visible')
     cy.contains('button', 'Coach').should('be.visible')
     cy.contains('button', 'Scorer').should('be.visible')

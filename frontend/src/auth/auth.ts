@@ -1,5 +1,7 @@
 const TOKEN_KEY = 'auth_token';
 
+export { GOOGLE_CLIENT_ID } from '@mock-scores/shared';
+
 export interface Session {
     userId: string;
     email: string;

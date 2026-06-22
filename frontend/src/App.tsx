@@ -1,9 +1,8 @@
 import './styles/globals.css'
 
 import { BrowserRouter, Route, Routes } from "react-router-dom";
-import { lazy, Suspense } from 'react';
+import { lazy } from 'react';
 import Layout from "./layout/Layout.tsx";
-import LoadingPage from "./layout/LoadingPage.tsx";
 import ProtectedRoute from "./layout/ProtectedRoute.tsx";
 
 const Home = lazy(() => import('./Home.tsx'));
@@ -24,12 +23,10 @@ const LoginPage = lazy(() => import('./auth/LoginPage.tsx'));
 const Register = lazy(() => import('./auth/Register.tsx'));
 const ScoreSheetHome = lazy(() => import('./judges/components/ScoreSheetHome.tsx'));
 
-const fallback = <LoadingPage />;
 
 function App() {
   return (
       <BrowserRouter>
-        <Suspense fallback={fallback}>
           <Routes>
             <Route element={<Layout />}>
 
@@ -68,7 +65,6 @@ function App() {
 
             <Route path="/score/:scorerID" element={<ScoreSheetHome />} />
           </Routes>
-        </Suspense>
       </BrowserRouter>
   )
 }

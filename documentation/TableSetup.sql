@@ -2,7 +2,7 @@ create table auth
 (
     user_id       uuid      default gen_random_uuid() not null
         primary key,
-    password_hash text                                not null,
+    password_hash text,
     email         text                                not null
         unique,
     created_at    timestamp default now()             not null,
