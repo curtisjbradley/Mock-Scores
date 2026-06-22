@@ -3,7 +3,7 @@ import { AuthProvider } from "../providers/authProvider";
 import { verifyUser } from "../authUtils";
 import { AlreadyExistsError, DbError } from '../errors';
 import { OAuth2Client } from 'google-auth-library';
-import {GOOGLE_CLIENT_ID} from '@mock-scores/shared/'
+import {GOOGLE_CLIENT_ID} from '@mock-scores/shared'
 
 const router = Router();
 const authProvider = new AuthProvider();
