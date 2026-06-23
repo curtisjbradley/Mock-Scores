@@ -2,6 +2,7 @@ import { useEffect, useRef, useState } from 'react';
 import * as Blockly from 'blockly';
 import { tiebreakerBlockDefs } from './tiebreakerBlocks';
 import { workspaceToTiebreakerRules, type TiebreakerRule } from './tiebreakerGenerator';
+import { getTheme, watchTheme } from './blocklyTheme';
 
 Blockly.common.defineBlocks(tiebreakerBlockDefs);
 
@@ -29,6 +30,7 @@ export default function TiebreakerBuilder({ onChange }: Props) {
       toolbox: TOOLBOX,
       scrollbars: true,
       trashcan: true,
+      theme: getTheme(),
     });
     wsRef.current = ws;
 
@@ -39,9 +41,11 @@ export default function TiebreakerBuilder({ onChange }: Props) {
       onChange?.(newRules);
     });
 
+    const unwatchTheme = watchTheme(() => wsRef.current ? [wsRef.current] : []);
     return () => {
       ws.dispose();
       wsRef.current = null;
+      unwatchTheme();
     };
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);

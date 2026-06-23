@@ -4,6 +4,7 @@ import { verifyUser } from "../authUtils";
 import { AlreadyExistsError, DbError } from '../errors';
 import { OAuth2Client } from 'google-auth-library';
 import {GOOGLE_CLIENT_ID} from '@mock-scores/shared'
+import {EmailTemplate, passwordChangedEmail, sendEmail, welcomeEmail} from "../email";
 
 const router = Router();
 const authProvider = new AuthProvider();
@@ -46,6 +47,13 @@ router.post('/register', async (req: Request, res: Response) => {
     if (!/[0-9]/.test(password)) return res.status(400).json({ message: 'Password must contain at least one number.' });
     try {
         const response = await authProvider.registerUser(email, password, firstName.trim(), lastName.trim());
+
+        if (response.status.toString().startsWith("2")){
+            Promise.resolve(() => {
+                const template = welcomeEmail(firstName)
+                sendEmail(email, template.subject, template.html, template.text)
+            }).catch((err: Error) => console.error(err));
+        }
         return res.status(response.status).json({ message: response.message });
     } catch (e) {
         if (e instanceof AlreadyExistsError) return res.status(409).json({ message: 'Email already in use' });
@@ -153,6 +161,14 @@ router.post('/change-password', verifyUser, async (req: Request, res: Response) 
     if (!/[0-9]/.test(newPassword)) return res.status(400).json({ message: 'Password must contain at least one number.' });
     try {
         const result = await authProvider.changePassword(req.session.userId, currentPassword, newPassword);
+
+        Promise.resolve(async () => {
+            if (req.session?.email) {
+            const template: EmailTemplate = passwordChangedEmail(req.session?.firstName ?? "")
+            await sendEmail(req.session?.email, template.subject, template.html, template.text);
+        }
+        }).catch(e => console.error(e))
+
         return res.status(result.status).json({ message: result.message });
     } catch (e) {
         if (e instanceof DbError) return res.status(500).json({ message: 'Internal error' });

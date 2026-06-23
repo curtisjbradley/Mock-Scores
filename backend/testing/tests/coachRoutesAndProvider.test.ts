@@ -1,3 +1,4 @@
+jest.mock('../../src/email', () => jest.requireActual('../mocks/email'));
 import request from 'supertest';
 import app from '../../src/appService';
 import { dbQuery } from '../../src/db';
@@ -316,8 +317,11 @@ describe('POST /api/coach/teams/:teamId/coaches', () => {
         mockTeamAccess();
         mockDbQuery
             .mockResolvedValueOnce({ rows: [{ user_id: UID, first_name: 'A', last_name: 'B', email: 'a@b.com' }], rowCount: 1 } as any)
-            .mockResolvedValueOnce({ rows: [], rowCount: 1 } as any);
+            .mockResolvedValueOnce({ rows: [], rowCount: 1 } as any)
+            .mockResolvedValueOnce({ rows: [{ id: TEAM, name: 'Team A', tournament_id: 't1' }], rowCount: 1 } as any)
+            .mockResolvedValueOnce({ rows: [{ tournament_id: 't1', name: 'Tournament A' }], rowCount: 1 } as any);
         const res = await request(app).post(`/api/coach/teams/${TEAM}/coaches`).set(auth()).send({ email: 'a@b.com' });
+        await new Promise(setImmediate);
         expect(res.status).toBe(201);
     });
 });

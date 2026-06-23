@@ -3,6 +3,7 @@ import { createPortal } from 'react-dom';
 import * as Blockly from 'blockly';
 import { standingsBlockDefs, dynamicOptions } from './standingsBlocks';
 import { extractStandingsConfig, type StandingsConfig } from './standingsGenerator';
+import { getTheme, watchTheme } from './blocklyTheme';
 
 function buildStatOptions(statDefs: { name: string }[]): [string, string][] {
   const custom: [string, string][] = statDefs.map(d => [d.name, d.name]);
@@ -126,8 +127,8 @@ export default function StandingsBuilder({ onChange, initialXml }: Props) {
     disposedRef.current = false;
 
     if (!Blockly.Blocks['define_visible_stats']) Blockly.common.defineBlocks(standingsBlockDefs);
-    const sws = Blockly.inject(statsDiv.current, { toolbox: STATS_TOOLBOX, scrollbars: true, trashcan: true });
-    const dws = Blockly.inject(standingsDiv.current, { toolbox: STANDINGS_TOOLBOX, scrollbars: true, trashcan: true });
+    const sws = Blockly.inject(statsDiv.current, { toolbox: STATS_TOOLBOX, scrollbars: true, trashcan: true, theme: getTheme() });
+    const dws = Blockly.inject(standingsDiv.current, { toolbox: STANDINGS_TOOLBOX, scrollbars: true, trashcan: true, theme: getTheme() });
     statsWs.current = sws;
     standingsWs.current = dws;
 
@@ -194,8 +195,10 @@ export default function StandingsBuilder({ onChange, initialXml }: Props) {
     dws.addChangeListener(sync);
 
     setWsReady(n => n + 1);
+    const unwatchTheme = watchTheme(() => [sws, dws].filter(Boolean) as Blockly.WorkspaceSvg[]);
     return () => {
       disposedRef.current = true; statsWs.current = null; standingsWs.current = null; sws.dispose(); dws.dispose();
+      unwatchTheme();
       dynamicOptions.col = [['(none)', '__none__']];
       dynamicOptions.tb = [['(none)', '__none__']];
       dynamicOptions.intermediate = [['(none)', '__none__']];

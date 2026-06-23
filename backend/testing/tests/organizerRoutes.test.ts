@@ -1,4 +1,5 @@
 
+jest.mock('../../src/email', () => jest.requireActual('../mocks/email'));
 import request from 'supertest';
 import app from '../../src/appService';
 import { dbQuery } from '../../src/db';
@@ -193,11 +194,13 @@ describe('POST /api/organizer/tournament/:tournamentId/organizers', () => {
         mockDbQuery
             .mockResolvedValueOnce({ rows: [], rowCount: 0 } as any)           // SELECT auth (user not found)
             .mockResolvedValueOnce({ rows: [], rowCount: 0 } as any)           // SELECT duplicate invite check
-            .mockResolvedValueOnce({ rows: [inviteRow], rowCount: 1 } as any); // INSERT invite
+            .mockResolvedValueOnce({ rows: [inviteRow], rowCount: 1 } as any)  // INSERT invite
+            .mockResolvedValueOnce({ rows: [{ tournament_id: TOURNAMENT_ID, name: 'Test Tournament' }], rowCount: 1 } as any); // getTournament (email)
         const res = await request(app)
             .post(`/api/organizer/tournament/${TOURNAMENT_ID}/organizers`)
             .set(auth())
             .send({ organizer: { name: 'Bob', email: 'b@c.com', role: 'delegate' } });
+        await new Promise(setImmediate);
         expect(res.status).toBe(201);
     });
 });

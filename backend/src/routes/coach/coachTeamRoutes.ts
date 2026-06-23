@@ -5,6 +5,8 @@ import { uuidRegex } from "../../authUtils";
 import { dbQuery } from "../../db";
 import { AuthenticatedRequest } from "../../types/express";
 import { authedHandler } from "../../types/handlers";
+import {coachAddedToTeam, EmailTemplate, sendEmail} from "../../email";
+import {getTeam, getTournamentFromTeamId} from "../../providers/coachProvider";
 
 const router = Router({ mergeParams: true });
 
@@ -13,7 +15,7 @@ export async function verifyTeamAccess(req: Request, res: Response, next: NextFu
     const teamId = req.params.teamId as string;
     if (!uuidRegex.test(teamId)) return res.status(400).json({ message: "Invalid team ID" });
     const row = (await dbQuery<{ coach_id: string }>(
-        `SELECT coach_id FROM team_coaches WHERE team_id=$1 AND coach_id=$2`,
+        `(SELECT coach_id FROM team_coaches WHERE team_id=$1 AND coach_id=$2) UNION (SELECT delegate_id from tournament_owners where delegate_id =$2)`,
         [teamId, session.userId]
     ))?.rows[0];
     if (!row) return res.status(403).json({ message: "No access to this team" });
@@ -67,7 +69,21 @@ router.get("/coaches", authedHandler(async (req, res) => {
 router.post("/coaches", authedHandler(async (req, res) => {
     const { email } = req.body as { email?: string };
     if (!email) return res.status(400).json({ message: "Missing email" });
-    return res.status(201).json(await coach.addCoach(req.params.teamId as string, email));
+
+    const newCoach = await coach.addCoach(req.params.teamId as string, email)
+
+    const teamPromise = getTeam(req.params.teamId as string);
+    const tournamentPromise = getTournamentFromTeamId(req.params.teamId as string);
+
+
+    Promise.all([tournamentPromise, teamPromise]).then(([tournament,team]) => {
+        if(!team || !tournament) return;
+        const message : EmailTemplate = coachAddedToTeam(newCoach.name, team.name, tournament.name, team.id)
+        sendEmail(newCoach.email, message.subject, message.html, message.text);
+        }
+    ).catch(err => console.error(err));
+
+    return res.status(201).json(newCoach);
 }));
 
 /**

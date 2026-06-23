@@ -20,10 +20,20 @@
     --success-text: #155724;
     --success-border: #c3e6cb;
 
+    --green-bg: #d1fae5;
+    --green-text: #065f46;
+    --green-text-alt: #059669;
+    --red-bg: #fee2e2;
+    --red-text: #991b1b;
+
     --focus: #9bb8ff;
 
     --radius: 0.9rem;
     --shadow: 0 16px 40px rgba(17, 24, 39, 0.08);
+    --shadow-primary: 0 8px 18px rgba(47, 91, 255, 0.2);
+    --shadow-primary-lg: 0 10px 22px rgba(31, 94, 255, 0.22);
+    --overlay-bg: rgba(15, 23, 42, 0.5);
+    --white: #fff;
 
     --nav-bg: rgba(245, 247, 251, 0.92);
     --nav-btn-bg: #eaf0ff;
@@ -53,13 +63,27 @@
         --success-text: #6fcf97;
         --success-border: #2d6a4f;
 
+        --green-bg: #064e3b;
+        --green-text: #6ee7b7;
+        --green-text-alt: #6ee7b7;
+        --red-bg: #450a0a;
+        --red-text: #fca5a5;
+
         --focus: #3d5aff;
 
         --shadow: 0 16px 40px rgba(0, 0, 0, 0.4);
+        --shadow-primary: 0 8px 18px rgba(47, 91, 255, 0.15);
+        --shadow-primary-lg: 0 10px 22px rgba(31, 94, 255, 0.18);
+        --overlay-bg: rgba(0, 0, 0, 0.6);
+        --white: #fff;
 
         --nav-bg: rgba(22, 28, 45, 0.95);
         --nav-btn-bg: #1e2d5a;
         --nav-btn-text: #93b4ff;
+    }
+
+    ::-webkit-calendar-picker-indicator {
+        filter: invert(1);
     }
 }
 
@@ -92,7 +116,7 @@ body {
     border: 0;
     border-radius: var(--radius);
     background: var(--primary);
-    color: #fff;
+    color: var(--white);
     font-size: 0.95rem;
     font-weight: 600;
     font-family: inherit;

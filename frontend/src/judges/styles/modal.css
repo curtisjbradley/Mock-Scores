@@ -8,7 +8,7 @@
     place-items: center;
     padding: 1rem;
     overflow-y: auto;
-    background: rgba(15, 23, 42, 0.5);
+    background: var(--overlay-bg);
 }
 
 .confirm-modal {
@@ -18,7 +18,7 @@
     overflow-y: auto;
     border-radius: 1.25rem;
     background: var(--surface);
-    box-shadow: 0 24px 60px rgba(15, 23, 42, 0.3);
+    box-shadow: var(--shadow);
     overscroll-behavior: contain;
 }
 
@@ -99,7 +99,7 @@
 
 .rank-selection:focus-visible {
     outline: none;
-    box-shadow: 0 0 0 4px var(--focus);
+    box-shadow: 0 0 0 0.25rem var(--focus);
 }
 
 .ranking-error {
@@ -179,7 +179,7 @@
 
 .tiebreaker-option:focus-within {
     outline: none;
-    box-shadow: 0 0 0 4px var(--focus);
+    box-shadow: 0 0 0 0.25rem var(--focus);
 }
 
 .tiebreaker-code {
@@ -233,9 +233,9 @@
 }
 
 .confirm-actions button:last-child {
-    color: #fff;
+    color: var(--white);
     background: var(--primary);
-    box-shadow: 0 8px 18px rgba(31, 94, 255, 0.2);
+    box-shadow: var(--shadow-primary);
 }
 
 .confirm-actions button:hover:not(:disabled) {
@@ -248,7 +248,7 @@
 
 .confirm-actions button:focus-visible {
     outline: none;
-    box-shadow: 0 0 0 4px var(--focus);
+    box-shadow: 0 0 0 0.25rem var(--focus);
 }
 
 #confirm-button:disabled {
@@ -275,8 +275,6 @@
         font-size: 1rem;
     }
 }
-
-
 
 /* ── Modal form ─────────────────────────────────────────────────────────── */
 

@@ -1,9 +1,29 @@
 import { dbQuery } from '../db';
 import type {
     ICoachTournament, ICoachScheduleRound, ICoachResultRound,
-    ICoach, IStudent, IWitnessCallOrder, IStudentAssignment, ICompetitionTeam
+    ICoach, IStudent, IWitnessCallOrder, IStudentAssignment, ICompetitionTeam, ITournament
 } from '@mock-scores/shared';
 import { AlreadyExistsError, DbError, NotFoundError } from '../errors';
+import {ITeamRow, ITournamentRow} from "../types/dbtypes";
+
+
+export async function getTeam(teamId: string): Promise<ICompetitionTeam | null> {
+    const result = await dbQuery<ITeamRow>(`SELECT * from teams where teams.id = $1`, [teamId]);
+    if(!result) throw new DbError('getTeam');
+
+    if (result.rowCount == 0) return null;
+
+    return result.rows[0]
+}
+
+export async function getTournamentFromTeamId(teamId: string): Promise<ITournament | null> {
+    const result = await dbQuery<ITournamentRow>(`SELECT * from tournaments join teams on teams.tournament_id = tournaments.id where teams.id = $1`, [teamId]);
+    if(!result || result.rowCount == null || result.rowCount > 1) throw new DbError('getTeam');
+
+    if (result.rowCount == 0) return null;
+
+    return result.rows[0]
+}
 
 export async function getAllTournaments(userId: string): Promise<ICoachTournament[]> {
     const result = await dbQuery<ICoachTournament>(
