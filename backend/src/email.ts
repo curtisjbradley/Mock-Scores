@@ -78,25 +78,32 @@ export function organizerAddedEmail(firstName: string, tournamentName: string): 
 }
 
 
-export function coachAddedToTeam(coachName: string, teamName: string, tournamentName: string): EmailTemplate {
+export function coachAddedToTeam(coachName: string, teamName: string, tournamentName: string, teamID: string): EmailTemplate {
+
+    const dashboardURL = `${BASE_URL}/coach/${teamID}`
+
     const subject = `Added as a coach for ${teamName}`
     const html = layout(subject, `
         <p>Hello ${coachName},</p>
         <p>You have been added as a coach for <strong>${teamName}</strong>. This team is successfully registered to compete at ${tournamentName}.</p>
         <p>You will receive further updates as the tournament progresses.</p>
         <p>In the meantime, feel free to get comfortable with the dashboard, upload your roster, and add more coaches.</p>
+        <p>You can view your team dashboard here: <a href=${dashboardURL}>dashboard.</a></p>
     `)
-    return { subject, html, text: `Hi,\n\n${teamName} has been registered for ${tournamentName}.\n\nYou will receive further updates as the tournament progresses.` }
+    return { subject, html, text: `Hi,\n\n${teamName} has been registered for ${tournamentName}.\n\nYou will receive further updates as the tournament progresses. You can access the dashboard at ${dashboardURL}` }
 }
 
 
-export function teamAddedEmail(teamName: string, tournamentName: string): EmailTemplate {
+export function teamAddedEmail(teamName: string, tournamentName: string, teamID:string): EmailTemplate {
+
+    const dashboardURL = `${BASE_URL}/coach/${teamID}`
     const subject = `${teamName} registered for ${tournamentName}`
     const html = layout(subject, `
         <p><strong>${teamName}</strong> has been registered to compete at <strong>${tournamentName}</strong>.</p>
         <p>You will receive further updates as the tournament progresses.</p>
+        <p>You can view your team dashboard here: <a href=${dashboardURL}>dashboard.</a></p>
     `)
-    return { subject, html, text: `${teamName} has been registered for ${tournamentName}.\n\nYou will receive further updates as the tournament progresses.` }
+    return { subject, html, text: `${teamName} has been registered for ${tournamentName}.\n\nYou will receive further updates as the tournament progresses. \n\nYou can view your team dashboard at ${dashboardURL}.` }
 }
 
 

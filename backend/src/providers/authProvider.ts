@@ -88,19 +88,6 @@ export class AuthProvider {
         return signToken(user.user_id, user.email, user.first_name, user.last_name);
     }
 
-    /*
-    Generate a token for the account based on only the email
-
-    This should only be used when logging in through oath
-     */
-    async loginWITHOUTPASSWORD(email: string): Promise<IStatusResponse | string> {
-        const result = await dbQuery<IAuthRow>(
-            'SELECT user_id, email, first_name, last_name FROM auth WHERE email = $1', [email]
-        );
-        if (result === null) throw new DbError('loginUser');
-        const user = result.rows[0]
-        return signToken(user.user_id, user.email, user.first_name, user.last_name);
-    }
 
     async changePassword(userId: string, currentPassword: string, newPassword: string): Promise<IStatusResponse> {
         const result = await dbQuery<IAuthRow>('SELECT password_hash FROM auth WHERE user_id=$1', [userId]);

@@ -2,14 +2,14 @@
     flex: 1;
     display: flex;
     justify-content: center;
-    padding: 48px 24px;
+    padding: 3rem 1.5rem;
 }
 
 .account-card {
     width: min(100%, 28rem);
     display: flex;
     flex-direction: column;
-    gap: 24px;
+    gap: 1.5rem;
 }
 
 .account-card h1 {
@@ -24,7 +24,7 @@
     padding: 1.25rem 1.5rem;
     display: flex;
     flex-direction: column;
-    gap: 4px;
+    gap: 0.25rem;
 }
 
 .account-info-label {
@@ -60,13 +60,13 @@
 
 .account-signout:focus-visible {
     outline: none;
-    box-shadow: 0 0 0 4px var(--focus);
+    box-shadow: 0 0 0 0.25rem var(--focus);
 }
 
 .account-field {
     display: flex;
     flex-direction: column;
-    gap: 4px;
+    gap: 0.25rem;
     margin-bottom: 0.75rem;
 }
 
@@ -85,12 +85,12 @@
 
 .account-input:focus {
     border-color: var(--primary);
-    box-shadow: 0 0 0 3px var(--focus);
+    box-shadow: 0 0 0 0.1875rem var(--focus);
 }
 
 .account-input--invalid {
     border-color: var(--danger);
-    box-shadow: 0 0 0 3px var(--danger-bg);
+    box-shadow: 0 0 0 0.1875rem var(--danger-bg);
 }
 
 .account-submit {
@@ -99,7 +99,7 @@
     border: none;
     border-radius: var(--radius);
     background: var(--primary);
-    color: #fff;
+    color: var(--white);
     font-size: 0.95rem;
     font-weight: 600;
     font-family: inherit;
@@ -118,6 +118,6 @@
 
 .account-form-success {
     font-size: 0.85rem;
-    color: var(--success, #16a34a);
+    color: var(--green-text-alt);
     margin: 0 0 0.5rem;
 }

@@ -2,24 +2,24 @@
     flex: 1;
     display: flex;
     justify-content: center;
-    padding: 48px 24px;
+    padding: 3rem 1.5rem;
 }
 
 .about-card {
     width: min(100%, 48rem);
     display: flex;
     flex-direction: column;
-    gap: 12px;
+    gap: 0.75rem;
 }
 
 .about-card h1 {
     font-size: 2rem;
-    margin-bottom: 4px;
+    margin-bottom: 0.25rem;
 }
 
 .about-card h2 {
     font-size: 1.1rem;
-    margin-top: 12px;
+    margin-top: 0.75rem;
 }
 
 .about-card p {

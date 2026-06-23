@@ -8,7 +8,7 @@ import { uuidRegex } from "../../authUtils";
 import { transferOwnership } from "../../providers/coachProvider";
 import { TournamentRequest } from "../../types/express";
 import { tournamentHandler, scorerHandler, organizerHandler, teamHandler } from "../../types/handlers";
-import {EmailTemplate, organizerAddedEmail, sendEmail} from "../../email";
+import {EmailTemplate, organizerAddedEmail, sendEmail, teamAddedEmail} from "../../email";
 import {getTournament} from "../../providers/organizerProvider";
 
 const router = Router();
@@ -1002,7 +1002,14 @@ router.post('/teams', verifyTeamPayload, teamHandler(async (req, res) => {
     const { name, coach_email, code } = req.selectedTeam;
     if (await organizer.teamNameExists(req.tournament, name)) return res.status(409).json({ message: 'A team with that name already exists' });
     try {
-        return res.status(201).json(await organizer.addTeam(req.tournament, name, coach_email, code || name));
+        const newTeam = await organizer.addTeam(req.tournament, name, coach_email, code || name)
+
+        getTournament(req.tournament).then(tournament => {
+            const template = teamAddedEmail(name, tournament.name, newTeam.id)
+            sendEmail(coach_email, template.subject, template.html, template.text)
+        }).catch(e => console.error(e))
+
+        return res.status(201).json(newTeam);
     } catch (e) {
         if (e instanceof DbError) return res.status(500).json({ message: 'Unable to add team' });
         throw e;

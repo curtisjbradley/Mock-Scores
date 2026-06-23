@@ -78,10 +78,10 @@ router.post("/coaches", authedHandler(async (req, res) => {
 
     Promise.all([tournamentPromise, teamPromise]).then(([tournament,team]) => {
         if(!team || !tournament) return;
-        const message : EmailTemplate = coachAddedToTeam(newCoach.name, team.name, tournament.name)
+        const message : EmailTemplate = coachAddedToTeam(newCoach.name, team.name, tournament.name, team.id)
         sendEmail(newCoach.email, message.subject, message.html, message.text);
         }
-    )
+    ).catch(err => console.error(err));
 
     return res.status(201).json(newCoach);
 }));

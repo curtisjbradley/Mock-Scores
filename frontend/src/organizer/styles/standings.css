@@ -29,68 +29,73 @@
 .dash-standings-table tbody tr:hover td { background: var(--surface-muted); }
 
 .dash-team-code { font-weight: 700; }
-.dash-diff--pos { color: #059669; font-weight: 600; }
+.dash-diff--pos { color: var(--green-text-alt); font-weight: 600; }
 .dash-diff--neg { color: var(--danger); font-weight: 600; }
 
 /* ── StandingsBuilder ─────────────────────────────────────────────────────── */
-.sb-workspaces { display: flex; flex-direction: column; gap: 16px; }
+.sb-workspaces { display: flex; flex-direction: column; gap: 1rem; }
 
-.sb-workspace-header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 4px; }
-.sb-workspace-label { margin: 0; font-weight: 600; font-size: 13px; }
-.sb-expand-btn { background: none; border: 1px solid var(--border); border-radius: 4px; padding: 2px 6px; font-size: 11px; cursor: pointer; color: var(--text-muted); }
+.sb-workspace-header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 0.25rem; }
+.sb-workspace-label { margin: 0; font-weight: 600; font-size: 0.8rem; }
+.sb-expand-btn { background: none; border: 1px solid var(--border); border-radius: 0.25rem; padding: 0.125rem 0.375rem; font-size: 0.7rem; cursor: pointer; color: var(--text-muted); }
 .sb-expand-btn:hover { background: var(--surface-muted); }
 
-.sb-workspace { height: 320px; border: 1px solid var(--border); }
+.sb-workspace { height: 20rem; border: 1px solid var(--border); }
 
 .sb-fullscreen-overlay {
   position: fixed; inset: 0; z-index: 1000;
-  background: var(--background, #fff);
+  background: var(--bg);
   display: flex; flex-direction: column;
 }
 .sb-fullscreen-header {
   display: flex; align-items: center; justify-content: space-between;
-  padding: 8px 12px; border-bottom: 1px solid var(--border);
-  font-weight: 600; font-size: 13px;
+  padding: 0.5rem 0.75rem; border-bottom: 1px solid var(--border);
+  font-weight: 600; font-size: 0.8rem;
 }
 .sb-fullscreen-ws { flex: 1; }
 
-.sb-config-details { margin-top: 8px; }
+.sb-config-details { margin-top: 0.5rem; }
 
-.sb-config-summary { cursor: pointer; font-size: 12px; color: var(--text-muted); }
+.sb-config-summary { cursor: pointer; font-size: 0.75rem; color: var(--text-muted); }
 
-.sb-config-body { margin-top: 8px; display: flex; flex-direction: column; gap: 8px; }
+.sb-config-body { margin-top: 0.5rem; display: flex; flex-direction: column; gap: 0.5rem; }
 
 .sb-config-body .org-new-btn { align-self: flex-start; }
 
 .sb-config-textarea {
     font-family: monospace;
-    font-size: 11px;
+    font-size: 0.7rem;
     width: 100%;
     box-sizing: border-box;
+    background: var(--surface-muted);
+    color: var(--text);
+    border: 1px solid var(--border);
+    border-radius: 0.25rem;
+    padding: 0.25rem 0.375rem;
 }
 
-.sb-config-hint { margin: 0; font-size: 12px; color: var(--text-muted); }
+.sb-config-hint { margin: 0; font-size: 0.75rem; color: var(--text-muted); }
 
-.sb-config-error { margin: 0; font-size: 12px; color: var(--danger); }
+.sb-config-error { margin: 0; font-size: 0.75rem; color: var(--danger); }
 
 /* ── TiebreakersTab ───────────────────────────────────────────────────────── */
-.tb-title { margin: 0 0 8px; }
+.tb-title { margin: 0 0 0.5rem; }
 
 .tb-save-bar {
     display: flex;
     align-items: center;
-    gap: 12px;
-    margin-top: 20px;
-    padding: 14px 16px;
+    gap: 0.75rem;
+    margin-top: 1.25rem;
+    padding: 0.875rem 1rem;
     background: var(--surface);
     border: 1px solid var(--border);
-    border-radius: 8px;
+    border-radius: 0.5rem;
 }
 
-.tb-save-msg { font-size: 13px; }
-.tb-save-msg--ok  { color: #059669; }
+.tb-save-msg { font-size: 0.8rem; }
+.tb-save-msg--ok  { color: var(--green-text-alt); }
 .tb-save-msg--err { color: var(--danger); }
 
-.tb-unsaved { font-size: 13px; color: var(--text-muted); margin-left: auto; }
+.tb-unsaved { font-size: 0.8rem; color: var(--text-muted); margin-left: auto; }
 
-.tb-description { font-size: 13px; color: var(--text-muted); margin-bottom: 16px; }
+.tb-description { font-size: 0.8rem; color: var(--text-muted); margin-bottom: 1rem; }
