@@ -1,4 +1,4 @@
-jest.mock('../../src/email');
+jest.mock('../../src/email', () => jest.requireActual('../mocks/email'));
 import { AuthProvider } from '../../src/providers/authProvider';
 import { dbQuery } from '../../src/db';
 import { AlreadyExistsError, DbError } from '../../src/errors';

@@ -10,7 +10,9 @@ const transporter = createTransport({
     },
 })
 
-transporter.verify().then(() => console.log('SMTP ready')).catch(console.error)
+if (process.env.NODE_ENV !== 'test') {
+    transporter.verify().then(() => console.log('SMTP ready')).catch(console.error)
+}
 
 const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
 

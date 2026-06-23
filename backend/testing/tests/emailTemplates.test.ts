@@ -48,7 +48,7 @@ describe('organizerAddedEmail', () => {
 
 describe('teamAddedEmail', () => {
     it('includes the team name and tournament name', () => {
-        const { subject, html, text } = teamAddedEmail('Team Alpha', 'Regionals 2026')
+        const { subject, html, text } = teamAddedEmail('Team Alpha', 'Regionals 2026', "team_id")
         expect(subject).toContain('Team Alpha')
         expect(html).toContain('Team Alpha')
         expect(html).toContain('Regionals 2026')

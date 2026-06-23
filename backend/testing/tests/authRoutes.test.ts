@@ -1,4 +1,4 @@
-jest.mock('../../src/email');
+jest.mock('../../src/email', () => jest.requireActual('../mocks/email'));
 import request from 'supertest';
 import testApp from '../../src/appService';
 import { dbQuery } from '../../src/db';

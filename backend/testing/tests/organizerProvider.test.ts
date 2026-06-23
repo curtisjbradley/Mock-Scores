@@ -1,4 +1,4 @@
-jest.mock('../../src/email');
+jest.mock('../../src/email', () => jest.requireActual('../mocks/email'));
 import * as provider from '../../src/providers/organizerProvider';
 import { AlreadyExistsError, DbError, NotFoundError, OrganizerAlreadyJoinedError } from '../../src/errors';
 import { dbQuery } from '../../src/db';
