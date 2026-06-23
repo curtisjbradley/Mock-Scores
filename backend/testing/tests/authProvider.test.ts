@@ -1,3 +1,4 @@
+jest.mock('../../src/email');
 import { AuthProvider } from '../../src/providers/authProvider';
 import { dbQuery } from '../../src/db';
 import { AlreadyExistsError, DbError } from '../../src/errors';

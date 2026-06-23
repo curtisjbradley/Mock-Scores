@@ -3,6 +3,7 @@ import bcrypt from 'bcrypt';
 import { signToken } from '../authUtils';
 import type { IAuthRow } from '../types/dbtypes';
 import { AlreadyExistsError, DbError } from '../errors';
+import {sendEmail, welcomeEmail} from "../email";
 
 interface IStatusResponse { status: number; message: string; }
 
@@ -74,6 +75,12 @@ export class AuthProvider {
             );
             if (!inserted?.rows[0]) throw new DbError('googleAuth insert');
             user = inserted.rows[0];
+
+                Promise.resolve(() => {
+                    const template = welcomeEmail(firstName)
+                    sendEmail(email, template.subject, template.html, template.text)
+                }).catch((err: Error) => console.error(err));
+
 
             await this.redeemInvites(email, user.user_id);
         }

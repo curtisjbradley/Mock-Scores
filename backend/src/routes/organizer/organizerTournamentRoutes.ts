@@ -8,6 +8,8 @@ import { uuidRegex } from "../../authUtils";
 import { transferOwnership } from "../../providers/coachProvider";
 import { TournamentRequest } from "../../types/express";
 import { tournamentHandler, scorerHandler, organizerHandler, teamHandler } from "../../types/handlers";
+import {EmailTemplate, organizerAddedEmail, sendEmail} from "../../email";
+import {getTournament} from "../../providers/organizerProvider";
 
 const router = Router();
 
@@ -697,7 +699,17 @@ async function verifyOrganizerPayload(req: Request, res: Response, next: NextFun
  */
 router.post("/organizers", verifyOrganizerPayload, organizerHandler(async (req, res) => {
     try {
-        return res.status(201).json(await organizer.addOrganizer(req.tournament, req.selectedOrganizer.name, req.selectedOrganizer.email, req.selectedOrganizer.role));
+
+        const newOrganizer = await organizer.addOrganizer(req.tournament, req.selectedOrganizer.name, req.selectedOrganizer.email, req.selectedOrganizer.role);
+
+
+       getTournament(req.tournament).then((tournament) => {
+           const message : EmailTemplate = organizerAddedEmail(newOrganizer.name, tournament.name)
+           sendEmail(newOrganizer.email, message.subject, message.html, message.text);
+       })
+
+
+        return res.status(201).json(newOrganizer);
     } catch (e) {
         if (e instanceof AlreadyExistsError) return res.status(409).json({ message: 'Email is already a delegate' });
         if (e instanceof DbError) return res.status(500).json({ message: 'Unable to speak to database' });

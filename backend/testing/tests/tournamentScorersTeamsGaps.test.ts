@@ -2,6 +2,7 @@
  * Coverage gaps: organizerTournamentRoutes — scorers, scorer-conflicts,
  * organizers, courtrooms, teams error branches
  */
+jest.mock('../../src/email');
 import request from 'supertest';
 import app from '../../src/appService';
 import { dbQuery } from '../../src/db';

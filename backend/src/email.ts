@@ -22,7 +22,7 @@ export async function sendEmail(to: string, subject: string, html: string, text:
 
 // ── Templates ──────────────────────────────────────────────────────────────────
 
-interface EmailTemplate { subject: string; html: string; text: string }
+export interface EmailTemplate { subject: string; html: string; text: string }
 
 const BASE_URL = process.env.FRONTEND_URL ?? 'http://localhost:5173'
 
@@ -77,18 +77,31 @@ export function organizerAddedEmail(firstName: string, tournamentName: string): 
     return { subject, html, text: `Hi ${firstName},\n\nYou have been added as an organizer for ${tournamentName}.\n\nDashboard: ${BASE_URL}/organizer` }
 }
 
-export function teamAddedEmail(teamName: string, tournamentName: string): EmailTemplate {
-    const subject = `${teamName} has been registered for ${tournamentName}`
+
+export function coachAddedToTeam(coachName: string, teamName: string, tournamentName: string): EmailTemplate {
+    const subject = `Added as a coach for ${teamName}`
     const html = layout(subject, `
-        <p>Hi,</p>
-        <p>The team <strong>${teamName}</strong> has been successfully registered for <strong>${tournamentName}</strong>.</p>
+        <p>Hello ${coachName},</p>
+        <p>You have been added as a coach for <strong>${teamName}</strong>. This team is successfully registered to compete at ${tournamentName}.</p>
         <p>You will receive further updates as the tournament progresses.</p>
+        <p>In the meantime, feel free to get comfortable with the dashboard, upload your roster, and add more coaches.</p>
     `)
     return { subject, html, text: `Hi,\n\n${teamName} has been registered for ${tournamentName}.\n\nYou will receive further updates as the tournament progresses.` }
 }
 
+
+export function teamAddedEmail(teamName: string, tournamentName: string): EmailTemplate {
+    const subject = `${teamName} registered for ${tournamentName}`
+    const html = layout(subject, `
+        <p><strong>${teamName}</strong> has been registered to compete at <strong>${tournamentName}</strong>.</p>
+        <p>You will receive further updates as the tournament progresses.</p>
+    `)
+    return { subject, html, text: `${teamName} has been registered for ${tournamentName}.\n\nYou will receive further updates as the tournament progresses.` }
+}
+
+
 export function roundResultsPublicEmail(tournamentName: string, roundName: string, standingsUrl: string): EmailTemplate {
-    const subject = `Round results published — ${tournamentName}`
+    const subject = `Round results published - ${tournamentName}`
     const html = layout(subject, `
         <p>The results for <strong>${roundName}</strong> at <strong>${tournamentName}</strong> have been published.</p>
         <a class="btn" href="${standingsUrl}">View Standings</a>

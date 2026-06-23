@@ -5,6 +5,7 @@
  *  - organizerRoundRoutes.ts (error branches on all endpoints)
  *  - coachTeamRoutes.ts (remaining uncovered branches)
  */
+jest.mock('../../src/email');
 import request from 'supertest';
 import app from '../../src/appService';
 import { dbQuery } from '../../src/db';

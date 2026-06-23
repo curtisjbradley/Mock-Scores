@@ -1,7 +1,9 @@
 import express, { NextFunction, Request, Response } from "express";
 import path from "path";
 import dotenv from 'dotenv';
-dotenv.config({ path: path.resolve(__dirname, '../.env') });
+import {expand} from 'dotenv-expand'
+const env = dotenv.config({ path: path.resolve(__dirname, '../.env') });
+expand(env)
 import swaggerUi from 'swagger-ui-express';
 import { swaggerSpec } from './swaggerConfig';
 import authRouter from './routes/authRoutes';

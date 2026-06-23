@@ -1,3 +1,4 @@
+jest.mock('../../src/email');
 import request from 'supertest';
 import testApp from '../../src/appService';
 import { dbQuery } from '../../src/db';
