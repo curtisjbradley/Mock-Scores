@@ -28,6 +28,14 @@ export interface EmailTemplate { subject: string; html: string; text: string }
 
 const BASE_URL = process.env.FRONTEND_URL ?? 'http://localhost:5173'
 
+const escapeHtml = (value: string): string =>
+    value
+        .replace(/&/g, '&amp;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;')
+        .replace(/"/g, '&quot;')
+        .replace(/'/g, '&#39;')
+
 const layout = (title: string, body: string) => `
 <!DOCTYPE html>
 <html lang="en">
@@ -51,32 +59,36 @@ const layout = (title: string, body: string) => `
 
 export function welcomeEmail(firstName: string): EmailTemplate {
     const subject = 'Welcome to Mock Scores'
+    const safeFirstName = escapeHtml(firstName)
     const html = layout(subject, `
-        <p>Hi ${firstName},</p>
+        <p>Hi ${safeFirstName},</p>
         <p>Your Mock Scores account has been created. You can now log in and start managing tournaments.</p>
         <a class="btn" href="${BASE_URL}/login">Go to Mock Scores</a>
     `)
-    return { subject, html, text: `Hi ${firstName},\n\nYour Mock Scores account has been created.\n\nLog in at: ${BASE_URL}/login` }
+    return { subject, html, text: `Hi ${safeFirstName},\n\nYour Mock Scores account has been created.\n\nLog in at: ${BASE_URL}/login` }
 }
 
 export function passwordChangedEmail(firstName: string): EmailTemplate {
     const subject = 'Your password has been changed'
+    const safeFirstName = escapeHtml(firstName)
     const html = layout(subject, `
-        <p>Hi ${firstName},</p>
+        <p>Hi ${safeFirstName},</p>
         <p>Your Mock Scores password was recently changed. If you made this change, no action is needed.</p>
         <p>If you did not change your password, please contact us immediately.</p>
     `)
-    return { subject, html, text: `Hi ${firstName},\n\nYour Mock Scores password was recently changed. If you did not do this, please contact us immediately.` }
+    return { subject, html, text: `Hi ${safeFirstName},\n\nYour Mock Scores password was recently changed. If you did not do this, please contact us immediately.` }
 }
 
 export function organizerAddedEmail(firstName: string, tournamentName: string): EmailTemplate {
-    const subject = `You've been added as an organizer for ${tournamentName}`
+    const safeFirstName = escapeHtml(firstName)
+    const safeTournamentName = escapeHtml(tournamentName)
+    const subject = `You've been added as an organizer for ${safeTournamentName}`
     const html = layout(subject, `
-        <p>Hi ${firstName},</p>
-        <p>You have been added as an organizer for <strong>${tournamentName}</strong>.</p>
+        <p>Hi ${safeFirstName},</p>
+        <p>You have been added as an organizer for <strong>${safeTournamentName}</strong>.</p>
         <a class="btn" href="${BASE_URL}/organizer">Go to Dashboard</a>
     `)
-    return { subject, html, text: `Hi ${firstName},\n\nYou have been added as an organizer for ${tournamentName}.\n\nDashboard: ${BASE_URL}/organizer` }
+    return { subject, html, text: `Hi ${safeFirstName},\n\nYou have been added as an organizer for ${safeTournamentName}.\n\nDashboard: ${BASE_URL}/organizer` }
 }
 
 
