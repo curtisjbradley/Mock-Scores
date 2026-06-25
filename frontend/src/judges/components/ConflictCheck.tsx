@@ -40,11 +40,11 @@ function ConflictCheck({ details, onProceed }: ConflictCheckProps) {
                     </div>
                     <div className="conflict-info-row">
                         <dt>{prosecutionLabel} Team</dt>
-                        <dd className="conflict-team-code">{details.prosecution}</dd>
+                        <dd className="conflict-team-code">{details.prosecutionCode}</dd>
                     </div>
                     <div className="conflict-info-row">
                         <dt>Defense Team</dt>
-                        <dd className="conflict-team-code">{details.defense}</dd>
+                        <dd className="conflict-team-code">{details.defenseCode}</dd>
                     </div>
                 </dl>
 

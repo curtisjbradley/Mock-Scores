@@ -270,11 +270,11 @@ function ScoreSheet(details: IScoreSheetFormat) {
                     <h1 className="case-name">{details.caseName}</h1>
                     <div className="team-labels">
                         <div className="team-label team-label--prosecution">
-                            <span className="team-code">{details.prosecution}</span>
+                            <span className="team-code">{details.prosecutionCode}</span>
                             <span className="team-label-role">{prosecutionLabel}</span>
                         </div>
                         <div className="team-label team-label--defense">
-                            <span className="team-code team-code--defense">{details.defense}</span>
+                            <span className="team-code team-code--defense">{details.defenseCode}</span>
                             <span className="team-label-role">Defense</span>
                         </div>
                     </div>
@@ -370,9 +370,9 @@ function ScoreSheet(details: IScoreSheetFormat) {
                     setPendingScores={setPendingScores}
                     pendingScores={pendingScores}
                     nomineeRanks={nomineeRanks}
-                    showTiebreaker={details.showTiebreaker}
-                    prosecution={details.prosecution}
-                    defense={details.defense}
+                    showTiebreaker={details.ballotOptions.showTiebreaker}
+                    prosecution={details.prosecutionCode}
+                    defense={details.defenseCode}
                     prosecutionLabel={prosecutionLabel}
                     details={details}
                 />

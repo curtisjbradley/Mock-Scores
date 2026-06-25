@@ -55,11 +55,11 @@ function TiebreakerOnly({ details, storageKey }: TiebreakerOnlyProps) {
                 <h1 className="case-name">{details.caseName}</h1>
                 <div className="team-labels">
                     <div className="team-label team-label--prosecution">
-                        <span className="team-code">{details.prosecution}</span>
+                        <span className="team-code">{details.prosecutionCode}</span>
                         <span className="team-label-role">{prosecutionLabel}</span>
                     </div>
                     <div className="team-label team-label--defense">
-                        <span className="team-code team-code--defense">{details.defense}</span>
+                        <span className="team-code team-code--defense">{details.defenseCode}</span>
                         <span className="team-label-role">Defense</span>
                     </div>
                 </div>
@@ -117,14 +117,14 @@ function TiebreakerOnly({ details, storageKey }: TiebreakerOnlyProps) {
 
             <div className="scoresheet-footer" style={{ flexDirection: "column", alignItems: "center", gap: "1rem" }}>
                 <div className="tiebreaker-options">
-                    <label className={`tiebreaker-option${tiebreaker === details.prosecution ? " tiebreaker-option--selected" : ""}`}>
-                        <input type="radio" name="tiebreaker" value={details.prosecution} checked={tiebreaker === details.prosecution} onChange={(e) => setTiebreaker(e.target.value)} />
-                        <span className="tiebreaker-code">{details.prosecution}</span>
+                    <label className={`tiebreaker-option${tiebreaker === details.prosecutionCode ? " tiebreaker-option--selected" : ""}`}>
+                        <input type="radio" name="tiebreaker" value={details.prosecutionCode} checked={tiebreaker === details.prosecutionCode} onChange={(e) => setTiebreaker(e.target.value)} />
+                        <span className="tiebreaker-code">{details.prosecutionCode}</span>
                         <span className="tiebreaker-role">{prosecutionLabel}</span>
                     </label>
-                    <label className={`tiebreaker-option${tiebreaker === details.defense ? " tiebreaker-option--selected" : ""}`}>
-                        <input type="radio" name="tiebreaker" value={details.defense} checked={tiebreaker === details.defense} onChange={(e) => setTiebreaker(e.target.value)} />
-                        <span className="tiebreaker-code">{details.defense}</span>
+                    <label className={`tiebreaker-option${tiebreaker === details.defenseCode ? " tiebreaker-option--selected" : ""}`}>
+                        <input type="radio" name="tiebreaker" value={details.defenseCode} checked={tiebreaker === details.defenseCode} onChange={(e) => setTiebreaker(e.target.value)} />
+                        <span className="tiebreaker-code">{details.defenseCode}</span>
                         <span className="tiebreaker-role">Defense</span>
                     </label>
                 </div>
@@ -137,7 +137,7 @@ function TiebreakerOnly({ details, storageKey }: TiebreakerOnlyProps) {
                 <div className="modal-backdrop" role="presentation" onClick={(e) => { if (e.target === e.currentTarget) setConfirming(false); }}>
                     <div className="confirm-modal" role="dialog" aria-modal="true" aria-labelledby="tb-confirm-title">
                         <h2 id="tb-confirm-title">Submit tiebreaker?</h2>
-                        <p>You selected team <strong>{tiebreaker} — {tiebreaker === details.prosecution ? prosecutionLabel : "Defense"}</strong>. This cannot be undone.</p>
+                        <p>You selected team <strong>{tiebreaker} — {tiebreaker === details.prosecutionCode ? prosecutionLabel : "Defense"}</strong>. This cannot be undone.</p>
                         <div className="confirm-actions">
                             <button type="button" onClick={() => setConfirming(false)}>Cancel</button>
                             <button type="button" onClick={handleSubmit}>Confirm</button>

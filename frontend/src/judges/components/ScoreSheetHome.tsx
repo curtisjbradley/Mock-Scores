@@ -24,7 +24,7 @@ const ScoreSheetHome = () => {
         return <ConflictCheck details={data} onProceed={() => setProceeded(true)} />;
     }
 
-    if (data.showTiebreaker && data.presiderTiebreakerOnly) {
+    if (data.ballotOptions.showTiebreaker && !data.ballotOptions.fillableScores) {
         return <TiebreakerOnly details={data} storageKey={storageKey} />;
     }
 
