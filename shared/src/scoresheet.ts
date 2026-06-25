@@ -28,7 +28,7 @@ export interface IScoreSheetFormat {
     isCriminal: boolean;
     ballotOptions: {
         showTiebreaker: boolean;
-        fillableScorers : boolean;
+        fillableScores : boolean;
     }
     pairingID: string;
     scorer : IScoringUser;
