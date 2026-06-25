@@ -27,5 +27,11 @@
     "backend",
     "blockly-integration",
     "shared"
-  ]
+  ],
+  "overrides": {
+    "js-yaml": "4.2.0",
+    "@istanbuljs/load-nyc-config": {
+      "js-yaml": "4.2.0"
+    }
+  }
 }
