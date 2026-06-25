@@ -35,11 +35,11 @@ router.post("/ses-bounce", async (req: Request, res: Response) => {
     const raw = typeof req.body === 'string' ? req.body : JSON.stringify(req.body)
     const snsMessage = JSON.parse(raw) as SNSBase;
     
-    if (snsMessage.Type === "SubscriptionConfirmation") {
-        console.log("Confirming SNS subscription:", snsMessage.SubscribeURL);
-        await fetch(snsMessage.SubscribeURL!);
-        return res.status(200).send("Subscription confirmed");
-    }
+    // if (snsMessage.Type === "SubscriptionConfirmation") {
+    //     console.log("Confirming SNS subscription:", snsMessage.SubscribeURL);
+    //     await fetch(snsMessage.SubscribeURL!);
+    //     return res.status(200).send("Subscription confirmed");
+    // }
 
 
     if (snsMessage.Type === "Notification") {
