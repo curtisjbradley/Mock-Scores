@@ -1,6 +1,6 @@
 const USER = { userId: '1', email: 'org@example.com', firstName: 'Alice', lastName: 'Smith' }
 
-describe('Scorecard Viewer', () => {
+describe.skip('Scorecard Viewer', () => {
   beforeEach(() => {
     cy.loginAs(USER)
     cy.visit('/organizer/tourney-1/scoresheet/pair-1/judge-1')

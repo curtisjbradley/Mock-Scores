@@ -136,6 +136,7 @@ describe('Coach Dashboard', () => {
     cy.contains('button', 'Roster').click()
     cy.wait('@getStudents')
     cy.contains('li', 'Alice Student').find('button').click()
+    cy.get('[role="dialog"]').within(() => cy.contains('button', 'Remove').click())
     cy.wait('@removeStudent')
     cy.contains('Alice Student').should('not.exist')
   })
