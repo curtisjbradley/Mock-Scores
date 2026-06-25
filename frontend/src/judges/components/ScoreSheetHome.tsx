@@ -18,7 +18,7 @@ const ScoreSheetHome = () => {
     if (error) return <><h1>Encountered an Error</h1><p>{error}</p><p>Please try again</p></>;
     if (!data) return <NotFound />;
 
-    const storageKey = `mock-trial-scores-${data.pairingID}-${data.scorerID}`;
+    const storageKey = `mock-trial-scores-${data.pairingID}-${data.scorer.scorerID}`;
 
     if (!proceeded) {
         return <ConflictCheck details={data} onProceed={() => setProceeded(true)} />;
