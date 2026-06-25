@@ -1,7 +1,7 @@
 import "../styles/modal.css";
 import "../styles/scoresheet.css";
 import { useState } from "react";
-import type { IScoreSheetFormat } from "../types.ts";
+import type { IScoreSheetFormat } from "@mock-scores/shared";
 
 interface TiebreakerOnlyProps {
     /** Full scoresheet data. Scoring categories are shown as a read-only roster. */
@@ -29,7 +29,6 @@ function TiebreakerOnly({ details, storageKey }: TiebreakerOnlyProps) {
     const handleSubmit = () => {
         if (!tiebreaker) return;
         // TODO: POST /api/pairings/:pairingId/tiebreaker { scorerID, tiebreaker }
-        console.log({ tournamentID: details.scorerID, trialID: details.trialID, scorerID: details.scorerID, tiebreaker });
         localStorage.removeItem(storageKey);
         setSubmitted(true);
         setConfirming(false);

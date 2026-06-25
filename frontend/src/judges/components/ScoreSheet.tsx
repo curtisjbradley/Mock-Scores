@@ -132,7 +132,7 @@ function buildNominationId(scoreId: string) {
  * Persists in-progress scores to localStorage keyed by tournamentID.
  */
 function ScoreSheet(details: IScoreSheetFormat) {
-    const storageKey = `mock-trial-scores-${details.pairingID}-${details.scorerID}`;
+    const storageKey = `mock-trial-scores-${details.pairingID}-${details.scorer.scorerID}`;
     const categoryKey = `${storageKey}-category`;
 
     const [categoryIndex, setCategoryIndex] = useState(() => {

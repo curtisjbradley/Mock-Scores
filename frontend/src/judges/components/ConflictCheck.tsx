@@ -1,5 +1,5 @@
 import "../styles/conflict-check.css";
-import type { IScoreSheetFormat } from "../types.ts";
+import type { IScoreSheetFormat } from "@mock-scores/shared";
 
 interface ConflictCheckProps {
     /** Full scoresheet data used to display trial and scorer info. */
@@ -28,7 +28,7 @@ function ConflictCheck({ details, onProceed }: ConflictCheckProps) {
                 <dl className="conflict-info">
                     <div className="conflict-info-row">
                         <dt>Your Name</dt>
-                        <dd>{details.scorerName}</dd>
+                        <dd>{details.scorer.firstName} {details.scorer.lastName}</dd>
                     </div>
                     <div className="conflict-info-row">
                         <dt>Presider</dt>
