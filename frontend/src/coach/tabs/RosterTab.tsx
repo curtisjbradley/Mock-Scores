@@ -1,5 +1,8 @@
 import { useState } from 'react'
 import type { IStudent } from '@mock-scores/shared'
+import { ConfirmRemoveModal } from '../../organizer/components/modals'
+import { useConfirmRemove } from '../../shared/hooks/useConfirmRemove'
+import EmptyState from '../../shared/components/EmptyState'
 
 const PRONOUN_OPTIONS = [
     { value: 'he/him', label: 'he/him (Mr)' },
@@ -18,9 +21,9 @@ export default function RosterTab({ students, onAdd, onRemove }: Props) {
     const [name, setName] = useState('')
     const [pronounSelect, setPronounSelect] = useState('')
     const [customPronouns, setCustomPronouns] = useState('')
-
     const [error, setError] = useState('')
     const [submitted, setSubmitted] = useState(false)
+    const confirmRemove = useConfirmRemove<IStudent>()
 
     const submit = () => {
         setSubmitted(true)
@@ -66,7 +69,7 @@ export default function RosterTab({ students, onAdd, onRemove }: Props) {
             {error && <p className="sb-config-error">{error}</p>}
 
             {students.length === 0
-                ? <p className="coach-empty">No students on the roster yet.</p>
+                ? <EmptyState message="No students on the roster yet." />
                 : <ul className="roster-list">
                     {students.map(s => (
                         <li key={s.student_id} className="roster-item">
@@ -74,12 +77,20 @@ export default function RosterTab({ students, onAdd, onRemove }: Props) {
                                 {s.student_name}
                                 {s.pronouns ? <span className="roster-pronouns">({s.pronouns})</span> : null}
                             </span>
-                            <button className="dash-remove-btn" onClick={() => onRemove(s.student_id)}>Remove</button>
+                            <button className="dash-remove-btn" onClick={() => confirmRemove.open(s)}>Remove</button>
                         </li>
                     ))}
                 </ul>
             }
             {students.length > 0 && <p className="org-header-sub">{students.length} student{students.length !== 1 ? 's' : ''}</p>}
+
+            {confirmRemove.pending && (
+                <ConfirmRemoveModal
+                    message={`Remove ${confirmRemove.pending.student_name} from the roster?`}
+                    onCancel={confirmRemove.clear}
+                    onConfirm={() => { onRemove(confirmRemove.pending!.student_id); confirmRemove.clear() }}
+                />
+            )}
         </div>
     )
 }

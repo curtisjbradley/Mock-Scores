@@ -1,6 +1,8 @@
 import { useState } from 'react'
 import type { ICoach } from '@mock-scores/shared'
 import { ConfirmRemoveModal, AddOrganizerModal } from '../../organizer/components/modals'
+import { useConfirmRemove } from '../../organizer/../shared/hooks/useConfirmRemove'
+import StatusChip from '../../shared/components/StatusChip'
 
 interface Props {
     coaches: ICoach[]
@@ -12,8 +14,8 @@ interface Props {
 
 export default function CoachesTab({ coaches, isOrganizerView, onAdd, onRemove, onMakeOwner }: Props) {
     const [showAdd, setShowAdd] = useState(false)
-    const [confirmRemove, setConfirmRemove] = useState<ICoach | null>(null)
-    const [confirmOwner, setConfirmOwner] = useState<ICoach | null>(null)
+    const confirmRemove = useConfirmRemove<ICoach>()
+    const confirmOwner = useConfirmRemove<ICoach>()
 
     return (
         <>
@@ -27,14 +29,14 @@ export default function CoachesTab({ coaches, isOrganizerView, onAdd, onRemove, 
                         <tr key={c.coach_id}>
                             <td>{c.name}</td>
                             <td><span className="dash-judge-name">{c.email}</span></td>
-                            <td><span className={`ss-chip ss-chip--${c.is_owner ? 'submitted' : 'pending'}`}>{c.is_owner ? 'Owner' : 'Coach'}</span></td>
-                            <td><span className={`ss-chip ss-chip--${c.has_joined ? 'submitted' : 'pending'}`}>{c.has_joined ? 'Joined' : 'Invited'}</span></td>
-                            <td>{!c.is_owner  && (
+                            <td><StatusChip label={c.is_owner ? 'Owner' : 'Coach'} variant={c.is_owner ? 'submitted' : 'pending'} /></td>
+                            <td><StatusChip label={c.has_joined ? 'Joined' : 'Invited'} variant={c.has_joined ? 'submitted' : 'pending'} /></td>
+                            <td>{!c.is_owner && (
                                 <div className="dash-actions-cell">
                                     {isOrganizerView && c.has_joined && (
-                                        <button className="dash-remove-btn" onClick={() => setConfirmOwner(c)}>Make Owner</button>
+                                        <button className="dash-remove-btn" onClick={() => confirmOwner.open(c)}>Make Owner</button>
                                     )}
-                                    <button className="dash-remove-btn" onClick={() => setConfirmRemove(c)}>Remove</button>
+                                    <button className="dash-remove-btn" onClick={() => confirmRemove.open(c)}>Remove</button>
                                 </div>
                             )}</td>
                         </tr>
@@ -50,18 +52,18 @@ export default function CoachesTab({ coaches, isOrganizerView, onAdd, onRemove, 
                     submitLabel="Add coach"
                 />
             )}
-            {confirmRemove && (
+            {confirmRemove.pending && (
                 <ConfirmRemoveModal
-                    message={`Remove ${confirmRemove.name} as a coach?`}
-                    onCancel={() => setConfirmRemove(null)}
-                    onConfirm={() => { onRemove(confirmRemove.coach_id); setConfirmRemove(null) }}
+                    message={`Remove ${confirmRemove.pending.name} as a coach?`}
+                    onCancel={confirmRemove.clear}
+                    onConfirm={() => { onRemove(confirmRemove.pending!.coach_id); confirmRemove.clear() }}
                 />
             )}
-            {confirmOwner && (
+            {confirmOwner.pending && (
                 <ConfirmRemoveModal
-                    message={`Make ${confirmOwner.name} the new team owner? The current owner will become a regular coach.`}
-                    onCancel={() => setConfirmOwner(null)}
-                    onConfirm={() => { onMakeOwner(confirmOwner.coach_id); setConfirmOwner(null) }}
+                    message={`Make ${confirmOwner.pending.name} the new team owner? The current owner will become a regular coach.`}
+                    onCancel={confirmOwner.clear}
+                    onConfirm={() => { onMakeOwner(confirmOwner.pending!.coach_id); confirmOwner.clear() }}
                     confirmLabel="Confirm"
                 />
             )}

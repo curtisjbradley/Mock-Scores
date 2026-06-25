@@ -19,6 +19,12 @@ export class NotFoundError extends Error {
     }
 }
 
+export class ImproperDataError extends Error {
+    constructor(context?: string) {
+        super(context ?? 'Improper data structure.');
+    }
+}
+
 /** Thrown when trying to edit an organizer who has already joined (cannot modify live account). */
 export class OrganizerAlreadyJoinedError extends Error {}
 

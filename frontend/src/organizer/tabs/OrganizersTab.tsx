@@ -2,15 +2,17 @@ import { useState, useEffect } from 'react'
 import type { IOrganizer } from '@mock-scores/shared'
 import { ConfirmRemoveModal, AddOrganizerModal } from '../components/modals'
 import Section from './Section'
-import { isValidEmail } from '../../utils/validation'
-import { apiFetch, getSession } from '../../auth/auth'
-import type { Session } from '../../auth/auth'
+import { apiFetch } from '../../auth/auth'
+import { useConfirmRemove } from '../../shared/hooks/useConfirmRemove'
+import { useSession } from '../../shared/hooks/useSession'
+import InlineEmailEdit from '../../shared/components/InlineEmailEdit'
+import StatusChip from '../../shared/components/StatusChip'
 
 export default function OrganizersTab({ tournamentId }: { tournamentId: string }) {
     const [organizers, setOrganizers] = useState<IOrganizer[]>([])
-    const [session, setSession] = useState<Session | null>(null)
+    const session = useSession()
     const [showModal, setShowModal] = useState(false)
-    const [confirmRemove, setConfirmRemove] = useState<IOrganizer | null>(null)
+    const confirmRemove = useConfirmRemove<IOrganizer>()
     const [editingId, setEditingId] = useState<string | null>(null)
     const [editEmail, setEditEmail] = useState('')
 
@@ -18,11 +20,9 @@ export default function OrganizersTab({ tournamentId }: { tournamentId: string }
         apiFetch(`/api/organizer/tournament/${tournamentId}/organizers`)
             .then(r => r.ok ? r.json() : Promise.reject())
             .then(setOrganizers).catch(console.error)
-        getSession().then(setSession)
     }, [tournamentId])
 
     const saveEmail = (org: IOrganizer) => {
-        if (!isValidEmail(editEmail)) return
         const updated = { ...org, email: editEmail }
         apiFetch(`/api/organizer/tournament/${tournamentId}/organizers`, {
             method: 'PUT', body: JSON.stringify({ organizer: updated }),
@@ -36,7 +36,7 @@ export default function OrganizersTab({ tournamentId }: { tournamentId: string }
             method: 'DELETE', body: JSON.stringify({ organizer: org }),
         }).catch(console.error)
         setOrganizers(prev => prev.filter(o => o.id !== org.id))
-        setConfirmRemove(null)
+        confirmRemove.clear()
     }
 
     const isReadOnly = (org: IOrganizer) => org.email === session?.email || org.role === 'owner'
@@ -54,26 +54,24 @@ export default function OrganizersTab({ tournamentId }: { tournamentId: string }
                             <tr key={org.id}>
                                 <td>{org.name}</td>
                                 <td>
-                                    {editingId === org.id ? (
-                                        <form className="dash-edit-form" onSubmit={e => { e.preventDefault(); saveEmail(org) }}>
-                                            <input autoFocus type="email" value={editEmail}
-                                                onChange={e => setEditEmail(e.target.value)}
-                                                className={`dash-edit-input ${!editEmail || isValidEmail(editEmail) ? 'dash-edit-input--valid' : 'dash-edit-input--invalid'}`} />
-                                            <button type="submit" disabled={!isValidEmail(editEmail)} className="dash-edit-save">Save</button>
-                                            <button type="button" className="dash-edit-cancel" onClick={() => setEditingId(null)}>Cancel</button>
-                                        </form>
-                                    ) : (
-                                        <span className="dash-judge-name">{org.email}</span>
-                                    )}
+                                    {editingId === org.id
+                                        ? <InlineEmailEdit
+                                            value={editEmail}
+                                            onChange={setEditEmail}
+                                            onSave={() => saveEmail(org)}
+                                            onCancel={() => setEditingId(null)}
+                                          />
+                                        : <span className="dash-judge-name">{org.email}</span>
+                                    }
                                 </td>
-                                <td><span className={`ss-chip ${org.role === 'owner' ? 'ss-chip--submitted' : 'ss-chip--pending'}`}>{org.role}</span></td>
+                                <td><StatusChip label={org.role} variant={org.role === 'owner' ? 'submitted' : 'pending'} /></td>
                                 <td>
                                     {!isReadOnly(org) && (
                                         <div className="dash-actions-cell">
                                             {!org.has_joined && editingId !== org.id && (
                                                 <button className="dash-remove-btn" onClick={() => { setEditingId(org.id); setEditEmail(org.email) }}>Edit email</button>
                                             )}
-                                            <button className="dash-remove-btn" onClick={() => setConfirmRemove(org)}>Remove</button>
+                                            <button className="dash-remove-btn" onClick={() => confirmRemove.open(org)}>Remove</button>
                                         </div>
                                     )}
                                 </td>
@@ -97,11 +95,11 @@ export default function OrganizersTab({ tournamentId }: { tournamentId: string }
                 />
             )}
 
-            {confirmRemove && (
+            {confirmRemove.pending && (
                 <ConfirmRemoveModal
-                    message={`Remove ${confirmRemove.name} as an organizer?`}
-                    onCancel={() => setConfirmRemove(null)}
-                    onConfirm={() => removeOrganizer(confirmRemove)}
+                    message={`Remove ${confirmRemove.pending.name} as an organizer?`}
+                    onCancel={confirmRemove.clear}
+                    onConfirm={() => removeOrganizer(confirmRemove.pending!)}
                 />
             )}
         </Section>

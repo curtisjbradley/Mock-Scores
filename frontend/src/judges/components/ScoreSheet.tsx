@@ -9,7 +9,7 @@ import {
     type Control,
 } from "react-hook-form";
 
-import type { IScoreSheetFormat, IStudentInfo } from "../types.ts";
+import type { IScoreSheetFormat, IStudentInfo } from "@mock-scores/shared";
 import ConfirmSubmitModal from "./ConfirmSubmitModal.tsx";
 
 /** Flat map of form field IDs to their values. Scores are numbers; nomination checkboxes are booleans. */
@@ -132,7 +132,7 @@ function buildNominationId(scoreId: string) {
  * Persists in-progress scores to localStorage keyed by tournamentID.
  */
 function ScoreSheet(details: IScoreSheetFormat) {
-    const storageKey = `mock-trial-scores-${details.trialID}-${details.scorerID}`;
+    const storageKey = `mock-trial-scores-${details.pairingID}-${details.scorerID}`;
     const categoryKey = `${storageKey}-category`;
 
     const [categoryIndex, setCategoryIndex] = useState(() => {
@@ -370,7 +370,7 @@ function ScoreSheet(details: IScoreSheetFormat) {
                     setPendingScores={setPendingScores}
                     pendingScores={pendingScores}
                     nomineeRanks={nomineeRanks}
-                    isPresider={details.isPresider}
+                    showTiebreaker={details.showTiebreaker}
                     prosecution={details.prosecution}
                     defense={details.defense}
                     prosecutionLabel={prosecutionLabel}

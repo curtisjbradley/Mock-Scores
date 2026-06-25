@@ -1,7 +1,6 @@
 import "../styles/modal.css";
 import { type Dispatch, type SetStateAction, useEffect, useMemo, useRef, useState } from "react";
-import type { ScorecardPayload } from '@mock-scores/shared';
-import type { IScoreSheetFormat } from "../types.ts";
+import type { ScorecardPayload, IScoreSheetFormat } from '@mock-scores/shared';
 import type { Nominee, NomineeRanks, ScoreResults } from "./ScoreSheet.tsx";
 import type {ScoreSection} from "@mock-scores/shared";
 
@@ -17,7 +16,7 @@ interface IConfirmSubmitModalProps {
     /** localStorage key used to clear saved progress on successful submission. */
     storageKey: string;
     /** Whether the current user is a presiding judge (shows tiebreaker UI). */
-    isPresider: boolean;
+    showTiebreaker: boolean;
     /** Prosecution team code. */
     prosecution: string;
     /** Defense team code. */
@@ -43,7 +42,7 @@ const FOCUSABLE = [
 const ConfirmSubmitModal = ({
     nominees, setNominees, nomineeRanks, setNomineeRanks,
     setShowConfirm, pendingScores, setPendingScores, storageKey,
-    isPresider, prosecution, defense, prosecutionLabel, details,
+    showTiebreaker, prosecution, defense, prosecutionLabel, details,
 }: IConfirmSubmitModalProps) => {
     const dialogRef = useRef<HTMLDivElement>(null);
     const [tiebreaker, setTiebreaker] = useState<string>("");
@@ -84,7 +83,7 @@ const ConfirmSubmitModal = ({
         [nominees, nomineeRanks]
     );
 
-    const isTiebreakerValid = !isPresider || tiebreaker !== "";
+    const isTiebreakerValid = !showTiebreaker || tiebreaker !== "";
 
     /**
      * Transforms the flat `ScoreResults` form map into a structured array of score entries,
@@ -120,10 +119,10 @@ const ConfirmSubmitModal = ({
         }) as ScoreSection[];
 
         const payload: ScorecardPayload = {
-            pairingID: details.trialID,
+            pairingID: details.pairingID,
             scores,
             nominations: nominees.map((n) => ({ studentId: n.id, rank: nomineeRanks[n.id] })),
-            ...(isPresider && { tiebreaker }),
+            ...(showTiebreaker && { tiebreaker }),
         };
 
         // TODO: fetch(`/api/scoresheets/${details.trialID}`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload) })
@@ -189,7 +188,7 @@ const ConfirmSubmitModal = ({
                     <p className="ranking-error" role="alert">Please rank all nominated students.</p>
                 )}
 
-                {isPresider && (
+                {showTiebreaker && (
                     <div className="tiebreaker-section">
                         <h3>Tiebreaker</h3>
                         <p>If the scores are tied, which team wins?</p>

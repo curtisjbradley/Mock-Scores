@@ -2,6 +2,7 @@ import { useState } from 'react'
 import '../../judges/styles/modal.css'
 import { isValidEmail } from '../../utils/validation'
 import type { ITeam } from '@mock-scores/shared'
+import ModalBackdrop from '../../shared/components/ModalBackdrop'
 
 export function ConfirmRemoveModal({ message, onCancel, onConfirm, confirmLabel = 'Remove' }: {
     message: string
@@ -10,7 +11,7 @@ export function ConfirmRemoveModal({ message, onCancel, onConfirm, confirmLabel 
     confirmLabel?: string
 }) {
     return (
-        <div className="modal-backdrop" role="presentation" onClick={e => { if (e.target === e.currentTarget) onCancel() }}>
+        <ModalBackdrop onClose={onCancel}>
             <div className="confirm-modal" role="dialog" aria-modal="true">
                 <h2>Are you sure?</h2>
                 <p>{message}</p>
@@ -19,7 +20,7 @@ export function ConfirmRemoveModal({ message, onCancel, onConfirm, confirmLabel 
                     <button type="button" className="confirm-btn-danger" onClick={onConfirm}>{confirmLabel}</button>
                 </div>
             </div>
-        </div>
+        </ModalBackdrop>
     )
 }
 
@@ -40,7 +41,7 @@ export function AddOrganizerModal({ onClose, onAdd, title = 'Add organizer', des
         onClose()
     }
     return (
-        <div className="modal-backdrop" role="presentation" onClick={e => { if (e.target === e.currentTarget) onClose() }}>
+        <ModalBackdrop onClose={onClose}>
             <div className="confirm-modal" role="dialog" aria-modal="true" aria-labelledby="add-org-title">
                 <h2 id="add-org-title">{title}</h2>
                 <p>{description}</p>
@@ -56,7 +57,7 @@ export function AddOrganizerModal({ onClose, onAdd, title = 'Add organizer', des
                     </div>
                 </form>
             </div>
-        </div>
+        </ModalBackdrop>
     )
 }
 
@@ -81,7 +82,7 @@ export function EditTeamModal({ team, existingNames, onClose, onSave }: {
     }
 
     return (
-        <div className="modal-backdrop" role="presentation" onClick={e => { if (e.target === e.currentTarget) onClose() }}>
+        <ModalBackdrop onClose={onClose}>
             <div className="confirm-modal" role="dialog" aria-modal="true" aria-labelledby="edit-team-title">
                 <h2 id="edit-team-title">Edit team</h2>
                 <form onSubmit={handleSubmit} noValidate className="modal-form">
@@ -100,6 +101,6 @@ export function EditTeamModal({ team, existingNames, onClose, onSave }: {
                     </div>
                 </form>
             </div>
-        </div>
+        </ModalBackdrop>
     )
 }
