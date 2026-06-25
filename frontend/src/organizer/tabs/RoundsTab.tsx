@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom'
 import type { IRound } from '@mock-scores/shared'
 import Section from './Section'
 import { ConfirmRemoveModal } from '../components/modals'
+import { useConfirmRemove } from '../../shared/hooks/useConfirmRemove'
 import { apiFetch } from '../../auth/auth'
 import '../styles/rounds.css'
 
@@ -76,7 +77,7 @@ function RoundRow({ round, tournamentId, onRemove, onSave }: {
 export default function RoundsTab({ tournamentId }: { tournamentId: string }) {
     const [rounds, setRounds] = useState<IRound[]>([])
     const [error, setError] = useState<string | null>(null)
-    const [confirmRemove, setConfirmRemove] = useState<string | null>(null)
+    const confirmRemove = useConfirmRemove<string>()
 
     useEffect(() => {
         apiFetch(`/api/organizer/tournament/${tournamentId}/rounds`)
@@ -115,10 +116,10 @@ export default function RoundsTab({ tournamentId }: { tournamentId: string }) {
             .then(res => { if (!res.ok) throw new Error() })
             .catch(() => setError('Failed to remove round.'))
         setRounds(prev => prev.filter(r => r.round_id !== id))
-        setConfirmRemove(null)
+        confirmRemove.clear()
     }
 
-    const confirmRound = rounds.find(r => r.round_id === confirmRemove)
+    const confirmRound = rounds.find(r => r.round_id === confirmRemove.pending)
     const sorted = [...rounds].sort((a, b) => a.position - b.position)
 
     return (
@@ -128,15 +129,15 @@ export default function RoundsTab({ tournamentId }: { tournamentId: string }) {
                 <button className="org-new-btn" onClick={handleAdd}>+ Add round</button>
                 {sorted.map(round => (
                     <RoundRow key={round.round_id} round={round} tournamentId={tournamentId}
-                        onRemove={id => setConfirmRemove(id)}
+                        onRemove={id => confirmRemove.open(id)}
                         onSave={handleSave} />
                 ))}
             </Section>
-            {confirmRemove !== null && (
+            {confirmRemove.pending !== null && (
                 <ConfirmRemoveModal
                     message={`Remove ${confirmRound?.name ?? 'this round'} and all its matchups?`}
-                    onCancel={() => setConfirmRemove(null)}
-                    onConfirm={() => handleRemove(confirmRemove)}
+                    onCancel={confirmRemove.clear}
+                    onConfirm={() => handleRemove(confirmRemove.pending!)}
                 />
             )}
         </>

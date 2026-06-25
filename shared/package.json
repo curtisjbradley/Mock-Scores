@@ -13,7 +13,7 @@
     }
   },
   "scripts": {
-    "build": "npx tsc && npx tsc -p tsconfig.cjs.json && echo '{\"type\":\"commonjs\"}' > dist/cjs/package.json"
+    "build": "npx tsc && npx tsc -p tsconfig.cjs.json && node -e \"require('fs').writeFileSync('dist/cjs/package.json', JSON.stringify({type:'commonjs'}, null, 2))\""
   },
   "devDependencies": {
     "typescript": "^6.0.3"

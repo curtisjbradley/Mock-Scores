@@ -10,6 +10,7 @@ import authRouter from './routes/authRoutes';
 import webhookRouter from "./routes/webhookRouter";
 import organizerTournamentRouter from './routes/organizer/organizerRoutes';
 import coachRouter from "./routes/coach/coachRoutes";
+import scorerRouter from "./routes/scorerRoutes"
 import { verifyUser } from "./authUtils";
 import { DbError } from "./errors";
 import RateLimit from 'express-rate-limit';
@@ -36,6 +37,8 @@ app.get('/api/docs-json', (_req: Request, res: Response) => res.json(swaggerSpec
 app.use('/api/auth', authLimiter, authRouter);
 app.use('/api/organizer/tournament',verifyUser, organizerTournamentRouter);
 app.use('/api/coach', verifyUser, coachRouter);
+
+app.use('/api/score', verifyUser, scorerRouter);
 
 
 

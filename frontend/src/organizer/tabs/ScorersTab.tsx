@@ -3,6 +3,8 @@ import type { IScorer, ITeam, IConflict } from '@mock-scores/shared'
 import { apiFetch } from '../../auth/auth'
 import { isValidEmail } from '../../utils/validation'
 import { ConfirmRemoveModal } from '../components/modals'
+import ModalBackdrop from '../../shared/components/ModalBackdrop'
+import { useConfirmRemove } from '../../shared/hooks/useConfirmRemove'
 import Section from './Section'
 import { v4 as randomUUID } from 'uuid'
 
@@ -39,7 +41,7 @@ function ManageConflictsModal({ scorer, tournamentId, onClose }: {
     }
 
     return (
-        <div className="modal-backdrop" role="presentation" onClick={e => { if (e.target === e.currentTarget) onClose() }}>
+        <ModalBackdrop onClose={onClose}>
             <div className="confirm-modal" role="dialog" aria-modal="true" aria-labelledby="conflicts-title">
                 <h2 id="conflicts-title">Conflicts — {scorer.first_name} {scorer.last_name}</h2>
                 {conflicts.length > 0 && (
@@ -72,7 +74,7 @@ function ManageConflictsModal({ scorer, tournamentId, onClose }: {
                     <button type="button" onClick={onClose}>Done</button>
                 </div>
             </div>
-        </div>
+        </ModalBackdrop>
     )
 }
 
@@ -80,7 +82,7 @@ export default function ScorersTab({ tournamentId }: { tournamentId: string }) {
     const [scorers, setScorers] = useState<IScorer[]>([])
     const [showModal, setShowModal] = useState(false)
     const [editingId, setEditingId] = useState<string | null>(null)
-    const [confirmRemove, setConfirmRemove] = useState<IScorer | null>(null)
+    const confirmRemove = useConfirmRemove<IScorer>()
     const [conflictsScorer, setConflictsScorer] = useState<IScorer | null>(null)
     const [firstName, setFirstName] = useState('')
     const [lastName, setLastName] = useState('')
@@ -111,20 +113,20 @@ export default function ScorersTab({ tournamentId }: { tournamentId: string }) {
             if (!updated) return
             const payload = { ...updated, first_name: firstName.trim(), last_name: lastName.trim(), email: email.trim() }
             setScorers(prev => prev.map(s => s.scorer_id === editingId ? payload : s))
-            apiFetch(`/api/organizer/tournament/${tournamentId}/scorers`, { method: 'PUT', body: JSON.stringify(payload) }).catch(console.error) //todo: better error reporting
+            apiFetch(`/api/organizer/tournament/${tournamentId}/scorers`, { method: 'PUT', body: JSON.stringify(payload) }).catch(console.error)
         } else {
             const newScorer: IScorer = { scorer_id: randomUUID(), first_name: firstName.trim(), last_name: lastName.trim(), email: email.trim() }
             setScorers(prev => [...prev, newScorer])
-            apiFetch(`/api/organizer/tournament/${tournamentId}/scorers`, { method: 'POST', body: JSON.stringify(newScorer) }).catch(console.error) //todo: better error reporting
+            apiFetch(`/api/organizer/tournament/${tournamentId}/scorers`, { method: 'POST', body: JSON.stringify(newScorer) }).catch(console.error)
         }
         setShowModal(false)
     }
 
     const handleRemove = () => {
-        if (!confirmRemove) return
-        apiFetch(`/api/organizer/tournament/${tournamentId}/scorers`, { method: 'DELETE', body: JSON.stringify({ scorer_id: confirmRemove.scorer_id }) }).catch(console.error) //todo: better error reporting
-        setScorers(prev => prev.filter(s => s.scorer_id !== confirmRemove.scorer_id))
-        setConfirmRemove(null)
+        if (!confirmRemove.pending) return
+        apiFetch(`/api/organizer/tournament/${tournamentId}/scorers`, { method: 'DELETE', body: JSON.stringify({ scorer_id: confirmRemove.pending.scorer_id }) }).catch(console.error)
+        setScorers(prev => prev.filter(s => s.scorer_id !== confirmRemove.pending!.scorer_id))
+        confirmRemove.clear()
     }
 
     return (
@@ -145,7 +147,7 @@ export default function ScorersTab({ tournamentId }: { tournamentId: string }) {
                                     <div className="dash-actions-cell">
                                         <button className="dash-remove-btn" onClick={() => openEditModal(scorer)}>Edit</button>
                                         <button className="dash-remove-btn" onClick={() => setConflictsScorer(scorer)}>Manage Conflicts</button>
-                                        <button className="dash-remove-btn" onClick={() => setConfirmRemove(scorer)}>Remove</button>
+                                        <button className="dash-remove-btn" onClick={() => confirmRemove.open(scorer)}>Remove</button>
                                     </div>
                                 </td>
                             </tr>
@@ -155,7 +157,7 @@ export default function ScorersTab({ tournamentId }: { tournamentId: string }) {
             </div>
 
             {showModal && (
-                <div className="modal-backdrop" role="presentation" onClick={e => { if (e.target === e.currentTarget) setShowModal(false) }}>
+                <ModalBackdrop onClose={() => setShowModal(false)}>
                     <div className="confirm-modal" role="dialog" aria-modal="true">
                         <h2>{editingId ? 'Edit scorer' : 'Add scorer'}</h2>
                         <form className="tc-form" onSubmit={e => { e.preventDefault(); handleSave() }} noValidate>
@@ -184,13 +186,13 @@ export default function ScorersTab({ tournamentId }: { tournamentId: string }) {
                             </div>
                         </form>
                     </div>
-                </div>
+                </ModalBackdrop>
             )}
 
-            {confirmRemove && (
+            {confirmRemove.pending && (
                 <ConfirmRemoveModal
-                    message={`Remove ${confirmRemove.first_name} ${confirmRemove.last_name} from the scorer list?`}
-                    onCancel={() => setConfirmRemove(null)}
+                    message={`Remove ${confirmRemove.pending.first_name} ${confirmRemove.pending.last_name} from the scorer list?`}
+                    onCancel={confirmRemove.clear}
                     onConfirm={handleRemove}
                 />
             )}

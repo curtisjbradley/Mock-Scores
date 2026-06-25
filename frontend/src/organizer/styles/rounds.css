@@ -218,6 +218,10 @@
     box-shadow: 0 0 0 0.1875rem var(--focus);
 }
 
+.dash-round-time-input:disabled{
+    visibility: hidden;
+}
+
 .dash-round-save-btn {
     height: 2rem;
     padding: 0 1rem;

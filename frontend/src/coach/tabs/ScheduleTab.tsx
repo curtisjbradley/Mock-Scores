@@ -1,6 +1,6 @@
 import type { ICoachScheduleRound } from '@mock-scores/shared'
-
-const fmt = (d: string | Date) => new Date(d).toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' })
+import { formatDate } from '../../utils/format'
+import EmptyState from '../../shared/components/EmptyState'
 
 interface Props {
     schedule: ICoachScheduleRound[]
@@ -10,12 +10,12 @@ interface Props {
 }
 
 export default function ScheduleTab({ schedule, teamId, onAssignRoles, onWitnessOrder }: Props) {
-    if (schedule.length === 0) return <p className="coach-empty">No schedule published yet.</p>
+    if (schedule.length === 0) return <EmptyState message="No schedule published yet." />
     return (
         <>
             {schedule.map(round => (
                 <div key={round.round_id} style={{ marginBottom: 16 }}>
-                    <h3 style={{ margin: '8px 0 6px' }}>{round.name} {round.round_time ? ` — ${fmt(round.round_time)}` : '(Time TBD)'}</h3>
+                    <h3 style={{ margin: '8px 0 6px' }}>{round.name} {round.round_time ? ` — ${formatDate(round.round_time)}` : '(Time TBD)'}</h3>
                     <table className="dash-standings-table">
                         <thead><tr><th>Prosecution</th><th>Defense</th><th>Courtroom</th>{(onAssignRoles || onWitnessOrder) && <th></th>}</tr></thead>
                         <tbody>{round.pairings.map(p => {

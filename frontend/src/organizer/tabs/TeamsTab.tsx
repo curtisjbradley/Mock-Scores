@@ -4,17 +4,16 @@ import type { ITeam } from '@mock-scores/shared'
 import { ConfirmRemoveModal, EditTeamModal } from '../components/modals'
 import Section from './Section'
 import AddTeamModal from '../components/AddTeamModal'
-import { isValidEmail } from '../../utils/validation'
 import { apiFetch } from '../../auth/auth'
+import { useConfirmRemove } from '../../shared/hooks/useConfirmRemove'
+import InlineEmailEdit from '../../shared/components/InlineEmailEdit'
+import StatusChip from '../../shared/components/StatusChip'
 
-const teamChip = (hasJoined: boolean) => (
-    <span className={`ss-chip ss-chip--${hasJoined ? 'submitted' : 'pending'}`}>{hasJoined ? 'accepted' : 'pending'}</span>
-)
 
 export default function TeamsTab({ tournamentId }: { tournamentId: string }) {
     const [teams, setTeams] = useState<ITeam[]>([])
     const [showModal, setShowModal] = useState(false)
-    const [confirmRemove, setConfirmRemove] = useState<ITeam | null>(null)
+    const confirmRemove = useConfirmRemove<ITeam>()
     const [editingTeam, setEditingTeam] = useState<ITeam | null>(null)
     const [editingEmailId, setEditingEmailId] = useState<string | null>(null)
     const [editEmail, setEditEmail] = useState('')
@@ -58,7 +57,7 @@ export default function TeamsTab({ tournamentId }: { tournamentId: string }) {
         })
         if (!res.ok) return
         setTeams(prev => prev.filter(t => t.id !== team.id))
-        setConfirmRemove(null)
+        confirmRemove.clear()
     }
 
     return (
@@ -76,29 +75,27 @@ export default function TeamsTab({ tournamentId }: { tournamentId: string }) {
                                 <td><Link className="dash-table-link" to={`/organizer/${tournamentId}/school/${team.id}`}>{team.name}</Link></td>
                                 <td>{team.code}</td>
                                 <td>
-                                    {editingEmailId === team.id ? (
-                                        <form className="dash-edit-form" onSubmit={async e => {
-                                            e.preventDefault()
-                                            const ok = await putTeam(team, { coach_email: editEmail })
-                                            if (ok) setEditingEmailId(null)
-                                        }}>
-                                            <input autoFocus type="email" value={editEmail} onChange={e => setEditEmail(e.target.value)}
-                                                className={`dash-edit-input ${isValidEmail(editEmail) || !editEmail ? 'dash-edit-input--valid' : 'dash-edit-input--invalid'}`} />
-                                            <button type="submit" disabled={!isValidEmail(editEmail)} className="dash-edit-save">Save</button>
-                                            <button type="button" className="dash-edit-cancel" onClick={() => setEditingEmailId(null)}>Cancel</button>
-                                        </form>
-                                    ) : (
-                                        <span className="dash-judge-name">{team.coach_email}</span>
-                                    )}
+                                    {editingEmailId === team.id
+                                        ? <InlineEmailEdit
+                                            value={editEmail}
+                                            onChange={setEditEmail}
+                                            onSave={async () => {
+                                                const ok = await putTeam(team, { coach_email: editEmail })
+                                                if (ok) setEditingEmailId(null)
+                                            }}
+                                            onCancel={() => setEditingEmailId(null)}
+                                          />
+                                        : <span className="dash-judge-name">{team.coach_email}</span>
+                                    }
                                 </td>
-                                <td>{teamChip(team.has_joined)}</td>
+                                <td><StatusChip label={team.has_joined ? 'accepted' : 'pending'} variant={team.has_joined ? 'submitted' : 'pending'} /></td>
                                 <td>
                                     <div className="dash-actions-cell">
                                         <button className="dash-remove-btn" onClick={() => setEditingTeam(team)}>Edit</button>
                                         {!team.has_joined && editingEmailId !== team.id && (
                                             <button className="dash-remove-btn" onClick={() => { setEditingEmailId(team.id); setEditEmail(team.coach_email) }}>Edit email</button>
                                         )}
-                                        <button className="dash-remove-btn" onClick={() => setConfirmRemove(team)}>Remove</button>
+                                        <button className="dash-remove-btn" onClick={() => confirmRemove.open(team)}>Remove</button>
                                     </div>
                                 </td>
                             </tr>
@@ -124,11 +121,11 @@ export default function TeamsTab({ tournamentId }: { tournamentId: string }) {
                 />
             )}
 
-            {confirmRemove && (
+            {confirmRemove.pending && (
                 <ConfirmRemoveModal
                     message="Remove this team from the tournament?"
-                    onCancel={() => setConfirmRemove(null)}
-                    onConfirm={() => { void handleRemove(confirmRemove) }}
+                    onCancel={confirmRemove.clear}
+                    onConfirm={() => { void handleRemove(confirmRemove.pending!) }}
                 />
             )}
         </Section>

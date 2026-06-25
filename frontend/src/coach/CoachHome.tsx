@@ -2,6 +2,8 @@ import { useEffect, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import '../organizer/styles/organizer.css'
 import { apiFetch } from '../auth/auth'
+import { formatDateRange } from '../utils/format'
+import EmptyState from '../shared/components/EmptyState'
 import type { ICoachTournament } from '@mock-scores/shared'
 
 const CoachHome = () => {
@@ -14,8 +16,6 @@ const CoachHome = () => {
             .then(setTournaments)
             .catch(() => {})
     }, [])
-
-    const fmt = (d: string | Date) => new Date(d).toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' })
 
     return (
         <main className="org-main">
@@ -31,8 +31,7 @@ const CoachHome = () => {
                             <div className="org-tournament-info">
                                 <span className="org-tournament-name">{t.team_name} - {t.name}</span>
                                 <span className="org-tournament-meta">
-                                    {t.start_date ? fmt(t.start_date) : 'TBD'}
-                                    {t.end_date && t.end_date !== t.start_date ? ` – ${fmt(t.end_date)}` : ''}
+                                    {t.start_date ? formatDateRange(t.start_date, t.end_date ?? undefined) : 'TBD'}
                                     {' · '} @ {t.location}
                                     {' · '}{t.num_teams} teams · {t.num_rounds} rounds
                                 </span>
@@ -40,7 +39,7 @@ const CoachHome = () => {
                             </div>
                         </button>
                     ))}
-                    {tournaments.length === 0 && <p className="coach-empty">No tournaments found.</p>}
+                    {tournaments.length === 0 && <EmptyState message="No tournaments found." />}
                 </div>
             </div>
         </main>
