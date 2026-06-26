@@ -58,6 +58,7 @@ router.post("/ses-bounce", async (req: Request, res: Response) => {
                 })
             }
         }
+        return res.status(200).send("OK")
     }
 
     if (sesEvent.notificationType === "Complaint" && sesEvent.complaint) {
@@ -65,6 +66,7 @@ router.post("/ses-bounce", async (req: Request, res: Response) => {
             console.log("Complaint email:", recipient.emailAddress);
             dbQuery("Insert into email_complaints (email) values ($1)", [recipient.emailAddress]).then(() => {console.log("Recorded Complaint")})
         }
+        return res.status(200).send("OK")
     }
 
     return res.status(200).send("Ignored");

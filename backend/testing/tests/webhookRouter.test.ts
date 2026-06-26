@@ -26,7 +26,7 @@ const post = (body: object) =>
 describe('POST /webhooks/ses-bounce — Bounce notification', () => {
     it('returns 200 and logs bounced recipients', async () => {
         const consoleSpy = jest.spyOn(console, 'log').mockImplementation()
-        const message = JSON.stringify({
+        const message = {
             notificationType: 'Bounce',
             bounce: {
                 bounceType: 'Permanent',
@@ -34,8 +34,8 @@ describe('POST /webhooks/ses-bounce — Bounce notification', () => {
                 bouncedRecipients: [{ emailAddress: 'bad@example.com' }],
                 timestamp: new Date().toISOString(),
             },
-        })
-        const res = await post({ Type: 'Notification', Message: message })
+        }
+        const res = await post(message)
         expect(res.status).toBe(200)
         expect(res.text).toBe('OK')
         expect(consoleSpy).toHaveBeenCalledWith('Bounced email:', 'bad@example.com')
@@ -47,14 +47,14 @@ describe('POST /webhooks/ses-bounce — Bounce notification', () => {
 describe('POST /webhooks/ses-bounce — Complaint notification', () => {
     it('returns 200 and logs complained recipients', async () => {
         const consoleSpy = jest.spyOn(console, 'log').mockImplementation()
-        const message = JSON.stringify({
+        const message = {
             notificationType: 'Complaint',
             complaint: {
                 complainedRecipients: [{ emailAddress: 'spam@example.com' }],
                 timestamp: new Date().toISOString(),
             },
-        })
-        const res = await post({ Type: 'Notification', Message: message })
+        }
+        const res = await post(message)
         expect(res.status).toBe(200)
         expect(consoleSpy).toHaveBeenCalledWith('Complaint email:', 'spam@example.com')
         consoleSpy.mockRestore()
