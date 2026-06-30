@@ -1,6 +1,6 @@
 import { useState } from 'react'
 import { useNavigate, useSearchParams } from 'react-router-dom'
-import { saveToken } from '../auth'
+import { saveToken, postJson } from '../auth'
 import { isValidEmail } from '../../utils/validation'
 
 export function useLoginForm() {
@@ -16,14 +16,9 @@ export function useLoginForm() {
         setError('')
         if (!isValidEmail(email)) { setError('Please enter a valid email address.'); return }
         try {
-            const res = await fetch('/api/auth/login', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ email, password }),
-            })
-            const data = await res.json().catch(() => ({}))
-            if (!res.ok) { setError(data.message ?? 'Invalid email or password.'); return }
-            saveToken(data.token)
+            const { ok, data } = await postJson<{ token?: string; message?: string }>('/api/auth/login', { email, password })
+            if (!ok) { setError(data.message ?? 'Invalid email or password.'); return }
+            saveToken(data.token!)
             navigate(redirect)
         } catch {
             setError('Something went wrong. Please try again.')

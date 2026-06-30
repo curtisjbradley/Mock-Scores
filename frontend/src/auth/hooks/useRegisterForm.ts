@@ -1,6 +1,8 @@
 import { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { isValidEmail, validatePassword } from '../../utils/validation'
+import { ValidationError } from '@mock-scores/shared'
+import { postJson } from '../auth'
 
 export function useRegisterForm() {
     const navigate = useNavigate()
@@ -16,19 +18,17 @@ export function useRegisterForm() {
         setError('')
         if (!isValidEmail(email)) { setError('Please enter a valid email address.'); return }
         if (password !== confirm) { setError('Passwords do not match.'); return }
-        const pwError = validatePassword(password)
-        if (pwError) { setError(pwError); return }
         try {
-            const res = await fetch('/api/auth/register', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ firstName: firstName.trim(), lastName: lastName.trim(), email, password }),
+            validatePassword(password)
+        } catch (err) {
+            if (err instanceof ValidationError) { setError(err.message); return }
+            throw err
+        }
+        try {
+            const { ok, data } = await postJson<{ message?: string }>('/api/auth/register', {
+                firstName: firstName.trim(), lastName: lastName.trim(), email, password,
             })
-            if (!res.ok) {
-                const data = await res.json().catch(() => ({}))
-                setError(data.message ?? 'Registration failed.')
-                return
-            }
+            if (!ok) { setError(data.message ?? 'Registration failed.'); return }
             navigate('/login')
         } catch {
             setError('Something went wrong. Please try again.')

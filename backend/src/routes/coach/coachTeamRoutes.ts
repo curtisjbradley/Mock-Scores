@@ -1,12 +1,13 @@
 import { Router, Request, Response, NextFunction } from "express";
 import * as coach from "../../providers/coachProvider";
-import { AlreadyExistsError, DbError, NotFoundError } from "../../errors";
+import { DbError, NotFoundError } from "../../errors";
 import { uuidRegex } from "../../authUtils";
 import { dbQuery } from "../../db";
 import { AuthenticatedRequest } from "../../types/express";
 import { authedHandler } from "../../types/handlers";
 import {coachAddedToTeam, EmailTemplate, sendEmail} from "../../email";
 import {getTeam, getTournamentFromTeamId} from "../../providers/coachProvider";
+import { removeCoachHandler, addStudentHandler } from "../teamHandlers";
 
 const router = Router({ mergeParams: true });
 
@@ -105,15 +106,7 @@ router.post("/coaches", authedHandler(async (req, res) => {
  *       204: { description: Removed }
  *       404: { description: Not found }
  */
-router.delete("/coaches/:coachId", authedHandler(async (req, res) => {
-    try {
-        await coach.removeCoach(req.params.teamId as string, req.params.coachId as string);
-        return res.status(204).send();
-    } catch (e) {
-        if (e instanceof NotFoundError) return res.status(404).json({ message: e.message });
-        throw e;
-    }
-}));
+router.delete("/coaches/:coachId", removeCoachHandler);
 
 /**
  * @swagger
@@ -159,16 +152,7 @@ router.get("/students", authedHandler(async (req, res) => {
  *       400: { description: Missing student_name }
  *       409: { description: Student already on roster }
  */
-router.post("/students", authedHandler(async (req, res) => {
-    const { student_name, pronouns } = req.body as { student_name?: string; pronouns?: string };
-    if (!student_name?.trim()) return res.status(400).json({ message: "Missing student_name" });
-    try {
-        return res.status(201).json(await coach.addStudent(req.params.teamId as string, student_name.trim(), pronouns ?? null));
-    } catch (e) {
-        if (e instanceof AlreadyExistsError) return res.status(409).json({ message: 'Student already on roster' });
-        throw e;
-    }
-}));
+router.post("/students", addStudentHandler);
 
 /**
  * @swagger

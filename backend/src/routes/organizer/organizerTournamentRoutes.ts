@@ -9,6 +9,18 @@ import { transferOwnership } from "../../providers/coachProvider";
 import { TournamentRequest } from "../../types/express";
 import { tournamentHandler, scorerHandler, organizerHandler, teamHandler } from "../../types/handlers";
 import {EmailTemplate, organizerAddedEmail, sendEmail, teamAddedEmail} from "../../email";
+import { removeCoachHandler, addStudentHandler } from "../teamHandlers";
+
+function validateWitnessCounts(format: TournamentPayload['caseFormat'], witnesses: IWitnesses): string | null {
+    const swing = witnesses.swingWitnessNames.length;
+    if (format.pWitnessesCalled != null && witnesses.pWitnessNames.length + swing > 0 &&
+        format.pWitnessesCalled > witnesses.pWitnessNames.length + swing)
+        return 'P witnesses called exceeds available witnesses';
+    if (format.dWitnessesCalled != null && witnesses.dWitnessNames.length + swing > 0 &&
+        format.dWitnessesCalled > witnesses.dWitnessNames.length + swing)
+        return 'D witnesses called exceeds available witnesses';
+    return null;
+}
 import {getTournament} from "../../providers/organizerProvider";
 
 const router = Router();
@@ -131,27 +143,20 @@ router.get("/format", tournamentHandler(async (req, res) => {
  *       404: { description: Not found }
  *       500: { description: Unable to update format }
  */
+async function checkWitnessCountsForFormat(tournament: string, format: TournamentPayload['caseFormat']): Promise<string | null> {
+    if (format.pWitnessesCalled == null && format.dWitnessesCalled == null) return null;
+    const witnesses = await organizer.getWitnesses(tournament);
+    return validateWitnessCounts(format, witnesses);
+}
+
 router.patch("/format", tournamentHandler(async (req, res) => {
     const format = req.body as TournamentPayload['caseFormat'];
     if ((format.pWitnessesCalled != null && format.pWitnessesCalled < 0) ||
         (format.dWitnessesCalled != null && format.dWitnessesCalled < 0))
         return res.status(400).json({ message: 'Witnesses called cannot be negative' });
-    if (format.pWitnessesCalled != null || format.dWitnessesCalled != null) {
-        try {
-            const witnesses = await organizer.getWitnesses(req.tournament);
-            const swing = witnesses.swingWitnessNames.length;
-            if (format.pWitnessesCalled != null && witnesses.pWitnessNames.length + swing > 0 &&
-                format.pWitnessesCalled > witnesses.pWitnessNames.length + swing)
-                return res.status(400).json({ message: 'P witnesses called exceeds available witnesses' });
-            if (format.dWitnessesCalled != null && witnesses.dWitnessNames.length + swing > 0 &&
-                format.dWitnessesCalled > witnesses.dWitnessNames.length + swing)
-                return res.status(400).json({ message: 'D witnesses called exceeds available witnesses' });
-        } catch (e) {
-            if (e instanceof NotFoundError) return res.status(404).json({ message: e.message });
-            throw e;
-        }
-    }
     try {
+        const countError = await checkWitnessCountsForFormat(req.tournament, format);
+        if (countError) return res.status(400).json({ message: countError });
         await organizer.updateFormat(req.tournament, format);
         return res.status(200).json({ success: true });
     } catch (e) {
@@ -1227,15 +1232,7 @@ router.post('/teams/:teamId/coaches', async (req: Request, res: Response) => {
  *       204: { description: Removed }
  *       404: { description: Not found }
  */
-router.delete('/teams/:teamId/coaches/:coachId', async (req: Request, res: Response) => {
-    try {
-        await coachProvider.removeCoach(req.params.teamId as string, req.params.coachId as string);
-        return res.status(204).send();
-    } catch (e) {
-        if (e instanceof NotFoundError) return res.status(404).json({ message: e.message });
-        throw e;
-    }
-});
+router.delete('/teams/:teamId/coaches/:coachId', removeCoachHandler);
 
 /**
  * @swagger
@@ -1289,16 +1286,7 @@ router.get('/teams/:teamId/students', async (req: Request, res: Response) => {
  *       400: { description: Missing student_name }
  *       409: { description: Student already on roster }
  */
-router.post('/teams/:teamId/students', async (req: Request, res: Response) => {
-    const { student_name, pronouns } = req.body as { student_name?: string; pronouns?: string };
-    if (!student_name?.trim()) return res.status(400).json({ message: 'Missing student_name' });
-    try {
-        return res.status(201).json(await coachProvider.addStudent(req.params.teamId as string, student_name.trim(), pronouns ?? null));
-    } catch (e) {
-        if (e instanceof AlreadyExistsError) return res.status(409).json({ message: 'Student already on roster' });
-        throw e;
-    }
-});
+router.post('/teams/:teamId/students', addStudentHandler);
 
 /**
  * @swagger

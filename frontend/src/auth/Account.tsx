@@ -1,20 +1,25 @@
 import { useEffect, useState } from 'react'
-import { getSession, logout, apiFetch } from './auth'
+import { getSession, logout } from './auth'
 import { validatePassword } from '../utils/validation'
 import PasswordRequirements from './PasswordRequirements'
 import { useNavigate } from 'react-router-dom'
+import { useChangePasswordForm } from './hooks/useChangePasswordForm'
 import './styles/account.css'
+
+function isPasswordInvalid(password: string): boolean {
+    try { validatePassword(password); return false; } catch { return true; }
+}
 
 export function Account() {
     const [email, setEmail] = useState<string | null>(null)
     const navigate = useNavigate()
-
-    const [currentPassword, setCurrentPassword] = useState('')
-    const [newPassword, setNewPassword] = useState('')
-    const [confirmPassword, setConfirmPassword] = useState('')
-    const [pwError, setPwError] = useState('')
-    const [pwSuccess, setPwSuccess] = useState('')
-    const [submitted, setSubmitted] = useState(false)
+    const {
+        currentPassword, setCurrentPassword,
+        newPassword, setNewPassword,
+        confirmPassword, setConfirmPassword,
+        pwError, pwSuccess, submitted,
+        handleSubmit,
+    } = useChangePasswordForm()
 
     useEffect(() => {
         getSession().then(s => {
@@ -28,23 +33,6 @@ export function Account() {
         navigate('/login', { replace: true })
     }
 
-    const handleChangePassword = (e: React.FormEvent) => {
-        e.preventDefault()
-        setSubmitted(true)
-        setPwError(''); setPwSuccess('')
-        if (!currentPassword || !newPassword || !confirmPassword) return
-        const pwValidationError = validatePassword(newPassword)
-        if (pwValidationError) { setPwError(pwValidationError); return }
-        if (newPassword !== confirmPassword) { setPwError('Passwords do not match'); return }
-        apiFetch('/api/auth/change-password', { method: 'POST', body: JSON.stringify({ currentPassword, newPassword }) })
-            .then(r => r.json().then(d => ({ ok: r.ok, message: d.message })))
-            .then(({ ok, message }) => {
-                if (!ok) { setPwError(message); return }
-                setPwSuccess('Password updated successfully')
-                setCurrentPassword(''); setNewPassword(''); setConfirmPassword(''); setSubmitted(false)
-            })
-    }
-
     if (!email) return null
 
     return (
@@ -56,7 +44,7 @@ export function Account() {
                     <span className="account-info-value">{email}</span>
                 </div>
 
-                <form onSubmit={handleChangePassword} noValidate>
+                <form onSubmit={handleSubmit} noValidate>
                     <h2 style={{ fontSize: '1.1rem', margin: '0 0 0.75rem' }}>Change password</h2>
                     {pwError && <p className="account-form-error">{pwError}</p>}
                     {pwSuccess && <p className="account-form-success">{pwSuccess}</p>}
@@ -67,7 +55,7 @@ export function Account() {
                     </div>
                     <div className="account-field">
                         <label className="account-info-label" htmlFor="new-pw">New password</label>
-                        <input id="new-pw" type="password" className={`account-input${submitted && newPassword.length > 0 && validatePassword(newPassword) !== null ? ' account-input--invalid' : ''}`}
+                        <input id="new-pw" type="password" className={`account-input${submitted && newPassword.length > 0 && isPasswordInvalid(newPassword) ? ' account-input--invalid' : ''}`}
                             value={newPassword} onChange={e => setNewPassword(e.target.value)} autoComplete="new-password" />
                         {newPassword && <PasswordRequirements password={newPassword} />}
                     </div>
