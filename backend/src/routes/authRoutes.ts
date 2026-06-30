@@ -3,13 +3,22 @@ import { AuthProvider } from "../providers/authProvider";
 import { verifyUser } from "../authUtils";
 import { AlreadyExistsError, DbError } from '../errors';
 import { OAuth2Client } from 'google-auth-library';
-import {GOOGLE_CLIENT_ID} from '@mock-scores/shared'
+import { GOOGLE_CLIENT_ID, validatePassword, ValidationError } from '@mock-scores/shared'
 import {EmailTemplate, passwordChangedEmail, sendEmail, welcomeEmail} from "../email";
 
 const router = Router();
 const authProvider = new AuthProvider();
-
 const oathClient = new OAuth2Client(GOOGLE_CLIENT_ID);
+
+function fireAndForgetEmail(fn: () => void): void {
+    Promise.resolve().then(fn).catch((err: Error) => console.error(err));
+}
+
+function extractNameFromPayload(payload: { given_name?: string; family_name?: string; name?: string }): { firstName: string; lastName: string } {
+    const firstName = payload.given_name ?? payload.name?.split(' ')[0] ?? '';
+    const lastName = payload.family_name ?? payload.name?.split(' ').slice(1).join(' ') ?? '';
+    return { firstName, lastName };
+}
 
 /**
  * @swagger
@@ -42,20 +51,18 @@ router.post('/register', async (req: Request, res: Response) => {
     };
     if (!email || !password) return res.status(400).json({ message: 'Email and password are required.' });
     if (!firstName?.trim() || !lastName?.trim()) return res.status(400).json({ message: 'First and last name are required.' });
-    if (password.length < 8) return res.status(400).json({ message: 'Password must be at least 8 characters.' });
-    if (!/[A-Z]/.test(password)) return res.status(400).json({ message: 'Password must contain at least one uppercase letter.' });
-    if (!/[0-9]/.test(password)) return res.status(400).json({ message: 'Password must contain at least one number.' });
     try {
+        validatePassword(password);
         const response = await authProvider.registerUser(email, password, firstName.trim(), lastName.trim());
-
-        if (response.status.toString().startsWith("2")){
-            Promise.resolve(() => {
-                const template = welcomeEmail(firstName)
-                sendEmail(email, template.subject, template.html, template.text)
-            }).catch((err: Error) => console.error(err));
+        if (response.status.toString().startsWith('2')) {
+            fireAndForgetEmail(() => {
+                const template = welcomeEmail(firstName);
+                sendEmail(email, template.subject, template.html, template.text);
+            });
         }
         return res.status(response.status).json({ message: response.message });
     } catch (e) {
+        if (e instanceof ValidationError) return res.status(400).json({ message: e.message });
         if (e instanceof AlreadyExistsError) return res.status(409).json({ message: 'Email already in use' });
         if (e instanceof DbError) return res.status(500).json({ message: 'Internal error' });
         throw e;
@@ -156,21 +163,17 @@ router.post('/change-password', verifyUser, async (req: Request, res: Response) 
     if (!req.session) return res.status(401).json({ message: 'Not verified.' });
     const { currentPassword, newPassword } = req.body as { currentPassword?: string; newPassword?: string };
     if (!currentPassword || !newPassword) return res.status(400).json({ message: 'Missing required fields' });
-    if (newPassword.length < 8) return res.status(400).json({ message: 'Password must be at least 8 characters.' });
-    if (!/[A-Z]/.test(newPassword)) return res.status(400).json({ message: 'Password must contain at least one uppercase letter.' });
-    if (!/[0-9]/.test(newPassword)) return res.status(400).json({ message: 'Password must contain at least one number.' });
     try {
+        validatePassword(newPassword);
         const result = await authProvider.changePassword(req.session.userId, currentPassword, newPassword);
-
-        Promise.resolve(async () => {
-            if (req.session?.email) {
-            const template: EmailTemplate = passwordChangedEmail(req.session?.firstName ?? "")
-            await sendEmail(req.session?.email, template.subject, template.html, template.text);
-        }
-        }).catch(e => console.error(e))
-
+        const { email, firstName } = req.session;
+        fireAndForgetEmail(() => {
+            const template: EmailTemplate = passwordChangedEmail(firstName ?? '');
+            sendEmail(email, template.subject, template.html, template.text);
+        });
         return res.status(result.status).json({ message: result.message });
     } catch (e) {
+        if (e instanceof ValidationError) return res.status(400).json({ message: e.message });
         if (e instanceof DbError) return res.status(500).json({ message: 'Internal error' });
         throw e;
     }
@@ -214,10 +217,7 @@ router.post('/google/login', async (req: Request, res: Response) => {
         const ticket = await oathClient.verifyIdToken({ idToken: token, audience: GOOGLE_CLIENT_ID });
         const payload = ticket.getPayload();
         if (!payload?.email) return res.status(401).json({ message: 'Could not get email from OAuth.' });
-
-        const firstName = payload.given_name ?? payload.name?.split(' ')[0] ?? '';
-        const lastName = payload.family_name ?? payload.name?.split(' ').slice(1).join(' ') ?? '';
-
+        const { firstName, lastName } = extractNameFromPayload(payload);
         const jwtToken = await authProvider.googleAuth(payload.email, firstName, lastName);
         return res.status(200).json({ token: jwtToken });
     } catch (e) {

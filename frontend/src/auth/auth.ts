@@ -52,3 +52,14 @@ export function apiFetch(url: string, init: RequestInit = {}): Promise<Response>
         },
     });
 }
+
+/** POST JSON to a public (unauthenticated) endpoint. Returns parsed body and ok flag. */
+export async function postJson<T = Record<string, unknown>>(url: string, body: unknown): Promise<{ ok: boolean; data: T }> {
+    const res = await fetch(url, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(body),
+    });
+    const data = await res.json().catch(() => ({})) as T;
+    return { ok: res.ok, data };
+}
