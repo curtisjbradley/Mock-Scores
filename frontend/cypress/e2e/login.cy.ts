@@ -2,6 +2,8 @@ const TEST_USER = { userId: '1', email: 'user@example.com', firstName: 'Jane', l
 
 describe('Login page', () => {
   beforeEach(() => {
+    // Stub refresh as unauthorized so ProtectedRoute doesn't auto-redirect
+    cy.intercept('POST', '/api/auth/refresh', { statusCode: 401 }).as('refresh')
     cy.intercept('GET', '/api/auth/session', { statusCode: 401, body: {} }).as('session')
     cy.visit('/login')
   })
@@ -39,7 +41,7 @@ describe('Login page', () => {
   it('redirects to / on successful login', () => {
     cy.intercept('POST', '/api/auth/login', {
       statusCode: 200,
-      body: { token: 'fake-jwt' },
+      body: { accessToken: 'fake-access-token' },
     }).as('loginOk')
     cy.intercept('GET', '/api/auth/session', { statusCode: 200, body: TEST_USER }).as('sessionOk')
     cy.get('#email').type(TEST_USER.email)
@@ -52,7 +54,7 @@ describe('Login page', () => {
   it('redirects to ?redirect target after login', () => {
     cy.intercept('POST', '/api/auth/login', {
       statusCode: 200,
-      body: { token: 'fake-jwt' },
+      body: { accessToken: 'fake-access-token' },
     }).as('loginOk')
     cy.intercept('GET', '/api/auth/session', { statusCode: 200, body: TEST_USER }).as('sessionOk')
     cy.visit('/login?redirect=%2Forganizer')
@@ -72,7 +74,6 @@ describe('Login page', () => {
   })
 
   it('already-authed user visiting /login still sees the form (no redirect away)', () => {
-    // The app does not forcefully redirect authed users away from /login, just verify form renders
     cy.loginAs(TEST_USER)
     cy.visit('/login')
     cy.contains('h1', 'Sign in').should('be.visible')

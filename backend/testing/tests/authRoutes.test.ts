@@ -1,20 +1,35 @@
 jest.mock('../../src/email', () => jest.requireActual('../mocks/email'));
+
+// Mock verifyRefreshToken so /refresh tests don't require real signed JWTs.
+// The default mock returns a valid payload; individual tests override it
+// via mockResolvedValueOnce to test the null/rejection path.
+jest.mock('../../src/authUtils', () => ({
+    ...jest.requireActual('../../src/authUtils'),
+    verifyRefreshToken: jest.fn().mockResolvedValue({ userId: 'u1', jti: 'mock-jti' }),
+    hashJti: jest.fn().mockReturnValue('hashed-jti'),
+}));
+
 import request from 'supertest';
 import testApp from '../../src/appService';
 import { dbQuery } from '../../src/db';
 import bcrypt from 'bcrypt';
-import { signToken } from '../../src/authUtils';
+import { signToken, verifyRefreshToken } from '../../src/authUtils';
 
 jest.mock('bcrypt');
 
 const mockDbQuery = dbQuery as jest.MockedFunction<typeof dbQuery>;
 const mockBcryptHash = bcrypt.hash as jest.MockedFunction<typeof bcrypt.hash>;
 const mockBcryptCompare = bcrypt.compare as jest.MockedFunction<typeof bcrypt.compare>;
+const mockVerifyRefreshToken = verifyRefreshToken as jest.MockedFunction<typeof verifyRefreshToken>;
 
 beforeEach(() => jest.clearAllMocks());
 
-// Token for the session/change-password tests. signToken is free after the
-// module-scope cache in helpers/auth.ts has been warmed by the first test file.
+// Re-apply the default after clearAllMocks resets it
+beforeEach(() => {
+    mockVerifyRefreshToken.mockResolvedValue({ userId: 'u1', jti: 'mock-jti' });
+});
+
+// Token for session/change-password tests — signed once, reused across tests.
 let sharedToken: string;
 beforeAll(async () => {
     sharedToken = await signToken('user-1', 'test@test.com', 'Test', 'User');
@@ -82,13 +97,82 @@ describe('POST /api/auth/login', () => {
         expect(res.status).toBe(401);
     });
 
-    it('returns 200 with token on successful login', async () => {
-        mockDbQuery.mockResolvedValueOnce({ rows: [{ user_id: 'u1', email: 'a@b.com', password_hash: 'hash', first_name: 'Alice', last_name: 'Smith' }], rowCount: 1 } as any);
+    it('returns 200 with accessToken and sets rt cookie on successful login', async () => {
+        mockDbQuery
+            .mockResolvedValueOnce({ rows: [{ user_id: 'u1', email: 'a@b.com', password_hash: 'hash', first_name: 'Alice', last_name: 'Smith' }], rowCount: 1 } as any)
+            .mockResolvedValueOnce({ rows: [], rowCount: 1 } as any); // INSERT refresh_token
         (mockBcryptCompare as jest.Mock).mockResolvedValueOnce(true);
 
         const res = await request(testApp).post('/api/auth/login').send({ email: 'a@b.com', password: 'Password1' });
         expect(res.status).toBe(200);
-        expect(typeof res.body.token).toBe('string');
+        expect(typeof res.body.accessToken).toBe('string');
+        const cookies = res.headers['set-cookie'] as string[] | undefined;
+        expect(cookies?.some(c => c.startsWith('rt='))).toBe(true);
+        expect(cookies?.some(c => c.includes('HttpOnly'))).toBe(true);
+    });
+});
+
+// ─── POST /api/auth/refresh ───────────────────────────────────────────────────
+describe('POST /api/auth/refresh', () => {
+    it('returns 401 when no refresh cookie is present', async () => {
+        const res = await request(testApp).post('/api/auth/refresh');
+        expect(res.status).toBe(401);
+    });
+
+    it('returns 401 when verifyRefreshToken rejects the JWT', async () => {
+        // Simulate a forged or expired token — crypto verification fails
+        mockVerifyRefreshToken.mockResolvedValueOnce(null);
+        const res = await request(testApp).post('/api/auth/refresh')
+            .set('Cookie', 'rt=forged-or-expired-token');
+        expect(res.status).toBe(401);
+    });
+
+    it('returns 401 when jti hash is not found in DB (rotated/revoked)', async () => {
+        // JWT is valid but the jti was already rotated out of the DB
+        mockDbQuery.mockResolvedValueOnce({ rows: [], rowCount: 0 } as any);
+        const res = await request(testApp).post('/api/auth/refresh')
+            .set('Cookie', 'rt=valid-but-revoked-token');
+        expect(res.status).toBe(401);
+    });
+
+    it('returns 200 with new accessToken and rotated rt cookie on valid refresh', async () => {
+        const future = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString();
+        mockDbQuery
+            .mockResolvedValueOnce({ rows: [{ user_id: 'u1', email: 'a@b.com', first_name: 'Alice', last_name: 'Smith', expires_at: future }], rowCount: 1 } as any)
+            .mockResolvedValueOnce({ rows: [], rowCount: 1 } as any)  // DELETE old token
+            .mockResolvedValueOnce({ rows: [], rowCount: 1 } as any); // INSERT new token
+
+        const res = await request(testApp).post('/api/auth/refresh')
+            .set('Cookie', 'rt=valid-refresh-token');
+        expect(res.status).toBe(200);
+        expect(typeof res.body.accessToken).toBe('string');
+        const cookies = res.headers['set-cookie'] as string[] | undefined;
+        expect(cookies?.some(c => c.startsWith('rt='))).toBe(true);
+    });
+});
+
+// ─── POST /api/auth/logout ────────────────────────────────────────────────────
+describe('POST /api/auth/logout', () => {
+    it('returns 204 and clears the rt cookie', async () => {
+        // verifyRefreshToken succeeds → revokeRefreshToken deletes by jti hash
+        mockDbQuery.mockResolvedValueOnce({ rows: [], rowCount: 1 } as any);
+        const res = await request(testApp).post('/api/auth/logout')
+            .set('Cookie', 'rt=sometoken');
+        expect(res.status).toBe(204);
+        const cookies = res.headers['set-cookie'] as string[] | undefined;
+        expect(cookies?.some(c => c.startsWith('rt=;') || c.includes('Expires=Thu, 01 Jan 1970'))).toBe(true);
+    });
+
+    it('returns 204 even when no cookie is present', async () => {
+        const res = await request(testApp).post('/api/auth/logout');
+        expect(res.status).toBe(204);
+    });
+
+    it('returns 204 when verifyRefreshToken rejects (expired cookie)', async () => {
+        mockVerifyRefreshToken.mockResolvedValueOnce(null);
+        const res = await request(testApp).post('/api/auth/logout')
+            .set('Cookie', 'rt=expired-token');
+        expect(res.status).toBe(204);
     });
 });
 
@@ -142,11 +226,12 @@ describe('POST /api/auth/change-password', () => {
         expect(res.status).toBe(401);
     });
 
-    it('returns 200 on successful password change', async () => {
+    it('returns 200 on successful password change and clears rt cookie', async () => {
         const token = validToken();
         mockDbQuery
-            .mockResolvedValueOnce({ rows: [{ password_hash: 'oldhash' }], rowCount: 1 } as any)
-            .mockResolvedValueOnce({ rows: [], rowCount: 1 } as any);
+            .mockResolvedValueOnce({ rows: [{ password_hash: 'oldhash' }], rowCount: 1 } as any) // SELECT password
+            .mockResolvedValueOnce({ rows: [], rowCount: 1 } as any)                              // UPDATE password
+            .mockResolvedValueOnce({ rows: [], rowCount: 0 } as any);                             // DELETE all refresh tokens
         (mockBcryptCompare as jest.Mock).mockResolvedValueOnce(true);
         (mockBcryptHash as jest.Mock).mockResolvedValueOnce('newhash');
 

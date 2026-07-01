@@ -1,16 +1,17 @@
 import express, { NextFunction, Request, Response } from "express";
 import path from "path";
 import dotenv from 'dotenv';
-import {expand} from 'dotenv-expand'
+import { expand } from 'dotenv-expand';
 const env = dotenv.config({ path: path.resolve(__dirname, '../.env') });
-expand(env)
+expand(env);
+import cookieParser from 'cookie-parser';
 import swaggerUi from 'swagger-ui-express';
 import { swaggerSpec } from './swaggerConfig';
 import authRouter from './routes/authRoutes';
 import webhookRouter from "./routes/webhookRouter";
 import organizerTournamentRouter from './routes/organizer/organizerRoutes';
 import coachRouter from "./routes/coach/coachRoutes";
-import scorerRouter from "./routes/scorerRoutes"
+import scorerRouter from "./routes/scorerRoutes";
 import { verifyUser } from "./authUtils";
 import { DbError } from "./errors";
 import RateLimit from 'express-rate-limit';
@@ -30,6 +31,7 @@ const authLimiter = RateLimit({ windowMs: 30 * 1000, max: 20, skip: () => proces
 
 app.use(express.urlencoded({ extended: true }));
 app.use(express.json());
+app.use(cookieParser());
 
 app.use('/api/docs', swaggerUi.serve, swaggerUi.setup(swaggerSpec));
 app.get('/api/docs-json', (_req: Request, res: Response) => res.json(swaggerSpec));

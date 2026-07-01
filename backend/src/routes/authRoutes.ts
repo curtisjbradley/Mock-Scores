@@ -1,24 +1,50 @@
 import { Router, Request, Response } from 'express';
-import { AuthProvider } from "../providers/authProvider";
-import { verifyUser } from "../authUtils";
+import { AuthProvider } from '../providers/authProvider';
+import { verifyUser, REFRESH_COOKIE, refreshCookieOptions } from '../authUtils';
 import { AlreadyExistsError, DbError } from '../errors';
 import { OAuth2Client } from 'google-auth-library';
-import { GOOGLE_CLIENT_ID, validatePassword, ValidationError } from '@mock-scores/shared'
-import {EmailTemplate, passwordChangedEmail, sendEmail, welcomeEmail} from "../email";
+import { GOOGLE_CLIENT_ID, validatePassword, ValidationError } from '@mock-scores/shared';
+import { EmailTemplate, passwordChangedEmail, sendEmail, welcomeEmail } from '../email';
 
 const router = Router();
 const authProvider = new AuthProvider();
-const oathClient = new OAuth2Client(GOOGLE_CLIENT_ID);
+const oauthClient = new OAuth2Client(GOOGLE_CLIENT_ID);
+
+// ── Helpers ───────────────────────────────────────────────────────────────────
 
 function fireAndForgetEmail(fn: () => void): void {
     Promise.resolve().then(fn).catch((err: Error) => console.error(err));
 }
 
-function extractNameFromPayload(payload: { given_name?: string; family_name?: string; name?: string }): { firstName: string; lastName: string } {
+function extractNameFromPayload(
+    payload: { given_name?: string; family_name?: string; name?: string },
+): { firstName: string; lastName: string } {
     const firstName = payload.given_name ?? payload.name?.split(' ')[0] ?? '';
-    const lastName = payload.family_name ?? payload.name?.split(' ').slice(1).join(' ') ?? '';
+    const lastName  = payload.family_name ?? payload.name?.split(' ').slice(1).join(' ') ?? '';
     return { firstName, lastName };
 }
+
+/**
+ * Sets the refresh token as an HttpOnly, Secure, SameSite=Strict cookie and
+ * returns the access token in the JSON body.
+ *
+ * Security properties:
+ * - The refresh token cookie is unreadable by JS (`httpOnly: true`), which
+ *   eliminates XSS-based session theft from localStorage.
+ * - `sameSite: 'strict'` blocks CSRF — the cookie is never sent cross-origin.
+ * - The access token lives only in JS memory on the client; it has a 15-min
+ *   lifetime so exposure is bounded even if intercepted.
+ */
+function sendAuthResponse(
+    res: Response,
+    accessToken: string,
+    refreshToken: string,
+): Response {
+    res.cookie(REFRESH_COOKIE, refreshToken, refreshCookieOptions());
+    return res.status(200).json({ accessToken });
+}
+
+// ── Routes ────────────────────────────────────────────────────────────────────
 
 /**
  * @swagger
@@ -41,7 +67,7 @@ function extractNameFromPayload(payload: { given_name?: string; family_name?: st
  *               lastName: { type: string }
  *     responses:
  *       201: { description: User registered }
- *       400: { description: Missing required fields }
+ *       400: { description: Missing or invalid fields }
  *       409: { description: Email already in use }
  *       500: { description: Internal error }
  */
@@ -62,9 +88,9 @@ router.post('/register', async (req: Request, res: Response) => {
         }
         return res.status(response.status).json({ message: response.message });
     } catch (e) {
-        if (e instanceof ValidationError) return res.status(400).json({ message: e.message });
+        if (e instanceof ValidationError)   return res.status(400).json({ message: e.message });
         if (e instanceof AlreadyExistsError) return res.status(409).json({ message: 'Email already in use' });
-        if (e instanceof DbError) return res.status(500).json({ message: 'Internal error' });
+        if (e instanceof DbError)            return res.status(500).json({ message: 'Internal error' });
         throw e;
     }
 });
@@ -73,9 +99,13 @@ router.post('/register', async (req: Request, res: Response) => {
  * @swagger
  * /api/auth/login:
  *   post:
- *     summary: Log in and receive a JWT
+ *     summary: Log in with email + password
  *     tags: [Auth]
  *     security: []
+ *     description: >
+ *       Returns a short-lived access token in the JSON body and sets a
+ *       long-lived HttpOnly refresh token cookie (`rt`). The access token
+ *       should be stored only in JavaScript memory — never in localStorage.
  *     requestBody:
  *       required: true
  *       content:
@@ -88,13 +118,13 @@ router.post('/register', async (req: Request, res: Response) => {
  *               password: { type: string }
  *     responses:
  *       200:
- *         description: JWT token
+ *         description: Access token + HttpOnly refresh cookie
  *         content:
  *           application/json:
  *             schema:
  *               type: object
  *               properties:
- *                 token: { type: string }
+ *                 accessToken: { type: string }
  *       400: { description: Missing credentials }
  *       401: { description: Invalid credentials }
  *       500: { description: Internal error }
@@ -103,9 +133,9 @@ router.post('/login', async (req: Request, res: Response) => {
     const { email, password } = req.body as { email?: string; password?: string };
     if (!email || !password) return res.status(400).json({ message: 'Email and password are required.' });
     try {
-        const response = await authProvider.loginUser(email, password);
-        if (typeof response === 'string') return res.status(200).json({ token: response });
-        return res.status(response.status).json({ message: response.message });
+        const result = await authProvider.loginUser(email, password);
+        if ('status' in result) return res.status(result.status).json({ message: result.message });
+        return sendAuthResponse(res, result.accessToken, result.refreshToken);
     } catch (e) {
         if (e instanceof DbError) return res.status(500).json({ message: 'Internal error' });
         throw e;
@@ -114,25 +144,75 @@ router.post('/login', async (req: Request, res: Response) => {
 
 /**
  * @swagger
- * /api/auth/session:
- *   get:
- *     summary: Get current session info
+ * /api/auth/refresh:
+ *   post:
+ *     summary: Silently refresh the access token using the HttpOnly refresh cookie
  *     tags: [Auth]
+ *     security: []
+ *     description: >
+ *       Reads the `rt` HttpOnly cookie, validates it, rotates it (single-use),
+ *       and returns a fresh access token + new refresh cookie.
  *     responses:
  *       200:
- *         description: Session payload
+ *         description: New access token + rotated refresh cookie
  *         content:
  *           application/json:
  *             schema:
  *               type: object
  *               properties:
- *                 userId: { type: string }
- *                 email: { type: string }
- *                 firstName: { type: string }
- *                 lastName: { type: string }
+ *                 accessToken: { type: string }
+ *       401: { description: Missing or invalid refresh token }
+ */
+router.post('/refresh', async (req: Request, res: Response) => {
+    const rawToken = req.cookies?.[REFRESH_COOKIE] as string | undefined;
+    if (!rawToken) return res.status(401).json({ message: 'No refresh token provided.' });
+    try {
+        const tokens = await authProvider.refreshSession(rawToken);
+        if (!tokens) {
+            // Token not found or expired — clear the stale cookie
+            res.clearCookie(REFRESH_COOKIE, { path: '/api/auth' });
+            return res.status(401).json({ message: 'Session expired. Please log in again.' });
+        }
+        return sendAuthResponse(res, tokens.accessToken, tokens.refreshToken);
+    } catch (e) {
+        if (e instanceof DbError) return res.status(500).json({ message: 'Internal error' });
+        throw e;
+    }
+});
+
+/**
+ * @swagger
+ * /api/auth/logout:
+ *   post:
+ *     summary: Revoke the refresh token and clear the cookie
+ *     tags: [Auth]
+ *     responses:
+ *       204: { description: Logged out }
+ */
+router.post('/logout', async (req: Request, res: Response) => {
+    const rawToken = req.cookies?.[REFRESH_COOKIE] as string | undefined;
+    if (rawToken) {
+        try {
+            await authProvider.revokeRefreshToken(rawToken);
+        } catch {
+            // Best-effort: always clear the cookie regardless
+        }
+    }
+    res.clearCookie(REFRESH_COOKIE, { path: '/api/auth' });
+    return res.status(204).send();
+});
+
+/**
+ * @swagger
+ * /api/auth/session:
+ *   get:
+ *     summary: Get current session info (requires valid access token)
+ *     tags: [Auth]
+ *     responses:
+ *       200: { description: Session payload }
  *       401: { description: Not authenticated }
  */
-router.get('/session', verifyUser, async (req: Request, res: Response) => {
+router.get('/session', verifyUser, (req: Request, res: Response) => {
     if (!req.session) return res.status(401).json({ message: 'Not verified.' });
     return res.status(200).json(req.session);
 });
@@ -143,6 +223,7 @@ router.get('/session', verifyUser, async (req: Request, res: Response) => {
  *   post:
  *     summary: Change the authenticated user's password
  *     tags: [Auth]
+ *     description: Also revokes all refresh tokens, requiring a fresh login on all devices.
  *     requestBody:
  *       required: true
  *       content:
@@ -155,8 +236,8 @@ router.get('/session', verifyUser, async (req: Request, res: Response) => {
  *               newPassword: { type: string, minLength: 8 }
  *     responses:
  *       200: { description: Password changed }
- *       400: { description: Missing fields or password too short }
- *       401: { description: Not authenticated }
+ *       400: { description: Missing fields or password too weak }
+ *       401: { description: Not authenticated or wrong current password }
  *       500: { description: Internal error }
  */
 router.post('/change-password', verifyUser, async (req: Request, res: Response) => {
@@ -166,28 +247,33 @@ router.post('/change-password', verifyUser, async (req: Request, res: Response) 
     try {
         validatePassword(newPassword);
         const result = await authProvider.changePassword(req.session.userId, currentPassword, newPassword);
-        const { email, firstName } = req.session;
-        fireAndForgetEmail(() => {
-            const template: EmailTemplate = passwordChangedEmail(firstName ?? '');
-            sendEmail(email, template.subject, template.html, template.text);
-        });
+        if (result.status === 200) {
+            // Clear the caller's refresh cookie — they'll need to log in again
+            res.clearCookie(REFRESH_COOKIE, { path: '/api/auth' });
+            const { email, firstName } = req.session;
+            fireAndForgetEmail(() => {
+                const template: EmailTemplate = passwordChangedEmail(firstName ?? '');
+                sendEmail(email, template.subject, template.html, template.text);
+            });
+        }
         return res.status(result.status).json({ message: result.message });
     } catch (e) {
         if (e instanceof ValidationError) return res.status(400).json({ message: e.message });
-        if (e instanceof DbError) return res.status(500).json({ message: 'Internal error' });
+        if (e instanceof DbError)         return res.status(500).json({ message: 'Internal error' });
         throw e;
     }
 });
-
-
 
 /**
  * @swagger
  * /api/auth/google/login:
  *   post:
- *     summary: Log in using Google OAUTH
+ *     summary: Log in or register via Google OAuth
  *     tags: [Auth]
  *     security: []
+ *     description: >
+ *       Verifies the Google credential, finds or creates the user account, and
+ *       returns the same access token + HttpOnly refresh cookie as /login.
  *     requestBody:
  *       required: true
  *       content:
@@ -198,31 +284,25 @@ router.post('/change-password', verifyUser, async (req: Request, res: Response) 
  *             properties:
  *               token: { type: string }
  *     responses:
- *       200:
- *         description: JWT token
- *         content:
- *           application/json:
- *             schema:
- *               type: object
- *               properties:
- *                 token: { type: string }
- *       400: { description: Missing OAUTH Token }
- *       401: { description: Invalid credentials }
+ *       200: { description: Access token + HttpOnly refresh cookie }
+ *       400: { description: Missing OAuth token }
+ *       401: { description: Invalid OAuth token }
  *       500: { description: Internal error }
  */
 router.post('/google/login', async (req: Request, res: Response) => {
     const { token } = req.body as { token?: string };
     if (!token) return res.status(400).json({ message: 'OAUTH Token is required.' });
     try {
-        const ticket = await oathClient.verifyIdToken({ idToken: token, audience: GOOGLE_CLIENT_ID });
+        const ticket = await oauthClient.verifyIdToken({ idToken: token, audience: GOOGLE_CLIENT_ID });
         const payload = ticket.getPayload();
         if (!payload?.email) return res.status(401).json({ message: 'Could not get email from OAuth.' });
         const { firstName, lastName } = extractNameFromPayload(payload);
-        const jwtToken = await authProvider.googleAuth(payload.email, firstName, lastName);
-        return res.status(200).json({ token: jwtToken });
+        const tokens = await authProvider.googleAuth(payload.email, firstName, lastName);
+        return sendAuthResponse(res, tokens.accessToken, tokens.refreshToken);
     } catch (e) {
         if (e instanceof DbError) return res.status(500).json({ message: 'Internal error' });
         return res.status(401).json({ message: 'Invalid OAuth token.' });
     }
 });
+
 export default router;
