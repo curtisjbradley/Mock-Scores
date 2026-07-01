@@ -9,6 +9,25 @@ create table auth
     first_name    text                                not null,
     last_name     text                                not null
 );
+
+-- Stores hashed refresh tokens for the HttpOnly-cookie auth flow.
+-- Only the SHA-256 hash of the raw token is persisted so that a DB leak
+-- cannot be used to forge new sessions.  Single-use rotation: every
+-- /api/auth/refresh call deletes this row and inserts a replacement.
+create table refresh_tokens
+(
+    id          uuid      default gen_random_uuid() not null primary key,
+    user_id     uuid                                not null
+        references auth (user_id) on delete cascade,
+    token_hash  text                                not null unique,
+    expires_at  timestamp                           not null,
+    created_at  timestamp default now()             not null
+);
+
+-- Fast look-up by hash (used on every /refresh request)
+create index refresh_tokens_hash_idx    on refresh_tokens (token_hash);
+-- Supports periodic expiry clean-up: DELETE FROM refresh_tokens WHERE expires_at < now()
+create index refresh_tokens_expires_idx on refresh_tokens (expires_at);
 create table tournament_format
 (
     format_id          uuid primary key default gen_random_uuid(),
@@ -429,3 +448,54 @@ create table student_assignments (
     student_id uuid not null references team_rostered_students(student_id) on delete cascade,
     unique (pairing_id, team_id, field_id, witness_id)
 );
+
+-- ── Indexes ───────────────────────────────────────────────────────────────────
+-- Added by migration 004. Justified by actual query patterns in
+-- organizerProvider.ts, coachProvider.ts, and authUtils.ts.
+
+-- auth: case-insensitive email lookups use LOWER(email) = LOWER($1)
+CREATE INDEX auth_email_lower_idx                         ON auth (lower(email));
+
+-- tournament_owners: verifyTournamentAccess / getTournaments filter by delegate_id
+-- (the unique on (tournament_id, delegate_id) has tournament_id leading)
+CREATE INDEX tournament_owners_delegate_idx               ON tournament_owners (delegate_id);
+
+-- rounds: getRounds / getSchedule / getResults filter by tournament_id
+CREATE INDEX rounds_tournament_id_idx                     ON rounds (tournament_id);
+
+-- pairings: getPairings and all scorer-assignment queries filter by round_id
+CREATE INDEX pairings_round_id_idx                        ON pairings (round_id);
+
+-- scoring_fields: getScoringCategories fetches fields WHERE category_id IN (...)
+CREATE INDEX scoring_fields_category_id_idx               ON scoring_fields (category_id);
+
+-- case_witnesses: getWitnesses / updateWitnesses filter by case_format
+CREATE INDEX case_witnesses_case_format_idx               ON case_witnesses (case_format);
+
+-- scorers: getScorers / getAllConflicts / duplicateScorers filter by tournament_id
+CREATE INDEX scorers_tournament_id_idx                    ON scorers (tournament_id);
+
+-- scorer_pairing_assignments: getPairingScorers / removeScorerAssignment filter by pairing_id
+CREATE INDEX scorer_pairing_assignments_pairing_id_idx    ON scorer_pairing_assignments (pairing_id);
+
+-- paper_scorers: getPairingScorers joins on pairing_id
+CREATE INDEX paper_scorers_pairing_id_idx                 ON paper_scorers (pairing_id);
+
+-- teams: getTeams / getCompetitionField / teamNameExists all filter by tournament_id
+CREATE INDEX teams_tournament_id_idx                      ON teams (tournament_id);
+
+-- team_coaches: PK is (coach_id, team_id); queries filter by team_id alone
+CREATE INDEX team_coaches_team_id_idx                     ON team_coaches (team_id);
+
+-- team_invites: getCoaches / addCoach / removeCoach filter by team_id
+CREATE INDEX team_invites_team_id_idx                     ON team_invites (team_id);
+
+-- ballots: getStandingsData / getResults filter by tournament_id and pairing_id
+CREATE INDEX ballots_tournament_id_idx                    ON ballots (tournament_id);
+CREATE INDEX ballots_pairing_id_idx                       ON ballots (pairing_id);
+
+-- tournament_delegate_invites: addOrganizer filters by tournament_id
+CREATE INDEX tournament_delegate_invites_tournament_id_idx ON tournament_delegate_invites (tournament_id);
+
+-- standings_templates: upsertStandingsConfig checks WHERE config_id = $1
+CREATE INDEX standings_templates_config_id_idx            ON standings_templates (config_id);
