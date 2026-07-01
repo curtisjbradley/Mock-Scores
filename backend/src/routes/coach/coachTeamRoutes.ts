@@ -11,7 +11,7 @@ import { removeCoachHandler, addStudentHandler } from "../teamHandlers";
 
 const router = Router({ mergeParams: true });
 
-export async function verifyTeamAccess(req: Request, res: Response, next: NextFunction) {
+async function verifyTeamAccess(req: Request, res: Response, next: NextFunction) {
     const { session } = req as AuthenticatedRequest;
     const teamId = req.params.teamId as string;
     if (!uuidRegex.test(teamId)) return res.status(400).json({ message: "Invalid team ID" });

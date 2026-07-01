@@ -3,6 +3,16 @@ import { useNavigate } from 'react-router-dom'
 import { apiFetch } from '../../auth/auth'
 import type { ICourtroom, IPairing, IPairingScorer, IRound, IScorer, ITeam } from '@mock-scores/shared'
 
+/**
+ * Loads all data needed to display and manage a single tournament round.
+ *
+ * On mount, fetches the round, teams, courtrooms, pairings, scorers, and each
+ * pairing's assigned scorers in one parallel batch. Redirects to `/` when
+ * either param is missing, and sets `notFound: true` on a 404 response.
+ *
+ * @param id - Tournament ID from the route param
+ * @param roundId - Round ID from the route param
+ */
 export function useRoundView(id: string | undefined, roundId: string | undefined) {
     const navigate = useNavigate()
     const [round, setRound] = useState<IRound | null>(null)

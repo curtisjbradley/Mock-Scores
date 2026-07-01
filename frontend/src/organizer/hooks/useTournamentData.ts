@@ -1,28 +1,10 @@
 import { apiFetch } from '../../auth/auth'
-import { emptyCaseFormat, defaultWitnessCategory } from '../types/tournament'
+import { defaultWitnessCategory } from '../types/tournament'
 import type { TournamentInfo, CaseFormatState, ScoringCategory } from '../types/tournament'
 import type { TournamentPayload, ITournamentDetails, IWitnesses, IScoringCategory, IStandingsTemplate } from '@mock-scores/shared'
-
-export interface TournamentState {
-    info: TournamentInfo
-    caseFormat: CaseFormatState
-    categories: ScoringCategory[]
-    loading: boolean
-    error: string | null
-}
-
-const emptyInfo: TournamentInfo = { name: '', location: '', startDate: '', endDate: '', startTbd: false, endTbd: false }
-
-export const emptyTournamentState = (): TournamentState => ({
-    info: emptyInfo,
-    caseFormat: emptyCaseFormat,
-    categories: [defaultWitnessCategory()],
-    loading: true,
-    error: null,
-})
-
 // ── Format ────────────────────────────────────────────────────────────────────
 
+/** Fetches the case format for a tournament from the API. */
 export async function fetchFormat(tournamentId: string): Promise<CaseFormatState> {
     const r = await apiFetch(`/api/organizer/tournament/${tournamentId}/format`)
     if (!r.ok) throw new Error('Failed to load format.')
@@ -39,6 +21,7 @@ export async function fetchFormat(tournamentId: string): Promise<CaseFormatState
     }
 }
 
+/** Persists the case format for a tournament. Throws on a non-OK response. */
 export async function saveFormat(tournamentId: string, cf: CaseFormatState): Promise<void> {
     const payload: TournamentPayload['caseFormat'] = {
         caseName: cf.caseName, criminalCase: cf.criminalCase,
@@ -53,12 +36,14 @@ export async function saveFormat(tournamentId: string, cf: CaseFormatState): Pro
 
 // ── Witnesses ─────────────────────────────────────────────────────────────────
 
+/** Fetches prosecution/defense/swing witness definitions for a tournament. */
 export async function fetchWitnesses(tournamentId: string): Promise<IWitnesses> {
     const r = await apiFetch(`/api/organizer/tournament/${tournamentId}/witnesses`)
     if (!r.ok) throw new Error('Failed to load witnesses.')
     return r.json()
 }
 
+/** Persists witness names and counts for a tournament. Throws on non-OK. */
 export async function saveWitnesses(tournamentId: string, witnesses: IWitnesses): Promise<void> {
     const r = await apiFetch(`/api/organizer/tournament/${tournamentId}/witnesses`, { method: 'PATCH', body: JSON.stringify(witnesses) })
     if (!r.ok) throw new Error(r.statusText)
@@ -66,6 +51,7 @@ export async function saveWitnesses(tournamentId: string, witnesses: IWitnesses)
 
 // ── Scoring categories ────────────────────────────────────────────────────────
 
+/** Fetches scoring categories (fields, witness assignments) for a tournament. */
 export async function fetchScoringCategories(tournamentId: string): Promise<ScoringCategory[]> {
     const r = await apiFetch(`/api/organizer/tournament/${tournamentId}/scoring-categories`)
     if (!r.ok) throw new Error('Failed to load scoring categories.')
@@ -73,6 +59,7 @@ export async function fetchScoringCategories(tournamentId: string): Promise<Scor
     return data.length ? data.map(c => ({ ...c })) : [defaultWitnessCategory()]
 }
 
+/** Persists the scoring category/field configuration for a tournament. */
 export async function saveScoringCategories(tournamentId: string, cats: ScoringCategory[]): Promise<void> {
     const payload: TournamentPayload['scoringCategories'] = cats.map((cat, catPos) => ({
         name: cat.name, witnessCategory: !!cat.witnessCategory, position: catPos,
@@ -89,18 +76,21 @@ export async function saveScoringCategories(tournamentId: string, cats: ScoringC
 
 // ── Standings config ──────────────────────────────────────────────────────────
 
+/** Fetches built-in standings configuration templates. */
 export async function fetchStandingsTemplates(): Promise<IStandingsTemplate[]> {
     const r = await apiFetch('/api/organizer/tournament/standings-templates')
     if (!r.ok) throw new Error('Failed to load standings templates.')
     return r.json()
 }
 
+/** Fetches the Blockly standings configuration (statsXml + standingsXml) for a tournament. */
 export async function fetchStandingsConfig(tournamentId: string): Promise<{ id: string; statsXml: string; standingsXml: string } | null> {
     const r = await apiFetch(`/api/organizer/tournament/${tournamentId}/standings-config`)
     if (!r.ok) throw new Error('Failed to load standings config.')
     return r.json()
 }
 
+/** Persists the Blockly standings XML configuration for a tournament. */
 export async function saveStandingsConfig(tournamentId: string, config: { statsXml: string; standingsXml: string }): Promise<void> {
     const r = await apiFetch(`/api/organizer/tournament/${tournamentId}/standings-config`, { method: 'PATCH', body: JSON.stringify(config) })
     if (!r.ok) throw new Error(r.statusText)
@@ -108,6 +98,7 @@ export async function saveStandingsConfig(tournamentId: string, config: { statsX
 
 // ── Tournament info (name/location/dates) ─────────────────────────────────────
 
+/** Persists the tournament name, location, and date fields. */
 export async function saveTournamentInfo(tournamentId: string, info: TournamentInfo): Promise<void> {
     const payload: TournamentPayload['tournament'] = {
         name: info.name, location: info.location,

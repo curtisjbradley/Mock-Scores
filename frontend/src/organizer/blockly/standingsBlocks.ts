@@ -1,7 +1,7 @@
 import * as Blockly from 'blockly';
 
 // Per-pairing fields available in the per-pairing expression
-export const PAIRING_FIELDS: [string, string][] = [
+const PAIRING_FIELDS: [string, string][] = [
   ['Ballots Won',              'ballots_won'],
   ['Ballots Lost',             'ballots_lost'],
   ['Ballots Tied',             'ballots_tied'],
@@ -12,14 +12,14 @@ export const PAIRING_FIELDS: [string, string][] = [
 ];
 
 // Per-ballot fields (aggregated within a pairing via sum)
-export const BALLOT_FIELDS: [string, string][] = [
+const BALLOT_FIELDS: [string, string][] = [
   ['Points For',          'ballot_pf'],
   ['Points Against',      'ballot_pa'],
   ['Point Differential',  'ballot_pd'],   // pf - pa per ballot
   ['Raw Total (PF)',      'ballot_raw'],  // pf per ballot (for raw points tiebreaker)
 ];
 
-export const AGGREGATES: [string, string][] = [
+const AGGREGATES: [string, string][] = [
   ['sum',   'sum'],
   ['avg',   'avg'],
   ['max',   'max'],
@@ -86,7 +86,7 @@ const trimmedStat = {
   tooltip: 'Aggregate after dropping the N highest and N lowest per-ballot values. Used for AMTA trimmed PD/raw points tiebreakers.',
 };
 
-// Shared mutable options — updated by StandingsBuilder after loading XML
+/** Shared mutable options — updated by StandingsBuilder after loading XML */
 export const dynamicOptions = {
   col: [['(none)', '__none__']] as [string, string][],
   tb: [['(none)', '__none__']] as [string, string][],
@@ -190,6 +190,11 @@ const intermediateRef = {
   tooltip: 'Reference an intermediate pairing-level stat defined by a "Define Intermediate Stat" block.',
 };
 
+/**
+ * All standings Blockly block definitions. Register these with
+ * `Blockly.common.defineBlocks(standingsBlockDefs)` before using any
+ * standings workspace.
+ */
 export const standingsBlockDefs = Blockly.common.createBlockDefinitionsFromJsonArray([
   pairingField,
   ballotField,

@@ -57,7 +57,7 @@ export const emptyCaseFormat: CaseFormatState = {
 }
 
 let _seq = 0
-export const uid = () => `sf${_seq++}`
+const uid = () => `sf${_seq++}`
 
 export function makeField(label = ''): ScoringField {
     return { id: uid(), label, min: 0, max: 10, multiplier: 1, assignable: true, eligibleForAward: false, visibleToScorers: true, prosecution: false, defense: false, calling: false, crossing: false }

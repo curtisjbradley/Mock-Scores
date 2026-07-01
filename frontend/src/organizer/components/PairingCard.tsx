@@ -1,6 +1,7 @@
 import { useState } from 'react'
 import type { ICourtroom, IPairing, IPairingScorer, IScorer, ITeam } from '@mock-scores/shared'
 import { apiFetch } from '../../auth/auth'
+import TeamSelectOptions from '../../shared/components/TeamSelectOptions'
 
 interface Props {
     pairing: IPairing
@@ -18,6 +19,11 @@ interface Props {
     onPresiderChanged: (assignmentId: string | null) => void
 }
 
+/**
+ * Card that represents a single prosecution vs. defense pairing within a round.
+ * Supports inline editing of courtroom and team assignments, and manages
+ * scorer assignment / presider selection.
+ */
 export default function PairingCard({ pairing, teams, courtrooms, scorers, assignedScorers, tournamentId, roundId, conflictSet, onRemove, onUpdate, onScorerAssigned, onScorerRemoved, onPresiderChanged }: Props) {
     const [editingCourtroom, setEditingCourtroom] = useState(false)
     const [courtroomDraft, setCourtroomDraft] = useState(pairing.courtroom ?? '')
@@ -141,15 +147,13 @@ export default function PairingCard({ pairing, teams, courtrooms, scorers, assig
                     <label className="rv-field-label">
                         Prosecution
                         <select className="rv-select" value={prosDraft} onChange={e => setProsDraft(e.target.value)}>
-                            <option value="">Select team…</option>
-                            {teams.map(t => <option key={t.id} value={t.id}>{t.code} — {t.name}</option>)}
+                            <TeamSelectOptions teams={teams} />
                         </select>
                     </label>
                     <label className="rv-field-label">
                         Defense
                         <select className="rv-select" value={defDraft} onChange={e => setDefDraft(e.target.value)}>
-                            <option value="">Select team…</option>
-                            {teams.map(t => <option key={t.id} value={t.id}>{t.code} — {t.name}</option>)}
+                            <TeamSelectOptions teams={teams} />
                         </select>
                     </label>
                     <div className="pc-edit-actions">

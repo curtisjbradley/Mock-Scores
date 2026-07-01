@@ -20,6 +20,19 @@ function reducer<T>(state: State<T>, action: Action<T>): State<T> {
     }
 }
 
+/**
+ * Fetches data from `url` using the authenticated `apiFetch` helper and
+ * tracks loading/error state via a reducer.
+ *
+ * Returns `refetch` — a stable callback that re-triggers the fetch without
+ * changing the URL (useful for manual refresh after a mutation).
+ *
+ * @param url - API path to fetch; changing this value re-triggers the effect
+ * @param fallback - Value used as `data` before the first successful response
+ *
+ * @example
+ * const { data, loading, error, refetch } = useApiFetch('/api/tournaments', []);
+ */
 export function useApiFetch<T>(url: string, fallback: T) {
     const [state, dispatch] = useReducer(reducer<T>, { data: null, loading: true, error: null })
     const [tick, refetch] = useReducer((n: number) => n + 1, 0)

@@ -1,5 +1,7 @@
 import { useState } from 'react'
 import type { CaseFormatState } from '../types/tournament'
+import FormField from '../../shared/components/FormField'
+import WitnessNameList from '../../shared/components/WitnessNameList'
 
 interface Props {
     caseFormat: CaseFormatState
@@ -8,23 +10,39 @@ interface Props {
     onBack: () => void
 }
 
+/** Returns an error string for witnesses-called, or '' when valid. */
+function calledError(called: number | '', available: number): string {
+    if (called === '') return 'Required'
+    if (Number(called) < 0) return 'Must be ≥ 0'
+    if (Number(called) > available) return `Only ${available} have been defined`
+    return ''
+}
+
+/** Derives validation errors from the current case format state. */
+function getErrors(cf: CaseFormatState) {
+    const swingCount  = cf.hasSwing ? cf.swingWitnessNames.length : 0
+    const pAvailable  = cf.pWitnessNames.length + swingCount
+    const dAvailable  = cf.dWitnessNames.length + swingCount
+    const hasBlankWitness = [
+        ...cf.pWitnessNames, ...cf.dWitnessNames,
+        ...(cf.hasSwing ? cf.swingWitnessNames : []),
+    ].some(n => !n.trim())
+    return {
+        caseName:         !cf.caseName.trim() ? 'Required' : '',
+        witnessNames:     hasBlankWitness ? 'All witness names are required' : '',
+        pWitnessesCalled: calledError(cf.pWitnessesCalled, pAvailable),
+        dWitnessesCalled: calledError(cf.dWitnessesCalled, dAvailable),
+    }
+}
+
+/**
+ * Step 2 of the tournament creation wizard: case format configuration.
+ * Captures case name, criminal/civil toggle, prosecution/defense witness
+ * lists, witnesses-called counts, and optional swing witnesses.
+ */
 export default function TournamentCaseFormat({ caseFormat, onChange, onNext, onBack }: Props) {
     const [submitted, setSubmitted] = useState(false)
-
-    const pCalled = caseFormat.pWitnessesCalled === '' ? 0 : Number(caseFormat.pWitnessesCalled)
-    const dCalled = caseFormat.dWitnessesCalled === '' ? 0 : Number(caseFormat.dWitnessesCalled)
-    const swingCount = caseFormat.hasSwing ? caseFormat.swingWitnessNames.length : 0
-    const pAvailable = caseFormat.pWitnessNames.length + swingCount
-    const dAvailable = caseFormat.dWitnessNames.length + swingCount
-
-    const hasBlankWitness = [...caseFormat.pWitnessNames, ...caseFormat.dWitnessNames, ...(caseFormat.hasSwing ? caseFormat.swingWitnessNames : [])].some(n => !n.trim())
-
-    const errors = {
-        caseName: !caseFormat.caseName.trim() ? 'Required' : '',
-        witnessNames: hasBlankWitness ? 'All witness names are required' : '',
-        pWitnessesCalled: caseFormat.pWitnessesCalled === '' ? 'Required' : pCalled < 0 ? 'Must be ≥ 0' : pCalled > pAvailable ? `Only ${pAvailable} have been defined` : '',
-        dWitnessesCalled: caseFormat.dWitnessesCalled === '' ? 'Required' : dCalled < 0 ? 'Must be ≥ 0' : dCalled > dAvailable ? `Only ${dAvailable} have been defined` : '',
-    }
+    const errors = getErrors(caseFormat)
 
     const handleSubmit = (e: { preventDefault(): void }) => {
         e.preventDefault()
@@ -36,16 +54,16 @@ export default function TournamentCaseFormat({ caseFormat, onChange, onNext, onB
 
     return (
         <form className="tc-form" onSubmit={handleSubmit} noValidate>
-            <div className="tc-field">
-                <label className="tc-label" htmlFor="caseName">Case name</label>
-                <input id="caseName" type="text" autoFocus
-                    className={`tc-input${submitted && errors.caseName ? ' tc-input--invalid' : ''}`}
-                    value={caseFormat.caseName}
-                    placeholder="e.g. People v. Fromholz"
-                    onChange={e => onChange({ ...caseFormat, caseName: e.target.value })}
-                />
-                {submitted && errors.caseName && <span className="tc-field-error">{errors.caseName}</span>}
-            </div>
+            <FormField
+                id="caseName"
+                label="Case name"
+                autoFocus
+                value={caseFormat.caseName}
+                placeholder="e.g. People v. Fromholz"
+                submitted={submitted}
+                error={errors.caseName}
+                onChange={e => onChange({ ...caseFormat, caseName: e.target.value })}
+            />
 
             <label className="tc-checkbox-label">
                 <input type="checkbox" checked={caseFormat.criminalCase}
@@ -54,30 +72,21 @@ export default function TournamentCaseFormat({ caseFormat, onChange, onNext, onB
             </label>
 
             {(['P', 'D'] as const).map((side, si) => {
-                const namesKey = side === 'P' ? 'pWitnessNames' : 'dWitnessNames'
-                const calledKey = side === 'P' ? 'pWitnessesCalled' : 'dWitnessesCalled'
-                const names = caseFormat[namesKey]
-                const setName = (i: number, val: string) => {
-                    const arr = [...names]; arr[i] = val
-                    onChange({ ...caseFormat, [namesKey]: arr })
-                }
+                const namesKey  = side === 'P' ? 'pWitnessNames'      : 'dWitnessNames'
+                const calledKey = side === 'P' ? 'pWitnessesCalled'   : 'dWitnessesCalled'
                 return (
-                    <div key={side} className="tc-section">
-                        <span className="tc-section-label">{sideLabel[si]} witnesses</span>
-                        <div className="tc-witness-list">
-                            {names.map((name, i) => (
-                                <div key={i} className="tc-witness-row">
-                                    <input type="text"
-                                        className={`tc-input${submitted && !name.trim() ? ' tc-input--invalid' : ''}`}
-                                        placeholder={`Witness ${i + 1}`} value={name}
-                                        onChange={e => setName(i, e.target.value)} />
-                                    <button type="button" className="tc-remove-btn"
-                                        onClick={() => onChange({ ...caseFormat, [namesKey]: names.filter((_, j) => j !== i) })}>×</button>
-                                </div>
-                            ))}
-                        </div>
-                        <button type="button" className="tc-add-btn"
-                            onClick={() => onChange({ ...caseFormat, [namesKey]: [...names, ''] })}>+ Add witness</button>
+                    <div key={side}>
+                        <WitnessNameList
+                            label={`${sideLabel[si]} witnesses`}
+                            names={caseFormat[namesKey]}
+                            showErrors={submitted}
+                            onChangeName={(i, v) => {
+                                const arr = [...caseFormat[namesKey]]; arr[i] = v
+                                onChange({ ...caseFormat, [namesKey]: arr })
+                            }}
+                            onAdd={() => onChange({ ...caseFormat, [namesKey]: [...caseFormat[namesKey], ''] })}
+                            onRemove={(i) => onChange({ ...caseFormat, [namesKey]: caseFormat[namesKey].filter((_, j) => j !== i) })}
+                        />
                         <div className="tc-field">
                             <label className="tc-label">Witnesses called per trial</label>
                             <input type="number" min={0}
@@ -98,23 +107,19 @@ export default function TournamentCaseFormat({ caseFormat, onChange, onNext, onB
             </label>
 
             {caseFormat.hasSwing && (
-                <div className="tc-section">
-                    <span className="tc-section-label">Swing witnesses</span>
-                    <div className="tc-witness-list">
-                        {caseFormat.swingWitnessNames.map((name, i) => (
-                            <div key={i} className="tc-witness-row">
-                                <input type="text"
-                                        className={`tc-input${submitted && !name.trim() ? ' tc-input--invalid' : ''}`}
-                                        placeholder={`Swing witness ${i + 1}`} value={name}
-                                    onChange={e => { const arr = [...caseFormat.swingWitnessNames]; arr[i] = e.target.value; onChange({ ...caseFormat, swingWitnessNames: arr }) }} />
-                                <button type="button" className="tc-remove-btn"
-                                    onClick={() => onChange({ ...caseFormat, swingWitnessNames: caseFormat.swingWitnessNames.filter((_, j) => j !== i) })}>×</button>
-                            </div>
-                        ))}
-                    </div>
-                    <button type="button" className="tc-add-btn"
-                        onClick={() => onChange({ ...caseFormat, swingWitnessNames: [...caseFormat.swingWitnessNames, ''] })}>+ Add swing witness</button>
-                </div>
+                <WitnessNameList
+                    label="Swing witnesses"
+                    names={caseFormat.swingWitnessNames}
+                    placeholder={(i) => `Swing witness ${i + 1}`}
+                    showErrors={submitted}
+                    onChangeName={(i, v) => {
+                        const arr = [...caseFormat.swingWitnessNames]; arr[i] = v
+                        onChange({ ...caseFormat, swingWitnessNames: arr })
+                    }}
+                    onAdd={() => onChange({ ...caseFormat, swingWitnessNames: [...caseFormat.swingWitnessNames, ''] })}
+                    onRemove={(i) => onChange({ ...caseFormat, swingWitnessNames: caseFormat.swingWitnessNames.filter((_, j) => j !== i) })}
+                    addLabel="Add swing witness"
+                />
             )}
 
             {submitted && errors.witnessNames && <span className="tc-field-error">{errors.witnessNames}</span>}
