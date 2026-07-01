@@ -2,7 +2,6 @@ jest.mock('../../src/email', () => jest.requireActual('../mocks/email'));
 import request from 'supertest';
 import app from '../../src/appService';
 import { dbQuery } from '../../src/db';
-import { signToken } from '../../src/authUtils';
 import { DbError, NotFoundError, AlreadyExistsError } from '../../src/errors';
 import {
     getAllTournaments, getSchedule, getResults, getCoaches, addCoach,
@@ -11,6 +10,7 @@ import {
     getCompetitionField, getStandingsData,
     getWitnessesForTournament, getFormatForTournament,
 } from '../../src/providers/coachProvider';
+import { setupAuth, makeAuth } from '../helpers/auth';
 
 const mockDbQuery = dbQuery as jest.MockedFunction<typeof dbQuery>;
 
@@ -21,11 +21,8 @@ const PID  = 'd4e5f6a7-b8c9-0123-defa-234567890123';
 const SID  = 'e5f6a7b8-c9d0-1234-efab-345678901234';
 const FID  = 'f6a7b8c9-d0e1-2345-fabc-456789012345';
 
-let token: string;
-beforeAll(async () => { token = await signToken('user-1', 't@t.com', 'T', 'U'); });
-beforeEach(() => jest.clearAllMocks());
-
-const auth = () => ({ Authorization: `Bearer ${token}` });
+const getToken = setupAuth();
+const auth = () => makeAuth(getToken());
 const mockTeamAccess = () =>
     mockDbQuery.mockResolvedValueOnce({ rows: [{ coach_id: 'user-1' }], rowCount: 1 } as any);
 

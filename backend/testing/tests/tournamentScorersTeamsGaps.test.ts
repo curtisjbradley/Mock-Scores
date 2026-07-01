@@ -6,7 +6,7 @@ jest.mock('../../src/email', () => jest.requireActual('../mocks/email'));
 import request from 'supertest';
 import app from '../../src/appService';
 import { dbQuery } from '../../src/db';
-import { signToken } from '../../src/authUtils';
+import { setupAuth, makeAuth, makeMockAccess } from '../helpers/auth';
 
 const mockDbQuery = dbQuery as jest.MockedFunction<typeof dbQuery>;
 
@@ -18,13 +18,9 @@ const COACH_ID = 'a7b8c9d0-e1f2-3456-abcd-567890123456';
 const STUDENT_ID = 'b8c9d0e1-f2a3-4567-bcde-678901234567';
 const PAIRING_ID = 'e5f6a7b8-c9d0-1234-efab-345678901234';
 
-let token: string;
-beforeAll(async () => { token = await signToken('user-1', 'test@test.com', 'Test', 'User'); });
-beforeEach(() => jest.clearAllMocks());
-
-const auth = () => ({ Authorization: `Bearer ${token}` });
-const mockAccess = () =>
-    mockDbQuery.mockResolvedValueOnce({ rows: [{ role: 'owner' }], rowCount: 1 } as any);
+const getToken = setupAuth();
+const auth = () => makeAuth(getToken());
+const mockAccess = () => makeMockAccess(mockDbQuery as jest.MockedFunction<(...args: unknown[]) => unknown>);
 
 // ─── Scorers ──────────────────────────────────────────────────────────────────
 describe('GET /scorers — DbError', () => {

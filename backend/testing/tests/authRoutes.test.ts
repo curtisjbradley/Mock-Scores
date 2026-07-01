@@ -13,6 +13,14 @@ const mockBcryptCompare = bcrypt.compare as jest.MockedFunction<typeof bcrypt.co
 
 beforeEach(() => jest.clearAllMocks());
 
+// Token for the session/change-password tests. signToken is free after the
+// module-scope cache in helpers/auth.ts has been warmed by the first test file.
+let sharedToken: string;
+beforeAll(async () => {
+    sharedToken = await signToken('user-1', 'test@test.com', 'Test', 'User');
+});
+const validToken = () => sharedToken;
+
 // ─── POST /api/auth/register ──────────────────────────────────────────────────
 describe('POST /api/auth/register', () => {
     it('returns 400 when email is missing', async () => {
@@ -97,10 +105,10 @@ describe('GET /api/auth/session', () => {
     });
 
     it('returns 200 with session data for valid token', async () => {
-        const token = await signToken('uid-1', 'x@y.com', 'Bob', 'Jones');
+        const token = validToken();
         const res = await request(testApp).get('/api/auth/session').set('Authorization', `Bearer ${token}`);
         expect(res.status).toBe(200);
-        expect(res.body).toMatchObject({ userId: 'uid-1', email: 'x@y.com', firstName: 'Bob', lastName: 'Jones' });
+        expect(res.body).toMatchObject({ userId: 'user-1', email: 'test@test.com', firstName: 'Test', lastName: 'User' });
     });
 });
 
@@ -112,21 +120,21 @@ describe('POST /api/auth/change-password', () => {
     });
 
     it('returns 400 when fields are missing', async () => {
-        const token = await signToken('uid-1', 'x@y.com', 'Bob', 'Jones');
+        const token = validToken();
         const res = await request(testApp).post('/api/auth/change-password').set('Authorization', `Bearer ${token}`).send({});
         expect(res.status).toBe(400);
         expect(res.body.message).toMatch(/missing required fields/i);
     });
 
     it('returns 400 when new password is too short', async () => {
-        const token = await signToken('uid-1', 'x@y.com', 'Bob', 'Jones');
+        const token = validToken();
         const res = await request(testApp).post('/api/auth/change-password').set('Authorization', `Bearer ${token}`).send({ currentPassword: 'old', newPassword: 'short' });
         expect(res.status).toBe(400);
         expect(res.body.message).toMatch(/at least 8 characters/i);
     });
 
     it('returns 401 when current password is wrong', async () => {
-        const token = await signToken('uid-1', 'x@y.com', 'Bob', 'Jones');
+        const token = validToken();
         mockDbQuery.mockResolvedValueOnce({ rows: [{ password_hash: 'hash' }], rowCount: 1 } as any);
         (mockBcryptCompare as jest.Mock).mockResolvedValueOnce(false);
 
@@ -135,7 +143,7 @@ describe('POST /api/auth/change-password', () => {
     });
 
     it('returns 200 on successful password change', async () => {
-        const token = await signToken('uid-1', 'x@y.com', 'Bob', 'Jones');
+        const token = validToken();
         mockDbQuery
             .mockResolvedValueOnce({ rows: [{ password_hash: 'oldhash' }], rowCount: 1 } as any)
             .mockResolvedValueOnce({ rows: [], rowCount: 1 } as any);

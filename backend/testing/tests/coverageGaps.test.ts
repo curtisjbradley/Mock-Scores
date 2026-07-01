@@ -9,7 +9,7 @@ jest.mock('../../src/email', () => jest.requireActual('../mocks/email'));
 import request from 'supertest';
 import app from '../../src/appService';
 import { dbQuery } from '../../src/db';
-import { signToken } from '../../src/authUtils';
+import { setupAuth, makeAuth, makeMockAccess } from '../helpers/auth';
 import bcrypt from 'bcrypt';
 
 jest.mock('bcrypt');
@@ -25,17 +25,14 @@ const TEAM_ID       = 'f6a7b8c9-d0e1-2345-fabc-456789012345';
 const STUDENT_ID    = 'a7b8c9d0-e1f2-3456-abcd-567890123456';
 const ASSIGNMENT_ID = 'b8c9d0e1-f2a3-4567-bcde-678901234567';
 
-let token: string;
-beforeAll(async () => { token = await signToken('user-1', 'test@test.com', 'Test', 'User'); });
-beforeEach(() => jest.clearAllMocks());
-
-const auth = () => ({ Authorization: `Bearer ${token}` });
+const getToken = setupAuth();
+const auth = () => makeAuth(getToken());
 
 function mockAccess() {
-    mockDbQuery.mockResolvedValueOnce({ rows: [{ role: 'owner' }], rowCount: 1 } as any);
+    makeMockAccess(mockDbQuery as jest.MockedFunction<(...args: unknown[]) => unknown>);
 }
 function mockOwnerAccess() {
-    mockDbQuery.mockResolvedValueOnce({ rows: [{ role: 'owner' }], rowCount: 1 } as any);
+    makeMockAccess(mockDbQuery as jest.MockedFunction<(...args: unknown[]) => unknown>);
 }
 function mockRound() {
     return { round_id: ROUND_ID, name: 'R1', round_time: null, results_public: false, teams_public: false };
