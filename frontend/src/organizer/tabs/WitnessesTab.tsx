@@ -4,9 +4,44 @@ import type { IWitnesses } from '@mock-scores/shared'
 import type { CaseFormatState } from '../types/tournament'
 import { emptyCaseFormat } from '../types/tournament'
 import Section from './Section'
+import WitnessNameList from '../../shared/components/WitnessNameList'
 
 const empty: IWitnesses = { pWitnessNames: [], dWitnessNames: [], swingWitnessNames: [] }
 
+interface WitnessValidationError {
+    message: string
+}
+
+/**
+ * Pure validation function for the witnesses + format state.
+ * Returns the first validation error found, or null when the state is valid.
+ * Extracted to keep `handleSave` below the cognitive complexity threshold.
+ */
+function validateWitnessForm(witnesses: IWitnesses, format: CaseFormatState): WitnessValidationError | null {
+    const allNames = [...witnesses.pWitnessNames, ...witnesses.dWitnessNames, ...witnesses.swingWitnessNames]
+    if (allNames.some(n => !n.trim()))
+        return { message: 'Witness names cannot be empty' }
+
+    const swingCount = witnesses.swingWitnessNames.length
+    const pMax = witnesses.pWitnessNames.length + swingCount
+    const dMax = witnesses.dWitnessNames.length + swingCount
+    const pCalled = Number(format.pWitnessesCalled)
+    const dCalled = Number(format.dWitnessesCalled)
+
+    if ((format.pWitnessesCalled !== '' && pCalled < 0) || (format.dWitnessesCalled !== '' && dCalled < 0))
+        return { message: 'Witnesses called cannot be negative' }
+
+    if ((format.pWitnessesCalled !== '' && pMax > 0 && pCalled > pMax) ||
+        (format.dWitnessesCalled !== '' && dMax > 0 && dCalled > dMax))
+        return { message: 'Witnesses called cannot exceed available witnesses' }
+
+    return null
+}
+
+/**
+ * Organizer tab for managing witness names and the number called per side.
+ * Also controls whether the case has swing witnesses.
+ */
 export default function WitnessesTab({ tournamentId }: { tournamentId: string }) {
     const [witnesses, setWitnesses] = useState<IWitnesses>(empty)
     const [format, setFormat] = useState<CaseFormatState>(emptyCaseFormat)
@@ -32,19 +67,9 @@ export default function WitnessesTab({ tournamentId }: { tournamentId: string })
         setWitnesses({ ...witnesses, [key]: witnesses[key].filter((_, i) => i !== idx) })
 
     const handleSave = async () => {
-        const allNames = [...witnesses.pWitnessNames, ...witnesses.dWitnessNames, ...witnesses.swingWitnessNames]
-        if (allNames.some(n => !n.trim())) { setSaveError('Witness names cannot be empty'); return }
-        const swingCount = witnesses.swingWitnessNames.length
-        const pMax = witnesses.pWitnessNames.length + swingCount
-        const dMax = witnesses.dWitnessNames.length + swingCount
-        if ((format.pWitnessesCalled !== '' && Number(format.pWitnessesCalled) < 0) ||
-            (format.dWitnessesCalled !== '' && Number(format.dWitnessesCalled) < 0)) {
-            setSaveError('Witnesses called cannot be negative'); return
-        }
-        if ((format.pWitnessesCalled !== '' && pMax > 0 && Number(format.pWitnessesCalled) > pMax) ||
-            (format.dWitnessesCalled !== '' && dMax > 0 && Number(format.dWitnessesCalled) > dMax)) {
-            setSaveError('Witnesses called cannot exceed available witnesses'); return
-        }
+        const validationError = validateWitnessForm(witnesses, format)
+        if (validationError) { setSaveError(validationError.message); return }
+
         setSaving(true); setSaveError(null); setSaveSuccess(false)
         try {
             await Promise.all([saveWitnesses(tournamentId, witnesses), saveFormat(tournamentId, format)])
@@ -65,6 +90,7 @@ export default function WitnessesTab({ tournamentId }: { tournamentId: string })
             {(error || saveError) && <div className="tc-error-banner">{error ?? saveError}</div>}
             {saveSuccess && <div className="tc-error-banner dash-save-success">Saved successfully</div>}
 
+            {/* Witnesses-called inputs */}
             <div className="tc-row">
                 {(['P', 'D'] as const).map(side => {
                     const key = side === 'P' ? 'pWitnessesCalled' : 'dWitnessesCalled'
@@ -84,22 +110,16 @@ export default function WitnessesTab({ tournamentId }: { tournamentId: string })
                 })}
             </div>
 
+            {/* Prosecution + defense witness name lists */}
             {(['pWitnessNames', 'dWitnessNames'] as const).map((key, si) => (
-                <div key={key} className="tc-section">
-                    <span className="tc-section-label">{['P', 'D'][si]} witnesses</span>
-                    <div className="tc-witness-list">
-                        {witnesses[key].map((name, i) => (
-                            <div key={i} className="tc-witness-row">
-                                <input type="text"
-                                    className={`tc-input${!name.trim() ? ' tc-input--invalid' : ''}`}
-                                    placeholder={`Witness ${i + 1}`} value={name}
-                                    onChange={e => setWitnessName(key, i, e.target.value)} />
-                                <button type="button" className="tc-remove-btn" onClick={() => removeWitness(key, i)}>×</button>
-                            </div>
-                        ))}
-                    </div>
-                    <button type="button" className="tc-add-btn" onClick={() => addWitness(key)}>+ Add witness</button>
-                </div>
+                <WitnessNameList
+                    key={key}
+                    label={`${['P', 'D'][si]} witnesses`}
+                    names={witnesses[key]}
+                    onChangeName={(i, v) => setWitnessName(key, i, v)}
+                    onAdd={() => addWitness(key)}
+                    onRemove={(i) => removeWitness(key, i)}
+                />
             ))}
 
             <label className="tc-checkbox-label">
@@ -112,21 +132,15 @@ export default function WitnessesTab({ tournamentId }: { tournamentId: string })
             </label>
 
             {hasSwing && (
-                <div className="tc-section">
-                    <span className="tc-section-label">Swing witnesses</span>
-                    <div className="tc-witness-list">
-                        {witnesses.swingWitnessNames.map((name, i) => (
-                            <div key={i} className="tc-witness-row">
-                                <input type="text"
-                                    className={`tc-input${!name.trim() ? ' tc-input--invalid' : ''}`}
-                                    placeholder={`Swing witness ${i + 1}`} value={name}
-                                    onChange={e => setWitnessName('swingWitnessNames', i, e.target.value)} />
-                                <button type="button" className="tc-remove-btn" onClick={() => removeWitness('swingWitnessNames', i)}>×</button>
-                            </div>
-                        ))}
-                    </div>
-                    <button type="button" className="tc-add-btn" onClick={() => addWitness('swingWitnessNames')}>+ Add swing witness</button>
-                </div>
+                <WitnessNameList
+                    label="Swing witnesses"
+                    names={witnesses.swingWitnessNames}
+                    placeholder={(i) => `Swing witness ${i + 1}`}
+                    onChangeName={(i, v) => setWitnessName('swingWitnessNames', i, v)}
+                    onAdd={() => addWitness('swingWitnessNames')}
+                    onRemove={(i) => removeWitness('swingWitnessNames', i)}
+                    addLabel="Add swing witness"
+                />
             )}
 
             <div className="tc-actions">

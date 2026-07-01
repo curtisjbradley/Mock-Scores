@@ -1,5 +1,7 @@
 import { useState } from 'react'
 import type { TournamentInfo } from '../types/tournament'
+import FormField from '../../shared/components/FormField'
+import DateRangePicker from '../../shared/components/DateRangePicker'
 
 interface Props {
     info: TournamentInfo
@@ -8,16 +10,31 @@ interface Props {
     onBack: () => void
 }
 
-export default function TournamentDetails({ info, onChange, onNext, onBack }: Props) {
-    const [submitted, setSubmitted] = useState(false)
+/** Returns the end-date validation error string, or '' when valid. */
+function endDateError(info: TournamentInfo): string {
+    if (!info.endTbd && !info.endDate) return 'Required'
+    if (!info.endTbd && !info.startTbd && info.endDate < info.startDate) return 'Must be after start'
+    return ''
+}
 
-    const errors = {
+/** Derives validation errors from the current TournamentInfo state. */
+function getErrors(info: TournamentInfo) {
+    return {
         name:      !info.name.trim() ? 'Required' : '',
         location:  !info.location.trim() ? 'Required' : '',
         startDate: !info.startTbd && !info.startDate ? 'Required' : '',
-        endDate:   !info.endTbd && !info.endDate ? 'Required'
-                 : !info.endTbd && !info.startTbd && info.endDate < info.startDate ? 'Must be after start' : '',
+        endDate:   endDateError(info),
     }
+}
+
+/**
+ * Step 1 of the tournament creation wizard: basic tournament details
+ * (name, location, dates). Validates on submit and calls onNext when clean.
+ */
+export default function TournamentDetails({ info, onChange, onNext, onBack }: Props) {
+    const [submitted, setSubmitted] = useState(false)
+
+    const errors = getErrors(info)
 
     const handleSubmit = (e: { preventDefault(): void }) => {
         e.preventDefault()
@@ -27,53 +44,33 @@ export default function TournamentDetails({ info, onChange, onNext, onBack }: Pr
 
     return (
         <form className="tc-form" onSubmit={handleSubmit} noValidate>
-            <div className="tc-field">
-                <label className="tc-label" htmlFor="name">Tournament name</label>
-                <input id="name" type="text" autoFocus
-                    className={`tc-input${submitted && errors.name ? ' tc-input--invalid' : ''}`}
-                    value={info.name}
-                    placeholder="e.g. San Luis Obispo County"
-                    onChange={e => onChange({ ...info, name: e.target.value })}
-                />
-                {submitted && errors.name && <span className="tc-field-error">{errors.name}</span>}
-            </div>
+            <FormField
+                id="name"
+                label="Tournament name"
+                autoFocus
+                value={info.name}
+                placeholder="e.g. San Luis Obispo County"
+                submitted={submitted}
+                error={errors.name}
+                onChange={e => onChange({ ...info, name: e.target.value })}
+            />
 
-            <div className="tc-field">
-                <label className="tc-label" htmlFor="location">Location</label>
-                <input id="location" type="text"
-                    className={`tc-input${submitted && errors.location ? ' tc-input--invalid' : ''}`}
-                    value={info.location}
-                    placeholder="e.g. SLO Superior Court"
-                    onChange={e => onChange({ ...info, location: e.target.value })}
-                />
-                {submitted && errors.location && <span className="tc-field-error">{errors.location}</span>}
-            </div>
+            <FormField
+                id="location"
+                label="Location"
+                value={info.location}
+                placeholder="e.g. SLO Superior Court"
+                submitted={submitted}
+                error={errors.location}
+                onChange={e => onChange({ ...info, location: e.target.value })}
+            />
 
-            <div className="tc-section">
-                <span className="tc-section-label">Dates</span>
-                <div className="tc-row">
-                    {(['startDate', 'endDate'] as const).map(key => {
-                        const tbdKey = key === 'startDate' ? 'startTbd' : 'endTbd'
-                        return (
-                            <div key={key} className="tc-field">
-                                <label className="tc-label">{key === 'startDate' ? 'Start' : 'End'}</label>
-                                {!info[tbdKey] && (
-                                    <input type="date"
-                                        className={`tc-input${submitted && errors[key] ? ' tc-input--invalid' : ''}`}
-                                        value={info[key]}
-                                        onChange={e => onChange({ ...info, [key]: e.target.value })}
-                                    />
-                                )}
-                                <label className="tc-checkbox-label">
-                                    <input type="checkbox" checked={info[tbdKey]} onChange={() => onChange({ ...info, [tbdKey]: !info[tbdKey] })} />
-                                    TBD
-                                </label>
-                                {submitted && errors[key] && <span className="tc-field-error">{errors[key]}</span>}
-                            </div>
-                        )
-                    })}
-                </div>
-            </div>
+            <DateRangePicker
+                info={info}
+                submitted={submitted}
+                errors={{ startDate: errors.startDate, endDate: errors.endDate }}
+                onChange={onChange}
+            />
 
             <div className="tc-actions">
                 <button type="button" className="btn-cancel" onClick={onBack}>← Back</button>
