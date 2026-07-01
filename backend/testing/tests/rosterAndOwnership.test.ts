@@ -1,7 +1,7 @@
 import request from 'supertest';
 import app from '../../src/appService';
 import { dbQuery } from '../../src/db';
-import { signToken } from '../../src/authUtils';
+import { setupAuth, makeAuth, makeMockAccess } from '../helpers/auth';
 
 const mockDbQuery = dbQuery as jest.MockedFunction<typeof dbQuery>;
 
@@ -10,19 +10,11 @@ const TEAM_ID       = 'b2c3d4e5-f6a7-8901-bcde-f12345678901';
 const COACH_ID      = 'c3d4e5f6-a7b8-9012-cdef-123456789012';
 const STUDENT_ID    = 'd4e5f6a7-b8c9-0123-defa-234567890123';
 
-let token: string;
-
-beforeAll(async () => {
-    token = await signToken('user-1', 'test@test.com', 'Test', 'User');
-});
-
-beforeEach(() => jest.clearAllMocks());
-
-const auth = () => ({ Authorization: `Bearer ${token}` });
+const getToken = setupAuth();
+const auth = () => makeAuth(getToken());
 
 /** Mock verifyTournamentAccess */
-const mockOrgAccess = () =>
-    mockDbQuery.mockResolvedValueOnce({ rows: [{ role: 'owner' }], rowCount: 1 } as any);
+const mockOrgAccess = () => makeMockAccess(mockDbQuery as jest.MockedFunction<(...args: unknown[]) => unknown>);
 
 /** Mock verifyTeamAccess (coach routes) */
 const mockCoachAccess = () =>

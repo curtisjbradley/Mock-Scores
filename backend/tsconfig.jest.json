@@ -4,7 +4,8 @@
     "rootDir": "..",
     "module": "CommonJS",
     "moduleResolution": "Node16",
-    "ignoreDeprecations": "5.0"
+    "ignoreDeprecations": "5.0",
+    "isolatedModules": true
   },
   "include": ["src/**/*.ts", "testing/**/*.ts", "../shared/src/**/*.ts"]
 }

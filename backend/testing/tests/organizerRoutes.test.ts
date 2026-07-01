@@ -3,7 +3,7 @@ jest.mock('../../src/email', () => jest.requireActual('../mocks/email'));
 import request from 'supertest';
 import app from '../../src/appService';
 import { dbQuery } from '../../src/db';
-import { signToken } from '../../src/authUtils';
+import { setupAuth, makeAuth } from '../helpers/auth';
 
 const mockDbQuery = dbQuery as jest.MockedFunction<typeof dbQuery>;
 
@@ -13,13 +13,8 @@ const ORG_ID        = 'c3d4e5f6-a7b8-9012-cdef-123456789012';
 const ROUND_ID      = 'd4e5f6a7-b8c9-0123-defa-234567890123';
 const PAIRING_ID    = 'e5f6a7b8-c9d0-1234-efab-345678901234';
 
-let token: string;
-
-beforeAll(async () => {
-    token = await signToken('user-1', 'test@test.com', 'Test', 'User');
-});
-
-beforeEach(() => jest.clearAllMocks());
+const getToken = setupAuth();
+const auth = () => makeAuth(getToken());
 
 /** Mock verifyUser session + verifyTournamentAccess ownership check */
 function mockAccess() {
@@ -30,8 +25,6 @@ function mockAccess() {
 function mockOwnerAccess() {
     mockDbQuery.mockResolvedValueOnce({ rows: [{ role: 'owner' }], rowCount: 1 } as any);
 }
-
-const auth = () => ({ Authorization: `Bearer ${token}` });
 
 // ─── GET /api/organizer/tournament/ ──────────────────────────────────────────
 describe('GET /api/organizer/tournament/', () => {

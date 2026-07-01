@@ -5,19 +5,15 @@
 import request from 'supertest';
 import app from '../../src/appService';
 import { dbQuery } from '../../src/db';
-import { signToken } from '../../src/authUtils';
+import { setupAuth, makeAuth, makeMockAccess } from '../helpers/auth';
 
 const mockDbQuery = dbQuery as jest.MockedFunction<typeof dbQuery>;
 
 const T = 'a1b2c3d4-e5f6-7890-abcd-ef1234567890';
 
-let token: string;
-beforeAll(async () => { token = await signToken('user-1', 'test@test.com', 'Test', 'User'); });
-beforeEach(() => jest.clearAllMocks());
-
-const auth = () => ({ Authorization: `Bearer ${token}` });
-const mockAccess = () =>
-    mockDbQuery.mockResolvedValueOnce({ rows: [{ role: 'owner' }], rowCount: 1 } as any);
+const getToken = setupAuth();
+const auth = () => makeAuth(getToken());
+const mockAccess = () => makeMockAccess(mockDbQuery as jest.MockedFunction<(...args: unknown[]) => unknown>);
 
 // ─── GET /:tournamentId — NotFoundError ───────────────────────────────────────
 describe('GET /api/organizer/tournament/:id — NotFoundError', () => {
