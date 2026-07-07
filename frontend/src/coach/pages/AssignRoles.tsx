@@ -90,7 +90,6 @@ export default function AssignRoles() {
             method: 'POST',
             body: JSON.stringify({ assignments }),
         })
-        setSaved(new Map(pending))
         setSaving(false)
         navigate(-1)
     }
