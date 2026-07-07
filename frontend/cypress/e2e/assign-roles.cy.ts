@@ -28,12 +28,14 @@ describe('Assign Roles page', () => {
     cy.intercept('GET', '/api/coach/tournaments/t-1/witnesses', { statusCode: 200, body: WITNESSES }).as('getWitnesses')
     cy.intercept('GET', '/api/coach/teams/team-1/students', { statusCode: 200, body: STUDENTS }).as('getStudents')
     cy.intercept('GET', '/api/coach/teams/team-1/pairings/p-1/assignments', { statusCode: 200, body: [] }).as('getAssignments')
+    cy.intercept('GET', '/api/coach/teams/team-1/default-assignments', { statusCode: 200, body: [] }).as('getDefaults')
     cy.visit(URL)
     cy.wait('@session')
     cy.wait('@getCats')
     cy.wait('@getWitnesses')
     cy.wait('@getStudents')
     cy.wait('@getAssignments')
+    cy.wait('@getDefaults')
   })
 
   it('renders the Assign Roles heading', () => {
@@ -57,10 +59,10 @@ describe('Assign Roles page', () => {
   })
 
   it('can select a student and save', () => {
-    cy.intercept('PUT', '/api/coach/teams/team-1/pairings/p-1/assignments', { statusCode: 200, body: {} }).as('saveAssignment')
+    cy.intercept('POST', '/api/coach/teams/team-1/pairings/p-1/assignments/bulk', { statusCode: 200, body: { success: true } }).as('saveAssignments')
     cy.get('select.rv-select').first().select('s-1')
     cy.contains('button', 'Save').click()
-    cy.wait('@saveAssignment')
+    cy.wait('@saveAssignments')
   })
 
   it('Cancel button navigates back', () => {
@@ -74,6 +76,7 @@ describe('Assign Roles page', () => {
     cy.intercept('GET', '/api/coach/tournaments/t-1/witnesses', { statusCode: 200, body: WITNESSES }).as('getWitnesses2')
     cy.intercept('GET', '/api/coach/teams/team-1/students', { statusCode: 200, body: STUDENTS }).as('getStudents2')
     cy.intercept('GET', '/api/coach/teams/team-1/pairings/p-1/assignments', { statusCode: 200, body: [] }).as('getAssignments2')
+    cy.intercept('GET', '/api/coach/teams/team-1/default-assignments', { statusCode: 200, body: [] }).as('getDefaults2')
     cy.visit('/coach/t-1/assign-roles/team-1/p-1/d')  // defense side
     cy.wait('@session')
     cy.wait('@getCats2')
