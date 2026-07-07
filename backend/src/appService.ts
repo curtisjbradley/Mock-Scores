@@ -40,7 +40,7 @@ app.use('/api/auth', authLimiter, authRouter);
 app.use('/api/organizer/tournament',verifyUser, organizerTournamentRouter);
 app.use('/api/coach', verifyUser, coachRouter);
 
-app.use('/api/score', verifyUser, scorerRouter);
+app.use('/api/score', scorerRouter);
 
 
 

@@ -319,4 +319,51 @@ router.put("/pairings/:pairingId/assignments", authedHandler(async (req, res) =>
     }
 }));
 
+router.post("/pairings/:pairingId/assignments/bulk", authedHandler(async (req, res) => {
+    const pairingId = req.params.pairingId as string;
+    if (!uuidRegex.test(pairingId)) return res.status(400).json({ message: "Invalid pairing ID" });
+    const { assignments } = req.body as { assignments?: { field_id: string; student_id: string; witness_id?: string | null }[] };
+    if (!Array.isArray(assignments)) return res.status(400).json({ message: "assignments must be an array" });
+    try {
+        await coach.bulkUpsertStudentAssignments(pairingId, req.params.teamId as string, assignments);
+        return res.status(200).json({ success: true });
+    } catch (e) {
+        if (e instanceof DbError) return res.status(500).json({ message: 'Unable to save assignments' });
+        throw e;
+    }
+}));
+
+// ── Default witness call order ────────────────────────────────────────────────
+
+router.get('/default-witness-order', authedHandler(async (req, res) => {
+    return res.status(200).json(await coach.getDefaultWitnessCallOrder(req.params.teamId as string));
+}));
+
+router.put('/default-witness-order', authedHandler(async (req, res) => {
+    const { witness_ids } = req.body as { witness_ids?: string[] };
+    if (!Array.isArray(witness_ids)) return res.status(400).json({ message: 'witness_ids must be an array' });
+    await coach.setDefaultWitnessCallOrder(req.params.teamId as string, witness_ids);
+    return res.status(200).json({ success: true });
+}));
+
+// ── Default student assignments ────────────────────────────────────────────────
+
+router.get('/default-assignments', authedHandler(async (req, res) => {
+    return res.status(200).json(await coach.getDefaultStudentAssignments(req.params.teamId as string));
+}));
+
+router.put('/default-assignments', authedHandler(async (req, res) => {
+    const { field_id, student_id, witness_id } = req.body as { field_id?: string; student_id?: string; witness_id?: string };
+    if (!field_id || !student_id) return res.status(400).json({ message: 'Missing field_id or student_id' });
+    await coach.upsertDefaultStudentAssignment(req.params.teamId as string, field_id, student_id, witness_id ?? null);
+    return res.status(200).json({ success: true });
+}));
+
+router.delete('/default-assignments', authedHandler(async (req, res) => {
+    const { field_id, witness_id } = req.body as { field_id?: string; witness_id?: string };
+    if (!field_id) return res.status(400).json({ message: 'Missing field_id' });
+    await coach.deleteDefaultStudentAssignment(req.params.teamId as string, field_id, witness_id ?? null);
+    return res.status(200).json({ success: true });
+}));
+
 export default router;

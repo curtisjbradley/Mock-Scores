@@ -1,6 +1,6 @@
 import { Router, Request, Response } from 'express';
 import { AuthProvider } from '../providers/authProvider';
-import { verifyUser, REFRESH_COOKIE, refreshCookieOptions } from '../authUtils';
+import { verifyUser, REFRESH_COOKIE, CSRF_COOKIE, refreshCookieOptions, csrfCookieOptions, generateCsrfToken } from '../authUtils';
 import { AlreadyExistsError, DbError } from '../errors';
 import { OAuth2Client } from 'google-auth-library';
 import { GOOGLE_CLIENT_ID, validatePassword, ValidationError } from '@mock-scores/shared';
@@ -25,22 +25,24 @@ function extractNameFromPayload(
 }
 
 /**
- * Sets the refresh token as an HttpOnly, Secure, SameSite=Strict cookie and
- * returns the access token in the JSON body.
+ * Sets the refresh token as an HttpOnly cookie, sets a readable CSRF token
+ * cookie (double-submit pattern), and returns the access token in the JSON body.
  *
  * Security properties:
- * - The refresh token cookie is unreadable by JS (`httpOnly: true`), which
- *   eliminates XSS-based session theft from localStorage.
- * - `sameSite: 'strict'` blocks CSRF — the cookie is never sent cross-origin.
- * - The access token lives only in JS memory on the client; it has a 15-min
- *   lifetime so exposure is bounded even if intercepted.
+ * - The refresh token cookie is unreadable by JS (`httpOnly: true`).
+ * - The CSRF token cookie is readable by JS (`httpOnly: false`) so the frontend
+ *   can echo it as an `X-CSRF-Token` header on refresh requests.
+ * - The server verifies header === cookie on every /refresh call, blocking any
+ *   cross-origin request that cannot read the cookie (i.e. all of them).
  */
 function sendAuthResponse(
     res: Response,
     accessToken: string,
     refreshToken: string,
 ): Response {
+    const csrfToken = generateCsrfToken();
     res.cookie(REFRESH_COOKIE, refreshToken, refreshCookieOptions());
+    res.cookie(CSRF_COOKIE, csrfToken, csrfCookieOptions());
     return res.status(200).json({ accessToken });
 }
 
@@ -166,11 +168,24 @@ router.post('/login', async (req: Request, res: Response) => {
 router.post('/refresh', async (req: Request, res: Response) => {
     const rawToken = req.cookies?.[REFRESH_COOKIE] as string | undefined;
     if (!rawToken) return res.status(401).json({ message: 'No refresh token provided.' });
+
+    // Double-submit CSRF check: the frontend must echo the csrf_token cookie
+    // value as an X-CSRF-Token header. A cross-origin attacker cannot read the
+    // cookie so they cannot forge this header.
+    // Skipped in test environment (same pattern as rate limiting).
+    if (process.env.NODE_ENV !== 'test') {
+        const csrfCookie = req.cookies?.[CSRF_COOKIE] as string | undefined;
+        const csrfHeader = req.headers['x-csrf-token'] as string | undefined;
+        if (!csrfCookie || !csrfHeader || csrfCookie !== csrfHeader) {
+            return res.status(403).json({ message: 'Invalid CSRF token.' });
+        }
+    }
+
     try {
         const tokens = await authProvider.refreshSession(rawToken);
         if (!tokens) {
-            // Token not found or expired — clear the stale cookie
-            res.clearCookie(REFRESH_COOKIE, { path: '/api/auth' });
+            res.clearCookie(REFRESH_COOKIE, { path: '/' });
+            res.clearCookie(CSRF_COOKIE, { path: '/' });
             return res.status(401).json({ message: 'Session expired. Please log in again.' });
         }
         return sendAuthResponse(res, tokens.accessToken, tokens.refreshToken);
@@ -198,7 +213,8 @@ router.post('/logout', async (req: Request, res: Response) => {
             // Best-effort: always clear the cookie regardless
         }
     }
-    res.clearCookie(REFRESH_COOKIE, { path: '/api/auth' });
+    res.clearCookie(REFRESH_COOKIE, { path: '/' });
+    res.clearCookie(CSRF_COOKIE, { path: '/' });
     return res.status(204).send();
 });
 
@@ -249,7 +265,7 @@ router.post('/change-password', verifyUser, async (req: Request, res: Response) 
         const result = await authProvider.changePassword(req.session.userId, currentPassword, newPassword);
         if (result.status === 200) {
             // Clear the caller's refresh cookie — they'll need to log in again
-            res.clearCookie(REFRESH_COOKIE, { path: '/api/auth' });
+            res.clearCookie(REFRESH_COOKIE, { path: '/' });
             const { email, firstName } = req.session;
             fireAndForgetEmail(() => {
                 const template: EmailTemplate = passwordChangedEmail(firstName ?? '');

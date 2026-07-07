@@ -28,6 +28,16 @@ export class ImproperDataError extends Error {
 /** Thrown when trying to edit an organizer who has already joined (cannot modify live account). */
 export class OrganizerAlreadyJoinedError extends Error {}
 
+/** Thrown when a scorer tries to access a scoresheet for an assignment that already has a submitted ballot. */
+export class AlreadySubmittedError extends Error {
+    constructor() { super('Ballot already submitted'); }
+}
+
+/** Thrown when a scorer tries to access a scoresheet after reporting a conflict of interest. */
+export class ConflictReportedError extends Error {
+    constructor() { super('Conflict of interest reported'); }
+}
+
 // Legacy aliases kept for any existing catch blocks that reference the old names.
 export const DuplicateDelegateError = AlreadyExistsError;
 export const DuplicateTeamNameError = AlreadyExistsError;

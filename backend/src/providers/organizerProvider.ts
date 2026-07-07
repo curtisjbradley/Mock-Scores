@@ -155,6 +155,44 @@ export async function upsertStandingsConfig(tournamentID: string, statsXml: stri
     }
 }
 
+export async function getOrganizerStandingsData(tournamentID: string): Promise<{
+    config: { statsXml: string; standingsXml: string } | null;
+    teams: { id: string; name: string; code: string }[];
+    ballots: { p_team_id: string; d_team_id: string; p_points: number; d_points: number; pairing_id: string; round_id: string }[];
+    rounds: { round_id: string; name: string }[];
+}> {
+    const [configRow, teamsRows, roundsRows, ballotsRows] = await Promise.all([
+        dbQuery<{ stats_xml: string; standings_xml: string }>(
+            `SELECT sc.stats_xml, sc.standings_xml FROM tournaments t
+             JOIN standings_configs sc ON sc.id = t.standings_config_id WHERE t.id = $1`,
+            [tournamentID],
+        ),
+        dbQuery<{ id: string; name: string; code: string }>(
+            'SELECT id, name, code FROM teams WHERE tournament_id = $1',
+            [tournamentID],
+        ),
+        dbQuery<{ round_id: string; name: string }>(
+            'SELECT round_id, name FROM rounds WHERE tournament_id = $1 ORDER BY round_time ASC NULLS LAST',
+            [tournamentID],
+        ),
+        dbQuery<{ p_team_id: string; d_team_id: string; p_points: number; d_points: number; pairing_id: string; round_id: string }>(
+            `SELECT b.p_team_id, b.d_team_id, b.p_points, b.d_points, b.pairing_id, p.round_id
+             FROM ballots b
+             JOIN pairings p ON p.pairing_id = b.pairing_id
+             WHERE b.tournament_id = $1`,
+            [tournamentID],
+        ),
+    ]);
+
+    const row = configRow?.rows[0];
+    return {
+        config: row ? { statsXml: row.stats_xml, standingsXml: row.standings_xml } : null,
+        teams: teamsRows?.rows ?? [],
+        ballots: ballotsRows?.rows ?? [],
+        rounds: roundsRows?.rows ?? [],
+    };
+}
+
 export async function getStandingsTemplates(): Promise<{ id: string; label: string; description: string; config_id: string }[]> {
     const result = await dbQuery<{ id: string; label: string; description: string; config_id: string }>(
         'SELECT id, label, description, config_id FROM standings_templates ORDER BY label'
@@ -487,25 +525,72 @@ export async function deletePairing(pairingID: string): Promise<void> {
     if (!row) throw new NotFoundError('pairing');
 }
 
-export async function getPairingScorers(pairingID: string): Promise<{ assignment_id: string; type: 'registered' | 'paper'; scorer_id: string; name: string; is_presider: boolean }[]> {
+export async function getPairingScorers(pairingID: string): Promise<{ assignment_id: string; type: 'registered' | 'paper'; scorer_id: string; name: string; is_presider: boolean; conflict_reported: boolean }[]> {
     const presiderRow = (await dbQuery<{ scorer_assignment_id: string }>('SELECT scorer_assignment_id FROM scorer_presider_assignment WHERE pairing_id=$1', [pairingID]))?.rows[0];
     const presiderAssignmentId = presiderRow?.scorer_assignment_id ?? null;
-    const registered = (await dbQuery<{ assignment_id: string; scorer_id: string; first_name: string; last_name: string }>(
-        `SELECT spa.assignment_id, s.scorer_id, s.first_name, s.last_name
+    const registered = (await dbQuery<{ assignment_id: string; scorer_id: string; first_name: string; last_name: string; conflict_reported: boolean }>(
+        `SELECT spa.assignment_id, s.scorer_id, s.first_name, s.last_name, spa.conflict_reported
          FROM scorer_pairing_assignments spa JOIN scorers s ON spa.registered_scorer_id = s.scorer_id
          WHERE spa.pairing_id=$1 AND spa.registered_scorer_id IS NOT NULL`,
         [pairingID]
     ))?.rows ?? [];
-    const paper = (await dbQuery<{ assignment_id: string; scorer_id: string; name: string }>(
-        `SELECT spa.assignment_id, ps.scorer_id, ps.name
+    const paper = (await dbQuery<{ assignment_id: string; scorer_id: string; name: string; conflict_reported: boolean }>(
+        `SELECT spa.assignment_id, ps.scorer_id, ps.name, spa.conflict_reported
          FROM scorer_pairing_assignments spa JOIN paper_scorers ps ON spa.paper_scorer_id = ps.scorer_id
          WHERE spa.pairing_id=$1 AND spa.paper_scorer_id IS NOT NULL`,
         [pairingID]
     ))?.rows ?? [];
     return [
-        ...registered.map(r => ({ assignment_id: r.assignment_id, type: 'registered' as const, scorer_id: r.scorer_id, name: `${r.first_name} ${r.last_name}`, is_presider: r.assignment_id === presiderAssignmentId })),
-        ...paper.map(p => ({ assignment_id: p.assignment_id, type: 'paper' as const, scorer_id: p.scorer_id, name: p.name, is_presider: p.assignment_id === presiderAssignmentId })),
+        ...registered.map(r => ({ assignment_id: r.assignment_id, type: 'registered' as const, scorer_id: r.scorer_id, name: `${r.first_name} ${r.last_name}`, is_presider: r.assignment_id === presiderAssignmentId, conflict_reported: r.conflict_reported })),
+        ...paper.map(p => ({ assignment_id: p.assignment_id, type: 'paper' as const, scorer_id: p.scorer_id, name: p.name, is_presider: p.assignment_id === presiderAssignmentId, conflict_reported: p.conflict_reported })),
     ];
+}
+
+/** Returns the data needed to send a scorer invite email after assignment. */
+export async function getScorerInviteContext(pairingID: string, scorerID: string): Promise<{
+    email: string; firstName: string; lastName: string; tournamentName: string;
+} | null> {
+    const row = (await dbQuery<{
+        email: string; first_name: string; last_name: string; tournament_name: string;
+    }>(`
+        SELECT s.email, s.first_name, s.last_name, t.name AS tournament_name
+        FROM scorers s
+        JOIN pairings p  ON p.pairing_id = $1
+        JOIN rounds r    ON r.round_id   = p.round_id
+        JOIN tournaments t ON t.id       = r.tournament_id
+        WHERE s.scorer_id = $2
+    `, [pairingID, scorerID]))?.rows[0];
+    if (!row) return null;
+    return { email: row.email, firstName: row.first_name, lastName: row.last_name, tournamentName: row.tournament_name };
+}
+
+/** Returns coach emails + tournament name for notifying results going public. */
+export async function getRoundResultsPublicContext(roundID: string): Promise<{
+    tournamentName: string; roundName: string; coachEmails: string[];
+} | null> {
+    const roundRow = (await dbQuery<{ name: string; tournament_id: string }>(
+        'SELECT name, tournament_id FROM rounds WHERE round_id = $1', [roundID],
+    ))?.rows[0];
+    if (!roundRow) return null;
+
+    const tourneyRow = (await dbQuery<{ name: string }>(
+        'SELECT name FROM tournaments WHERE id = $1', [roundRow.tournament_id],
+    ))?.rows[0];
+    if (!tourneyRow) return null;
+
+    const emailRows = (await dbQuery<{ email: string }>(
+        `SELECT DISTINCT a.email FROM team_coaches tc
+         JOIN teams t ON t.id = tc.team_id
+         JOIN auth a  ON a.user_id = tc.coach_id
+         WHERE t.tournament_id = $1`,
+        [roundRow.tournament_id],
+    ))?.rows ?? [];
+
+    return {
+        tournamentName: tourneyRow.name,
+        roundName: roundRow.name,
+        coachEmails: emailRows.map(r => r.email),
+    };
 }
 
 export async function assignScorerToPairing(pairingID: string, scorerID: string): Promise<{ assignment_id: string }> {

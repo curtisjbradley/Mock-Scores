@@ -90,7 +90,7 @@ export default function CoachDashboard({ isOrganizerView = false }: Props) {
                         onMakeOwner={makeOwner}
                     />
                 )}
-                {tab === 'roster' && <RosterTab students={students} onAdd={addStudent} onRemove={removeStudent} />}
+                {tab === 'roster' && <RosterTab students={students} tournamentId={id ?? ''} teamId={teamId} onAdd={addStudent} onRemove={removeStudent} />}
                 {tab === 'field' && <FieldTab field={field} />}
                 {tab === 'standings' && <StandingsTab rows={standingsRows} cols={standingsCols} standingsXml={standingsXml} />}
             </div>

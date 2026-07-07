@@ -130,6 +130,32 @@ export function roundResultsPublicEmail(tournamentName: string, roundName: strin
     return { subject, html, text: `Results for ${roundName} at ${tournamentName} have been published.\n\nView standings: ${standingsUrl}` }
 }
 
+export function conflictReportEmail(
+    ownerFirstName: string,
+    scorerName: string,
+    tournamentName: string,
+    roundName: string | null,
+    courtroomName: string | null,
+): EmailTemplate {
+    const safeOwner = escapeHtml(ownerFirstName)
+    const safeScorer = escapeHtml(scorerName)
+    const safeTournament = escapeHtml(tournamentName)
+    const location = [roundName, courtroomName].filter((s): s is string => s != null).map(escapeHtml).join(', ')
+    const subject = `Conflict of interest reported — ${safeTournament}`
+    const html = layout(subject, `
+        <p>Hi ${safeOwner},</p>
+        <p>A scorer has reported a conflict of interest at <strong>${safeTournament}</strong>${location ? ` (${location})` : ''}.</p>
+        <p><strong>Scorer:</strong> ${safeScorer}</p>
+        <p>Please log in to your organizer dashboard to reassign the scorer for this pairing.</p>
+        <a class="btn" href="${BASE_URL}/organizer">Go to Dashboard</a>
+    `)
+    return {
+        subject,
+        html,
+        text: `Hi ${ownerFirstName},\n\nScorer ${scorerName} has reported a conflict of interest at ${tournamentName}${location ? ` (${location})` : ''}.\n\nPlease log in to reassign the scorer: ${BASE_URL}/organizer`,
+    }
+}
+
 export function scorerInviteEmail(tournamentName: string, scorecardUrl: string): EmailTemplate {
     const subject = `You've been assigned to score at ${tournamentName}`
     const html = layout(subject, `

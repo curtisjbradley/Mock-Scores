@@ -3,6 +3,7 @@ import { IRound, TournamentPayload, IWitnesses, IOrganizer, IScorer, ITeam } fro
 import { AlreadyExistsError, DbError, NotFoundError, OrganizerAlreadyJoinedError } from "../../errors";
 import * as organizer from "../../providers/organizerProvider";
 import * as coachProvider from "../../providers/coachProvider";
+import * as scorerProv from "../../providers/scorerProvider";
 import roundRoutes from "./organizerRoundRoutes";
 import { uuidRegex } from "../../authUtils";
 import { transferOwnership } from "../../providers/coachProvider";
@@ -251,6 +252,35 @@ router.patch("/witnesses", tournamentHandler(async (req, res) => {
 router.get("/standings-config", tournamentHandler(async (req, res) => {
     try {
         return res.status(200).json((await organizer.getStandingsConfig(req.tournament)) ?? null);
+    } catch (e) {
+        if (e instanceof DbError) return res.status(500).json({ message: 'Database error' });
+        throw e;
+    }
+}));
+
+/**
+ * @swagger
+ * /api/organizer/tournament/{tournamentId}/standings:
+ *   get:
+ *     summary: Get standings data (ballot totals + config) for the organizer view
+ *     tags: [Organizer - Tournament]
+ *     parameters:
+ *       - in: path
+ *         name: tournamentId
+ *         required: true
+ *         schema: { type: string, format: uuid }
+ *       - in: query
+ *         name: rounds
+ *         required: false
+ *         schema: { type: string }
+ *         description: Comma-separated round UUIDs to filter by. Omit for all rounds.
+ *     responses:
+ *       200: { description: Standings data }
+ *       500: { description: Database error }
+ */
+router.get("/standings", tournamentHandler(async (req, res) => {
+    try {
+        return res.status(200).json(await organizer.getOrganizerStandingsData(req.tournament));
     } catch (e) {
         if (e instanceof DbError) return res.status(500).json({ message: 'Database error' });
         throw e;
@@ -1528,5 +1558,20 @@ async function verifyRound(req: Request, res: Response, next: NextFunction) {
 }
 
 router.use('/rounds/:round', verifyRound, roundRoutes);
+
+// ── Scorecard viewer ──────────────────────────────────────────────────────────
+
+/**
+ * GET /api/organizer/tournament/:tournamentId/pairings/:pairingId/scoresheets/:assignmentId
+ * Returns the stored ballot for a scorer assignment, or null if not yet submitted.
+ * Used by the organizer's ScorecardViewer page.
+ * No round ID is needed because the assignment ID uniquely identifies the ballot.
+ */
+router.get('/pairings/:pairingId/scoresheets/:assignmentId', tournamentHandler(async (req, res) => {
+    const assignmentId = req.params.assignmentId as string;
+    if (!uuidRegex.test(assignmentId)) return res.status(400).json({ message: 'Invalid assignment ID' });
+    const ballot = await scorerProv.getBallot(assignmentId);
+    return res.status(200).json(ballot);
+}));
 
 export default router;

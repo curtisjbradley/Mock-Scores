@@ -131,7 +131,7 @@ function buildNominationId(scoreId: string) {
  * with mobile step-through navigation and a desktop submit button.
  * Persists in-progress scores to localStorage keyed by tournamentID.
  */
-function ScoreSheet(details: IScoreSheetFormat) {
+function ScoreSheet(details: IScoreSheetFormat & { onSubmitSuccess: () => void }) {
     const storageKey = `mock-trial-scores-${details.pairingID}-${details.scorer.scorerID}`;
     const categoryKey = `${storageKey}-category`;
 
@@ -375,6 +375,7 @@ function ScoreSheet(details: IScoreSheetFormat) {
                     defense={details.defenseCode}
                     prosecutionLabel={prosecutionLabel}
                     details={details}
+                    onSubmitSuccess={details.onSubmitSuccess}
                 />
             )}
         </>

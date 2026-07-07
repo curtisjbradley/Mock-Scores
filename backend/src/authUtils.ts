@@ -163,19 +163,49 @@ export function refreshTokenTtlMs(): number {
 /** Name of the HttpOnly refresh token cookie. */
 export const REFRESH_COOKIE = 'rt';
 
+/** Name of the readable CSRF token cookie (double-submit pattern). */
+export const CSRF_COOKIE = 'csrf_token';
+
+/**
+ * Generates a cryptographically random CSRF token.
+ */
+export function generateCsrfToken(): string {
+    return randomBytes(32).toString('hex');
+}
+
+/**
+ * Options for the CSRF token cookie.
+ * NOT httpOnly — JS must be able to read it to send it as a header.
+ * Same path and sameSite settings as the refresh cookie so they travel together.
+ */
+export function csrfCookieOptions() {
+    const isProd = process.env.NODE_ENV === 'production';
+    return {
+        httpOnly: false,
+        secure:   isProd,
+        sameSite: (isProd ? 'strict' : 'lax') as 'strict' | 'lax',
+        path:     '/',
+        maxAge:   Math.floor(REFRESH_TOKEN_TTL_MS / 1000),
+    };
+}
+
 /**
  * Options for the refresh token cookie:
  * - `httpOnly`  — JS cannot read it (eliminates XSS-based token theft)
  * - `secure`    — only transmitted over HTTPS in production
- * - `sameSite`  — blocks CSRF from cross-origin form submissions
- * - `path`      — scoped to `/api/auth` so it is not sent on every API request
+ * - `sameSite`  — 'lax' in dev (avoids Vite proxy issues), 'strict' in prod
+ * - `path`      — '/' so the browser sends it on all same-origin requests;
+ *                 the cookie is still only useful at /api/auth/refresh, but
+ *                 scoping to /api/auth caused Chrome to drop it in some
+ *                 redirect flows with Vite's dev proxy.
  */
 export function refreshCookieOptions() {
+    const isProd = process.env.NODE_ENV === 'production';
     return {
         httpOnly: true,
-        secure:   process.env.NODE_ENV === 'production',
-        sameSite: 'strict' as const,
-        path:     '/api/auth',
+        secure:   isProd,
+        sameSite: (isProd ? 'strict' : 'lax') as 'strict' | 'lax',
+        path:     '/',
         maxAge:   Math.floor(REFRESH_TOKEN_TTL_MS / 1000),
     };
 }

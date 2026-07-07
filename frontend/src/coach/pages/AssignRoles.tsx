@@ -26,7 +26,6 @@ export default function AssignRoles() {
     const [categories, setCategories] = useState<IScoringCategory[]>([])
     const [witnesses, setWitnesses] = useState<Witness[]>([])
     const [students, setStudents] = useState<IStudent[]>([])
-    const [saved, setSaved] = useState<Map<string, string>>(new Map())
     const [pending, setPending] = useState<Map<string, string>>(new Map())
     const [saving, setSaving] = useState(false)
 
@@ -37,17 +36,23 @@ export default function AssignRoles() {
             apiFetch(`/api/coach/tournaments/${tournamentId}/witnesses`).then(r => r.ok ? r.json() : []),
             apiFetch(`/api/coach/teams/${teamId}/students`).then(r => r.ok ? r.json() : []),
             apiFetch(`/api/coach/teams/${teamId}/pairings/${pairingId}/assignments`).then(r => r.ok ? r.json() : []),
-        ]).then(([cats, wits, studs, assigns]: [IScoringCategory[], Witness[], IStudent[], IStudentAssignment[]]) => {
+            apiFetch(`/api/coach/teams/${teamId}/default-assignments`).then(r => r.ok ? r.json() : []),
+        ]).then(([cats, wits, studs, assigns, defaults]: [IScoringCategory[], Witness[], IStudent[], IStudentAssignment[], IStudentAssignment[]]) => {
             setCategories(cats)
             setWitnesses(wits)
             setStudents(studs)
+
+            // Build default map first, then overlay pairing-specific assignments
             const map = new Map<string, string>()
+            for (const a of defaults) {
+                const key = a.witness_id ? `${a.field_id}:${a.witness_id}` : a.field_id
+                map.set(key, a.student_id)
+            }
             for (const a of assigns) {
                 const key = a.witness_id ? `${a.field_id}:${a.witness_id}` : a.field_id
                 map.set(key, a.student_id)
             }
-            setSaved(map)
-            setPending(new Map(map))
+            setPending(map)
         }).catch(() => {})
     }, [tournamentId, teamId, pairingId])
 
@@ -77,14 +82,14 @@ export default function AssignRoles() {
     async function handleSave() {
         if (!teamId || !pairingId) return
         setSaving(true)
-        await Promise.all(
-            rows
-                .filter(r => pending.get(r.key) !== saved.get(r.key) && pending.get(r.key))
-                .map(r => apiFetch(`/api/coach/teams/${teamId}/pairings/${pairingId}/assignments`, {
-                    method: 'PUT',
-                    body: JSON.stringify({ field_id: r.fieldId, student_id: pending.get(r.key), witness_id: r.witnessId }),
-                }))
-        )
+        // Send all assigned rows in one request
+        const assignments = rows
+            .filter(r => pending.get(r.key))
+            .map(r => ({ field_id: r.fieldId, student_id: pending.get(r.key)!, witness_id: r.witnessId ?? null }))
+        await apiFetch(`/api/coach/teams/${teamId}/pairings/${pairingId}/assignments/bulk`, {
+            method: 'POST',
+            body: JSON.stringify({ assignments }),
+        })
         setSaved(new Map(pending))
         setSaving(false)
         navigate(-1)

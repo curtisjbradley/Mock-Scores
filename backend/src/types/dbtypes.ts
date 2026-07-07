@@ -142,6 +142,7 @@ export interface IScorerPairingAssignmentRow {
     registered_scorer_id: string | null;
     paper_scorer_id: string | null;
     pairing_id: string;
+    conflict_reported: boolean;
 }
 
 export interface IScorerPresiderAssignmentRow {

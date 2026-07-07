@@ -21,4 +21,5 @@ export interface IPairingScorer {
     scorer_id: string;
     name: string;
     is_presider: boolean;
+    conflict_reported: boolean;
 }
