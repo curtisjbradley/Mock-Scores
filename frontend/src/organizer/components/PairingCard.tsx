@@ -74,7 +74,7 @@ export default function PairingCard({ pairing, teams, courtrooms, scorers, assig
                 })
                 onPresiderChanged(data.assignment_id)
             }
-            onScorerAssigned({ assignment_id: data.assignment_id, type: 'registered', scorer_id: scorerDraft, name: `${scorer.first_name} ${scorer.last_name}`, is_presider: isFirst })
+            onScorerAssigned({ assignment_id: data.assignment_id, type: 'registered', scorer_id: scorerDraft, name: `${scorer.first_name} ${scorer.last_name}`, is_presider: isFirst, conflict_reported: false })
             setScorerDraft('')
             setShowScorerAdd(false)
         })
@@ -92,7 +92,7 @@ export default function PairingCard({ pairing, teams, courtrooms, scorers, assig
                 })
                 onPresiderChanged(data.assignment_id)
             }
-            onScorerAssigned({ assignment_id: data.assignment_id, type: 'paper', scorer_id: data.scorer_id, name: paperName.trim(), is_presider: isFirst })
+            onScorerAssigned({ assignment_id: data.assignment_id, type: 'paper', scorer_id: data.scorer_id, name: paperName.trim(), is_presider: isFirst, conflict_reported: false })
             setPaperName('')
             setShowScorerAdd(false)
         })

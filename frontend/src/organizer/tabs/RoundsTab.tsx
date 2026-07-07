@@ -60,7 +60,7 @@ function RoundRow({ round, tournamentId, onRemove, onSave }: {
                       </button>
                 }
                 {dirty && (
-                    <button className="dash-round-save-btn" onClick={() => onSave({ ...round, name: draftName, round_time: tbd ? null : (draftTime ? new Date(draftTime).toISOString() : null), teams_public: draftPublish, results_public: draftResults })}>
+                    <button className="dash-round-save-btn" onClick={() => onSave({ ...round, name: draftName, round_time: tbd ? null : (draftTime ? new Date(draftTime).toISOString() : null), teams_public: round.teams_public, results_public: round.results_public })}>
                         Save
                     </button>
                 )}

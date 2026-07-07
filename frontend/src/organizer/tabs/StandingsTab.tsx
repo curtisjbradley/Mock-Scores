@@ -193,7 +193,7 @@ export default function StandingsTab({ tournamentId }: { tournamentId: string })
 
                     <Suspense fallback={null}>
                         <div style={{ marginTop: '1.5rem' }}>
-                            <TiebreakerViewer standingsXml={payload.config.standingsXml} />
+                            <TiebreakerViewer standingsXml={payload.config!.standingsXml} />
                         </div>
                     </Suspense>
                 </>
