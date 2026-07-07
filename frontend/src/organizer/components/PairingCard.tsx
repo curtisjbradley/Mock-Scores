@@ -202,10 +202,12 @@ export default function PairingCard({ pairing, teams, courtrooms, scorers, assig
                             {hasConflict && (
                                 <span style={{ marginLeft: 6, background: 'red', color: '#fff', fontSize: '0.7rem', fontWeight: 700, padding: '1px 5px', borderRadius: 3 }}>CONFLICT</span>
                             )}
+                            {s.conflict_reported && (
+                                <span style={{ marginLeft: 6, background: '#c05000', color: '#fff', fontSize: '0.7rem', fontWeight: 700, padding: '1px 5px', borderRadius: 3 }}>CONFLICT REPORTED</span>
+                            )}
                         </span>
                         {s.type === 'paper' && (
-                            // TODO: open score input for paper scorer
-                            <button className="pc-save-btn" onClick={() => {}}>Input scores</button>
+                            <button className="pc-save-btn" onClick={() => window.open(`/score/${s.assignment_id}`, '_blank')}>Input scores</button>
                         )}
                         <button className="dash-remove-btn" onClick={() => removeScorer(s.assignment_id)}>Remove</button>
                     </div>

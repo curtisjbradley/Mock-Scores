@@ -38,7 +38,15 @@ router.get("/tournaments", authedHandler(async (req, res) => {
 router.get("/tournaments/:tournamentId/schedule", authedHandler(async (req, res) => {
     const id = req.params.tournamentId as string;
     if (!uuidRegex.test(id)) return res.status(400).json({ message: "Invalid tournament ID" });
-    return res.status(200).json(await coach.getSchedule(id));
+
+    // Accept an explicit teamId query param (used by organizer preview view).
+    // Fall back to deriving it from the session for regular coach access.
+    const queryTeamId = typeof req.query.teamId === 'string' ? req.query.teamId : null;
+    if (queryTeamId && !uuidRegex.test(queryTeamId)) return res.status(400).json({ message: "Invalid team ID" });
+
+    const teamId = queryTeamId ?? await coach.getTeamIdForCoach(id, req.session.userId);
+    if (!teamId) return res.status(200).json([]);
+    return res.status(200).json(await coach.getSchedule(id, teamId));
 }));
 
 /**

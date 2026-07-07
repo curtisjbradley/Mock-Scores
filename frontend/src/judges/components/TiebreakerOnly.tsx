@@ -8,6 +8,8 @@ interface TiebreakerOnlyProps {
     details: IScoreSheetFormat;
     /** localStorage key used to clear saved progress on successful submission. */
     storageKey: string;
+    /** Called after a successful submission so the parent can show the submitted state. */
+    onSubmitSuccess: () => void;
 }
 
 /**
@@ -16,30 +18,67 @@ interface TiebreakerOnlyProps {
  * can identify who is performing, then presents the tiebreaker selection.
  * Requires confirmation before final submission.
  */
-function TiebreakerOnly({ details, storageKey }: TiebreakerOnlyProps) {
+function TiebreakerOnly({ details, storageKey, onSubmitSuccess }: TiebreakerOnlyProps) {
     const [tiebreaker, setTiebreaker] = useState("");
     const [confirming, setConfirming] = useState(false);
-    const [submitted, setSubmitted] = useState(false);
+    const [submitting, setSubmitting] = useState(false);
+    const [submitError, setSubmitError] = useState<string | null>(null);
 
     const prosecutionLabel = details.isCriminal ? "Prosecution" : "Plaintiff";
     /** Resolves a student ID to its info object, or null. */
     const student = (id: string | null) => id ? (details.students[id] ?? null) : null;
     const { categoryOrder, scoringCategories, witnesses } = details;
 
-    const handleSubmit = () => {
-        if (!tiebreaker) return;
-        // TODO: POST /api/pairings/:pairingId/tiebreaker { scorerID, tiebreaker }
+    const handleSubmit = async () => {
+        if (!tiebreaker || submitting) return;
+
+        const payload = {
+            pairingID: details.pairingID,
+            scores: [],
+            nominations: [],
+            tiebreaker,
+        };
+
+        setSubmitting(true);
+        setSubmitError(null);
+        try {
+            const res = await fetch(`/api/score/${details.scorer.scorerID}/ballot`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(payload),
+            });
+            if (res.status === 409) {
+                setSubmitError('This ballot has already been submitted.');
+                setSubmitting(false);
+                setConfirming(false);
+                return;
+            }
+            if (!res.ok) {
+                setSubmitError('Something went wrong. Please try again.');
+                setSubmitting(false);
+                return;
+            }
+        } catch {
+            setSubmitError('Network error. Please check your connection and try again.');
+            setSubmitting(false);
+            return;
+        }
+
         localStorage.removeItem(storageKey);
-        setSubmitted(true);
-        setConfirming(false);
+        onSubmitSuccess();
     };
 
-    if (submitted) {
+    if (submitError && !confirming) {
         return (
             <div className="conflict-check">
                 <div className="conflict-card">
-                    <h1 className="conflict-title">Submitted</h1>
-                    <p style={{ color: "var(--text-muted)" }}>Your tiebreaker selection has been recorded.</p>
+                    <h1 className="conflict-title">Error</h1>
+                    <p style={{ color: "var(--text-muted)" }}>{submitError}</p>
+                    <div className="conflict-actions">
+                        <button type="button" className="conflict-btn-proceed" onClick={() => setSubmitError(null)}>
+                            Try Again
+                        </button>
+                    </div>
                 </div>
             </div>
         );
@@ -138,9 +177,14 @@ function TiebreakerOnly({ details, storageKey }: TiebreakerOnlyProps) {
                     <div className="confirm-modal" role="dialog" aria-modal="true" aria-labelledby="tb-confirm-title">
                         <h2 id="tb-confirm-title">Submit tiebreaker?</h2>
                         <p>You selected team <strong>{tiebreaker} — {tiebreaker === details.prosecutionCode ? prosecutionLabel : "Defense"}</strong>. This cannot be undone.</p>
+                        {submitError && (
+                            <p className="ranking-error" role="alert">{submitError}</p>
+                        )}
                         <div className="confirm-actions">
-                            <button type="button" onClick={() => setConfirming(false)}>Cancel</button>
-                            <button type="button" onClick={handleSubmit}>Confirm</button>
+                            <button type="button" onClick={() => setConfirming(false)} disabled={submitting}>Cancel</button>
+                            <button type="button" onClick={handleSubmit} disabled={submitting}>
+                                {submitting ? 'Submitting…' : 'Confirm'}
+                            </button>
                         </div>
                     </div>
                 </div>

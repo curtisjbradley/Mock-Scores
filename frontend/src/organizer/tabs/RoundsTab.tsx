@@ -24,11 +24,8 @@ function RoundRow({ round, tournamentId, onRemove, onSave }: {
     const [draftName, setDraftName] = useState(round.name)
     const [draftTime, setDraftTime] = useState(() => toLocalInput(round.round_time))
     const [tbd, setTbd] = useState(!round.round_time)
-    const [draftPublish, setDraftPublish] = useState(round.teams_public)
-    const [draftResults, setDraftResults] = useState(round.results_public)
     const dirty = draftName !== round.name || tbd !== !round.round_time ||
-        (!tbd && draftTime !== toLocalInput(round.round_time)) ||
-        draftPublish !== round.teams_public || draftResults !== round.results_public
+        (!tbd && draftTime !== toLocalInput(round.round_time))
 
     return (
         <div className="dash-round-summary">
@@ -50,14 +47,18 @@ function RoundRow({ round, tournamentId, onRemove, onSave }: {
                 <span className="dash-publish-label">TBD</span>
             </label>
             <div className="dash-round-checks">
-                <label className="dash-publish-checkbox">
-                    <input type="checkbox" checked={draftPublish} onChange={e => setDraftPublish(e.target.checked)} />
-                    <span className="dash-publish-label">Publish round</span>
-                </label>
-                <label className="dash-publish-checkbox">
-                    <input type="checkbox" checked={draftResults} onChange={e => setDraftResults(e.target.checked)} />
-                    <span className="dash-publish-label">Publish results</span>
-                </label>
+                {round.teams_public
+                    ? <span className="dash-publish-label dash-publish-label--active">✓ Round published</span>
+                    : <button className="dash-round-save-btn" onClick={() => onSave({ ...round, name: draftName, round_time: tbd ? null : (draftTime ? new Date(draftTime).toISOString() : null), teams_public: true, results_public: round.results_public })}>
+                        Publish round
+                      </button>
+                }
+                {round.results_public
+                    ? <span className="dash-publish-label dash-publish-label--active">✓ Results published</span>
+                    : <button className="dash-round-save-btn" onClick={() => onSave({ ...round, name: draftName, round_time: tbd ? null : (draftTime ? new Date(draftTime).toISOString() : null), teams_public: round.teams_public, results_public: true })}>
+                        Publish results
+                      </button>
+                }
                 {dirty && (
                     <button className="dash-round-save-btn" onClick={() => onSave({ ...round, name: draftName, round_time: tbd ? null : (draftTime ? new Date(draftTime).toISOString() : null), teams_public: draftPublish, results_public: draftResults })}>
                         Save

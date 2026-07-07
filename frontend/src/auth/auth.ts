@@ -41,6 +41,17 @@ export function setAccessToken(token: string | null): void {
     window.dispatchEvent(new Event('auth-changed'));
 }
 
+// ── CSRF ──────────────────────────────────────────────────────────────────────
+
+/**
+ * Reads the csrf_token cookie value. This cookie is NOT httpOnly so JS can
+ * read it to echo it as an X-CSRF-Token header on refresh requests.
+ */
+function getCsrfToken(): string | null {
+    const match = document.cookie.match(/(?:^|;\s*)csrf_token=([^;]+)/);
+    return match ? decodeURIComponent(match[1]) : null;
+}
+
 // ── Token refresh ─────────────────────────────────────────────────────────────
 
 /**
@@ -55,7 +66,13 @@ export function setAccessToken(token: string | null): void {
 export function refreshAccessToken(): Promise<boolean> {
     if (_refreshing) return _refreshing;
 
-    _refreshing = fetch('/api/auth/refresh', { method: 'POST', credentials: 'same-origin' })
+    _refreshing = fetch('/api/auth/refresh', {
+        method: 'POST',
+        credentials: 'same-origin',
+        headers: {
+            ...(getCsrfToken() ? { 'X-CSRF-Token': getCsrfToken()! } : {}),
+        },
+    })
         .then(async res => {
             if (!res.ok) { setAccessToken(null); return false; }
             const data = await res.json() as { accessToken: string };

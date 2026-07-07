@@ -48,4 +48,5 @@ export interface IScoringUser {
     firstName: string;
     lastName: string;
     scorerID: string;
+    isPaper: boolean;
 }

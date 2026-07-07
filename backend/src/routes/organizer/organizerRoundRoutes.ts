@@ -4,6 +4,9 @@ import { IPairingCreationPayload, IRound } from "@mock-scores/shared";
 import { DbError, NotFoundError } from "../../errors";
 import { uuidRegex } from "../../authUtils";
 import { roundHandler } from "../../types/handlers";
+import { scorerInviteEmail, roundResultsPublicEmail, sendEmail } from "../../email";
+
+const BASE_URL = process.env.FRONTEND_URL ?? 'http://localhost:5173';
 
 const router = Router();
 
@@ -66,8 +69,28 @@ router.patch("/", roundHandler(async (req, res) => {
     const body: IRound = req.body;
     if (body.name == undefined || body.results_public == undefined || body.teams_public == undefined)
         return res.status(400).json({ message: "Missing required fields" });
+
+    // results_public and teams_public are one-way: once true they cannot be unset
+    if (req.round.results_public && !body.results_public)
+        return res.status(400).json({ message: "Results cannot be made private once published" });
+    if (req.round.teams_public && !body.teams_public)
+        return res.status(400).json({ message: "Teams cannot be made private once published" });
+
     try {
-        return res.status(200).json(await organizer.updateRound(req.round.round_id, body));
+        const wasPublic = req.round.results_public;
+        const updated = await organizer.updateRound(req.round.round_id, body);
+        // Fire results-public emails only on the false→true transition
+        if (!wasPublic && updated.results_public) {
+            organizer.getRoundResultsPublicContext(req.round.round_id).then(ctx => {
+                if (!ctx || ctx.coachEmails.length === 0) return;
+                const standingsUrl = `${BASE_URL}/coach`;
+                const template = roundResultsPublicEmail(ctx.tournamentName, ctx.roundName, standingsUrl);
+                return Promise.all(ctx.coachEmails.map(email =>
+                    sendEmail(email, template.subject, template.html, template.text).catch(console.error)
+                ));
+            }).catch(console.error);
+        }
+        return res.status(200).json(updated);
     } catch (e) {
         if (e instanceof NotFoundError) return res.status(404).json({ message: e.message });
         throw e;
@@ -282,7 +305,15 @@ router.post('/pairings/:pairing/scorers', async (req: Request, res: Response) =>
     try {
         if (scorer_id) {
             if (!uuidRegex.test(scorer_id)) return res.status(400).json({ message: 'Invalid scorer ID' });
-            return res.status(201).json(await organizer.assignScorerToPairing(pairing, scorer_id));
+            const result = await organizer.assignScorerToPairing(pairing, scorer_id);
+            // Fire-and-forget invite email
+            organizer.getScorerInviteContext(pairing, scorer_id).then(ctx => {
+                if (!ctx) return;
+                const scorecardUrl = `${BASE_URL}/score/${result.assignment_id}`;
+                const template = scorerInviteEmail(ctx.tournamentName, scorecardUrl);
+                return sendEmail(ctx.email, template.subject, template.html, template.text);
+            }).catch(console.error);
+            return res.status(201).json(result);
         }
         if (paper_name?.trim()) {
             return res.status(201).json(await organizer.addPaperScorer(pairing, paper_name.trim()));

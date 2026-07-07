@@ -1,4 +1,5 @@
 import "../styles/conflict-check.css";
+import { useState } from "react";
 import type { IScoreSheetFormat } from "@mock-scores/shared";
 
 interface ConflictCheckProps {
@@ -15,10 +16,33 @@ interface ConflictCheckProps {
  */
 function ConflictCheck({ details, onProceed }: ConflictCheckProps) {
     const prosecutionLabel = details.isCriminal ? "Prosecution" : "Plaintiff";
+    const [reported, setReported] = useState(false);
+    const [reporting, setReporting] = useState(false);
 
-    const handleReportConflict = () => {
-        // TBI
+    const handleReportConflict = async () => {
+        setReporting(true);
+        try {
+            await fetch(`/api/score/${details.scorer.scorerID}/conflict`, { method: 'POST' });
+        } catch {
+            // best-effort — always show the confirmation
+        }
+        setReporting(false);
+        setReported(true);
     };
+
+    if (reported) {
+        return (
+            <div className="conflict-check">
+                <div className="conflict-card">
+                    <h1 className="conflict-title">Conflict Reported</h1>
+                    <p style={{ color: "var(--text-muted)", lineHeight: 1.6 }}>
+                        The tournament organizer has been notified. Please do not score this round.
+                        You may close this tab.
+                    </p>
+                </div>
+            </div>
+        );
+    }
 
     return (
         <div className="conflict-check">
@@ -53,9 +77,11 @@ function ConflictCheck({ details, onProceed }: ConflictCheckProps) {
                 </p>
 
                 <div className="conflict-actions">
-                    <button type="button" className="conflict-btn-report" onClick={handleReportConflict}>
-                        Report Conflict
-                    </button>
+                    {!details.scorer.isPaper && (
+                        <button type="button" className="conflict-btn-report" disabled={reporting} onClick={handleReportConflict}>
+                            {reporting ? 'Reporting…' : 'Report Conflict'}
+                        </button>
+                    )}
                     <button type="button" className="conflict-btn-proceed" onClick={onProceed}>
                         Proceed
                     </button>

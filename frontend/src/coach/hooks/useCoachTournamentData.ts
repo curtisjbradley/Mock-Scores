@@ -55,7 +55,7 @@ export function useCoachTournamentData(
         if (isOrganizerView) {
             Promise.all([
                 apiFetch(`/api/organizer/tournament/${id}`).then(r => r.ok ? r.json() : null),
-                apiFetch(`/api/coach/tournaments/${id}/schedule`).then(r => r.ok ? r.json() : []),
+                apiFetch(`/api/coach/tournaments/${id}/schedule${schoolId ? `?teamId=${schoolId}` : ''}`).then(r => r.ok ? r.json() : []),
                 apiFetch(`/api/coach/tournaments/${id}/results`).then(r => r.ok ? r.json() : []),
                 apiFetch(`/api/organizer/tournament/${id}/teams`).then(r => r.ok ? r.json() : []),
             ]).then(([t, s, r, teams]) => {
@@ -70,8 +70,17 @@ export function useCoachTournamentData(
                 apiFetch(`/api/coach/tournaments/${id}/schedule`).then(r => r.ok ? r.json() : []),
                 apiFetch(`/api/coach/tournaments/${id}/results`).then(r => r.ok ? r.json() : []),
             ]).then(([ts, s, r]) => {
-                setTournament((ts as ICoachTournament[]).find(t => t.id === id) ?? null)
-                setSchedule(s)
+                const myTournament = (ts as ICoachTournament[]).find(t => t.id === id) ?? null
+                setTournament(myTournament)
+                // Re-fetch schedule with the resolved teamId so filtering is correct
+                if (myTournament?.team_id) {
+                    apiFetch(`/api/coach/tournaments/${id}/schedule?teamId=${myTournament.team_id}`)
+                        .then(r => r.ok ? r.json() : s)
+                        .then(setSchedule)
+                        .catch(() => setSchedule(s))
+                } else {
+                    setSchedule(s)
+                }
                 setResults(r)
             }).catch(() => {})
         }

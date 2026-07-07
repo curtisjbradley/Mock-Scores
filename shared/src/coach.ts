@@ -20,6 +20,8 @@ export interface ICoachSchedulePairing {
     d_team_name: string;
     d_team_code: string;
     courtroom_name: string | null;
+    has_assignments: boolean;
+    has_call_order: boolean;
 }
 
 export interface ICoachScheduleRound {

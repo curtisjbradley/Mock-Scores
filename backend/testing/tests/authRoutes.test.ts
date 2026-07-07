@@ -29,9 +29,10 @@ beforeEach(() => {
     mockVerifyRefreshToken.mockResolvedValue({ userId: 'u1', jti: 'mock-jti' });
 });
 
-// Token for session/change-password tests — signed once, reused across tests.
+// Token for session/change-password tests — regenerated before each test
+// to prevent expiry on slow machines (ACCESS_TOKEN_EXPIRY is 5 min).
 let sharedToken: string;
-beforeAll(async () => {
+beforeEach(async () => {
     sharedToken = await signToken('user-1', 'test@test.com', 'Test', 'User');
 });
 const validToken = () => sharedToken;

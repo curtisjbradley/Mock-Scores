@@ -25,6 +25,8 @@ interface IConfirmSubmitModalProps {
     prosecutionLabel: string;
     /** Full scoresheet data, used to build the structured submission payload. */
     details: IScoreSheetFormat;
+    /** Called after a successful submission so the parent can show the submitted state. */
+    onSubmitSuccess: () => void;
 }
 
 /** CSS selector string for all focusable elements, used for focus trapping. */
@@ -42,9 +44,11 @@ const FOCUSABLE = [
 const ConfirmSubmitModal = ({
     nominees, setNominees, nomineeRanks, setNomineeRanks,
     setShowConfirm, pendingScores, setPendingScores, storageKey,
-    showTiebreaker, prosecution, defense, prosecutionLabel, details,
+    showTiebreaker, prosecution, defense, prosecutionLabel, details, onSubmitSuccess,
 }: IConfirmSubmitModalProps) => {
     const dialogRef = useRef<HTMLDivElement>(null);
+    const [submitting, setSubmitting] = useState(false);
+    const [submitError, setSubmitError] = useState<string | null>(null);
     const [tiebreaker, setTiebreaker] = useState<string>("");
 
     useEffect(() => {
@@ -87,11 +91,11 @@ const ConfirmSubmitModal = ({
 
     /**
      * Transforms the flat `ScoreResults` form map into a structured array of score entries,
-     * then submits the payload to the backend (TODO).
+     * then POSTs the payload to /api/score/:assignmentId/ballot.
      * Each entry includes categoryId, assignmentKey, side, studentId, and score value.
      */
-    const handleConfirm = () => {
-        if (!pendingScores || !isRankingValid || !isTiebreakerValid) return;
+    const handleConfirm = async () => {
+        if (!pendingScores || !isRankingValid || !isTiebreakerValid || submitting) return;
 
         const scores : ScoreSection[]  = details.categoryOrder.flatMap((catId) => {
             const cat = details.scoringCategories[catId];
@@ -125,14 +129,36 @@ const ConfirmSubmitModal = ({
             ...(showTiebreaker && { tiebreaker }),
         };
 
-        // TODO: fetch(`/api/scoresheets/${details.trialID}`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload) })
-        console.log('Scorecard payload:', JSON.stringify(payload, null, 2));
+        setSubmitting(true);
+        setSubmitError(null);
+        try {
+            const res = await fetch(`/api/score/${details.scorer.scorerID}/ballot`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(payload),
+            });
+            if (res.status === 409) {
+                setSubmitError('This ballot has already been submitted.');
+                setSubmitting(false);
+                return;
+            }
+            if (!res.ok) {
+                setSubmitError('Something went wrong. Please try again.');
+                setSubmitting(false);
+                return;
+            }
+        } catch {
+            setSubmitError('Network error. Please check your connection and try again.');
+            setSubmitting(false);
+            return;
+        }
+
         localStorage.removeItem(storageKey);
         localStorage.removeItem(`${storageKey}-category`);
-        reset();
+        onSubmitSuccess();
     };
 
-    const canConfirm = isRankingValid && isTiebreakerValid;
+    const canConfirm = isRankingValid && isTiebreakerValid && !submitting;
 
     return (
         <div
@@ -211,11 +237,14 @@ const ConfirmSubmitModal = ({
                 )}
 
                 <div className="confirm-actions">
-                    <button type="button" onClick={reset}>Cancel</button>
-                    <button id="confirm-button" type="button" onClick={handleConfirm} disabled={!canConfirm}>
-                        Confirm
+                    <button type="button" onClick={reset} disabled={submitting}>Cancel</button>
+                    <button id="confirm-button" type="button" onClick={handleConfirm} disabled={!canConfirm || submitting}>
+                        {submitting ? 'Submitting…' : 'Confirm'}
                     </button>
                 </div>
+                {submitError && (
+                    <p className="ranking-error" role="alert">{submitError}</p>
+                )}
             </div>
         </div>
     );
