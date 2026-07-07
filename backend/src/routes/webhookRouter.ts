@@ -3,57 +3,40 @@ import {dbQuery} from "../db";
 
 const router = Router();
 
-// interface SNSBase {
-//     Type: string
-//     SubscribeURL?: string
-//     Message: string
-// }
-
-interface SESRecipient {
-    emailAddress: string
-}
-
 interface SESBounce {
-    bounceType: string
-    bounceSubType: string
-    bouncedRecipients: SESRecipient[]
-    timestamp: string
-}
-
-interface SESComplaint {
-    complainedRecipients: SESRecipient[]
-    timestamp: string
-}
-
-interface SESEvent {
-    notificationType: 'Bounce' | 'Complaint' | 'Delivery'
-    bounce?: SESBounce
-    complaint?: SESComplaint
+    created_at: string,
+    data: {
+        bounce?: {
+            diagnosticCode: string[]
+            message: string,
+            subType: string,
+            type: string,
+        },
+        created_at: string,
+        email_id:string,
+        from: string,
+        message_id: string,
+        subject: string,
+        to: string[]
+    },
+    type: string
 }
 
 router.post("/ses-bounce", async (req: Request, res: Response) => {
     const raw = typeof req.body === 'string' ? req.body : JSON.stringify(req.body)
-    // const snsMessage = JSON.parse(raw) as SNSBase;
-    //
-    // if (snsMessage.Type === "SubscriptionConfirmation") {
-    //     console.log("Confirming SNS subscription:", snsMessage.SubscribeURL);
-    //     await fetch(snsMessage.SubscribeURL!);
-    //     return res.status(200).send("Subscription confirmed");
-    // }
 
 
 
-    const sesEvent = JSON.parse(raw) as SESEvent;
+    const sesEvent = JSON.parse(raw) as SESBounce;
 
-    if (sesEvent.notificationType === "Bounce" && sesEvent.bounce) {
-        const { bounce } = sesEvent;
-        for (const recipient of bounce.bouncedRecipients) {
-            console.log("Bounced email:", recipient.emailAddress);
-            console.log("Bounce type:", bounce.bounceType);
-            console.log("Bounce subtype:", bounce.bounceSubType);
+    if (sesEvent.type === "email.bounced" && sesEvent?.data?.bounce) {
+        for (const recipient of sesEvent.data.to) {
+            console.log("Bounced email:", recipient);
+            console.log("Bounce type:", sesEvent.data.bounce.type);
+            console.log("Bounce subtype:", sesEvent.data.bounce.subType);
 
-            if (bounce.bounceType == 'Permanent') {
-                dbQuery("Insert into bounced_emails (email,type,subtype) values ($1, $2, $3)", [recipient.emailAddress, bounce.bounceType, bounce.bounceSubType]).then(() => {
+            if (sesEvent.data.bounce.type == 'Permanent') {
+                dbQuery("Insert into bounced_emails (email,type,subtype) values ($1, $2, $3)", [recipient, sesEvent.data.bounce.type, sesEvent.data.bounce.subType]).then(() => {
                     console.log("Recorded Bounce")
                 })
             }
@@ -61,10 +44,10 @@ router.post("/ses-bounce", async (req: Request, res: Response) => {
         return res.status(200).send("OK")
     }
 
-    if (sesEvent.notificationType === "Complaint" && sesEvent.complaint) {
-        for (const recipient of sesEvent.complaint.complainedRecipients) {
-            console.log("Complaint email:", recipient.emailAddress);
-            dbQuery("Insert into email_complaints (email) values ($1)", [recipient.emailAddress]).then(() => {console.log("Recorded Complaint")})
+    if (sesEvent.type === "email.complained") {
+        for (const recipient of sesEvent.data.to) {
+            console.log("Complaint email:", recipient);
+            dbQuery("Insert into email_complaints (email) values ($1)", [recipient]).then(() => {console.log("Recorded Complaint")})
         }
         return res.status(200).send("OK")
     }
