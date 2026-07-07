@@ -13,7 +13,7 @@ const TOURNAMENT = {
   team_code: '101',
 }
 
-const SCHEDULE: { round_id: string; name: string; round_time: null; pairings: { pairing_id: string; p_team_id: string; p_team_name: string; p_team_code: string; d_team_id: string; d_team_name: string; d_team_code: string; courtroom_name: string }[] }[] = [
+const SCHEDULE: { round_id: string; name: string; round_time: null; pairings: { pairing_id: string; p_team_id: string; p_team_name: string; p_team_code: string; d_team_id: string; d_team_name: string; d_team_code: string; courtroom_name: string; has_assignments: boolean; has_call_order: boolean }[] }[] = [
   {
     round_id: 'r-1',
     name: 'Round 1',
@@ -28,6 +28,8 @@ const SCHEDULE: { round_id: string; name: string; round_time: null; pairings: { 
         d_team_name: 'Jefferson High',
         d_team_code: '102',
         courtroom_name: 'Dept. 5',
+        has_assignments: false,
+        has_call_order: false,
       },
     ],
   },
@@ -44,7 +46,7 @@ const COACHES = [
 
 function stubCoachDashboard() {
   cy.intercept('GET', '/api/coach/tournaments', { statusCode: 200, body: [TOURNAMENT] }).as('getTournaments')
-  cy.intercept('GET', '/api/coach/tournaments/t-1/schedule', { statusCode: 200, body: SCHEDULE }).as('getSchedule')
+  cy.intercept('GET', '/api/coach/tournaments/t-1/schedule*', { statusCode: 200, body: SCHEDULE }).as('getSchedule')
   cy.intercept('GET', '/api/coach/tournaments/t-1/results', { statusCode: 200, body: [] }).as('getResults')
   cy.intercept('GET', '/api/coach/teams/team-1/students', { statusCode: 200, body: STUDENTS }).as('getStudents')
   cy.intercept('GET', '/api/coach/teams/team-1/coaches', { statusCode: 200, body: COACHES }).as('getCoaches')
@@ -59,7 +61,6 @@ describe('Coach Dashboard', () => {
     cy.visit('/coach/t-1')
     cy.wait('@session')
     cy.wait('@getTournaments')
-    cy.wait('@getSchedule')
   })
 
   it('renders the team name, tournament name, and meta', () => {
