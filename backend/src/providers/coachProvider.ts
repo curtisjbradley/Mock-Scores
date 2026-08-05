@@ -334,6 +334,21 @@ export async function getFormatForTournament(tournamentId: string): Promise<{ p_
     ))?.rows[0] ?? null;
 }
 
+
+export async function getPairingBallots(pairingId: string): Promise<{
+    p_points: number;
+    d_points: number;
+    assignment_id: string;
+}[]> {
+    const rows = (await dbQuery<{ p_points: number; d_points: number; scorer_assignment_id: string }>(
+        `SELECT b.p_points, b.d_points, b.scorer_assignment_id
+         FROM ballots b
+         WHERE b.pairing_id = $1`,
+        [pairingId]
+    ))?.rows ?? [];
+    return rows.map(r => ({ p_points: r.p_points, d_points: r.d_points, assignment_id: r.scorer_assignment_id }));
+}
+
 export async function getStandingsData(tournamentId: string): Promise<{
     config: { statsXml: string; standingsXml: string } | null;
     teams: { id: string; name: string; code: string }[];

@@ -1,10 +1,10 @@
 import { Router, Request, Response } from 'express';
 import { AuthProvider } from '../providers/authProvider';
 import { verifyUser, REFRESH_COOKIE, CSRF_COOKIE, refreshCookieOptions, csrfCookieOptions, generateCsrfToken } from '../authUtils';
-import { AlreadyExistsError, DbError } from '../errors';
+import { AlreadyExistsError, DbError, NotFoundError } from '../errors';
 import { OAuth2Client } from 'google-auth-library';
 import { GOOGLE_CLIENT_ID, validatePassword, ValidationError } from '@mock-scores/shared';
-import { EmailTemplate, passwordChangedEmail, sendEmail, welcomeEmail } from '../email';
+import { EmailTemplate, emailVerificationEmail, isValidEmail, passwordChangedEmail, passwordResetEmail, sendEmail, welcomeEmail } from '../email';
 
 const router = Router();
 const authProvider = new AuthProvider();
@@ -78,6 +78,7 @@ router.post('/register', async (req: Request, res: Response) => {
         email?: string; password?: string; firstName?: string; lastName?: string;
     };
     if (!email || !password) return res.status(400).json({ message: 'Email and password are required.' });
+    if (!isValidEmail(email)) return res.status(400).json({ message: 'Invalid email address.' });
     if (!firstName?.trim() || !lastName?.trim()) return res.status(400).json({ message: 'First and last name are required.' });
     try {
         validatePassword(password);
@@ -87,6 +88,16 @@ router.post('/register', async (req: Request, res: Response) => {
                 const template = welcomeEmail(firstName);
                 sendEmail(email, template.subject, template.html, template.text);
             });
+            // Send verification email (fire-and-forget)
+            authProvider.createEmailVerificationTokenByEmail(email)
+                .then(result => {
+                    if (result) {
+                        const verifyUrl = `${process.env.FRONTEND_URL ?? 'http://localhost:5173'}/verify-email?token=${result.token}`;
+                        const template = emailVerificationEmail(result.firstName, verifyUrl);
+                        sendEmail(email, template.subject, template.html, template.text);
+                    }
+                })
+                .catch((err: Error) => console.error('Verification email error:', err));
         }
         return res.status(response.status).json({ message: response.message });
     } catch (e) {
@@ -134,6 +145,7 @@ router.post('/register', async (req: Request, res: Response) => {
 router.post('/login', async (req: Request, res: Response) => {
     const { email, password } = req.body as { email?: string; password?: string };
     if (!email || !password) return res.status(400).json({ message: 'Email and password are required.' });
+    if (!isValidEmail(email)) return res.status(400).json({ message: 'Invalid email address.' });
     try {
         const result = await authProvider.loginUser(email, password);
         if ('status' in result) return res.status(result.status).json({ message: result.message });
@@ -276,6 +288,181 @@ router.post('/change-password', verifyUser, async (req: Request, res: Response) 
     } catch (e) {
         if (e instanceof ValidationError) return res.status(400).json({ message: e.message });
         if (e instanceof DbError)         return res.status(500).json({ message: 'Internal error' });
+        throw e;
+    }
+});
+
+/**
+ * @swagger
+ * /api/auth/account:
+ *   delete:
+ *     summary: Permanently delete the authenticated user's account
+ *     tags: [Auth]
+ *     description: >
+ *       Deletes the user's account and all associated data (refresh tokens,
+ *       reset tokens, tournament ownership, team coaching). CASCADE constraints
+ *       handle dependent rows. Clears auth cookies on success.
+ *     responses:
+ *       204: { description: Account deleted }
+ *       401: { description: Not authenticated }
+ *       404: { description: Account not found }
+ *       500: { description: Internal error }
+ */
+router.delete('/account', verifyUser, async (req: Request, res: Response) => {
+    if (!req.session) return res.status(401).json({ message: 'Not verified.' });
+    try {
+        await authProvider.deleteAccount(req.session.userId);
+        res.clearCookie(REFRESH_COOKIE, { path: '/' });
+        res.clearCookie(CSRF_COOKIE, { path: '/' });
+        return res.status(204).send();
+    } catch (e) {
+        if (e instanceof NotFoundError) return res.status(404).json({ message: 'Account not found' });
+        if (e instanceof DbError)       return res.status(500).json({ message: 'Internal error' });
+        throw e;
+    }
+});
+
+
+/**
+ * @swagger
+ * /api/auth/forgot-password:
+ *   post:
+ *     summary: Request a password reset email
+ *     tags: [Auth]
+ *     security: []
+ *     description: >
+ *       Sends a password reset link to the given email address. Always returns
+ *       200 regardless of whether the email exists (no information leakage).
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             required: [email]
+ *             properties:
+ *               email: { type: string, format: email }
+ *     responses:
+ *       200: { description: Reset email sent (or silently ignored if email unknown) }
+ *       400: { description: Missing or invalid email }
+ *       500: { description: Internal error }
+ */
+router.post('/forgot-password', async (req: Request, res: Response) => {
+    const { email } = req.body as { email?: string };
+    if (!email) return res.status(400).json({ message: 'Email is required.' });
+    if (!isValidEmail(email)) return res.status(400).json({ message: 'Invalid email address.' });
+    try {
+        const result = await authProvider.createPasswordResetToken(email);
+        if (result) {
+            const resetUrl = `${process.env.FRONTEND_URL ?? 'http://localhost:5173'}/reset-password?token=${result.token}`;
+            fireAndForgetEmail(() => {
+                const template = passwordResetEmail(result.firstName, resetUrl);
+                sendEmail(result.email, template.subject, template.html, template.text);
+            });
+        }
+        // Always return 200 to prevent email enumeration
+        return res.status(200).json({ message: 'If that email is registered, a reset link has been sent.' });
+    } catch (e) {
+        if (e instanceof DbError) return res.status(500).json({ message: 'Internal error' });
+        throw e;
+    }
+});
+
+/**
+ * @swagger
+ * /api/auth/reset-password:
+ *   post:
+ *     summary: Reset password using a token from the reset email
+ *     tags: [Auth]
+ *     security: []
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             required: [token, newPassword]
+ *             properties:
+ *               token: { type: string }
+ *               newPassword: { type: string, minLength: 8 }
+ *     responses:
+ *       200: { description: Password has been reset }
+ *       400: { description: Invalid/expired token or weak password }
+ *       500: { description: Internal error }
+ */
+router.post('/reset-password', async (req: Request, res: Response) => {
+    const { token, newPassword } = req.body as { token?: string; newPassword?: string };
+    if (!token || !newPassword) return res.status(400).json({ message: 'Token and new password are required.' });
+    try {
+        validatePassword(newPassword);
+        const result = await authProvider.resetPassword(token, newPassword);
+        return res.status(result.status).json({ message: result.message });
+    } catch (e) {
+        if (e instanceof ValidationError) return res.status(400).json({ message: e.message });
+        if (e instanceof DbError) return res.status(500).json({ message: 'Internal error' });
+        throw e;
+    }
+});
+
+/**
+ * @swagger
+ * /api/auth/verify-email:
+ *   post:
+ *     summary: Verify a user's email address using a token from the verification email
+ *     tags: [Auth]
+ *     security: []
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             required: [token]
+ *             properties:
+ *               token: { type: string }
+ *     responses:
+ *       200: { description: Email verified successfully }
+ *       400: { description: Invalid or expired verification token }
+ *       500: { description: Internal error }
+ */
+router.post('/verify-email', async (req: Request, res: Response) => {
+    const { token } = req.body as { token?: string };
+    if (!token) return res.status(400).json({ message: 'Verification token is required.' });
+    try {
+        const result = await authProvider.verifyEmail(token);
+        return res.status(result.status).json({ message: result.message });
+    } catch (e) {
+        if (e instanceof DbError) return res.status(500).json({ message: 'Internal error' });
+        throw e;
+    }
+});
+
+/**
+ * @swagger
+ * /api/auth/resend-verification:
+ *   post:
+ *     summary: Resend the email verification link (requires authentication)
+ *     tags: [Auth]
+ *     responses:
+ *       200: { description: Verification email sent (or already verified) }
+ *       401: { description: Not authenticated }
+ *       500: { description: Internal error }
+ */
+router.post('/resend-verification', verifyUser, async (req: Request, res: Response) => {
+    if (!req.session) return res.status(401).json({ message: 'Not verified.' });
+    try {
+        const result = await authProvider.createEmailVerificationTokenByEmail(req.session.email);
+        if (!result) {
+            return res.status(200).json({ message: 'Email is already verified.' });
+        }
+        const verifyUrl = `${process.env.FRONTEND_URL ?? 'http://localhost:5173'}/verify-email?token=${result.token}`;
+        fireAndForgetEmail(() => {
+            const template = emailVerificationEmail(result.firstName, verifyUrl);
+            sendEmail(req.session!.email, template.subject, template.html, template.text);
+        });
+        return res.status(200).json({ message: 'Verification email sent.' });
+    } catch (e) {
+        if (e instanceof DbError) return res.status(500).json({ message: 'Internal error' });
         throw e;
     }
 });

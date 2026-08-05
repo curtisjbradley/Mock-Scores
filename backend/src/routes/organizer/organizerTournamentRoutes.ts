@@ -9,7 +9,7 @@ import { uuidRegex } from "../../authUtils";
 import { transferOwnership } from "../../providers/coachProvider";
 import { TournamentRequest } from "../../types/express";
 import { tournamentHandler, scorerHandler, organizerHandler, teamHandler } from "../../types/handlers";
-import {EmailTemplate, organizerAddedEmail, sendEmail, teamAddedEmail} from "../../email";
+import {EmailTemplate, isValidEmail, organizerAddedEmail, sendEmail, teamAddedEmail} from "../../email";
 import { removeCoachHandler, addStudentHandler } from "../teamHandlers";
 
 function validateWitnessCounts(format: TournamentPayload['caseFormat'], witnesses: IWitnesses): string | null {
@@ -407,6 +407,7 @@ function verifyScorer(req: Request, res: Response, next: NextFunction) {
     const scorer: IScorer = req.body;
     if (!scorer?.email || !scorer?.first_name || !scorer?.last_name || !scorer?.scorer_id)
         return res.status(409).json({ message: 'Missing required field(s)' });
+    if (!isValidEmail(scorer.email)) return res.status(400).json({ message: 'Invalid email address' });
     req.scorer = scorer;
     next();
 }
@@ -696,6 +697,7 @@ async function verifyOrganizerPayload(req: Request, res: Response, next: NextFun
     if (!org) return res.status(400).json({ message: 'No organizer in body' });
     const o: IOrganizer = org;
     if (!o.name || !o.email || !o.role) return res.status(400).json({ message: 'Missing required fields' });
+    if (!isValidEmail(o.email)) return res.status(400).json({ message: 'Invalid email address' });
     req.selectedOrganizer = o;
     next();
 }
@@ -997,6 +999,7 @@ function verifyTeamPayload(req: Request, res: Response, next: NextFunction) {
     if (!team) return res.status(400).json({ message: 'No team in body' });
     const t: ITeam = team;
     if (!t.name || !t.coach_email) return res.status(400).json({ message: 'Missing required fields' });
+    if (!isValidEmail(t.coach_email)) return res.status(400).json({ message: 'Invalid coach email address' });
     req.selectedTeam = t;
     next();
 }
@@ -1236,6 +1239,7 @@ router.get('/teams/:teamId/coaches', async (req: Request, res: Response) => {
 router.post('/teams/:teamId/coaches', async (req: Request, res: Response) => {
     const { email } = req.body as { email?: string };
     if (!email) return res.status(400).json({ message: 'Missing email' });
+    if (!isValidEmail(email)) return res.status(400).json({ message: 'Invalid email address' });
     return res.status(201).json(await coachProvider.addCoach(req.params.teamId as string, email));
 });
 
@@ -1559,19 +1563,216 @@ async function verifyRound(req: Request, res: Response, next: NextFunction) {
 
 router.use('/rounds/:round', verifyRound, roundRoutes);
 
+// ── Export / Download ─────────────────────────────────────────────────────────
+
+function escapeCsvField(value: string): string {
+    if (value.includes(',') || value.includes('"') || value.includes('\n'))
+        return `"${value.replace(/"/g, '""')}"`;
+    return value;
+}
+
+/**
+ * @swagger
+ * /api/organizer/tournament/{tournamentId}/export/standings:
+ *   get:
+ *     summary: Download standings as CSV
+ *     tags: [Organizer - Export]
+ *     parameters:
+ *       - in: path
+ *         name: tournamentId
+ *         required: true
+ *         schema: { type: string, format: uuid }
+ *     responses:
+ *       200: { description: CSV file }
+ *       500: { description: Database error }
+ */
+router.get('/export/standings', tournamentHandler(async (req, res) => {
+    try {
+        const data = await organizer.getOrganizerStandingsData(req.tournament);
+        const { teams, ballots } = data;
+
+        // Build a map of team stats
+        const statsMap = new Map<string, { name: string; code: string; won: number; lost: number; pointsFor: number; pointsAgainst: number }>();
+        for (const t of teams)
+            statsMap.set(t.id, { name: t.name, code: t.code, won: 0, lost: 0, pointsFor: 0, pointsAgainst: 0 });
+
+        // Aggregate ballots per pairing, then determine wins/losses per ballot
+        for (const b of ballots) {
+            const pStats = statsMap.get(b.p_team_id);
+            const dStats = statsMap.get(b.d_team_id);
+            if (pStats) {
+                pStats.pointsFor += b.p_points;
+                pStats.pointsAgainst += b.d_points;
+                if (b.p_points > b.d_points) pStats.won++;
+                else if (b.d_points > b.p_points) pStats.lost++;
+            }
+            if (dStats) {
+                dStats.pointsFor += b.d_points;
+                dStats.pointsAgainst += b.p_points;
+                if (b.d_points > b.p_points) dStats.won++;
+                else if (b.p_points > b.d_points) dStats.lost++;
+            }
+        }
+
+        const header = 'Team Name,Team Code,Ballots Won,Ballots Lost,Total Points For,Total Points Against';
+        const rows = [...statsMap.values()].map(s =>
+            `${escapeCsvField(s.name)},${escapeCsvField(s.code)},${s.won},${s.lost},${s.pointsFor},${s.pointsAgainst}`
+        );
+
+        const csv = [header, ...rows].join('\n');
+        res.setHeader('Content-Type', 'text/csv');
+        res.setHeader('Content-Disposition', 'attachment; filename="standings.csv"');
+        return res.status(200).send(csv);
+    } catch (e) {
+        if (e instanceof DbError) return res.status(500).json({ message: 'Database error' });
+        throw e;
+    }
+}));
+
+/**
+ * @swagger
+ * /api/organizer/tournament/{tournamentId}/export/results:
+ *   get:
+ *     summary: Download round results as CSV
+ *     tags: [Organizer - Export]
+ *     parameters:
+ *       - in: path
+ *         name: tournamentId
+ *         required: true
+ *         schema: { type: string, format: uuid }
+ *     responses:
+ *       200: { description: CSV file }
+ *       500: { description: Database error }
+ */
+router.get('/export/results', tournamentHandler(async (req, res) => {
+    try {
+        const data = await organizer.getOrganizerStandingsData(req.tournament);
+        const { teams, ballots, rounds } = data;
+
+        const teamNameMap = new Map<string, string>();
+        for (const t of teams) teamNameMap.set(t.id, t.name);
+
+        const roundNameMap = new Map<string, string>();
+        for (const r of rounds) roundNameMap.set(r.round_id, r.name);
+
+        const header = 'Round,Prosecution,Defense,P Points,D Points';
+        const rows = ballots.map(b =>
+            `${escapeCsvField(roundNameMap.get(b.round_id) ?? 'Unknown')},${escapeCsvField(teamNameMap.get(b.p_team_id) ?? 'Unknown')},${escapeCsvField(teamNameMap.get(b.d_team_id) ?? 'Unknown')},${b.p_points},${b.d_points}`
+        );
+
+        const csv = [header, ...rows].join('\n');
+        res.setHeader('Content-Type', 'text/csv');
+        res.setHeader('Content-Disposition', 'attachment; filename="results.csv"');
+        return res.status(200).send(csv);
+    } catch (e) {
+        if (e instanceof DbError) return res.status(500).json({ message: 'Database error' });
+        throw e;
+    }
+}));
+
 // ── Scorecard viewer ──────────────────────────────────────────────────────────
+
 
 /**
  * GET /api/organizer/tournament/:tournamentId/pairings/:pairingId/scoresheets/:assignmentId
  * Returns the stored ballot for a scorer assignment, or null if not yet submitted.
  * Used by the organizer's ScorecardViewer page.
- * No round ID is needed because the assignment ID uniquely identifies the ballot.
  */
 router.get('/pairings/:pairingId/scoresheets/:assignmentId', tournamentHandler(async (req, res) => {
     const assignmentId = req.params.assignmentId as string;
     if (!uuidRegex.test(assignmentId)) return res.status(400).json({ message: 'Invalid assignment ID' });
-    const ballot = await scorerProv.getBallot(assignmentId);
-    return res.status(200).json(ballot);
+    const [sheet, ballot, editLog] = await Promise.all([
+        scorerProv.getScoreSheet(assignmentId, { skipGuards: true }).catch(() => null),
+        scorerProv.getBallot(assignmentId),
+        organizer.getBallotEditLog(assignmentId),
+    ]);
+    return res.status(200).json({ sheet, ballot, editLog });
+}));
+/**
+ * @swagger
+ * /api/organizer/tournament/{tournamentId}/pairings/{pairingId}/scoresheets/{assignmentId}:
+ *   put:
+ *     summary: Edit a submitted ballot's scores
+ *     tags: [Organizer - Scorecards]
+ *     parameters:
+ *       - in: path
+ *         name: tournamentId
+ *         required: true
+ *         schema: { type: string, format: uuid }
+ *       - in: path
+ *         name: pairingId
+ *         required: true
+ *         schema: { type: string, format: uuid }
+ *       - in: path
+ *         name: assignmentId
+ *         required: true
+ *         schema: { type: string, format: uuid }
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             required: [scores, reason]
+ *             properties:
+ *               scores: { type: array }
+ *               reason: { type: string }
+ *     responses:
+ *       200: { description: Ballot updated }
+ *       400: { description: Invalid input }
+ *       404: { description: Ballot not found }
+ *       500: { description: Database error }
+ */
+router.put('/pairings/:pairingId/scoresheets/:assignmentId', tournamentHandler(async (req, res) => {
+    const assignmentId = req.params.assignmentId as string;
+    if (!uuidRegex.test(assignmentId)) return res.status(400).json({ message: 'Invalid assignment ID' });
+    const { scores, reason } = req.body as { scores?: { assignmentKey: string; side: 'P' | 'D'; score: number; studentId: string | null; categoryId: string }[]; reason?: string };
+    if (!Array.isArray(scores) || !reason?.trim()) return res.status(400).json({ message: 'scores array and reason are required' });
+    try {
+        await organizer.editBallot(assignmentId, { scores }, req.session.email, reason.trim());
+        return res.status(200).json({ success: true });
+    } catch (e) {
+        if (e instanceof NotFoundError) return res.status(404).json({ message: e.message });
+        if (e instanceof DbError) return res.status(500).json({ message: 'Unable to update ballot' });
+        throw e;
+    }
+}));
+/**
+ * @swagger
+ * /api/organizer/tournament/{tournamentId}/pairings/{pairingId}/scoresheets/{assignmentId}:
+ *   delete:
+ *     summary: Delete a submitted ballot
+ *     tags: [Organizer - Scorecards]
+ *     parameters:
+ *       - in: path
+ *         name: tournamentId
+ *         required: true
+ *         schema: { type: string, format: uuid }
+ *       - in: path
+ *         name: pairingId
+ *         required: true
+ *         schema: { type: string, format: uuid }
+ *       - in: path
+ *         name: assignmentId
+ *         required: true
+ *         schema: { type: string, format: uuid }
+ *     responses:
+ *       204: { description: Ballot deleted }
+ *       400: { description: Invalid assignment ID }
+ *       404: { description: Ballot not found }
+ *       500: { description: Database error }
+ */
+router.delete('/pairings/:pairingId/scoresheets/:assignmentId', tournamentHandler(async (req, res) => {
+    const assignmentId = req.params.assignmentId as string;
+    if (!uuidRegex.test(assignmentId)) return res.status(400).json({ message: 'Invalid assignment ID' });
+    try {
+        await organizer.deleteBallot(assignmentId);
+        return res.status(204).send();
+    } catch (e) {
+        if (e instanceof NotFoundError) return res.status(404).json({ message: e.message });
+        if (e instanceof DbError) return res.status(500).json({ message: 'Unable to delete ballot' });
+        throw e;
+    }
 }));
 
 export default router;

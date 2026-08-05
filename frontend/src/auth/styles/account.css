@@ -121,3 +121,47 @@
     color: var(--green-text-alt);
     margin: 0 0 0.5rem;
 }
+
+.account-danger-zone {
+    border: 1px solid var(--danger);
+    border-radius: var(--radius);
+    padding: 1.25rem 1.5rem;
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+}
+
+.account-danger-heading {
+    font-size: 1.1rem;
+    margin: 0;
+    color: var(--danger);
+}
+
+.account-danger-description {
+    font-size: 0.85rem;
+    color: var(--text-muted);
+    margin: 0;
+}
+
+.account-delete {
+    height: 2.75rem;
+    border: none;
+    border-radius: var(--radius);
+    background: var(--danger);
+    color: var(--white);
+    font-size: 1rem;
+    font-weight: 600;
+    font-family: inherit;
+    cursor: pointer;
+    transition: background 140ms ease, opacity 140ms ease;
+    margin-top: 0.5rem;
+}
+
+.account-delete:hover {
+    opacity: 0.9;
+}
+
+.account-delete:focus-visible {
+    outline: none;
+    box-shadow: 0 0 0 0.25rem var(--focus);
+}

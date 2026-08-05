@@ -22,4 +22,12 @@ export interface IPairingScorer {
     name: string;
     is_presider: boolean;
     conflict_reported: boolean;
+    p_points: number | null;
+    d_points: number | null;
+}
+
+export interface IBallotStatus {
+    pairing_id: string;
+    total_scorers: number;
+    submitted: number;
 }

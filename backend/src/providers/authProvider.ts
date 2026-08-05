@@ -1,5 +1,6 @@
 import { dbQuery } from '../db';
 import bcrypt from 'bcrypt';
+import { randomBytes, createHash } from 'crypto';
 import {
     signToken,
     signRefreshToken,
@@ -8,7 +9,7 @@ import {
     refreshTokenTtlMs,
 } from '../authUtils';
 import type { IAuthRow } from '../types/dbtypes';
-import { AlreadyExistsError, DbError } from '../errors';
+import { AlreadyExistsError, DbError, NotFoundError } from '../errors';
 import { sendEmail, welcomeEmail } from '../email';
 
 interface IStatusResponse { status: number; message: string; }
@@ -237,6 +238,66 @@ export class AuthProvider {
         await dbQuery('DELETE FROM refresh_tokens WHERE user_id = $1', [userId]);
     }
 
+    /**
+     * Creates a password reset token for the given email. If the email doesn't
+     * exist, returns silently (no information leakage). The token is hashed
+     * before storage. Replaces any existing reset token for the user.
+     */
+    async createPasswordResetToken(email: string): Promise<{
+        token: string; firstName: string; email: string;
+    } | null> {
+        const user = (await dbQuery<IAuthRow>(
+            'SELECT user_id, first_name, email FROM auth WHERE LOWER(email) = LOWER($1)',
+            [email],
+        ))?.rows[0];
+        if (!user) return null; // silent — don't reveal whether email exists
+
+        // Google-only users (no password_hash) can still reset to set a password
+        const token = randomBytes(32).toString('hex');
+        const tokenHash = createHash('sha256').update(token).digest('hex');
+        const expiresAt = new Date(Date.now() + 60 * 60 * 1000); // 1 hour
+
+        // UPSERT: only one active token per user (UNIQUE on user_id)
+        const result = await dbQuery(
+            `INSERT INTO password_reset_tokens (user_id, token_hash, expires_at)
+             VALUES ($1, $2, $3)
+             ON CONFLICT (user_id) DO UPDATE SET token_hash = EXCLUDED.token_hash, expires_at = EXCLUDED.expires_at, created_at = now()`,
+            [user.user_id, tokenHash, expiresAt.toISOString()],
+        );
+        if (!result) throw new DbError('createPasswordResetToken');
+
+        return { token, firstName: user.first_name, email: user.email };
+    }
+
+    /**
+     * Validates a password reset token and sets the new password.
+     * Revokes all refresh tokens for the user (forced re-login everywhere).
+     * Deletes the reset token after use.
+     */
+    async resetPassword(token: string, newPassword: string): Promise<IStatusResponse> {
+        const tokenHash = createHash('sha256').update(token).digest('hex');
+        const row = (await dbQuery<{ user_id: string; expires_at: string }>(
+            'SELECT user_id, expires_at FROM password_reset_tokens WHERE token_hash = $1',
+            [tokenHash],
+        ))?.rows[0];
+
+        if (!row) return { status: 400, message: 'Invalid or expired reset link' };
+        if (new Date(row.expires_at) < new Date()) {
+            await dbQuery('DELETE FROM password_reset_tokens WHERE token_hash = $1', [tokenHash]);
+            return { status: 400, message: 'Reset link has expired' };
+        }
+
+        const hash = await bcrypt.hash(newPassword, 10);
+        const updated = await dbQuery('UPDATE auth SET password_hash = $1 WHERE user_id = $2', [hash, row.user_id]);
+        if (!updated) throw new DbError('resetPassword update');
+
+        // Clean up: delete the used token and revoke all sessions
+        await dbQuery('DELETE FROM password_reset_tokens WHERE user_id = $1', [row.user_id]);
+        await this.revokeAllRefreshTokens(row.user_id);
+
+        return { status: 200, message: 'Password has been reset' };
+    }
+
     /** Changes a user's password and revokes all existing refresh tokens. */
     async changePassword(
         userId: string,
@@ -256,5 +317,87 @@ export class AuthProvider {
         // Invalidate all sessions on password change
         await this.revokeAllRefreshTokens(userId);
         return { status: 200, message: 'Password updated' };
+    }
+
+    /**
+     * Permanently deletes a user account and all associated data.
+     * CASCADE constraints handle refresh_tokens, password_reset_tokens,
+     * tournament_owners, and team_coaches.
+     */
+    async deleteAccount(userId: string): Promise<void> {
+        const result = await dbQuery('DELETE FROM auth WHERE user_id = $1', [userId]);
+        if (!result) throw new DbError('deleteAccount');
+        if (result.rowCount === 0) throw new NotFoundError('Account not found');
+    }
+
+    /**
+     * Creates an email verification token for the given user. Stores a SHA-256
+     * hash; returns the raw token so the caller can build the verification URL.
+     * The token expires in 24 hours. Previous tokens for the same user are
+     * deleted to keep the table clean.
+     */
+    async createEmailVerificationToken(userId: string): Promise<string> {
+        // Remove any existing tokens for this user
+        await dbQuery('DELETE FROM email_verification_tokens WHERE user_id = $1', [userId]);
+
+        const token = randomBytes(32).toString('hex');
+        const tokenHash = createHash('sha256').update(token).digest('hex');
+        const expiresAt = new Date(Date.now() + 24 * 60 * 60 * 1000); // 24 hours
+
+        const result = await dbQuery(
+            'INSERT INTO email_verification_tokens (user_id, token_hash, expires_at) VALUES ($1, $2, $3)',
+            [userId, tokenHash, expiresAt.toISOString()],
+        );
+        if (!result) throw new DbError('createEmailVerificationToken');
+
+        return token;
+    }
+
+    /**
+     * Creates an email verification token for the user identified by email.
+     * Convenience wrapper that resolves user_id from email first.
+     * Returns the raw token and user info, or null if the email doesn't exist.
+     */
+    async createEmailVerificationTokenByEmail(email: string): Promise<{
+        token: string; userId: string; firstName: string;
+    } | null> {
+        const user = (await dbQuery<{ user_id: string; first_name: string; email_verified: boolean }>(
+            'SELECT user_id, first_name, email_verified FROM auth WHERE LOWER(email) = LOWER($1)',
+            [email],
+        ))?.rows[0];
+        if (!user) return null;
+        if (user.email_verified) return null; // already verified
+
+        const token = await this.createEmailVerificationToken(user.user_id);
+        return { token, userId: user.user_id, firstName: user.first_name };
+    }
+
+    /**
+     * Validates an email verification token, marks the user as verified, and
+     * deletes the token. Returns a status/message response.
+     */
+    async verifyEmail(token: string): Promise<IStatusResponse> {
+        const tokenHash = createHash('sha256').update(token).digest('hex');
+        const row = (await dbQuery<{ user_id: string; expires_at: string }>(
+            'SELECT user_id, expires_at FROM email_verification_tokens WHERE token_hash = $1',
+            [tokenHash],
+        ))?.rows[0];
+
+        if (!row) return { status: 400, message: 'Invalid or expired verification link' };
+        if (new Date(row.expires_at) < new Date()) {
+            await dbQuery('DELETE FROM email_verification_tokens WHERE token_hash = $1', [tokenHash]);
+            return { status: 400, message: 'Verification link has expired' };
+        }
+
+        const updated = await dbQuery(
+            'UPDATE auth SET email_verified = true WHERE user_id = $1',
+            [row.user_id],
+        );
+        if (!updated) throw new DbError('verifyEmail update');
+
+        // Clean up the used token
+        await dbQuery('DELETE FROM email_verification_tokens WHERE user_id = $1', [row.user_id]);
+
+        return { status: 200, message: 'Email verified successfully' };
     }
 }

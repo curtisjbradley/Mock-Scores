@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { apiFetch } from '../../auth/auth'
-import type { ICourtroom, IPairing, IPairingScorer, IRound, IScorer, ITeam } from '@mock-scores/shared'
+import type { IBallotStatus, ICourtroom, IPairing, IPairingScorer, IRound, IScorer, ITeam } from '@mock-scores/shared'
 
 /**
  * Loads all data needed to display and manage a single tournament round.
@@ -21,6 +21,7 @@ export function useRoundView(id: string | undefined, roundId: string | undefined
     const [pairings, setPairings] = useState<IPairing[]>([])
     const [scorers, setScorers] = useState<IScorer[]>([])
     const [pairingScorers, setPairingScorers] = useState<Record<string, IPairingScorer[]>>({})
+    const [ballotStatus, setBallotStatus] = useState<Record<string, IBallotStatus>>({})
     const [conflictSet, setConflictSet] = useState<Set<string>>(new Set())
     const [error, setError] = useState('')
     const [notFound, setNotFound] = useState(false)
@@ -47,10 +48,16 @@ export function useRoundView(id: string | undefined, roundId: string | undefined
                         .then((s: IPairingScorer[]) => [p.pairing_id, s] as [string, IPairingScorer[]])
                 )),
                 apiFetch(`/api/organizer/tournament/${id}/scorer-conflicts`).then(r => r.ok ? r.json() : []),
+                apiFetch(`/api/organizer/tournament/${id}/rounds/${roundId}/ballot-status`).then(r => r.ok ? r.json() : []),
             ])
-        }).then(([entries, conflicts]) => {
+        }).then(([entries, conflicts, ballotStatuses]) => {
             setPairingScorers(Object.fromEntries(entries as [string, IPairingScorer[]][]))
             setConflictSet(new Set((conflicts as { scorer_id: string; team_id: string }[]).map(c => `${c.scorer_id}:${c.team_id}`)))
+            const statusMap: Record<string, IBallotStatus> = {}
+            for (const s of ballotStatuses as IBallotStatus[]) {
+                statusMap[s.pairing_id] = s
+            }
+            setBallotStatus(statusMap)
         }).catch(() => setError('Failed to load round data.'))
     }, [id, roundId, navigate])
 
@@ -100,7 +107,7 @@ export function useRoundView(id: string | undefined, roundId: string | undefined
         }))
 
     return {
-        round, teams, courtrooms, pairings, scorers, pairingScorers, conflictSet,
+        round, teams, courtrooms, pairings, scorers, pairingScorers, ballotStatus, conflictSet,
         error, notFound,
         saveName, addMatchup, updatePairing, removePairing,
         onScorerAssigned, onScorerRemoved, onPresiderChanged,

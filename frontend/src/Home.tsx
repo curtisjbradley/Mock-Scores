@@ -4,7 +4,6 @@ import './styles/home.css'
 const roles = [
     { label: 'Organizer', path: '/organizer' },
     { label: 'Coach', path: '/coach' },
-    { label: 'Scorer', path: '/scorer' },
 ]
 
 const Home = () => {

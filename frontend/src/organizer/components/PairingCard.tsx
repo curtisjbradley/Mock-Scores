@@ -1,5 +1,6 @@
 import { useState } from 'react'
-import type { ICourtroom, IPairing, IPairingScorer, IScorer, ITeam } from '@mock-scores/shared'
+import { Link } from 'react-router-dom'
+import type { IBallotStatus, ICourtroom, IPairing, IPairingScorer, IScorer, ITeam } from '@mock-scores/shared'
 import { apiFetch } from '../../auth/auth'
 import TeamSelectOptions from '../../shared/components/TeamSelectOptions'
 
@@ -9,6 +10,7 @@ interface Props {
     courtrooms: ICourtroom[]
     scorers: IScorer[]
     assignedScorers: IPairingScorer[]
+    ballotStatus?: IBallotStatus
     tournamentId: string
     roundId: string
     conflictSet: Set<string>
@@ -24,7 +26,7 @@ interface Props {
  * Supports inline editing of courtroom and team assignments, and manages
  * scorer assignment / presider selection.
  */
-export default function PairingCard({ pairing, teams, courtrooms, scorers, assignedScorers, tournamentId, roundId, conflictSet, onRemove, onUpdate, onScorerAssigned, onScorerRemoved, onPresiderChanged }: Props) {
+export default function PairingCard({ pairing, teams, courtrooms, scorers, assignedScorers, ballotStatus, tournamentId, roundId, conflictSet, onRemove, onUpdate, onScorerAssigned, onScorerRemoved, onPresiderChanged }: Props) {
     const [editingCourtroom, setEditingCourtroom] = useState(false)
     const [courtroomDraft, setCourtroomDraft] = useState(pairing.courtroom ?? '')
 
@@ -36,6 +38,8 @@ export default function PairingCard({ pairing, teams, courtrooms, scorers, assig
     const [scorerDraft, setScorerDraft] = useState('')
     const [paperMode, setPaperMode] = useState(false)
     const [paperName, setPaperName] = useState('')
+    const [manualEntryScorer, setManualEntryScorer] = useState<{ name: string; assignmentId: string } | null>(null)
+    const [removeScorerTarget, setRemoveScorerTarget] = useState<{ name: string; assignmentId: string } | null>(null)
 
     const teamName = (tid: string) => {
         const t = teams.find(t => t.id === tid)
@@ -74,7 +78,7 @@ export default function PairingCard({ pairing, teams, courtrooms, scorers, assig
                 })
                 onPresiderChanged(data.assignment_id)
             }
-            onScorerAssigned({ assignment_id: data.assignment_id, type: 'registered', scorer_id: scorerDraft, name: `${scorer.first_name} ${scorer.last_name}`, is_presider: isFirst, conflict_reported: false })
+            onScorerAssigned({ assignment_id: data.assignment_id, type: 'registered', scorer_id: scorerDraft, name: `${scorer.first_name} ${scorer.last_name}`, is_presider: isFirst, conflict_reported: false, p_points: null, d_points: null })
             setScorerDraft('')
             setShowScorerAdd(false)
         })
@@ -92,7 +96,7 @@ export default function PairingCard({ pairing, teams, courtrooms, scorers, assig
                 })
                 onPresiderChanged(data.assignment_id)
             }
-            onScorerAssigned({ assignment_id: data.assignment_id, type: 'paper', scorer_id: data.scorer_id, name: paperName.trim(), is_presider: isFirst, conflict_reported: false })
+            onScorerAssigned({ assignment_id: data.assignment_id, type: 'paper', scorer_id: data.scorer_id, name: paperName.trim(), is_presider: isFirst, conflict_reported: false, p_points: null, d_points: null })
             setPaperName('')
             setShowScorerAdd(false)
         })
@@ -119,6 +123,7 @@ export default function PairingCard({ pairing, teams, courtrooms, scorers, assig
     }
 
     return (
+        <>
         <div className="dash-pairing-card">
             <div className="dash-pairing-topbar">
                 {editingCourtroom ? (
@@ -179,6 +184,17 @@ export default function PairingCard({ pairing, teams, courtrooms, scorers, assig
             <div className="pc-scorers-section">
                 <div className="pc-scorers-header">
                     <span className="pc-scorers-label">Scorers</span>
+                    {ballotStatus && ballotStatus.total_scorers > 0 && (
+                        <span className={`pc-ballot-status ${
+                            ballotStatus.submitted === ballotStatus.total_scorers
+                                ? 'pc-ballot-status--complete'
+                                : ballotStatus.submitted > 0
+                                    ? 'pc-ballot-status--partial'
+                                    : 'pc-ballot-status--none'
+                        }`}>
+                            {ballotStatus.submitted}/{ballotStatus.total_scorers} ballots
+                        </span>
+                    )}
                     {!showScorerAdd && (
                         <button className="pc-save-btn" onClick={() => { setShowScorerAdd(true); setPaperMode(false); setScorerDraft(''); setPaperName('') }}>+ Add</button>
                     )}
@@ -189,6 +205,14 @@ export default function PairingCard({ pairing, teams, courtrooms, scorers, assig
                         conflictSet.has(`${s.scorer_id}:${pairing.p_team}`) ||
                         conflictSet.has(`${s.scorer_id}:${pairing.d_team}`)
                     )
+                    const hasSubmitted = s.p_points != null && s.d_points != null
+                    const diff = hasSubmitted ? s.p_points! - s.d_points! : 0
+                    const diffLabel = hasSubmitted
+                        ? diff > 0 ? `+${diff} P Win` : diff < 0 ? `${diff} D Win` : '0 Tie'
+                        : null
+                    const diffClass = hasSubmitted
+                        ? diff > 0 ? 'pc-diff--p' : diff < 0 ? 'pc-diff--d' : 'pc-diff--tie'
+                        : ''
                     return (
                     <div key={s.assignment_id} className="pc-scorer-add-row">
                         <label className="pc-presider-radio">
@@ -198,7 +222,11 @@ export default function PairingCard({ pairing, teams, courtrooms, scorers, assig
                             Presider
                         </label>
                         <span style={{ flex: 1, fontSize: '0.875rem' }}>
-                            {s.name}{s.type === 'paper' ? ' (paper)' : ''}
+                            {s.name}
+                            {s.type === 'paper'
+                                ? <span className="pc-scorer-type pc-scorer-type--paper">Paper</span>
+                                : <span className="pc-scorer-type pc-scorer-type--online">Online</span>
+                            }
                             {hasConflict && (
                                 <span style={{ marginLeft: 6, background: 'red', color: '#fff', fontSize: '0.7rem', fontWeight: 700, padding: '1px 5px', borderRadius: 3 }}>CONFLICT</span>
                             )}
@@ -206,10 +234,19 @@ export default function PairingCard({ pairing, teams, courtrooms, scorers, assig
                                 <span style={{ marginLeft: 6, background: '#c05000', color: '#fff', fontSize: '0.7rem', fontWeight: 700, padding: '1px 5px', borderRadius: 3 }}>CONFLICT REPORTED</span>
                             )}
                         </span>
-                        {s.type === 'paper' && (
+                        {diffLabel && <span className={`pc-diff ${diffClass}`}>{diffLabel}</span>}
+                        {hasSubmitted && <Link to={`/organizer/${tournamentId}/scoresheet/${pairing.pairing_id}/${s.assignment_id}`} className="pc-view-btn">View</Link>}
+                        {s.type === 'paper' && !hasSubmitted && (
                             <button className="pc-save-btn" onClick={() => window.open(`/score/${s.assignment_id}`, '_blank')}>Input scores</button>
                         )}
-                        <button className="dash-remove-btn" onClick={() => removeScorer(s.assignment_id)}>Remove</button>
+                        {s.type === 'registered' && !hasSubmitted && (
+                            <button className="pc-cancel-btn" onClick={() => setManualEntryScorer({ name: s.name, assignmentId: s.assignment_id })}>Manually enter</button>
+                        )}
+                        {hasSubmitted ? (
+                            <span style={{ fontSize: '0.75rem', color: 'var(--text-muted)', fontStyle: 'italic' }}>Delete ballot to remove</span>
+                        ) : (
+                            <button className="dash-remove-btn" onClick={() => setRemoveScorerTarget({ name: s.name, assignmentId: s.assignment_id })}>Remove</button>
+                        )}
                     </div>
                     )
                 })}
@@ -243,5 +280,43 @@ export default function PairingCard({ pairing, teams, courtrooms, scorers, assig
                 )}
             </div>
         </div>
+
+        {manualEntryScorer && (
+            <div className="modal-backdrop" onClick={() => setManualEntryScorer(null)}>
+                <div className="confirm-modal" onClick={e => e.stopPropagation()}>
+                    <h2 style={{ margin: '0 0 0.75rem' }}>Manually Enter Scores</h2>
+                    <p style={{ margin: '0 0 0.5rem', lineHeight: 1.6 }}>
+                        You are about to manually enter scores for <strong>{manualEntryScorer.name}</strong>.
+                    </p>
+                    <p style={{ margin: '0 0 1rem', fontSize: '0.85rem', color: 'var(--text-muted)' }}>
+                        This will open the scoring form. Once submitted, the scorer's original link will be permanently invalidated and they will no longer be able to submit online.
+                    </p>
+                    <div className="confirm-actions">
+                        <button onClick={() => setManualEntryScorer(null)}>Cancel</button>
+                        <button onClick={() => { window.open(`/score/${manualEntryScorer.assignmentId}`, '_blank'); setManualEntryScorer(null) }}>
+                            Open Scoring Form
+                        </button>
+                    </div>
+                </div>
+            </div>
+        )}
+
+        {removeScorerTarget && (
+            <div className="modal-backdrop" onClick={() => setRemoveScorerTarget(null)}>
+                <div className="confirm-modal" onClick={e => e.stopPropagation()}>
+                    <h2 style={{ margin: '0 0 0.75rem' }}>Remove Scorer</h2>
+                    <p style={{ margin: '0 0 1rem', lineHeight: 1.6 }}>
+                        Remove <strong>{removeScorerTarget.name}</strong> from this pairing?
+                    </p>
+                    <div className="confirm-actions">
+                        <button onClick={() => setRemoveScorerTarget(null)}>Cancel</button>
+                        <button onClick={() => { removeScorer(removeScorerTarget.assignmentId); setRemoveScorerTarget(null) }} style={{ backgroundColor: '#d32f2f', color: '#fff' }}>
+                            Remove
+                        </button>
+                    </div>
+                </div>
+            </div>
+        )}
+        </>
     )
 }
