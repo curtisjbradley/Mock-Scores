@@ -80,7 +80,7 @@ export default function CoachDashboard({ isOrganizerView = false }: Props) {
                             : `/coach/${id}/witness-order/${teamId}/${pairingId}?side=${side}`)
                     }}
                 />}
-                {tab === 'results' && <ResultsTab results={results} />}
+                {tab === 'results' && <ResultsTab results={results} tournamentId={id ?? ''} />}
                 {tab === 'coaches' && (
                     <CoachesTab
                         coaches={coaches}

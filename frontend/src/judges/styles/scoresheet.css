@@ -384,7 +384,7 @@ html {
 
 @media screen and (max-width: 48rem) {
     #scores {
-        padding-bottom: calc(8rem + env(safe-area-inset-bottom));
+        padding: 0.75rem 0.5rem calc(8rem + env(safe-area-inset-bottom));
     }
 
     #score-table th,
@@ -395,6 +395,12 @@ html {
     #score-table td:first-child {
         font-size: 0.82rem;
         word-break: break-word;
+        max-width: 6rem;
+    }
+
+    .scoresheet-header th {
+        font-size: 0.8rem;
+        letter-spacing: 0.03em;
     }
 
     .case-name {
@@ -405,8 +411,17 @@ html {
     .submit-inactive {
         display: none;
     }
-    .trial-info-card{
+
+    .trial-info-card {
         display: none;
+    }
+
+    /* Category name header stays visible on mobile for context */
+    .category-name th {
+        position: sticky;
+        top: 2.4rem;
+        font-size: 0.8rem;
+        padding: 0.5rem 0.6rem;
     }
 
     .scoresheet-nav {
@@ -433,12 +448,15 @@ html {
         min-height: 3.5rem;
         font-size: 1rem;
         padding: 0.75rem 1.25rem;
+        /* Prevent double-tap zoom on buttons */
+        touch-action: manipulation;
     }
 
     #score-submit.submit-active {
         grid-column: 1 / -1;
         min-height: 3.5rem;
         font-size: 1.1rem;
+        touch-action: manipulation;
     }
 
     .score-input {
@@ -446,6 +464,8 @@ html {
         font-size: 1.2rem;
         min-width: 0;
         width: 100%;
+        /* Prevent zoom on focus in iOS (font-size >= 16px) */
+        touch-action: manipulation;
     }
 
     .student-name,
@@ -461,7 +481,8 @@ html {
     .error {
         width: 100%;
     }
-    #score-submit-desktop{
+
+    #score-submit-desktop {
         display: none;
     }
 
@@ -472,6 +493,44 @@ html {
 
     .score-row:hover td {
         background: rgba(255, 255, 255, 0.04);
+    }
+
+    /* Table fills viewport width */
+    #score-table {
+        border-radius: 0.75rem;
+    }
+
+    .scoresheet-header th:first-child { border-top-left-radius: 0.75rem; }
+    .scoresheet-header th:last-child  { border-top-right-radius: 0.75rem; }
+}
+
+/* Extra-small phones (< 375px) */
+@media screen and (max-width: 23.4375rem) {
+    #score-table th,
+    #score-table td {
+        padding: 0.5rem 0.25rem;
+    }
+
+    #score-table td:first-child {
+        font-size: 0.75rem;
+        max-width: 4.5rem;
+    }
+
+    .score-input {
+        min-height: 3rem;
+        font-size: 1.1rem;
+        padding: 0.35rem 0.25rem;
+    }
+
+    .nav-button {
+        padding: 0.6rem 0.75rem;
+        font-size: 0.9rem;
+    }
+
+    .scoresheet-nav {
+        left: 0.4rem;
+        right: 0.4rem;
+        padding: 0.6rem;
     }
 }
 

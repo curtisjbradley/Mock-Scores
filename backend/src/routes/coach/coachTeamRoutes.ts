@@ -5,7 +5,7 @@ import { uuidRegex } from "../../authUtils";
 import { dbQuery } from "../../db";
 import { AuthenticatedRequest } from "../../types/express";
 import { authedHandler } from "../../types/handlers";
-import {coachAddedToTeam, EmailTemplate, sendEmail} from "../../email";
+import {coachAddedToTeam, EmailTemplate, isValidEmail, sendEmail} from "../../email";
 import {getTeam, getTournamentFromTeamId} from "../../providers/coachProvider";
 import { removeCoachHandler, addStudentHandler } from "../teamHandlers";
 
@@ -70,6 +70,7 @@ router.get("/coaches", authedHandler(async (req, res) => {
 router.post("/coaches", authedHandler(async (req, res) => {
     const { email } = req.body as { email?: string };
     if (!email) return res.status(400).json({ message: "Missing email" });
+    if (!isValidEmail(email)) return res.status(400).json({ message: "Invalid email address" });
 
     const newCoach = await coach.addCoach(req.params.teamId as string, email)
 

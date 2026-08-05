@@ -1,15 +1,16 @@
 import { useState, useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
-import type { IRound } from '@mock-scores/shared'
+import type { IBallotStatus, IRound } from '@mock-scores/shared'
 import Section from './Section'
 import { ConfirmRemoveModal } from '../components/modals'
 import { useConfirmRemove } from '../../shared/hooks/useConfirmRemove'
 import { apiFetch } from '../../auth/auth'
 import '../styles/rounds.css'
 
-function RoundRow({ round, tournamentId, onRemove, onSave }: {
+function RoundRow({ round, tournamentId, ballotSummary, onRemove, onSave }: {
     round: IRound
     tournamentId: string
+    ballotSummary: { total: number; submitted: number } | null
     onRemove: (id: string) => void
     onSave: (updated: IRound) => void
 }) {
@@ -68,6 +69,17 @@ function RoundRow({ round, tournamentId, onRemove, onSave }: {
             <button className="dash-open-round-btn" onClick={() => navigate(`/organizer/${tournamentId}/round/${round.round_id}`)}>
                 Open →
             </button>
+            {ballotSummary && ballotSummary.total > 0 && (
+                <span className={`pc-ballot-status ${
+                    ballotSummary.submitted === ballotSummary.total
+                        ? 'pc-ballot-status--complete'
+                        : ballotSummary.submitted > 0
+                            ? 'pc-ballot-status--partial'
+                            : 'pc-ballot-status--none'
+                }`}>
+                    {ballotSummary.submitted}/{ballotSummary.total} ballots
+                </span>
+            )}
             <button className="dash-remove-btn" onClick={() => onRemove(round.round_id)}>
                 Remove
             </button>
@@ -78,6 +90,7 @@ function RoundRow({ round, tournamentId, onRemove, onSave }: {
 export default function RoundsTab({ tournamentId }: { tournamentId: string }) {
     const [rounds, setRounds] = useState<IRound[]>([])
     const [error, setError] = useState<string | null>(null)
+    const [ballotStatusByRound, setBallotStatusByRound] = useState<Record<string, { total: number; submitted: number }>>({})
     const confirmRemove = useConfirmRemove<string>()
 
     useEffect(() => {
@@ -86,7 +99,23 @@ export default function RoundsTab({ tournamentId }: { tournamentId: string }) {
                 if (!res.ok) throw new Error()
                 return res.json()
             })
-            .then((data: IRound[]) => setRounds(data))
+            .then((data: IRound[]) => {
+                setRounds(data)
+                // Fetch ballot status for each round
+                Promise.all(data.map(r =>
+                    apiFetch(`/api/organizer/tournament/${tournamentId}/rounds/${r.round_id}/ballot-status`)
+                        .then(res => res.ok ? res.json() : [])
+                        .then((statuses: IBallotStatus[]) => ({
+                            roundId: r.round_id,
+                            total: statuses.reduce((sum, s) => sum + s.total_scorers, 0),
+                            submitted: statuses.reduce((sum, s) => sum + s.submitted, 0),
+                        }))
+                )).then(results => {
+                    const map: Record<string, { total: number; submitted: number }> = {}
+                    for (const r of results) map[r.roundId] = { total: r.total, submitted: r.submitted }
+                    setBallotStatusByRound(map)
+                })
+            })
             .catch(() => setError('Failed to load rounds.'))
     }, [tournamentId])
 
@@ -130,6 +159,7 @@ export default function RoundsTab({ tournamentId }: { tournamentId: string }) {
                 <button className="org-new-btn" onClick={handleAdd}>+ Add round</button>
                 {sorted.map(round => (
                     <RoundRow key={round.round_id} round={round} tournamentId={tournamentId}
+                        ballotSummary={ballotStatusByRound[round.round_id] ?? null}
                         onRemove={id => confirmRemove.open(id)}
                         onSave={handleSave} />
                 ))}

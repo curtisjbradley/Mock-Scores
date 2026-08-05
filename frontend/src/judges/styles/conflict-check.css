@@ -126,5 +126,6 @@
 
     .conflict-actions button {
         min-height: 3.5rem;
+        touch-action: manipulation;
     }
 }

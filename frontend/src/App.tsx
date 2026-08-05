@@ -21,6 +21,9 @@ const WitnessCallOrder = lazy(() => import('./coach/pages/WitnessCallOrder.tsx')
 const Account = lazy(() => import('./auth/Account.tsx').then(m => ({ default: m.Account })));
 const LoginPage = lazy(() => import('./auth/LoginPage.tsx'));
 const Register = lazy(() => import('./auth/Register.tsx'));
+const ForgotPassword = lazy(() => import('./auth/ForgotPassword.tsx'));
+const ResetPassword = lazy(() => import('./auth/ResetPassword.tsx'));
+const VerifyEmail = lazy(() => import('./auth/VerifyEmail.tsx'));
 const ScoreSheetHome = lazy(() => import('./judges/components/ScoreSheetHome.tsx'));
 
 
@@ -32,8 +35,11 @@ function App() {
 
               <Route index element={<Home />} />
 
-              <Route path="login" element={<LoginPage title="Sign in" footerLink={{ text: "Don't have an account?", label: "Register", to: "/register" }} />} />
+              <Route path="login" element={<LoginPage />} />
               <Route path="register" element={<Register />} />
+              <Route path="forgot-password" element={<ForgotPassword />} />
+              <Route path="reset-password" element={<ResetPassword />} />
+              <Route path="verify-email" element={<VerifyEmail />} />
               <Route path="account" element={<Account />} />
 
               <Route path="organizer" element={<ProtectedRoute />}>
@@ -54,6 +60,7 @@ function App() {
                 <Route path=":id" element={<CoachDashboard />} />
                 <Route path=":id/assign-roles/:teamId/:pairingId/:side" element={<AssignRoles />} />
                 <Route path=":id/witness-order/:teamId/:pairingId" element={<WitnessCallOrder />} />
+                <Route path=":id/ballot/:pairingId/:assignmentId" element={<ScorecardViewer />} />
                 <Route path=":id/:tab" element={<CoachDashboard />} />
                   <Route path=":id/*" element={<NotFound />} />
               </Route>

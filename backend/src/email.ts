@@ -16,10 +16,20 @@ if (process.env.NODE_ENV !== 'test') {
 
 const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
 
+/** Returns true when the string looks like a valid email address. */
+export function isValidEmail(email: string): boolean {
+    return EMAIL_RE.test(email);
+}
+
 export async function sendEmail(to: string, subject: string, html: string, text: string): Promise<void> {
     if (!EMAIL_RE.test(to)) throw new Error(`Invalid email address: ${to}`)
-    const info = await transporter.sendMail({ from: process.env.MAIL_FROM, to, subject, html, text })
-    console.log(`Email sent to ${to} — MessageId: ${info.messageId}`)
+
+    await transporter.sendMail({ from: process.env.MAIL_FROM, to, subject, html, text }).then( info =>
+        console.log(`Email sent to ${to} — MessageId: ${info.messageId}`)
+    ).catch((e) => {
+        console.log("error sending email");
+        console.error(e)
+    })
 }
 
 // ── Templates ──────────────────────────────────────────────────────────────────
@@ -80,15 +90,14 @@ export function passwordChangedEmail(firstName: string): EmailTemplate {
 }
 
 export function organizerAddedEmail(firstName: string, tournamentName: string): EmailTemplate {
-    const safeFirstName = escapeHtml(firstName)
-    const safeTournamentName = escapeHtml(tournamentName)
-    const subject = `You've been added as an organizer for ${safeTournamentName}`
+
+    const subject = `You've been added as an organizer for ${escapeHtml(tournamentName)}`
     const html = layout(subject, `
-        <p>Hi ${safeFirstName},</p>
-        <p>You have been added as an organizer for <strong>${safeTournamentName}</strong>.</p>
+        <p>Hi ${escapeHtml(firstName)},</p>
+        <p>You have been added as an organizer for <strong>${escapeHtml(tournamentName)}</strong>.</p>
         <a class="btn" href="${BASE_URL}/organizer">Go to Dashboard</a>
     `)
-    return { subject, html, text: `Hi ${safeFirstName},\n\nYou have been added as an organizer for ${safeTournamentName}.\n\nDashboard: ${BASE_URL}/organizer` }
+    return { subject, html, text: `Hi ${firstName},\n\nYou have been added as an organizer for ${tournamentName}.\n\nDashboard: ${BASE_URL}/organizer` }
 }
 
 
@@ -98,8 +107,8 @@ export function coachAddedToTeam(coachName: string, teamName: string, tournament
 
     const subject = `Added as a coach for ${teamName}`
     const html = layout(subject, `
-        <p>Hello ${coachName},</p>
-        <p>You have been added as a coach for <strong>${teamName}</strong>. This team is successfully registered to compete at ${tournamentName}.</p>
+        <p>Hello ${escapeHtml(coachName)},</p>
+        <p>You have been added as a coach for <strong>${escapeHtml(teamName)}</strong>. This team is successfully registered to compete at ${escapeHtml(tournamentName)}.</p>
         <p>You will receive further updates as the tournament progresses.</p>
         <p>In the meantime, feel free to get comfortable with the dashboard, upload your roster, and add more coaches.</p>
         <p>You can view your team dashboard here: <a href=${dashboardURL}>dashboard.</a></p>
@@ -156,6 +165,18 @@ export function conflictReportEmail(
     }
 }
 
+export function passwordResetEmail(firstName: string, resetUrl: string): EmailTemplate {
+    const subject = 'Reset your Mock Scores password'
+    const safeFirstName = escapeHtml(firstName)
+    const html = layout(subject, `
+        <p>Hi ${safeFirstName},</p>
+        <p>We received a request to reset your password. Click the button below to choose a new password:</p>
+        <a class="btn" href="${resetUrl}">Reset Password</a>
+        <p style="font-size: 0.85em; color: #666;">This link will expire in 1 hour. If you did not request a password reset, you can safely ignore this email.</p>
+    `)
+    return { subject, html, text: `Hi ${safeFirstName},\n\nWe received a request to reset your password.\n\nReset your password: ${resetUrl}\n\nThis link expires in 1 hour. If you did not request this, ignore this email.` }
+}
+
 export function scorerInviteEmail(tournamentName: string, scorecardUrl: string): EmailTemplate {
     const subject = `You've been assigned to score at ${tournamentName}`
     const html = layout(subject, `
@@ -165,4 +186,16 @@ export function scorerInviteEmail(tournamentName: string, scorecardUrl: string):
         <p>If you have any questions, please contact the tournament organizer.</p>
     `)
     return { subject, html, text: `You have been assigned as a scorer at ${tournamentName}.\n\nOpen your scorecard: ${scorecardUrl}` }
+}
+
+export function emailVerificationEmail(firstName: string, verifyUrl: string): EmailTemplate {
+    const subject = 'Verify your Mock Scores email'
+    const safeFirstName = escapeHtml(firstName)
+    const html = layout(subject, `
+        <p>Hi ${safeFirstName},</p>
+        <p>Thanks for signing up! Please verify your email address by clicking the button below:</p>
+        <a class="btn" href="${verifyUrl}">Verify Email</a>
+        <p style="font-size: 0.85em; color: #666;">This link will expire in 24 hours. If you did not create an account, you can safely ignore this email.</p>
+    `)
+    return { subject, html, text: `Hi ${safeFirstName},\n\nThanks for signing up! Please verify your email address:\n\n${verifyUrl}\n\nThis link expires in 24 hours. If you did not create an account, ignore this email.` }
 }

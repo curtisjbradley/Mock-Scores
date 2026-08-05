@@ -287,3 +287,27 @@
     font-weight: 400;
     color: var(--text-muted);
 }
+
+/* ── Print ──────────────────────────────────────────────────────────────── */
+
+@media print {
+    .org-back-btn,
+    .pc-save-btn,
+    .pc-cancel-btn,
+    .pc-view-btn,
+    .dash-remove-btn,
+    .confirm-actions,
+    .account-danger-zone,
+    .scoresheet-nav {
+        display: none !important;
+    }
+
+    .org-main {
+        padding: 0;
+    }
+
+    .org-container {
+        max-width: 100%;
+        box-shadow: none;
+    }
+}

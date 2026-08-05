@@ -12,7 +12,7 @@ import { DbError, NotFoundError, AlreadySubmittedError, ConflictReportedError } 
  * Throws NotFoundError when the assignment does not exist.
  * Throws DbError when a query fails.
  */
-export async function getScoreSheet(assignmentId: string): Promise<IScoreSheetFormat> {
+export async function getScoreSheet(assignmentId: string, options?: { skipGuards?: boolean }): Promise<IScoreSheetFormat> {
     // ── 1. Resolve assignment → pairing → tournament ──────────────────────────
     const asg = (await dbQuery<{
         pairing_id: string;
@@ -49,14 +49,16 @@ export async function getScoreSheet(assignmentId: string): Promise<IScoreSheetFo
     if (!asg) throw new NotFoundError('Assignment not found');
 
     // If the scorer has reported a conflict, block access until reassigned
-    if (asg.conflict_reported) throw new ConflictReportedError();
+    if (asg.conflict_reported && !options?.skipGuards) throw new ConflictReportedError();
 
     // Prevent re-entry: if a ballot already exists this link is spent
-    const existing = (await dbQuery<{ ballot_id: string }>(
-        'SELECT ballot_id FROM ballots WHERE scorer_assignment_id = $1 LIMIT 1',
-        [assignmentId],
-    ))?.rows[0];
-    if (existing) throw new AlreadySubmittedError();
+    if (!options?.skipGuards) {
+        const existing = (await dbQuery<{ ballot_id: string }>(
+            'SELECT ballot_id FROM ballots WHERE scorer_assignment_id = $1 LIMIT 1',
+            [assignmentId],
+        ))?.rows[0];
+        if (existing) throw new AlreadySubmittedError();
+    }
 
     const { pairing_id, tournament_id, p_team, d_team } = asg;
     // This scorer is the presider when their assignment_id matches the presider row's scorer_assignment_id

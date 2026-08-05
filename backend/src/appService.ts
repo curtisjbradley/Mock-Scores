@@ -22,9 +22,9 @@ app.set('trust proxy', 1);
 const STATIC_DIR = path.resolve(__dirname, "../../frontend/dist");
 const PUBLIC_DIR = path.resolve(__dirname, "../../frontend/public");
 
-// Global rate limit applied before all routes
+// Rate limit applied to API routes only — never to static assets.
+// Static files are served below all API routes so they are never affected.
 const globalLimiter = RateLimit({ windowMs: 500, max: 20, skip: () => process.env.NODE_ENV === 'test' });
-app.use(globalLimiter);
 
 // Stricter limit for auth endpoints to mitigate brute-force attacks
 const authLimiter = RateLimit({ windowMs: 30 * 1000, max: 20, skip: () => process.env.NODE_ENV === 'test' });
@@ -37,20 +37,14 @@ app.use('/api/docs', swaggerUi.serve, swaggerUi.setup(swaggerSpec));
 app.get('/api/docs-json', (_req: Request, res: Response) => res.json(swaggerSpec));
 
 app.use('/api/auth', authLimiter, authRouter);
-app.use('/api/organizer/tournament',verifyUser, organizerTournamentRouter);
-app.use('/api/coach', verifyUser, coachRouter);
+app.use('/api/organizer/tournament', globalLimiter, verifyUser, organizerTournamentRouter);
+app.use('/api/coach', globalLimiter, verifyUser, coachRouter);
+app.use('/api/score', globalLimiter, scorerRouter);
+app.use('/webhooks', globalLimiter, express.text({ type: '*/*' }), webhookRouter);
 
-app.use('/api/score', scorerRouter);
-
-
-
+// Static assets — served after all API routes, never rate limited
 app.use(express.static(PUBLIC_DIR));
 app.use(express.static(STATIC_DIR));
-
-
-app.use('/webhooks', express.text({ type: '*/*' }))
-app.use("/webhooks", webhookRouter);
-
 
 app.get(/(.*)/, (_req: Request, res: Response) => {
     res.sendFile(path.join(STATIC_DIR, "index.html"));

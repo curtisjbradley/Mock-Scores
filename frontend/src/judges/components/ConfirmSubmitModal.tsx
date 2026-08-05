@@ -101,22 +101,15 @@ const ConfirmSubmitModal = ({
             const cat = details.scoringCategories[catId];
             return cat.categoryAssignments.flatMap((a) => {
                 const entries = [];
-                if (a.side !== "D" && a.pStudentId) {
+                if (a.side !== "D") {
                     const score = pendingScores[`${a.assignmentKey}P`];
                     if (typeof score === "number")
-                        entries.push({ categoryId: catId, assignmentKey: a.assignmentKey, side: "P", studentId: a.pStudentId, score });
+                        entries.push({ categoryId: catId, assignmentKey: a.assignmentKey, side: "P", studentId: a.pStudentId ?? null, score });
                 }
-                if (a.side !== "P" && a.dStudentId) {
+                if (a.side !== "P") {
                     const score = pendingScores[`${a.assignmentKey}D`];
                     if (typeof score === "number")
-                        entries.push({ categoryId: catId, assignmentKey: a.assignmentKey, side: "D", studentId: a.dStudentId, score });
-                }
-                // Team score rows have no individual student
-                if (a.side === "BOTH" && !a.pStudentId && !a.dStudentId) {
-                    const pScore = pendingScores[`${a.assignmentKey}P`];
-                    const dScore = pendingScores[`${a.assignmentKey}D`];
-                    if (typeof pScore === "number") entries.push({ categoryId: catId, assignmentKey: a.assignmentKey, side: "P", studentId: null, score: pScore });
-                    if (typeof dScore === "number") entries.push({ categoryId: catId, assignmentKey: a.assignmentKey, side: "D", studentId: null, score: dScore });
+                        entries.push({ categoryId: catId, assignmentKey: a.assignmentKey, side: "D", studentId: a.dStudentId ?? null, score });
                 }
                 return entries;
             });
