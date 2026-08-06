@@ -3,6 +3,9 @@ import type { EmailTemplate } from '../../src/email';
 
 const stubTemplate = (): EmailTemplate => ({ subject: '', html: '', text: '' });
 
+const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+export function isValidEmail(email: string): boolean { return EMAIL_RE.test(email); }
+
 export const sendEmail = jest.fn().mockResolvedValue(undefined);
 export const welcomeEmail = jest.fn(stubTemplate);
 export const passwordChangedEmail = jest.fn(stubTemplate);

@@ -1,6 +1,7 @@
 /** @type {import('ts-jest').JestConfigWithTsJest} */
+const tsJestPath = require.resolve('ts-jest');
+
 module.exports = {
-  preset: 'ts-jest',
   testEnvironment: 'node',
   roots: ['<rootDir>/src', '<rootDir>/testing'],
   testMatch: ['**/testing/**/*.test.ts', '**/__tests__/**/*.test.ts'],
@@ -21,10 +22,10 @@ module.exports = {
     '/node_modules/(?!(jose)/)',
   ],
   transform: {
-    '^.+\\.tsx?$': ['ts-jest', {
+    '^.+\\.tsx?$': [tsJestPath, {
       tsconfig: 'tsconfig.jest.json',
     }],
-    '^.+\\.js$': ['ts-jest', {
+    '^.+\\.js$': [tsJestPath, {
       tsconfig: 'tsconfig.jest.json',
     }],
   },
