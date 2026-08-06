@@ -48,7 +48,7 @@ describe('Witnesses Tab', () => {
   })
 
   it('shows swing witness section when checkbox is checked', () => {
-    cy.contains('Case has swing witnesses').closest('label').find('input[type="checkbox"]').check({ force: true })
+    cy.contains('label', 'Case has swing witnesses').click()
     cy.contains('Swing witnesses').should('be.visible')
   })
 
