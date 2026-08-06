@@ -81,6 +81,8 @@
     text-align: left;
     font-family: inherit;
     transition: border-color 140ms ease, box-shadow 140ms ease;
+    flex-wrap: wrap;
+    overflow: hidden;
 }
 
 .org-tournament-card:has(.org-tournament-info:hover) {
@@ -120,12 +122,16 @@
     display: flex;
     flex-direction: column;
     gap: 0.25rem;
+    min-width: 0;
 }
 
 .org-tournament-name {
     font-size: 1rem;
     font-weight: 600;
     color: var(--text);
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
 }
 
 .org-tournament-meta {
