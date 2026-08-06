@@ -203,7 +203,8 @@ router.get("/tournaments/:tournamentId/pairings/:pairingId/ballots", authedHandl
     const pairingId = req.params.pairingId as string;
     if (!uuidRegex.test(tournamentId)) return res.status(400).json({ message: "Invalid tournament ID" });
     if (!uuidRegex.test(pairingId)) return res.status(400).json({ message: "Invalid pairing ID" });
-    return res.status(200).json(await coach.getPairingBallots(pairingId));
+    if (!await coach.canViewPairingResults(tournamentId, pairingId)) return res.status(404).json({ message: "Pairing not found" });
+    return res.status(200).json(await coach.getPairingBallots(tournamentId, pairingId));
 }));
 
 
@@ -239,6 +240,8 @@ router.get("/tournaments/:tournamentId/pairings/:pairingId/ballots/:assignmentId
     if (!uuidRegex.test(pairingId)) return res.status(400).json({ message: "Invalid pairing ID" });
     if (!uuidRegex.test(assignmentId)) return res.status(400).json({ message: "Invalid assignment ID" });
 
+    if (!await coach.isAssignmentInPairingWithPublicResults(tournamentId, pairingId, assignmentId))
+        return res.status(404).json({ message: "Ballot not found" });
 
     const [sheet, ballot] = await Promise.all([
         getScoreSheet(assignmentId, { skipGuards: true }).catch(() => null),

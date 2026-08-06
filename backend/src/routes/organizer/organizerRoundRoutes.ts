@@ -506,15 +506,7 @@ router.post('/pairings/:pairing/scorers/:assignment/resend-link', async (req: Re
     if (!uuidRegex.test(pairing)) return res.status(400).json({ message: 'Invalid pairing ID' });
     if (!uuidRegex.test(assignment)) return res.status(400).json({ message: 'Invalid assignment ID' });
 
-    // Resolve the registered scorer's email from the assignment_id
-    // getScorerInviteContext takes (pairingID, scorerID from scorers table)
-    // The :assignment URL param IS the assignment_id which the scorer uses as their link
-    // We need to resolve the scorer_id from it first - but actually the function
-    // is already used in the bulk flow and resolves by scorer_id. For the resend,
-    // the frontend should pass scorer_id. Read it from the IPairingScorer.scorer_id.
-    const { scorer_id } = req.body as { scorer_id?: string };
-    if (!scorer_id || !uuidRegex.test(scorer_id)) return res.status(400).json({ message: 'Missing scorer_id in body' });
-    const ctx = await organizer.getScorerInviteContext(pairing, scorer_id);
+    const ctx = await organizer.getScorerInviteContextForAssignment(pairing, assignment);
     if (!ctx) return res.status(404).json({ message: 'Scorer not found or is a paper scorer' });
 
     const scorecardUrl = `${BASE_URL}/score/${assignment}`;

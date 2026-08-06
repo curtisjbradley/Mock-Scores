@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { Fragment, useState } from 'react'
 import { Link } from 'react-router-dom'
 import type { ICoachResultRound } from '@mock-scores/shared'
 import { apiFetch } from '../../auth/auth'
@@ -43,8 +43,8 @@ export default function ResultsTab({ results, tournamentId }: { results: ICoachR
                             const pairingBallots = ballots[p.pairing_id]
                             const diff = p.p_points - p.d_points
                             return (
-                                <>
-                                <tr key={p.pairing_id} onClick={() => togglePairing(p.pairing_id)} style={{ cursor: 'pointer' }}>
+                                <Fragment key={p.pairing_id}>
+                                <tr onClick={() => togglePairing(p.pairing_id)} style={{ cursor: 'pointer' }}>
                                     <td>{p.p_team_code} — {p.p_team_name}</td><td><strong>{p.p_points}</strong></td>
                                     <td>{p.d_team_code} — {p.d_team_name}</td><td><strong>{p.d_points}</strong></td>
                                     <td style={{ fontSize: '0.8rem', fontWeight: 700, color: diff > 0 ? '#166534' : diff < 0 ? '#991b1b' : '#4b5563' }}>
@@ -52,7 +52,7 @@ export default function ResultsTab({ results, tournamentId }: { results: ICoachR
                                     </td>
                                 </tr>
                                 {isExpanded && (
-                                    <tr key={`${p.pairing_id}-detail`}>
+                                    <tr>
                                         <td colSpan={5} style={{ padding: '0.5rem 1rem', background: 'var(--surface-muted)' }}>
                                             {loadingId === p.pairing_id && <span style={{ fontSize: '0.85rem', color: 'var(--text-muted)' }}>Loading ballots…</span>}
                                             {pairingBallots && pairingBallots.length === 0 && <span style={{ fontSize: '0.85rem', color: 'var(--text-muted)', fontStyle: 'italic' }}>No individual ballots available.</span>}
@@ -87,7 +87,7 @@ export default function ResultsTab({ results, tournamentId }: { results: ICoachR
                                         </td>
                                     </tr>
                                 )}
-                                </>
+                                </Fragment>
                             )
                         })}</tbody>
                     </table>

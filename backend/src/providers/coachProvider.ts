@@ -335,7 +335,41 @@ export async function getFormatForTournament(tournamentId: string): Promise<{ p_
 }
 
 
-export async function getPairingBallots(pairingId: string): Promise<{
+export async function canViewPairingResults(tournamentId: string, pairingId: string): Promise<boolean> {
+    const row = (await dbQuery<{ pairing_id: string }>(
+        `SELECT p.pairing_id
+         FROM pairings p
+         JOIN rounds r ON r.round_id = p.round_id
+         WHERE p.pairing_id = $1
+           AND r.tournament_id = $2
+           AND r.results_public = true
+         LIMIT 1`,
+        [pairingId, tournamentId],
+    ))?.rows[0];
+    return !!row;
+}
+
+export async function isAssignmentInPairingWithPublicResults(
+    tournamentId: string,
+    pairingId: string,
+    assignmentId: string,
+): Promise<boolean> {
+    const row = (await dbQuery<{ assignment_id: string }>(
+        `SELECT spa.assignment_id
+         FROM scorer_pairing_assignments spa
+         JOIN pairings p ON p.pairing_id = spa.pairing_id
+         JOIN rounds r   ON r.round_id   = p.round_id
+         WHERE spa.assignment_id = $1
+           AND p.pairing_id = $2
+           AND r.tournament_id = $3
+           AND r.results_public = true
+         LIMIT 1`,
+        [assignmentId, pairingId, tournamentId],
+    ))?.rows[0];
+    return !!row;
+}
+
+export async function getPairingBallots(tournamentId: string, pairingId: string): Promise<{
     p_points: number;
     d_points: number;
     assignment_id: string;
@@ -343,8 +377,12 @@ export async function getPairingBallots(pairingId: string): Promise<{
     const rows = (await dbQuery<{ p_points: number; d_points: number; scorer_assignment_id: string }>(
         `SELECT b.p_points, b.d_points, b.scorer_assignment_id
          FROM ballots b
-         WHERE b.pairing_id = $1`,
-        [pairingId]
+         JOIN pairings p ON p.pairing_id = b.pairing_id
+         JOIN rounds r   ON r.round_id   = p.round_id
+         WHERE b.pairing_id = $1
+           AND r.tournament_id = $2
+           AND r.results_public = true`,
+        [pairingId, tournamentId]
     ))?.rows ?? [];
     return rows.map(r => ({ p_points: r.p_points, d_points: r.d_points, assignment_id: r.scorer_assignment_id }));
 }

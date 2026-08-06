@@ -1567,9 +1567,10 @@ router.use('/rounds/:round', verifyRound, roundRoutes);
 // ── Export / Download ─────────────────────────────────────────────────────────
 
 function escapeCsvField(value: string): string {
-    if (value.includes(',') || value.includes('"') || value.includes('\n'))
-        return `"${value.replace(/"/g, '""')}"`;
-    return value;
+    const sanitized = /^[=+\-@]/.test(value) ? `'${value}` : value;
+    if (sanitized.includes(',') || sanitized.includes('"') || sanitized.includes('\n'))
+        return `"${sanitized.replace(/"/g, '""')}"`;
+    return sanitized;
 }
 
 /**

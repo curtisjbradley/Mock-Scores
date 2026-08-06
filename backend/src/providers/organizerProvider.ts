@@ -586,6 +586,27 @@ export async function getScorerInviteContext(pairingID: string, scorerID: string
     return { email: row.email, firstName: row.first_name, lastName: row.last_name, tournamentName: row.tournament_name };
 }
 
+export async function getScorerInviteContextForAssignment(pairingID: string, assignmentID: string): Promise<{
+    email: string; firstName: string; lastName: string; tournamentName: string;
+} | null> {
+    const row = (await dbQuery<{
+        email: string; first_name: string; last_name: string; tournament_name: string;
+    }>(`
+        SELECT s.email, s.first_name, s.last_name, t.name AS tournament_name
+        FROM scorer_pairing_assignments spa
+        JOIN scorers s ON s.scorer_id = spa.registered_scorer_id
+        JOIN pairings p ON p.pairing_id = spa.pairing_id
+        JOIN rounds r ON r.round_id = p.round_id
+        JOIN tournaments t ON t.id = r.tournament_id
+        WHERE spa.assignment_id = $1
+          AND spa.pairing_id = $2
+          AND spa.registered_scorer_id IS NOT NULL
+        LIMIT 1
+    `, [assignmentID, pairingID]))?.rows[0];
+    if (!row) return null;
+    return { email: row.email, firstName: row.first_name, lastName: row.last_name, tournamentName: row.tournament_name };
+}
+
 /** Returns coach emails + tournament name for notifying results going public. */
 export async function getRoundResultsPublicContext(roundID: string): Promise<{
     tournamentName: string; roundName: string; coachEmails: string[];
