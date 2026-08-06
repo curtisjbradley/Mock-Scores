@@ -15,11 +15,16 @@ export default function OrganizersTab({ tournamentId }: { tournamentId: string }
     const confirmRemove = useConfirmRemove<IOrganizer>()
     const [editingId, setEditingId] = useState<string | null>(null)
     const [editEmail, setEditEmail] = useState('')
+    const [bouncedEmails, setBouncedEmails] = useState<Set<string>>(new Set())
 
     useEffect(() => {
         apiFetch(`/api/organizer/tournament/${tournamentId}/organizers`)
             .then(r => r.ok ? r.json() : Promise.reject())
             .then(setOrganizers).catch(console.error)
+        apiFetch(`/api/organizer/tournament/${tournamentId}/bounced-emails`)
+            .then(r => r.ok ? r.json() : [])
+            .then((emails: string[]) => setBouncedEmails(new Set(emails.map(e => e.toLowerCase()))))
+            .catch(() => {})
     }, [tournamentId])
 
     const saveEmail = (org: IOrganizer) => {
@@ -61,7 +66,12 @@ export default function OrganizersTab({ tournamentId }: { tournamentId: string }
                                             onSave={() => saveEmail(org)}
                                             onCancel={() => setEditingId(null)}
                                           />
-                                        : <span className="dash-judge-name">{org.email}</span>
+                                        : <span className="dash-judge-name">
+                                            {org.email}
+                                            {bouncedEmails.has(org.email.toLowerCase()) && (
+                                                <span title="Email delivery failed" style={{ marginLeft: 6, background: '#dc2626', color: '#fff', fontSize: '0.65rem', fontWeight: 700, padding: '1px 5px', borderRadius: 3, verticalAlign: 'middle' }}>⚠ BOUNCED</span>
+                                            )}
+                                          </span>
                                     }
                                 </td>
                                 <td><StatusChip label={org.role} variant={org.role === 'owner' ? 'submitted' : 'pending'} /></td>

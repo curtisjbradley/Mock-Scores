@@ -17,6 +17,8 @@
  * No localStorage manipulation is needed or valid under the new model.
  */
 
+import 'cypress-axe'
+
 Cypress.Commands.add('loginAs', (user: {
   userId: string
   email: string

@@ -4,6 +4,7 @@ import { apiFetch } from '../../auth/auth'
 import { isValidEmail } from '../../utils/validation'
 import { ConfirmRemoveModal } from '../components/modals'
 import ModalBackdrop from '../../shared/components/ModalBackdrop'
+import CsvImportModal from '../../shared/components/CsvImportModal'
 import { useConfirmRemove } from '../../shared/hooks/useConfirmRemove'
 import Section from './Section'
 import { v4 as randomUUID } from 'uuid'
@@ -56,8 +57,8 @@ function ManageConflictsModal({ scorer, tournamentId, onClose }: {
                 )}
                 {available.length > 0 ? (
                     <div className="tc-field">
-                        <label className="tc-label">Add conflicting team</label>
-                        <select className="tc-input" defaultValue="" onChange={e => {
+                        <label className="tc-label" htmlFor="add-conflict-team">Add conflicting team</label>
+                        <select id="add-conflict-team" className="tc-input" defaultValue="" onChange={e => {
                             const team = teams.find(t => t.id === e.target.value)
                             if (team) { addConflict(team); e.target.value = '' }
                         }}>
@@ -88,6 +89,7 @@ export default function ScorersTab({ tournamentId }: { tournamentId: string }) {
     const [lastName, setLastName] = useState('')
     const [email, setEmail] = useState('')
     const [bouncedEmails, setBouncedEmails] = useState<Set<string>>(new Set())
+    const [showImport, setShowImport] = useState(false)
 
     useEffect(() => {
         apiFetch(`/api/organizer/tournament/${tournamentId}/scorers`)
@@ -138,6 +140,7 @@ export default function ScorersTab({ tournamentId }: { tournamentId: string }) {
         <Section title="Scorers" description="Manage available scorers">
             <div className="tab-actions">
                 <button className="org-new-btn" onClick={openAddModal}>+ Add scorer</button>
+                <button className="org-new-btn" onClick={() => setShowImport(true)} style={{ marginLeft: 8 }}>Import CSV</button>
             </div>
 
             <div className="dash-table-scroll">
@@ -212,6 +215,31 @@ export default function ScorersTab({ tournamentId }: { tournamentId: string }) {
                     scorer={conflictsScorer}
                     tournamentId={tournamentId}
                     onClose={() => setConflictsScorer(null)}
+                />
+            )}
+
+            {showImport && (
+                <CsvImportModal
+                    title="Import Scorers"
+                    description="Upload a CSV file with scorer information. Each row will be added as a new scorer."
+                    columns={['first_name', 'last_name', 'email']}
+                    exampleRow="Jane,Smith,jane.smith@example.com"
+                    onClose={() => {
+                        setShowImport(false)
+                        // Refresh scorers list after import
+                        apiFetch(`/api/organizer/tournament/${tournamentId}/scorers`)
+                            .then(r => r.ok ? r.json() : [])
+                            .then((data: IScorer[]) => setScorers(Array.isArray(data) ? data : []))
+                            .catch(() => {})
+                    }}
+                    onImport={async (csv) => {
+                        const res = await apiFetch(`/api/organizer/tournament/${tournamentId}/import/scorers`, {
+                            method: 'POST',
+                            body: JSON.stringify({ csv }),
+                        })
+                        if (!res.ok) throw new Error('Import failed')
+                        return res.json()
+                    }}
                 />
             )}
         </Section>

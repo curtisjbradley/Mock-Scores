@@ -88,8 +88,8 @@ export default function TournamentCaseFormat({ caseFormat, onChange, onNext, onB
                             onRemove={(i) => onChange({ ...caseFormat, [namesKey]: caseFormat[namesKey].filter((_, j) => j !== i) })}
                         />
                         <div className="tc-field">
-                            <label className="tc-label">Witnesses called per trial</label>
-                            <input type="number" min={0}
+                            <label className="tc-label" htmlFor={`witnesses-called-${calledKey}`}>Witnesses called per trial</label>
+                            <input id={`witnesses-called-${calledKey}`} type="number" min={0}
                                 className={`tc-input${submitted && errors[calledKey] ? ' tc-input--invalid' : ''}`}
                                 value={caseFormat[calledKey]}
                                 onChange={e => onChange({ ...caseFormat, [calledKey]: e.target.value === '' ? '' : Number(e.target.value) })}

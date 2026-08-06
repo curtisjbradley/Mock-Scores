@@ -29,6 +29,7 @@ export interface ITournamentRow {
     case_format_id: string;
     num_rounds: number;
     num_teams: number;
+    status: 'active' | 'completed' | 'archived';
 }
 
 export interface ICaseWitnessRow {
