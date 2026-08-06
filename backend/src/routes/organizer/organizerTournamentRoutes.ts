@@ -11,6 +11,7 @@ import { TournamentRequest } from "../../types/express";
 import { tournamentHandler, scorerHandler, organizerHandler, teamHandler } from "../../types/handlers";
 import {EmailTemplate, isValidEmail, organizerAddedEmail, sendEmail, teamAddedEmail} from "../../email";
 import { removeCoachHandler, addStudentHandler } from "../teamHandlers";
+import { dbQuery } from "../../db";
 
 function validateWitnessCounts(format: TournamentPayload['caseFormat'], witnesses: IWitnesses): string | null {
     const swing = witnesses.swingWitnessNames.length;
@@ -1668,6 +1669,45 @@ router.get('/export/results', tournamentHandler(async (req, res) => {
         if (e instanceof DbError) return res.status(500).json({ message: 'Database error' });
         throw e;
     }
+}));
+
+// ── Email delivery status ─────────────────────────────────────────────────────
+
+/**
+ * @swagger
+ * /api/organizer/tournament/{tournamentId}/bounced-emails:
+ *   get:
+ *     summary: Get list of emails that have bounced (delivery failures)
+ *     tags: [Organizer - Tournament]
+ *     parameters:
+ *       - in: path
+ *         name: tournamentId
+ *         required: true
+ *         schema: { type: string, format: uuid }
+ *     responses:
+ *       200: { description: Set of bounced email addresses relevant to this tournament }
+ */
+router.get('/bounced-emails', tournamentHandler(async (req, res) => {
+    const result = await dbQuery<{ email: string }>(
+        `SELECT DISTINCT be.email FROM bounced_emails be
+         WHERE be.email IN (
+             SELECT email FROM scorers WHERE tournament_id = $1
+             UNION SELECT coach_email FROM (
+                 SELECT a.email AS coach_email FROM teams t
+                 JOIN team_coaches tc ON tc.team_id = t.id
+                 JOIN auth a ON a.user_id = tc.coach_id
+                 WHERE t.tournament_id = $1
+                 UNION
+                 SELECT ti.invite_email FROM teams t
+                 JOIN team_invites ti ON ti.team_id = t.id
+                 WHERE t.tournament_id = $1
+             ) coaches
+             UNION SELECT email FROM tournament_delegate_invites WHERE tournament_id = $1
+             UNION SELECT a.email FROM tournament_owners tow JOIN auth a ON a.user_id = tow.delegate_id WHERE tow.tournament_id = $1
+         )`,
+        [req.tournament]
+    );
+    return res.status(200).json(result?.rows.map(r => r.email) ?? []);
 }));
 
 // ── Scorecard viewer ──────────────────────────────────────────────────────────
