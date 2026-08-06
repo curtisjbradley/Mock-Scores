@@ -14,6 +14,8 @@
     display: flex;
     flex-direction: column;
     gap: 0.75rem;
+    min-width: 0;
+    overflow: hidden;
 }
 
 .dash-pairing-topbar {
@@ -21,6 +23,8 @@
     align-items: center;
     justify-content: space-between;
     gap: 0.5rem;
+    flex-wrap: wrap;
+    min-width: 0;
 }
 
 .dash-courtroom-badge {
@@ -52,12 +56,14 @@
     padding: 0.75rem 0;
     border-top: 1px solid var(--border);
     border-bottom: 1px solid var(--border);
+    min-width: 0;
 }
 
 .dash-matchup-side {
     display: flex;
     flex-direction: column;
     gap: 0.2rem;
+    min-width: 0;
 }
 
 .dash-matchup-side--right {
@@ -77,6 +83,9 @@
     font-size: 0.9rem;
     font-weight: 600;
     color: var(--text);
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
 }
 
 .dash-vs {
@@ -91,6 +100,7 @@
     display: flex;
     flex-direction: column;
     gap: 0.4rem;
+    min-width: 0;
 }
 
 .dash-scoresheet-row {
@@ -103,6 +113,7 @@
     border-radius: 0.5rem;
     transition: background 120ms ease;
     flex-wrap: wrap;
+    min-width: 0;
 }
 
 .dash-scoresheet-row:hover {
@@ -114,9 +125,10 @@
     align-items: center;
     gap: 0.4rem;
     flex-wrap: wrap;
+    flex-shrink: 0;
 }
 
-.dash-judge-name { color: var(--text-muted); min-width: 0; overflow-wrap: break-word; }
+.dash-judge-name { color: var(--text-muted); min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; flex: 1 1 0; }
 
 .ss-chip {
     padding: 0.15rem 0.55rem;
@@ -241,6 +253,8 @@
     font-size: 0.85rem;
     font-family: inherit;
     width: 10rem;
+    max-width: 100%;
+    min-width: 0;
     outline: none;
     box-shadow: 0 0 0 0.1875rem var(--focus);
 }
@@ -525,6 +539,8 @@
     font-size: 0.85rem;
     font-family: inherit;
     width: 10rem;
+    max-width: 100%;
+    min-width: 0;
     outline: none;
     box-shadow: 0 0 0 0.1875rem var(--focus);
 }
@@ -606,4 +622,49 @@
 .pc-ballot-status--none {
     background: var(--surface-muted);
     color: var(--text-muted);
+}
+
+/* ── Narrow screen overrides ─────────────────────────────────────────────── */
+@media (max-width: 480px) {
+    .dash-pairing-card {
+        padding: 0.75rem 0.85rem;
+    }
+
+    .dash-matchup-grid {
+        gap: 0.4rem;
+    }
+
+    .dash-team-name {
+        font-size: 0.82rem;
+    }
+
+    .pc-edit-teams {
+        grid-template-columns: 1fr;
+        gap: 0.5rem;
+    }
+
+    .pc-scorer-add-row {
+        flex-wrap: wrap;
+    }
+
+    .pc-paper-form {
+        flex-wrap: wrap;
+    }
+
+    .pc-paper-input {
+        width: 100%;
+    }
+
+    .dash-paper-scorer-input {
+        width: 100%;
+    }
+
+    .dash-paper-scorer-form {
+        flex-wrap: wrap;
+    }
+
+    .dash-scoresheet-actions {
+        width: 100%;
+        justify-content: flex-start;
+    }
 }

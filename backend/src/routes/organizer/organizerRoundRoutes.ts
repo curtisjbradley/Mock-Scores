@@ -5,6 +5,7 @@ import { DbError, NotFoundError } from "../../errors";
 import { uuidRegex } from "../../authUtils";
 import { roundHandler } from "../../types/handlers";
 import { scorerInviteEmail, roundResultsPublicEmail, sendEmail } from "../../email";
+import { dbQuery } from "../../db";
 
 const BASE_URL = process.env.FRONTEND_URL ?? 'http://localhost:5173';
 
@@ -492,6 +493,154 @@ router.post('/send-scoring-links', roundHandler(async (req, res) => {
         sent++;
     }
     return res.status(200).json({ sent });
+}));
+
+/**
+ * POST /api/organizer/tournament/:tournamentId/rounds/:round/generate-pairings
+ * Automatically generates pairings for the round using the specified method.
+ * Accepts optional body: { method: 'random' | 'power' } (default: 'power')
+ * Returns the array of created pairings.
+ */
+router.post('/generate-pairings', roundHandler(async (req, res) => {
+    const method: 'random' | 'power' = req.body?.method === 'random' ? 'random' : 'power';
+    const tournamentId = req.tournament;
+    const roundId = req.round.round_id;
+
+    // Check that the round has no existing pairings
+    const existingPairings = await organizer.getPairings(roundId);
+    if (existingPairings.length > 0) {
+        return res.status(409).json({ message: 'Round already has pairings. Remove them before generating new ones.' });
+    }
+
+    // Get all teams for the tournament
+    const teamsResult = await dbQuery<{ id: string; name: string }>('SELECT id, name FROM teams WHERE tournament_id = $1', [tournamentId]);
+    if (!teamsResult) return res.status(500).json({ message: 'Failed to fetch teams' });
+    const teams = teamsResult.rows;
+
+    if (teams.length < 2) {
+        return res.status(400).json({ message: 'Need at least 2 teams to generate pairings' });
+    }
+
+    // Get all existing pairings across ALL rounds in this tournament for history
+    const historyResult = await dbQuery<{ p_team: string; d_team: string; round_id: string }>(
+        `SELECT p.p_team, p.d_team, p.round_id FROM pairings p
+         JOIN rounds r ON r.round_id = p.round_id
+         WHERE r.tournament_id = $1`,
+        [tournamentId]
+    );
+    const allPairings = historyResult?.rows ?? [];
+
+    // Track side counts per team (how many times prosecution vs defense)
+    const prosCount: Record<string, number> = {};
+    const defCount: Record<string, number> = {};
+    const matchupSet = new Set<string>(); // "teamA:teamB" regardless of sides
+
+    for (const p of allPairings) {
+        prosCount[p.p_team] = (prosCount[p.p_team] ?? 0) + 1;
+        defCount[p.d_team] = (defCount[p.d_team] ?? 0) + 1;
+        // Store matchup in both directions for easy lookup
+        matchupSet.add(`${p.p_team}:${p.d_team}`);
+        matchupSet.add(`${p.d_team}:${p.p_team}`);
+    }
+
+    // For power matching, get win/loss records from ballots
+    const winCounts: Record<string, number> = {};
+    if (method === 'power') {
+        const ballotsResult = await dbQuery<{ p_team_id: string; d_team_id: string; p_points: number; d_points: number }>(
+            `SELECT b.p_team_id, b.d_team_id, b.p_points, b.d_points
+             FROM ballots b WHERE b.tournament_id = $1`,
+            [tournamentId]
+        );
+        if (ballotsResult) {
+            for (const b of ballotsResult.rows) {
+                if (b.p_points > b.d_points) {
+                    winCounts[b.p_team_id] = (winCounts[b.p_team_id] ?? 0) + 1;
+                } else if (b.d_points > b.p_points) {
+                    winCounts[b.d_team_id] = (winCounts[b.d_team_id] ?? 0) + 1;
+                }
+            }
+        }
+    }
+
+    // Order teams based on method
+    const orderedTeams = [...teams];
+    if (method === 'power') {
+        // Sort by win count descending
+        orderedTeams.sort((a, b) => (winCounts[b.id] ?? 0) - (winCounts[a.id] ?? 0));
+    } else {
+        // Random shuffle (Fisher-Yates)
+        for (let i = orderedTeams.length - 1; i > 0; i--) {
+            const j = Math.floor(Math.random() * (i + 1));
+            [orderedTeams[i], orderedTeams[j]] = [orderedTeams[j], orderedTeams[i]];
+        }
+    }
+
+    // If odd number of teams, remove the last one (bye)
+    if (orderedTeams.length % 2 !== 0) {
+        orderedTeams.pop();
+    }
+
+    // Try to avoid rematches by swapping within adjacent pairs if needed
+    // Simple greedy: for each pair, check if they've already faced each other
+    // If so, try to swap with the next pair
+    for (let i = 0; i < orderedTeams.length - 1; i += 2) {
+        const a = orderedTeams[i].id;
+        const b = orderedTeams[i + 1].id;
+        if (matchupSet.has(`${a}:${b}`) && i + 3 < orderedTeams.length) {
+            // Try swapping b with the next pair's second team
+            const c = orderedTeams[i + 2].id;
+            const d = orderedTeams[i + 3].id;
+            if (!matchupSet.has(`${a}:${d}`) && !matchupSet.has(`${c}:${b}`)) {
+                [orderedTeams[i + 1], orderedTeams[i + 3]] = [orderedTeams[i + 3], orderedTeams[i + 1]];
+            }
+        }
+    }
+
+    // Get courtrooms for assignment
+    const courtroomsResult = await dbQuery<{ id: string }>('SELECT id FROM courtrooms WHERE tournament_id = $1', [tournamentId]);
+    const courtrooms = courtroomsResult?.rows ?? [];
+
+    // Generate pairings
+    const createdPairings = [];
+    for (let i = 0; i < orderedTeams.length - 1; i += 2) {
+        const teamA = orderedTeams[i];
+        const teamB = orderedTeams[i + 1];
+
+        // Side assignment: team with fewer prosecution appearances gets prosecution
+        const aPros = prosCount[teamA.id] ?? 0;
+        const bPros = prosCount[teamB.id] ?? 0;
+        let prosecution: string;
+        let defense: string;
+
+        if (aPros < bPros) {
+            prosecution = teamA.id;
+            defense = teamB.id;
+        } else if (bPros < aPros) {
+            prosecution = teamB.id;
+            defense = teamA.id;
+        } else {
+            // Equal — assign based on defense count (fewer defense → defense)
+            const aDef = defCount[teamA.id] ?? 0;
+            const bDef = defCount[teamB.id] ?? 0;
+            if (aDef <= bDef) {
+                prosecution = teamA.id;
+                defense = teamB.id;
+            } else {
+                prosecution = teamB.id;
+                defense = teamA.id;
+            }
+        }
+
+        // Courtroom assignment: cycle through available courtrooms
+        const courtroomId = courtrooms.length > 0
+            ? courtrooms[Math.floor(i / 2) % courtrooms.length].id
+            : null;
+
+        const pairing = await organizer.createRoundPairing(roundId, prosecution, defense, courtroomId as string);
+        createdPairings.push(pairing);
+    }
+
+    return res.status(201).json(createdPairings);
 }));
 
 /**

@@ -7,6 +7,15 @@ import { standingsBlockDefs } from '../blockly/standingsBlocks'
 import { tiebreakerBlockDefs } from '../blockly/tiebreakerBlocks'
 import type { IStandingsTeam } from '@mock-scores/shared'
 
+interface AwardEntry {
+    student_id: string
+    student_name: string
+    team_name: string
+    team_code: string
+    total_nominations: number
+    average_rank: number
+}
+
 const TiebreakerViewer = lazy(() => import('../blockly/TiebreakerViewer'))
 
 interface Round { round_id: string; name: string }
@@ -85,6 +94,7 @@ export default function StandingsTab({ tournamentId }: { tournamentId: string })
     const [payload, setPayload] = useState<StandingsApiPayload | null>(null)
     const [selected, setSelected] = useState<Set<string>>(new Set())
     const [error, setError] = useState<string | null>(null)
+    const [awards, setAwards] = useState<AwardEntry[]>([])
 
     // Single fetch on mount — all data comes back at once
     useEffect(() => {
@@ -96,6 +106,11 @@ export default function StandingsTab({ tournamentId }: { tournamentId: string })
                 setSelected(new Set(data.rounds.map(r => r.round_id)))
             })
             .catch(() => setError('Failed to load standings.'))
+
+        apiFetch(`/api/organizer/tournament/${tournamentId}/awards`)
+            .then(r => r.ok ? r.json() : [])
+            .then((data: AwardEntry[]) => setAwards(data))
+            .catch(() => setAwards([]))
     }, [tournamentId])
 
     const toggleRound = (roundId: string) =>
@@ -227,6 +242,39 @@ export default function StandingsTab({ tournamentId }: { tournamentId: string })
                         </div>
                     </Suspense>
                 </>
+            )}
+
+            {/* Awards / Nominations */}
+            {awards.length > 0 && (
+                <div style={{ marginTop: '2rem' }}>
+                    <strong style={{ display: 'block', marginBottom: '0.5rem', fontSize: '1.1rem' }}>
+                        Outstanding Performer Nominations
+                    </strong>
+                    <div className="dash-table-scroll">
+                        <table className="dash-standings-table">
+                            <thead>
+                                <tr>
+                                    <th>#</th>
+                                    <th>Student</th>
+                                    <th>Team</th>
+                                    <th>Nominations</th>
+                                    <th>Avg Rank</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {awards.map((a, i) => (
+                                    <tr key={a.student_id}>
+                                        <td>{i + 1}</td>
+                                        <td>{a.student_name}</td>
+                                        <td>{a.team_name} ({a.team_code})</td>
+                                        <td>{a.total_nominations}</td>
+                                        <td>{a.average_rank.toFixed(2)}</td>
+                                    </tr>
+                                ))}
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
             )}
         </div>
     )

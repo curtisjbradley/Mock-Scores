@@ -1672,6 +1672,109 @@ router.get('/export/results', tournamentHandler(async (req, res) => {
     }
 }));
 
+// ── Awards / Nominations ──────────────────────────────────────────────────────
+
+/**
+ * @swagger
+ * /api/organizer/tournament/{tournamentId}/awards:
+ *   get:
+ *     summary: Get aggregated nomination awards for the tournament
+ *     tags: [Organizer - Tournament]
+ *     parameters:
+ *       - in: path
+ *         name: tournamentId
+ *         required: true
+ *         schema: { type: string, format: uuid }
+ *     responses:
+ *       200:
+ *         description: Array of nomination summaries sorted by total nominations desc, average rank asc
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: array
+ *               items:
+ *                 type: object
+ *                 properties:
+ *                   student_id: { type: string, format: uuid }
+ *                   student_name: { type: string }
+ *                   team_name: { type: string }
+ *                   team_code: { type: string }
+ *                   total_nominations: { type: integer }
+ *                   average_rank: { type: number }
+ *       500: { description: Database error }
+ */
+router.get('/awards', tournamentHandler(async (req, res) => {
+    try {
+        const ballotsResult = await dbQuery<{ ballot_json: { nominations?: { studentId: string; rank: number }[] } }>(
+            `SELECT ballot_json FROM ballots WHERE tournament_id = $1`,
+            [req.tournament]
+        );
+
+        if (!ballotsResult || ballotsResult.rows.length === 0) {
+            return res.status(200).json([]);
+        }
+
+        // Aggregate nominations from all ballots
+        const nominationMap = new Map<string, { totalNominations: number; totalRank: number }>();
+        for (const row of ballotsResult.rows) {
+            const nominations = row.ballot_json?.nominations;
+            if (!Array.isArray(nominations)) continue;
+            for (const nom of nominations) {
+                if (!nom.studentId || typeof nom.rank !== 'number') continue;
+                const existing = nominationMap.get(nom.studentId);
+                if (existing) {
+                    existing.totalNominations++;
+                    existing.totalRank += nom.rank;
+                } else {
+                    nominationMap.set(nom.studentId, { totalNominations: 1, totalRank: nom.rank });
+                }
+            }
+        }
+
+        if (nominationMap.size === 0) {
+            return res.status(200).json([]);
+        }
+
+        // Fetch student and team info for nominated students
+        const studentIds = [...nominationMap.keys()];
+        const studentsResult = await dbQuery<{ student_id: string; student_name: string; team_name: string; team_code: string }>(
+            `SELECT s.student_id, s.student_name, t.name AS team_name, t.code AS team_code
+             FROM team_rostered_students s
+             JOIN teams t ON t.id = s.team_id
+             WHERE s.student_id = ANY($1)`,
+            [studentIds]
+        );
+
+        const studentInfo = new Map<string, { student_name: string; team_name: string; team_code: string }>();
+        if (studentsResult) {
+            for (const row of studentsResult.rows) {
+                studentInfo.set(row.student_id, { student_name: row.student_name, team_name: row.team_name, team_code: row.team_code });
+            }
+        }
+
+        // Build response array
+        const awards = studentIds
+            .map(studentId => {
+                const stats = nominationMap.get(studentId)!;
+                const info = studentInfo.get(studentId);
+                return {
+                    student_id: studentId,
+                    student_name: info?.student_name ?? 'Unknown',
+                    team_name: info?.team_name ?? 'Unknown',
+                    team_code: info?.team_code ?? '',
+                    total_nominations: stats.totalNominations,
+                    average_rank: Math.round((stats.totalRank / stats.totalNominations) * 100) / 100,
+                };
+            })
+            .sort((a, b) => b.total_nominations - a.total_nominations || a.average_rank - b.average_rank);
+
+        return res.status(200).json(awards);
+    } catch (e) {
+        if (e instanceof DbError) return res.status(500).json({ message: 'Database error' });
+        throw e;
+    }
+}));
+
 // ── Email delivery status ─────────────────────────────────────────────────────
 
 /**

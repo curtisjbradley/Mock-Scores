@@ -109,7 +109,7 @@ export function useRoundView(id: string | undefined, roundId: string | undefined
     return {
         round, teams, courtrooms, pairings, scorers, pairingScorers, ballotStatus, conflictSet,
         error, notFound,
-        saveName, addMatchup, updatePairing, removePairing,
+        saveName, addMatchup, updatePairing, removePairing, setPairings,
         onScorerAssigned, onScorerRemoved, onPresiderChanged,
     }
 }
