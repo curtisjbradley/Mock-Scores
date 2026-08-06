@@ -831,7 +831,8 @@ describe('DELETE /api/organizer/tournament/:tournamentId/rounds/:round/pairings/
 
     it('returns 204 on success', async () => {
         mockRoundAccess(ROUND_BASE);
-        mockDbQuery.mockResolvedValueOnce({ rows: [{ id: SCORER_ASSIGN_ID }], rowCount: 1 } as any);
+        mockDbQuery.mockResolvedValueOnce({ rows: [], rowCount: 0 } as any); // DELETE ballots
+        mockDbQuery.mockResolvedValueOnce({ rows: [{ paper_scorer_id: null }], rowCount: 1 } as any); // DELETE assignment
         const res = await request(app).delete(`${PAIRINGS_URL}/${PAIRING_ID}/scorers/${SCORER_ASSIGN_ID}`).set(auth());
         expect(res.status).toBe(204);
     });

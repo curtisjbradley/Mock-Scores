@@ -306,13 +306,6 @@ router.post('/pairings/:pairing/scorers', async (req: Request, res: Response) =>
         if (scorer_id) {
             if (!uuidRegex.test(scorer_id)) return res.status(400).json({ message: 'Invalid scorer ID' });
             const result = await organizer.assignScorerToPairing(pairing, scorer_id);
-            // Fire-and-forget invite email
-            organizer.getScorerInviteContext(pairing, scorer_id).then(ctx => {
-                if (!ctx) return;
-                const scorecardUrl = `${BASE_URL}/score/${result.assignment_id}`;
-                const template = scorerInviteEmail(ctx.tournamentName, scorecardUrl);
-                return sendEmail(ctx.email, template.subject, template.html, template.text);
-            }).catch(console.error);
             return res.status(201).json(result);
         }
         if (paper_name?.trim()) {
@@ -440,6 +433,87 @@ router.delete('/pairings/:pairing/presider', async (req: Request, res: Response)
     if (!uuidRegex.test(pairing)) return res.status(400).json({ message: 'Invalid pairing ID' });
     await organizer.clearPresider(pairing);
     return res.status(204).send();
+});
+
+/**
+ * @swagger
+ * /api/organizer/tournament/{tournamentId}/rounds/{round}/ballot-status:
+ *   get:
+ *     summary: Get ballot submission status for all pairings in a round
+ *     tags: [Organizer - Rounds]
+ *     parameters:
+ *       - in: path
+ *         name: tournamentId
+ *         required: true
+ *         schema: { type: string, format: uuid }
+ *       - in: path
+ *         name: round
+ *         required: true
+ *         schema: { type: string, format: uuid }
+ *     responses:
+ *       200:
+ *         description: Array of ballot status per pairing
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: array
+ *               items:
+ *                 type: object
+ *                 properties:
+ *                   pairing_id: { type: string, format: uuid }
+ *                   total_scorers: { type: integer }
+ *                   submitted: { type: integer }
+ *       500: { description: Database error }
+ */
+router.get('/ballot-status', roundHandler(async (req, res) => {
+    try {
+        return res.status(200).json(await organizer.getBallotStatus(req.round.round_id));
+    } catch (e) {
+        if (e instanceof DbError) return res.status(500).json({ message: 'Database error' });
+        throw e;
+    }
+}));
+
+/**
+ * POST /api/organizer/tournament/:tournamentId/rounds/:round/send-scoring-links
+ * Sends scorecard invite emails to all registered scorers assigned to pairings
+ * in this round. Fire-and-forget per email so one bad address doesn't block others.
+ * Returns the count of emails dispatched.
+ */
+router.post('/send-scoring-links', roundHandler(async (req, res) => {
+    const contexts = await organizer.getScorerInviteContextsForRound(req.round.round_id);
+    let sent = 0;
+    for (const ctx of contexts) {
+        const scorecardUrl = `${BASE_URL}/score/${ctx.assignmentId}`;
+        const template = scorerInviteEmail(ctx.tournamentName, scorecardUrl);
+        sendEmail(ctx.email, template.subject, template.html, template.text)
+            .then(() => { /* fire-and-forget */ })
+            .catch(console.error);
+        sent++;
+    }
+    return res.status(200).json({ sent });
+}));
+
+/**
+ * POST /api/organizer/tournament/:tournamentId/rounds/:round/pairings/:pairing/scorers/:assignment/resend-link
+ * Resends the scorecard invite email to a specific scorer assignment.
+ * Only works for registered scorers (paper scorers have no email).
+ * Returns 200 with { sent: true } on success, 404 if context not found.
+ */
+router.post('/pairings/:pairing/scorers/:assignment/resend-link', async (req: Request, res: Response) => {
+    const pairing = req.params.pairing as string;
+    const assignment = req.params.assignment as string;
+    if (!uuidRegex.test(pairing)) return res.status(400).json({ message: 'Invalid pairing ID' });
+    if (!uuidRegex.test(assignment)) return res.status(400).json({ message: 'Invalid assignment ID' });
+
+    const ctx = await organizer.getScorerInviteContextForAssignment(pairing, assignment);
+    if (!ctx) return res.status(404).json({ message: 'Scorer not found or is a paper scorer' });
+
+    const scorecardUrl = `${BASE_URL}/score/${assignment}`;
+    const template = scorerInviteEmail(ctx.tournamentName, scorecardUrl);
+    sendEmail(ctx.email, template.subject, template.html, template.text).catch(console.error);
+
+    return res.status(200).json({ sent: true });
 });
 
 export default router;

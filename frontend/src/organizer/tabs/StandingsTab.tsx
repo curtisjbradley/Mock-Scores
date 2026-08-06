@@ -69,6 +69,18 @@ function computeFromBallots(
     }
 }
 
+async function downloadCsv(tournamentId: string, type: 'standings' | 'results') {
+    const res = await apiFetch(`/api/organizer/tournament/${tournamentId}/export/${type}`)
+    if (!res.ok) return
+    const blob = await res.blob()
+    const url = URL.createObjectURL(blob)
+    const a = document.createElement('a')
+    a.href = url
+    a.download = `${type}.csv`
+    a.click()
+    URL.revokeObjectURL(url)
+}
+
 export default function StandingsTab({ tournamentId }: { tournamentId: string }) {
     const [payload, setPayload] = useState<StandingsApiPayload | null>(null)
     const [selected, setSelected] = useState<Set<string>>(new Set())
@@ -149,6 +161,24 @@ export default function StandingsTab({ tournamentId }: { tournamentId: string })
 
             {noConfig && (
                 <p className="coach-empty">No standings configuration set. Configure one in the Tiebreakers tab.</p>
+            )}
+
+            {/* Export buttons */}
+            {payload.ballots.length > 0 && (
+                <div style={{ marginBottom: '1rem', display: 'flex', gap: '0.5rem' }}>
+                    <button
+                        className="btn btn-secondary"
+                        onClick={() => downloadCsv(tournamentId, 'standings')}
+                    >
+                        Download Standings CSV
+                    </button>
+                    <button
+                        className="btn btn-secondary"
+                        onClick={() => downloadCsv(tournamentId, 'results')}
+                    >
+                        Download Results CSV
+                    </button>
+                </div>
             )}
 
             {!noConfig && selected.size === 0 && (

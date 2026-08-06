@@ -525,16 +525,19 @@ describe('addPaperScorer', () => {
 
 describe('removeScorerAssignment', () => {
     it('resolves for registered scorer', async () => {
+        mockDbQuery.mockResolvedValueOnce(ok([])); // DELETE ballots
         mockDbQuery.mockResolvedValueOnce(ok([{ paper_scorer_id: null }]));
         await expect(provider.removeScorerAssignment('a1')).resolves.toBeUndefined();
     });
     it('cleans up paper scorer row', async () => {
         mockDbQuery
+            .mockResolvedValueOnce(ok([])) // DELETE ballots
             .mockResolvedValueOnce(ok([{ paper_scorer_id: 'ps1' }]))
             .mockResolvedValueOnce(ok([]));
         await expect(provider.removeScorerAssignment('a1')).resolves.toBeUndefined();
     });
     it('throws NotFoundError when assignment not found', async () => {
+        mockDbQuery.mockResolvedValueOnce(ok([])); // DELETE ballots
         mockDbQuery.mockResolvedValueOnce(ok([]));
         await expect(provider.removeScorerAssignment('a1')).rejects.toThrow(NotFoundError);
     });

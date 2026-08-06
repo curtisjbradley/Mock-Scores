@@ -9,14 +9,14 @@ describe('Login page', () => {
   })
 
   it('renders the sign-in form', () => {
-    cy.contains('h1', 'Sign in').should('be.visible')
+    cy.contains('h1', 'Sign In').should('be.visible')
     cy.get('#email').should('exist')
     cy.get('#password').should('exist')
     cy.contains('button', 'Sign in').should('be.visible')
   })
 
   it('shows a link to register', () => {
-    cy.contains('a', 'Register').should('have.attr', 'href', '/register')
+    cy.contains('a', 'Create an Account').should('have.attr', 'href', '/register')
   })
 
   it('shows validation error for invalid email', () => {
@@ -76,6 +76,6 @@ describe('Login page', () => {
   it('already-authed user visiting /login still sees the form (no redirect away)', () => {
     cy.loginAs(TEST_USER)
     cy.visit('/login')
-    cy.contains('h1', 'Sign in').should('be.visible')
+    cy.contains('h1', 'Sign In').should('be.visible')
   })
 })

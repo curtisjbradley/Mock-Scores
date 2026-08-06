@@ -87,12 +87,17 @@ export default function ScorersTab({ tournamentId }: { tournamentId: string }) {
     const [firstName, setFirstName] = useState('')
     const [lastName, setLastName] = useState('')
     const [email, setEmail] = useState('')
+    const [bouncedEmails, setBouncedEmails] = useState<Set<string>>(new Set())
 
     useEffect(() => {
         apiFetch(`/api/organizer/tournament/${tournamentId}/scorers`)
             .then(r => r.ok ? r.json() : [])
             .then((data: IScorer[]) => setScorers(Array.isArray(data) ? data : []))
             .catch(() => setScorers([]))
+        apiFetch(`/api/organizer/tournament/${tournamentId}/bounced-emails`)
+            .then(r => r.ok ? r.json() : [])
+            .then((emails: string[]) => setBouncedEmails(new Set(emails.map(e => e.toLowerCase()))))
+            .catch(() => {})
     }, [tournamentId])
 
     const openAddModal = () => {
@@ -142,7 +147,12 @@ export default function ScorersTab({ tournamentId }: { tournamentId: string }) {
                         {scorers.map(scorer => (
                             <tr key={scorer.scorer_id}>
                                 <td>{scorer.first_name} {scorer.last_name}</td>
-                                <td className="dash-judge-name">{scorer.email ?? '—'}</td>
+                                <td className="dash-judge-name">
+                                    {scorer.email ?? '—'}
+                                    {scorer.email && bouncedEmails.has(scorer.email.toLowerCase()) && (
+                                        <span title="Email delivery failed" style={{ marginLeft: 6, background: '#dc2626', color: '#fff', fontSize: '0.65rem', fontWeight: 700, padding: '1px 5px', borderRadius: 3, verticalAlign: 'middle' }}>⚠ BOUNCED</span>
+                                    )}
+                                </td>
                                 <td>
                                     <div className="dash-actions-cell">
                                         <button className="dash-remove-btn" onClick={() => openEditModal(scorer)}>Edit</button>

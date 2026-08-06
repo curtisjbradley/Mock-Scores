@@ -1,10 +1,11 @@
 import { useEffect, useState } from 'react'
-import { getSession, logout } from './auth'
+import { apiFetch, getSession, logout } from './auth'
 import { validatePassword } from '../utils/validation'
 import PasswordRequirements from './PasswordRequirements'
 import { useNavigate } from 'react-router-dom'
 import { useChangePasswordForm } from './hooks/useChangePasswordForm'
 import './styles/account.css'
+import '../judges/styles/modal.css'
 
 function isPasswordInvalid(password: string): boolean {
     try { validatePassword(password); return false; } catch { return true; }
@@ -33,9 +34,25 @@ export function Account() {
         navigate('/login', { replace: true })
     }
 
+    const [showDeleteModal, setShowDeleteModal] = useState(false)
+    const [deleting, setDeleting] = useState(false)
+
+    const handleDeleteAccount = async () => {
+        setDeleting(true)
+        const res = await apiFetch('/api/auth/account', { method: 'DELETE' })
+        if (res.ok || res.status === 204) {
+            await logout()
+            navigate('/', { replace: true })
+        } else {
+            setDeleting(false)
+            setShowDeleteModal(false)
+        }
+    }
+
     if (!email) return null
 
     return (
+        <>
         <main className="account-main">
             <div className="account-card">
                 <h1>Account</h1>
@@ -68,7 +85,38 @@ export function Account() {
                 </form>
 
                 <button className="account-signout" onClick={handleLogout}>Sign out</button>
+
+                <div className="account-danger-zone">
+                    <h2 className="account-danger-heading">Danger zone</h2>
+                    <p className="account-danger-description">
+                        Permanently delete your account and all associated data. This cannot be undone.
+                    </p>
+                    <button className="account-delete" onClick={() => setShowDeleteModal(true)}>
+                        Delete account
+                    </button>
+                </div>
             </div>
         </main>
+
+        {showDeleteModal && (
+            <div className="modal-backdrop" onClick={() => !deleting && setShowDeleteModal(false)}>
+                <div className="confirm-modal" onClick={e => e.stopPropagation()}>
+                    <h2 style={{ margin: '0 0 0.75rem', color: '#d32f2f' }}>Delete Account</h2>
+                    <p style={{ margin: '0 0 0.5rem', lineHeight: 1.6 }}>
+                        Are you sure you want to permanently delete your account?
+                    </p>
+                    <p style={{ margin: '0 0 1rem', fontSize: '0.85rem', color: 'var(--text-muted)' }}>
+                        All your data including tournaments, teams, and scoring history will be permanently removed. This action cannot be undone.
+                    </p>
+                    <div className="confirm-actions">
+                        <button onClick={() => setShowDeleteModal(false)} disabled={deleting}>Cancel</button>
+                        <button onClick={handleDeleteAccount} disabled={deleting} style={{ backgroundColor: '#d32f2f', color: '#fff' }}>
+                            {deleting ? 'Deleting…' : 'Permanently Delete'}
+                        </button>
+                    </div>
+                </div>
+            </div>
+        )}
+        </>
     )
 }

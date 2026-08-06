@@ -1,6 +1,7 @@
 import { Router } from "express";
 import * as coach from "../../providers/coachProvider";
 import { getScoringCategories } from "../../providers/organizerProvider";
+import { getScoreSheet, getBallot } from "../../providers/scorerProvider";
 import { uuidRegex } from "../../authUtils";
 import { authedHandler } from "../../types/handlers";
 import teamRoutes from "./coachTeamRoutes";
@@ -176,5 +177,86 @@ router.get("/tournaments/:tournamentId/format", authedHandler(async (req, res) =
 }));
 
 router.use("/teams/:teamId", teamRoutes);
+
+/**
+ * @swagger
+ * /api/coach/tournaments/{tournamentId}/pairings/{pairingId}/ballots:
+ *   get:
+ *     summary: Get individual ballot breakdowns for a pairing (only if results are published)
+ *     tags: [Coach]
+ *     parameters:
+ *       - in: path
+ *         name: tournamentId
+ *         required: true
+ *         schema: { type: string, format: uuid }
+ *       - in: path
+ *         name: pairingId
+ *         required: true
+ *         schema: { type: string, format: uuid }
+ *     responses:
+ *       200: { description: Array of individual ballot summaries }
+ *       400: { description: Invalid ID }
+ *       403: { description: Results not published }
+ */
+router.get("/tournaments/:tournamentId/pairings/:pairingId/ballots", authedHandler(async (req, res) => {
+    const tournamentId = req.params.tournamentId as string;
+    const pairingId = req.params.pairingId as string;
+    if (!uuidRegex.test(tournamentId)) return res.status(400).json({ message: "Invalid tournament ID" });
+    if (!uuidRegex.test(pairingId)) return res.status(400).json({ message: "Invalid pairing ID" });
+    if (!await coach.canViewPairingResults(tournamentId, pairingId)) return res.status(404).json({ message: "Pairing not found" });
+    return res.status(200).json(await coach.getPairingBallots(tournamentId, pairingId));
+}));
+
+
+/**
+ * @swagger
+ * /api/coach/tournaments/{tournamentId}/pairings/{pairingId}/ballots/{assignmentId}:
+ *   get:
+ *     summary: Get full ballot detail (scoresheet format + scores) for a specific ballot
+ *     tags: [Coach]
+ *     parameters:
+ *       - in: path
+ *         name: tournamentId
+ *         required: true
+ *         schema: { type: string, format: uuid }
+ *       - in: path
+ *         name: pairingId
+ *         required: true
+ *         schema: { type: string, format: uuid }
+ *       - in: path
+ *         name: assignmentId
+ *         required: true
+ *         schema: { type: string, format: uuid }
+ *     responses:
+ *       200: { description: Scoresheet format + ballot data (scorer name redacted) }
+ *       400: { description: Invalid ID }
+ *       404: { description: Ballot not found }
+ */
+router.get("/tournaments/:tournamentId/pairings/:pairingId/ballots/:assignmentId", authedHandler(async (req, res) => {
+    const tournamentId = req.params.tournamentId as string;
+    const pairingId = req.params.pairingId as string;
+    const assignmentId = req.params.assignmentId as string;
+    if (!uuidRegex.test(tournamentId)) return res.status(400).json({ message: "Invalid tournament ID" });
+    if (!uuidRegex.test(pairingId)) return res.status(400).json({ message: "Invalid pairing ID" });
+    if (!uuidRegex.test(assignmentId)) return res.status(400).json({ message: "Invalid assignment ID" });
+
+    if (!await coach.isAssignmentInPairingWithPublicResults(tournamentId, pairingId, assignmentId))
+        return res.status(404).json({ message: "Ballot not found" });
+
+    const [sheet, ballot] = await Promise.all([
+        getScoreSheet(assignmentId, { skipGuards: true }).catch(() => null),
+        getBallot(assignmentId),
+    ]);
+
+    if (!sheet && !ballot) return res.status(404).json({ message: "Ballot not found" });
+
+    // Redact scorer identity from the sheet
+    if (sheet) {
+        sheet.scorer = { firstName: '', lastName: '', scorerID: '', isPaper: false };
+        sheet.presiderName = '';
+    }
+
+    return res.status(200).json({ sheet, ballot });
+}));
 
 export default router;

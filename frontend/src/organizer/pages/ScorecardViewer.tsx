@@ -4,6 +4,7 @@ import { apiFetch } from '../../auth/auth'
 import type { IScoreSheetFormat, ScorecardPayload } from '@mock-scores/shared'
 import '../styles/organizer.css'
 import '../../judges/styles/scoresheet.css'
+import '../../judges/styles/modal.css'
 
 /**
  * Organizer read-only view of a submitted scorecard.
@@ -11,33 +12,105 @@ import '../../judges/styles/scoresheet.css'
  * and the submitted ballot (organizer endpoint, JWT-required) and renders them together.
  */
 const ScorecardViewer = () => {
-    const { id, pairingId, judgeId } = useParams<{ id: string; pairingId: string; judgeId: string }>()
+    const { id, pairingId, judgeId, assignmentId } = useParams<{ id: string; pairingId: string; judgeId?: string; assignmentId?: string }>()
     const navigate = useNavigate()
+    const location = window.location.pathname
+    const isCoachView = location.includes('/coach/')
+    const ballotAssignmentId = judgeId ?? assignmentId ?? ''
 
     const [sheet, setSheet] = useState<IScoreSheetFormat | null>(null)
     const [ballot, setBallot] = useState<ScorecardPayload | null | undefined>(undefined)
     const [loading, setLoading] = useState(true)
     const [error, setError] = useState<string | null>(null)
+    const [deleting, setDeleting] = useState(false)
+    const [showDeleteModal, setShowDeleteModal] = useState(false)
+
+    // Edit mode state
+    const [editing, setEditing] = useState(false)
+    const [editedScores, setEditedScores] = useState<Record<string, number>>({})
+    const [showSaveModal, setShowSaveModal] = useState(false)
+    const [editReason, setEditReason] = useState('')
+    const [saving, setSaving] = useState(false)
+    const [editLog, setEditLog] = useState<{ editor_email: string; edited_at: string; reason: string; p_points_before: number; p_points_after: number; d_points_before: number; d_points_after: number }[]>([])
+    const [showEditLog, setShowEditLog] = useState(false)
+
+    const startEditing = () => {
+        if (!ballot) return
+        const map: Record<string, number> = {}
+        for (const s of ballot.scores) {
+            map[`${s.assignmentKey}:${s.side}`] = s.score
+        }
+        setEditedScores(map)
+        setEditing(true)
+    }
+
+    const cancelEditing = () => {
+        setEditing(false)
+        setEditedScores({})
+    }
+
+    const handleSaveEdit = async () => {
+        if (!id || !pairingId || !judgeId || !ballot || !editReason.trim()) return
+        setSaving(true)
+        try {
+            const scores = Object.entries(editedScores).map(([key, score]) => {
+                const [assignmentKey, side] = key.split(':') as [string, 'P' | 'D']
+                const original = ballot.scores.find(s => s.assignmentKey === assignmentKey && s.side === side)
+                return { assignmentKey, side, score, studentId: original?.studentId ?? null, categoryId: original?.categoryId ?? '' }
+            })
+            const res = await apiFetch(`/api/organizer/tournament/${id}/pairings/${pairingId}/scoresheets/${ballotAssignmentId}`, {
+                method: 'PUT',
+                body: JSON.stringify({ scores, reason: editReason.trim() }),
+            })
+            if (!res.ok) throw new Error('Failed to save edits')
+            // Refresh data
+            const refreshRes = await apiFetch(`/api/organizer/tournament/${id}/pairings/${pairingId}/scoresheets/${ballotAssignmentId}`)
+            if (refreshRes.ok) {
+                const data = await refreshRes.json() as { sheet: IScoreSheetFormat | null; ballot: ScorecardPayload | null; editLog: { editor_email: string; edited_at: string; reason: string; p_points_before: number; p_points_after: number; d_points_before: number; d_points_after: number }[] }
+                setSheet(data.sheet)
+                setBallot(data.ballot)
+                setEditLog(data.editLog ?? [])
+            }
+            setEditing(false)
+            setShowSaveModal(false)
+            setEditReason('')
+        } catch (e) {
+            setError(e instanceof Error ? e.message : 'Failed to save edits')
+        } finally {
+            setSaving(false)
+        }
+    }
+
+    const handleDeleteBallot = async () => {
+        if (!id || !pairingId || !ballotAssignmentId) return
+        setDeleting(true)
+        try {
+            const res = await apiFetch(`/api/organizer/tournament/${id}/pairings/${pairingId}/scoresheets/${ballotAssignmentId}`, { method: 'DELETE' })
+            if (!res.ok) throw new Error('Failed to delete ballot')
+            navigate(-1)
+        } catch (e) {
+            setError(e instanceof Error ? e.message : 'Failed to delete ballot')
+            setDeleting(false)
+            setShowDeleteModal(false)
+        }
+    }
 
     useEffect(() => {
-        if (!id || !pairingId || !judgeId) return
+        if (!id || !pairingId || !ballotAssignmentId) return
 
         const fetchData = async () => {
             setLoading(true)
             setError(null)
             try {
-                // Fetch both in parallel. The scoresheet endpoint is public;
-                // the ballot endpoint requires a JWT (handled by apiFetch).
-                const [sheetRes, ballotRes] = await Promise.all([
-                    fetch(`/api/score/${judgeId}`),
-                    apiFetch(`/api/organizer/tournament/${id}/pairings/${pairingId}/scoresheets/${judgeId}`),
-                ])
-                if (!sheetRes.ok) throw new Error('Failed to load scoresheet format')
-                if (!ballotRes.ok) throw new Error('Failed to load ballot')
-                const sheetData: IScoreSheetFormat = await sheetRes.json()
-                const ballotData: ScorecardPayload | null = await ballotRes.json()
-                setSheet(sheetData)
-                setBallot(ballotData)
+                const url = isCoachView
+                    ? `/api/coach/tournaments/${id}/pairings/${pairingId}/ballots/${ballotAssignmentId}`
+                    : `/api/organizer/tournament/${id}/pairings/${pairingId}/scoresheets/${ballotAssignmentId}`
+                const res = await apiFetch(url)
+                if (!res.ok) throw new Error('Failed to load scorecard')
+                const data = await res.json() as { sheet: IScoreSheetFormat | null; ballot: ScorecardPayload | null; editLog?: { editor_email: string; edited_at: string; reason: string; p_points_before: number; p_points_after: number; d_points_before: number; d_points_after: number }[] }
+                setSheet(data.sheet)
+                setBallot(data.ballot)
+                setEditLog(data.editLog ?? [])
             } catch (e) {
                 setError(e instanceof Error ? e.message : 'Unknown error')
             } finally {
@@ -46,7 +119,7 @@ const ScorecardViewer = () => {
         }
 
         fetchData()
-    }, [id, pairingId, judgeId])
+    }, [id, pairingId, ballotAssignmentId, isCoachView])
 
     if (loading) {
         return (
@@ -86,12 +159,96 @@ const ScorecardViewer = () => {
     }
 
     return (
+        <>
         <main className="org-main">
             <div className="org-container">
                 <button className="org-back-btn" onClick={() => navigate(-1)}>← Back to tournament</button>
 
                 <div className="coach-section">
-                    <h2>Scorecard — {sheet.scorer.firstName} {sheet.scorer.lastName}</h2>
+                    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '0.5rem' }}>
+                        <h2 style={{ margin: 0 }}>Scorecard{sheet.scorer.firstName ? ` — ${sheet.scorer.firstName} ${sheet.scorer.lastName}` : ''}</h2>
+                        {ballot && (
+                            <div style={{ display: 'flex', gap: '0.5rem' }}>
+                                <button className="pc-cancel-btn" onClick={() => {
+                                    if (!sheet || !ballot) return
+                                    const rows: string[][] = [['Category', 'Field', 'Side', 'Score', 'Student']]
+                                    for (const catId of sheet.categoryOrder) {
+                                        const cat = sheet.scoringCategories[catId]
+                                        const witness = cat.witnessId ? sheet.witnesses[cat.witnessId] : null
+                                        const catName = witness ? `${cat.categoryName} — ${witness.characterName}` : cat.categoryName
+                                        for (const a of cat.categoryAssignments) {
+                                            if (a.side !== 'D') {
+                                                const score = scoreMap.get(`${a.assignmentKey}:P`)
+                                                const s = a.pStudentId ? sheet.students[a.pStudentId] : null
+                                                rows.push([catName, a.assignmentName, 'P', String(score ?? ''), s?.name ?? ''])
+                                            }
+                                            if (a.side !== 'P') {
+                                                const score = scoreMap.get(`${a.assignmentKey}:D`)
+                                                const s = a.dStudentId ? sheet.students[a.dStudentId] : null
+                                                rows.push([catName, a.assignmentName, 'D', String(score ?? ''), s?.name ?? ''])
+                                            }
+                                        }
+                                    }
+                                    const csv = rows.map(r => r.map(c => c.includes(',') || c.includes('"') ? `"${c.replace(/"/g, '""')}"` : c).join(',')).join('\n')
+                                    const blob = new Blob([csv], { type: 'text/csv' })
+                                    const url = URL.createObjectURL(blob)
+                                    const a = document.createElement('a')
+                                    a.href = url
+                                    a.download = `ballot-${ballotAssignmentId}.csv`
+                                    a.click()
+                                    URL.revokeObjectURL(url)
+                                }}>Export CSV</button>
+                            </div>
+                        )}
+                    </div>
+
+                    {!isCoachView && editLog.length > 0 && (
+                        <div style={{ marginBottom: '1rem' }}>
+                            <button
+                                onClick={() => setShowEditLog(!showEditLog)}
+                                style={{ background: 'none', border: 'none', padding: 0, cursor: 'pointer', color: 'var(--primary)', fontSize: '0.875rem', fontWeight: 600, textDecoration: 'underline' }}
+                            >
+                                Ballot contains {editLog.length} edit{editLog.length !== 1 ? 's' : ''}
+                            </button>
+                            {showEditLog && (
+                                <div style={{ marginTop: '0.75rem', border: '1px solid var(--border)', borderRadius: '0.75rem', overflow: 'hidden' }}>
+                                    {editLog.map((entry, i) => (
+                                        <div key={i} style={{ padding: '0.75rem 1rem', borderBottom: i < editLog.length - 1 ? '1px solid var(--border)' : 'none', fontSize: '0.85rem' }}>
+                                            <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '0.25rem' }}>
+                                                <strong>{entry.editor_email}</strong>
+                                                <span style={{ color: 'var(--text-muted)', fontSize: '0.8rem' }}>{new Date(entry.edited_at).toLocaleString()}</span>
+                                            </div>
+                                            <div style={{ color: 'var(--text-muted)', marginBottom: '0.25rem' }}>
+                                                P: {entry.p_points_before} → {entry.p_points_after} | D: {entry.d_points_before} → {entry.d_points_after}
+                                            </div>
+                                            <div style={{ fontStyle: 'italic' }}>{entry.reason}</div>
+                                        </div>
+                                    ))}
+                                </div>
+                            )}
+                        </div>
+                    )}
+
+                    {!isCoachView && ballot && (
+                        <div style={{ display: 'flex', gap: '0.5rem', marginBottom: '1rem', flexWrap: 'wrap' }}>
+                            {!editing ? (
+                                <button className="pc-save-btn" onClick={startEditing}>Edit Scores</button>
+                            ) : (
+                                <>
+                                    <button className="pc-save-btn" onClick={() => setShowSaveModal(true)}>Save Changes</button>
+                                    <button className="pc-cancel-btn" onClick={cancelEditing}>Cancel</button>
+                                </>
+                            )}
+                            <button
+                                className="org-back-btn"
+                                style={{ backgroundColor: '#d32f2f', color: '#fff', border: 'none' }}
+                                onClick={() => setShowDeleteModal(true)}
+                                disabled={deleting}
+                            >
+                                {deleting ? 'Deleting…' : 'Delete Ballot'}
+                            </button>
+                        </div>
+                    )}
 
                     {/* Trial info */}
                     <div className="trial-info-card" style={{ marginBottom: '1rem' }}>
@@ -154,9 +311,20 @@ const ScorecardViewer = () => {
                                                             <td>
                                                                 {a.side !== 'D' && (
                                                                     <div className="score-box">
-                                                                        <span className="score-input" style={{ display: 'inline-block', minWidth: '2.5rem', textAlign: 'center', fontWeight: 'bold' }}>
-                                                                            {pScore ?? '—'}
-                                                                        </span>
+                                                                        {editing ? (
+                                                                            <input
+                                                                                type="number"
+                                                                                inputMode="numeric"
+                                                                                className="score-input"
+                                                                                style={{ width: '4rem', textAlign: 'center', fontWeight: 'bold' }}
+                                                                                value={editedScores[`${a.assignmentKey}:P`] ?? ''}
+                                                                                onChange={e => setEditedScores(prev => ({ ...prev, [`${a.assignmentKey}:P`]: Number(e.target.value) }))}
+                                                                            />
+                                                                        ) : (
+                                                                            <span className="score-input" style={{ display: 'inline-block', minWidth: '2.5rem', textAlign: 'center', fontWeight: 'bold' }}>
+                                                                                {pScore ?? '—'}
+                                                                            </span>
+                                                                        )}
                                                                         {pStudent && (
                                                                             <p className="student-name">
                                                                                 {pStudent.name}
@@ -170,9 +338,20 @@ const ScorecardViewer = () => {
                                                             <td>
                                                                 {a.side !== 'P' && (
                                                                     <div className="score-box">
-                                                                        <span className="score-input" style={{ display: 'inline-block', minWidth: '2.5rem', textAlign: 'center', fontWeight: 'bold' }}>
-                                                                            {dScore ?? '—'}
-                                                                        </span>
+                                                                        {editing ? (
+                                                                            <input
+                                                                                type="number"
+                                                                                inputMode="numeric"
+                                                                                className="score-input"
+                                                                                style={{ width: '4rem', textAlign: 'center', fontWeight: 'bold' }}
+                                                                                value={editedScores[`${a.assignmentKey}:D`] ?? ''}
+                                                                                onChange={e => setEditedScores(prev => ({ ...prev, [`${a.assignmentKey}:D`]: Number(e.target.value) }))}
+                                                                            />
+                                                                        ) : (
+                                                                            <span className="score-input" style={{ display: 'inline-block', minWidth: '2.5rem', textAlign: 'center', fontWeight: 'bold' }}>
+                                                                                {dScore ?? '—'}
+                                                                            </span>
+                                                                        )}
                                                                         {dStudent && (
                                                                             <p className="student-name">
                                                                                 {dStudent.name}
@@ -237,6 +416,53 @@ const ScorecardViewer = () => {
                 </div>
             </div>
         </main>
+
+        {showDeleteModal && (
+            <div className="modal-backdrop" onClick={() => !deleting && setShowDeleteModal(false)}>
+                <div className="confirm-modal" onClick={e => e.stopPropagation()}>
+                    <h2 style={{ margin: '0 0 0.75rem', color: '#d32f2f' }}>Delete Ballot</h2>
+                    <p style={{ margin: '0 0 0.5rem', lineHeight: 1.6 }}>
+                        Are you sure you want to delete this ballot? This action cannot be undone.
+                    </p>
+                    <p style={{ margin: '0 0 1rem', fontSize: '0.85rem', color: 'var(--text-muted)' }}>
+                        The scorer will need to resubmit their scores. Any standings or results that include this ballot will be recalculated.
+                    </p>
+                    <div className="confirm-actions">
+                        <button onClick={() => setShowDeleteModal(false)} disabled={deleting}>Cancel</button>
+                        <button onClick={handleDeleteBallot} disabled={deleting} style={{ backgroundColor: '#d32f2f' }}>
+                            {deleting ? 'Deleting…' : 'Confirm Delete'}
+                        </button>
+                    </div>
+                </div>
+            </div>
+        )}
+
+        {showSaveModal && (
+            <div className="modal-backdrop" onClick={() => !saving && setShowSaveModal(false)}>
+                <div className="confirm-modal" onClick={e => e.stopPropagation()}>
+                    <h2 style={{ margin: '0 0 0.75rem' }}>Save Ballot Edits</h2>
+                    <p style={{ margin: '0 0 1rem', lineHeight: 1.6, fontSize: '0.9rem' }}>
+                        Please provide a reason for this edit. This will be logged for audit purposes.
+                    </p>
+                    <label style={{ display: 'block', marginBottom: '0.4rem', fontSize: '0.85rem', fontWeight: 600 }}>Reason for edit</label>
+                    <textarea
+                        className="modal-input"
+                        style={{ width: '100%', minHeight: '5rem', resize: 'vertical', padding: '0.5rem 0.75rem', fontFamily: 'inherit', fontSize: '0.9rem' }}
+                        value={editReason}
+                        onChange={e => setEditReason(e.target.value)}
+                        placeholder="e.g., Scorer reported incorrect score for witness #2"
+                        autoFocus
+                    />
+                    <div className="confirm-actions" style={{ marginTop: '1rem' }}>
+                        <button onClick={() => { setShowSaveModal(false); setEditReason('') }} disabled={saving}>Cancel</button>
+                        <button onClick={handleSaveEdit} disabled={saving || !editReason.trim()}>
+                            {saving ? 'Saving…' : 'Confirm Edit'}
+                        </button>
+                    </div>
+                </div>
+            </div>
+        )}
+        </>
     )
 }
 

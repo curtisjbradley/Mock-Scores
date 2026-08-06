@@ -1,7 +1,9 @@
+import { useState } from 'react'
 import { useNavigate, useParams } from 'react-router-dom'
 import '../styles/organizer.css'
 import '../styles/round-view.css'
 import '../styles/pairings.css'
+import '../../judges/styles/modal.css'
 import PairingCard from '../components/PairingCard'
 import RoundNameEditor from '../components/RoundNameEditor'
 import AddMatchupForm from '../components/AddMatchupForm'
@@ -11,6 +13,7 @@ import { useRoundView } from '../hooks/useRoundView'
 import { usePairingForm } from '../hooks/usePairingForm'
 import type { IPairing } from '@mock-scores/shared'
 import NotFound from '../../error/NotFound'
+import { apiFetch } from '../../auth/auth'
 
 /**
  * Displays all pairings for a single round and allows the organizer to
@@ -26,13 +29,28 @@ const RoundView = () => {
     const navigate = useNavigate()
 
     const {
-        round, teams, courtrooms, pairings, scorers, pairingScorers, conflictSet,
+        round, teams, courtrooms, pairings, scorers, pairingScorers, ballotStatus, conflictSet,
         error, notFound,
         saveName, addMatchup, updatePairing, removePairing,
         onScorerAssigned, onScorerRemoved, onPresiderChanged,
     } = useRoundView(id, roundId)
 
     const confirmRemove = useConfirmRemove<IPairing>()
+    const [sending, setSending] = useState(false)
+    const [sendMsg, setSendMsg] = useState<string | null>(null)
+
+    const handleSendScoringLinks = () => {
+        if (!id || !roundId || sending) return
+        setSending(true)
+        setSendMsg(null)
+        apiFetch(`/api/organizer/tournament/${id}/rounds/${roundId}/send-scoring-links`, { method: 'POST' })
+            .then(r => r.ok ? r.json() : null)
+            .then((data: { sent: number } | null) => {
+                setSendMsg(data ? `Sent ${data.sent} link${data.sent !== 1 ? 's' : ''}` : 'Failed to send')
+            })
+            .catch(() => setSendMsg('Failed to send'))
+            .finally(() => setSending(false))
+    }
 
     const {
         showAddForm, addPros, addDef, addCourtroom,
@@ -67,9 +85,15 @@ const RoundView = () => {
                             </div>
                         )}
                     </div>
-                    <button className="org-new-btn" onClick={toggleForm}>
-                        {showAddForm ? 'Cancel' : '+ Add matchup'}
-                    </button>
+                    <div style={{ display: 'flex', gap: '0.5rem', alignItems: 'center', flexWrap: 'wrap' }}>
+                        <button className="org-new-btn" onClick={handleSendScoringLinks} disabled={sending}>
+                            {sending ? 'Sending…' : '✉ Send scoring links'}
+                        </button>
+                        {sendMsg && <span style={{ fontSize: '0.82rem', color: 'var(--text-muted)' }}>{sendMsg}</span>}
+                        <button className="org-new-btn" onClick={toggleForm}>
+                            {showAddForm ? 'Cancel' : '+ Add matchup'}
+                        </button>
+                    </div>
                 </div>
 
                 {showAddForm && (
@@ -101,6 +125,7 @@ const RoundView = () => {
                             courtrooms={courtrooms}
                             scorers={scorers}
                             assignedScorers={pairingScorers[pairing.pairing_id] ?? []}
+                            ballotStatus={ballotStatus[pairing.pairing_id]}
                             tournamentId={id!}
                             roundId={roundId!}
                             conflictSet={conflictSet}

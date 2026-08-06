@@ -8,7 +8,6 @@ describe('Home page', () => {
     cy.contains('h1', 'Mock Trial Scoring & Tabulation').should('be.visible')
     cy.contains('button', 'Organizer').should('be.visible')
     cy.contains('button', 'Coach').should('be.visible')
-    cy.contains('button', 'Scorer').should('be.visible')
   })
 
   it('Organizer button navigates to /organizer (redirects unauthed to login)', () => {

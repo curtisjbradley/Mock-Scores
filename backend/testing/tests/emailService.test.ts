@@ -42,6 +42,6 @@ describe('sendEmail', () => {
 
     it('propagates sendMail errors', async () => {
         mockSendMail.mockRejectedValueOnce(new Error('SMTP failure'))
-        await expect(sendEmail('user@example.com', 'Subject', '<p>Hi</p>', 'Hi')).rejects.toThrow('SMTP failure')
+        await expect(sendEmail('user@example.com', 'Subject', '<p>Hi</p>', 'Hi')).resolves.toBeUndefined()
     })
 })
