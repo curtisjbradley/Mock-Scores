@@ -357,6 +357,21 @@
     background: var(--danger-bg);
 }
 
+.tc-status-section {
+    margin-top: 2rem;
+    padding: 1.25rem;
+    border: 1.5px solid var(--border, #e5e7eb);
+    border-radius: 0.75rem;
+    background: var(--surface-muted, #f9fafb);
+}
+
+.tc-status-section h3 {
+    margin: 0 0 0.4rem;
+    font-size: 0.95rem;
+    font-weight: 700;
+    color: var(--text-primary, #1a1a2e);
+}
+
 .tc-danger-zone h3 {
     margin: 0 0 0.4rem;
     font-size: 0.95rem;

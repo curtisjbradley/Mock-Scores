@@ -92,6 +92,46 @@ router.patch("/", tournamentHandler(async (req, res) => {
     }
 }));
 
+/**
+ * @swagger
+ * /api/organizer/tournament/{tournamentId}/status:
+ *   patch:
+ *     summary: Update tournament status (active, completed, or archived)
+ *     tags: [Organizer - Tournament]
+ *     parameters:
+ *       - in: path
+ *         name: tournamentId
+ *         required: true
+ *         schema: { type: string, format: uuid }
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             required: [status]
+ *             properties:
+ *               status: { type: string, enum: [active, completed, archived] }
+ *     responses:
+ *       200: { description: Status updated }
+ *       400: { description: Invalid status value }
+ *       404: { description: Not found }
+ *       500: { description: Unable to update status }
+ */
+router.patch("/status", tournamentHandler(async (req, res) => {
+    const { status } = req.body as { status?: string };
+    if (!status || !['active', 'completed', 'archived'].includes(status))
+        return res.status(400).json({ message: 'Status must be active, completed, or archived' });
+    try {
+        await organizer.updateTournamentStatus(req.tournament, status as 'active' | 'completed' | 'archived');
+        return res.status(200).json({ success: true });
+    } catch (e) {
+        if (e instanceof NotFoundError) return res.status(404).json({ message: e.message });
+        if (e instanceof DbError) return res.status(500).json({ message: 'Unable to update status' });
+        throw e;
+    }
+}));
+
 // ── Format & Witnesses ────────────────────────────────────────────────────────
 
 /**
@@ -1563,6 +1603,170 @@ async function verifyRound(req: Request, res: Response, next: NextFunction) {
 }
 
 router.use('/rounds/:round', verifyRound, roundRoutes);
+
+// ── Bulk Import ───────────────────────────────────────────────────────────────
+
+/** Simple CSV parser — handles quoted fields and commas within quotes */
+function parseCsv(text: string): string[][] {
+    const rows: string[][] = [];
+    const lines = text.replace(/\r\n/g, '\n').replace(/\r/g, '\n').split('\n');
+    for (const line of lines) {
+        if (!line.trim()) continue;
+        const fields: string[] = [];
+        let current = '';
+        let inQuotes = false;
+        for (let i = 0; i < line.length; i++) {
+            const ch = line[i];
+            if (inQuotes) {
+                if (ch === '"' && line[i + 1] === '"') { current += '"'; i++; }
+                else if (ch === '"') inQuotes = false;
+                else current += ch;
+            } else {
+                if (ch === '"') inQuotes = true;
+                else if (ch === ',') { fields.push(current.trim()); current = ''; }
+                else current += ch;
+            }
+        }
+        fields.push(current.trim());
+        rows.push(fields);
+    }
+    return rows;
+}
+
+/**
+ * @swagger
+ * /api/organizer/tournament/{tournamentId}/import/scorers:
+ *   post:
+ *     summary: Bulk import scorers from CSV
+ *     tags: [Organizer - Import]
+ *     parameters:
+ *       - in: path
+ *         name: tournamentId
+ *         required: true
+ *         schema: { type: string, format: uuid }
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             required: [csv]
+ *             properties:
+ *               csv: { type: string, description: "Raw CSV text with columns: first_name, last_name, email" }
+ *     responses:
+ *       200: { description: Import results with created count and errors }
+ *       400: { description: Missing CSV or invalid format }
+ */
+router.post('/import/scorers', tournamentHandler(async (req, res) => {
+    const { csv } = req.body as { csv?: string };
+    if (!csv?.trim()) return res.status(400).json({ message: 'No CSV data provided' });
+
+    const rows = parseCsv(csv);
+    if (rows.length === 0) return res.status(400).json({ message: 'CSV is empty' });
+
+    // Detect header row — if first row looks like headers, skip it
+    const firstRow = rows[0].map(f => f.toLowerCase());
+    const hasHeader = firstRow.includes('first_name') || firstRow.includes('first name') ||
+                      firstRow.includes('email') || firstRow.includes('lastname');
+    const dataRows = hasHeader ? rows.slice(1) : rows;
+
+    const results: { created: number; errors: { row: number; message: string }[] } = { created: 0, errors: [] };
+
+    for (let i = 0; i < dataRows.length; i++) {
+        const row = dataRows[i];
+        const [firstName, lastName, email] = row;
+        const rowNum = i + (hasHeader ? 2 : 1); // 1-indexed, accounting for header
+
+        if (!firstName?.trim() || !lastName?.trim()) {
+            results.errors.push({ row: rowNum, message: 'Missing first or last name' });
+            continue;
+        }
+        if (!email?.trim() || !isValidEmail(email.trim())) {
+            results.errors.push({ row: rowNum, message: `Invalid email: ${email ?? '(empty)'}` });
+            continue;
+        }
+
+        try {
+            const scorer: IScorer = { scorer_id: crypto.randomUUID(), first_name: firstName.trim(), last_name: lastName.trim(), email: email.trim() };
+            await organizer.addScorer(scorer, req.tournament);
+            results.created++;
+        } catch (e) {
+            results.errors.push({ row: rowNum, message: e instanceof Error ? e.message : 'Unknown error' });
+        }
+    }
+
+    return res.status(200).json(results);
+}));
+
+/**
+ * @swagger
+ * /api/organizer/tournament/{tournamentId}/import/teams:
+ *   post:
+ *     summary: Bulk import teams from CSV
+ *     tags: [Organizer - Import]
+ *     parameters:
+ *       - in: path
+ *         name: tournamentId
+ *         required: true
+ *         schema: { type: string, format: uuid }
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             required: [csv]
+ *             properties:
+ *               csv: { type: string, description: "Raw CSV text with columns: name, coach_email, code (code is optional)" }
+ *     responses:
+ *       200: { description: Import results with created count and errors }
+ *       400: { description: Missing CSV or invalid format }
+ */
+router.post('/import/teams', tournamentHandler(async (req, res) => {
+    const { csv } = req.body as { csv?: string };
+    if (!csv?.trim()) return res.status(400).json({ message: 'No CSV data provided' });
+
+    const rows = parseCsv(csv);
+    if (rows.length === 0) return res.status(400).json({ message: 'CSV is empty' });
+
+    // Detect header row
+    const firstRow = rows[0].map(f => f.toLowerCase());
+    const hasHeader = firstRow.includes('name') || firstRow.includes('team') ||
+                      firstRow.includes('coach_email') || firstRow.includes('email');
+    const dataRows = hasHeader ? rows.slice(1) : rows;
+
+    const results: { created: number; errors: { row: number; message: string }[] } = { created: 0, errors: [] };
+
+    for (let i = 0; i < dataRows.length; i++) {
+        const row = dataRows[i];
+        const [name, coachEmail, code] = row;
+        const rowNum = i + (hasHeader ? 2 : 1);
+
+        if (!name?.trim()) {
+            results.errors.push({ row: rowNum, message: 'Missing team name' });
+            continue;
+        }
+        if (!coachEmail?.trim() || !isValidEmail(coachEmail.trim())) {
+            results.errors.push({ row: rowNum, message: `Invalid coach email: ${coachEmail ?? '(empty)'}` });
+            continue;
+        }
+
+        // Check for duplicate name
+        if (await organizer.teamNameExists(req.tournament, name.trim())) {
+            results.errors.push({ row: rowNum, message: `Team "${name.trim()}" already exists` });
+            continue;
+        }
+
+        try {
+            await organizer.addTeam(req.tournament, name.trim(), coachEmail.trim(), code?.trim() || name.trim());
+            results.created++;
+        } catch (e) {
+            results.errors.push({ row: rowNum, message: e instanceof Error ? e.message : 'Unknown error' });
+        }
+    }
+
+    return res.status(200).json(results);
+}));
 
 // ── Export / Download ─────────────────────────────────────────────────────────
 

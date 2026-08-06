@@ -4,6 +4,7 @@ import type { ITeam } from '@mock-scores/shared'
 import { ConfirmRemoveModal, EditTeamModal } from '../components/modals'
 import Section from './Section'
 import AddTeamModal from '../components/AddTeamModal'
+import CsvImportModal from '../../shared/components/CsvImportModal'
 import { apiFetch } from '../../auth/auth'
 import { useConfirmRemove } from '../../shared/hooks/useConfirmRemove'
 import InlineEmailEdit from '../../shared/components/InlineEmailEdit'
@@ -17,12 +18,18 @@ export default function TeamsTab({ tournamentId }: { tournamentId: string }) {
     const [editingTeam, setEditingTeam] = useState<ITeam | null>(null)
     const [editingEmailId, setEditingEmailId] = useState<string | null>(null)
     const [editEmail, setEditEmail] = useState('')
+    const [bouncedEmails, setBouncedEmails] = useState<Set<string>>(new Set())
+    const [showImport, setShowImport] = useState(false)
 
     useEffect(() => {
         apiFetch(`/api/organizer/tournament/${tournamentId}/teams`)
             .then(r => r.json())
             .then(setTeams)
             .catch(console.error)
+        apiFetch(`/api/organizer/tournament/${tournamentId}/bounced-emails`)
+            .then(r => r.ok ? r.json() : [])
+            .then((emails: string[]) => setBouncedEmails(new Set(emails.map(e => e.toLowerCase()))))
+            .catch(() => {})
     }, [tournamentId])
 
     const putTeam = async (team: ITeam, patch: Partial<ITeam>): Promise<boolean> => {
@@ -64,6 +71,7 @@ export default function TeamsTab({ tournamentId }: { tournamentId: string }) {
         <Section title="Teams" description="Manage invited teams">
             <div className="tab-actions">
                 <button className="org-new-btn" onClick={() => setShowModal(true)}>+ Add team</button>
+                <button className="org-new-btn" onClick={() => setShowImport(true)} style={{ marginLeft: 8 }}>Import CSV</button>
             </div>
 
             <div className="dash-table-scroll">
@@ -85,7 +93,12 @@ export default function TeamsTab({ tournamentId }: { tournamentId: string }) {
                                             }}
                                             onCancel={() => setEditingEmailId(null)}
                                           />
-                                        : <span className="dash-judge-name">{team.coach_email}</span>
+                                        : <span className="dash-judge-name">
+                                            {team.coach_email}
+                                            {bouncedEmails.has(team.coach_email.toLowerCase()) && (
+                                                <span title="Email delivery failed" style={{ marginLeft: 6, background: '#dc2626', color: '#fff', fontSize: '0.65rem', fontWeight: 700, padding: '1px 5px', borderRadius: 3, verticalAlign: 'middle' }}>⚠ BOUNCED</span>
+                                            )}
+                                          </span>
                                     }
                                 </td>
                                 <td><StatusChip label={team.has_joined ? 'accepted' : 'pending'} variant={team.has_joined ? 'submitted' : 'pending'} /></td>
@@ -126,6 +139,31 @@ export default function TeamsTab({ tournamentId }: { tournamentId: string }) {
                     message="Remove this team from the tournament?"
                     onCancel={confirmRemove.clear}
                     onConfirm={() => { void handleRemove(confirmRemove.pending!) }}
+                />
+            )}
+
+            {showImport && (
+                <CsvImportModal
+                    title="Import Teams"
+                    description="Upload a CSV file with team information. Each row will be added as a new team."
+                    columns={['name', 'coach_email', 'code (optional)']}
+                    exampleRow="Eagles,coach@school.edu,EGL"
+                    onClose={() => {
+                        setShowImport(false)
+                        // Refresh teams list after import
+                        apiFetch(`/api/organizer/tournament/${tournamentId}/teams`)
+                            .then(r => r.json())
+                            .then(setTeams)
+                            .catch(console.error)
+                    }}
+                    onImport={async (csv) => {
+                        const res = await apiFetch(`/api/organizer/tournament/${tournamentId}/import/teams`, {
+                            method: 'POST',
+                            body: JSON.stringify({ csv }),
+                        })
+                        if (!res.ok) throw new Error('Import failed')
+                        return res.json()
+                    }}
                 />
             )}
         </Section>

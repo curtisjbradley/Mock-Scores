@@ -12,6 +12,7 @@ const OrganizerHome = () => {
     const navigate = useNavigate()
     const [tournaments, setTournaments] = useState<ITournament[]>([])
     const [duplicating, setDuplicating] = useState<ITournament | null>(null)
+    const [statusFilter, setStatusFilter] = useState<'all' | 'active' | 'completed' | 'archived'>('all')
 
     useEffect(() => {
         apiFetch('/api/organizer/tournament')
@@ -33,6 +34,10 @@ const OrganizerHome = () => {
         }
     }
 
+    const filteredTournaments = statusFilter === 'all'
+        ? tournaments
+        : tournaments.filter(t => (t.status ?? 'active') === statusFilter)
+
     return (
         <main className="org-main">
             <div className="org-container">
@@ -43,16 +48,42 @@ const OrganizerHome = () => {
                     </button>
                 </div>
 
+                <div className="org-status-filter" role="tablist" aria-label="Filter by status">
+                    {(['all', 'active', 'completed', 'archived'] as const).map(s => (
+                        <button
+                            key={s}
+                            role="tab"
+                            aria-selected={statusFilter === s}
+                            className={`org-status-filter-btn${statusFilter === s ? ' org-status-filter-btn--active' : ''}`}
+                            onClick={() => setStatusFilter(s)}
+                        >
+                            {s === 'all' ? 'All' : s.charAt(0).toUpperCase() + s.slice(1)}
+                            {s !== 'all' && (
+                                <span className="org-status-filter-count">
+                                    {tournaments.filter(t => (t.status ?? 'active') === s).length}
+                                </span>
+                            )}
+                        </button>
+                    ))}
+                </div>
+
                 <div className="org-tournament-list">
-                    {tournaments.map(t => (
+                    {filteredTournaments.map(t => (
                         <div
                             key={t.id}
-                            className="org-tournament-card"
+                            className={`org-tournament-card${(t.status ?? 'active') === 'archived' ? ' org-tournament-card--archived' : ''}`}
                         >
                             <div className="org-tournament-info" role="button" tabIndex={0}
                                 onClick={() => navigate(`/organizer/${t.id}`)}
                                 onKeyDown={e => e.key === 'Enter' && navigate(`/organizer/${t.id}`)}>
-                                <span className="org-tournament-name">{t.name}</span>
+                                <span className="org-tournament-name">
+                                    {t.name}
+                                    {(t.status ?? 'active') !== 'active' && (
+                                        <span className={`org-tournament-status org-tournament-status--${t.status ?? 'active'}`}>
+                                            {(t.status ?? 'active').toUpperCase()}
+                                        </span>
+                                    )}
+                                </span>
                                 <span className="org-tournament-meta">
                                     {fmtDate(t.start_date)} – {fmtDate(t.end_date)}
                                     {' · '}{t.location}
@@ -68,6 +99,11 @@ const OrganizerHome = () => {
                             </button>
                         </div>
                     ))}
+                    {filteredTournaments.length === 0 && tournaments.length > 0 && (
+                        <p style={{ opacity: 0.6, textAlign: 'center', padding: '24px 0' }}>
+                            No {statusFilter} tournaments.
+                        </p>
+                    )}
                 </div>
             </div>
 

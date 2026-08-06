@@ -444,8 +444,9 @@ const ScorecardViewer = () => {
                     <p style={{ margin: '0 0 1rem', lineHeight: 1.6, fontSize: '0.9rem' }}>
                         Please provide a reason for this edit. This will be logged for audit purposes.
                     </p>
-                    <label style={{ display: 'block', marginBottom: '0.4rem', fontSize: '0.85rem', fontWeight: 600 }}>Reason for edit</label>
+                    <label htmlFor="edit-reason" style={{ display: 'block', marginBottom: '0.4rem', fontSize: '0.85rem', fontWeight: 600 }}>Reason for edit</label>
                     <textarea
+                        id="edit-reason"
                         className="modal-input"
                         style={{ width: '100%', minHeight: '5rem', resize: 'vertical', padding: '0.5rem 0.75rem', fontFamily: 'inherit', fontSize: '0.9rem' }}
                         value={editReason}

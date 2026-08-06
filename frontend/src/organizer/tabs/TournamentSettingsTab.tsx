@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
 import '../styles/tournament-create.css'
 import Section from './Section'
@@ -35,6 +35,8 @@ function getErrors(info: TournamentInfo, cf: CaseFormatState) {
 export default function TournamentSettingsTab({ tournamentId }: { tournamentId: string }) {
     const navigate = useNavigate()
     const [showDeleteModal, setShowDeleteModal] = useState(false)
+    const [currentStatus, setCurrentStatus] = useState<'active' | 'completed' | 'archived'>('active')
+    const [statusSaving, setStatusSaving] = useState(false)
 
     const {
         info, caseFormat, loading, loadError,
@@ -42,6 +44,25 @@ export default function TournamentSettingsTab({ tournamentId }: { tournamentId: 
         setInfo, setCaseFormat, setSaveError,
         handleSave,
     } = useTournamentSettings(tournamentId, getErrors)
+
+    // Fetch current status
+    useEffect(() => {
+        apiFetch(`/api/organizer/tournament/${tournamentId}`)
+            .then(r => r.ok ? r.json() : null)
+            .then(t => { if (t?.status) setCurrentStatus(t.status) })
+            .catch(() => {})
+    }, [tournamentId])
+
+    const handleStatusChange = async (newStatus: 'active' | 'completed' | 'archived') => {
+        setStatusSaving(true)
+        const res = await apiFetch(`/api/organizer/tournament/${tournamentId}/status`, {
+            method: 'PATCH',
+            body: JSON.stringify({ status: newStatus }),
+        })
+        if (res.ok) setCurrentStatus(newStatus)
+        else setSaveError('Failed to update status.')
+        setStatusSaving(false)
+    }
 
     const handleDelete = async () => {
         const res = await apiFetch(`/api/organizer/tournament/${tournamentId}`, { method: 'DELETE' })
@@ -111,6 +132,36 @@ export default function TournamentSettingsTab({ tournamentId }: { tournamentId: 
                     </button>
                 </div>
             </form>
+
+            {isOwner && (
+                <div className="tc-status-section">
+                    <h3>Tournament status</h3>
+                    <p style={{ fontSize: '0.9em', color: '#666', marginBottom: 12 }}>
+                        Current status: <strong>{currentStatus}</strong>
+                    </p>
+                    <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
+                        {currentStatus !== 'active' && (
+                            <button type="button" className="org-new-btn" disabled={statusSaving}
+                                onClick={() => handleStatusChange('active')}>
+                                Reactivate
+                            </button>
+                        )}
+                        {currentStatus !== 'completed' && (
+                            <button type="button" className="org-new-btn" disabled={statusSaving}
+                                onClick={() => handleStatusChange('completed')}>
+                                Mark completed
+                            </button>
+                        )}
+                        {currentStatus !== 'archived' && (
+                            <button type="button" className="org-new-btn" disabled={statusSaving}
+                                style={{ background: '#6b7280' }}
+                                onClick={() => handleStatusChange('archived')}>
+                                Archive
+                            </button>
+                        )}
+                    </div>
+                </div>
+            )}
 
             {isOwner && (
                 <div className="tc-danger-zone">

@@ -49,6 +49,7 @@ export interface ITournament {
     case_format_id: string;
     num_teams: number;
     num_rounds: number;
+    status: 'active' | 'completed' | 'archived';
 }
 
 export interface ITournamentDetails {

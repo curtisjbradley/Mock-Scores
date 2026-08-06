@@ -123,6 +123,15 @@ export async function updateTournamentDetails(tournamentID: string, t: { name: s
     if (result.rowCount === 0) throw new NotFoundError('tournament');
 }
 
+export async function updateTournamentStatus(tournamentID: string, status: 'active' | 'completed' | 'archived'): Promise<void> {
+    const result = await dbQuery(
+        'UPDATE tournaments SET status=$1 WHERE id=$2',
+        [status, tournamentID]
+    );
+    if (!result) throw new DbError('updateTournamentStatus');
+    if (result.rowCount === 0) throw new NotFoundError('tournament');
+}
+
 export async function getStandingsConfig(tournamentID: string): Promise<{ id: string; statsXml: string; standingsXml: string } | null> {
     const r = await dbQuery<{ id: string; stats_xml: string; standings_xml: string }>(
         `SELECT sc.id, sc.stats_xml, sc.standings_xml
