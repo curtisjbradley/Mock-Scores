@@ -259,9 +259,8 @@ html {
 
 .student-pronouns {
     font-size: 0.75rem;
-    font-weight: 300;
+    font-weight: 400;
     color: var(--text-muted);
-    opacity: 0.75;
 }
 
 .student-nom {
