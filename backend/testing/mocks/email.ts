@@ -16,3 +16,4 @@ export const teamAddedEmail = jest.fn(stubTemplate);
 export const roundResultsPublicEmail = jest.fn(stubTemplate);
 export const scorerInviteEmail = jest.fn(stubTemplate);
 export const emailVerificationEmail = jest.fn(stubTemplate);
+export const conflictReportEmail = jest.fn(stubTemplate);

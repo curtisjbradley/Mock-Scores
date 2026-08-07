@@ -241,3 +241,205 @@ describe('POST /api/auth/change-password', () => {
         expect(res.body.message).toMatch(/password updated/i);
     });
 });
+
+// ─── DELETE /api/auth/account ─────────────────────────────────────────────────
+describe('DELETE /api/auth/account', () => {
+    it('returns 401 with no token', async () => {
+        const res = await request(testApp).delete('/api/auth/account');
+        expect(res.status).toBe(401);
+    });
+
+    it('returns 204 on successful account deletion', async () => {
+        const token = validToken();
+        // deleteAccount: DELETE FROM auth
+        mockDbQuery.mockResolvedValueOnce({ rows: [], rowCount: 1 } as any);
+
+        const res = await request(testApp).delete('/api/auth/account').set('Authorization', `Bearer ${token}`);
+        expect(res.status).toBe(204);
+    });
+
+    it('returns 404 when account not found', async () => {
+        const token = validToken();
+        // deleteAccount: no rows deleted
+        mockDbQuery.mockResolvedValueOnce({ rows: [], rowCount: 0 } as any);
+
+        const res = await request(testApp).delete('/api/auth/account').set('Authorization', `Bearer ${token}`);
+        expect(res.status).toBe(404);
+    });
+
+    it('returns 500 on db error', async () => {
+        const token = validToken();
+        // deleteAccount: null result
+        mockDbQuery.mockResolvedValueOnce(null as any);
+
+        const res = await request(testApp).delete('/api/auth/account').set('Authorization', `Bearer ${token}`);
+        expect(res.status).toBe(500);
+    });
+});
+
+// ─── POST /api/auth/forgot-password ───────────────────────────────────────────
+describe('POST /api/auth/forgot-password', () => {
+    it('returns 400 when email is missing', async () => {
+        const res = await request(testApp).post('/api/auth/forgot-password').send({});
+        expect(res.status).toBe(400);
+    });
+
+    it('returns 400 for invalid email format', async () => {
+        const res = await request(testApp).post('/api/auth/forgot-password').send({ email: 'not-an-email' });
+        expect(res.status).toBe(400);
+        expect(res.body.message).toMatch(/invalid email/i);
+    });
+
+    it('returns 200 when email exists (sends reset email)', async () => {
+        // createPasswordResetToken: SELECT user
+        mockDbQuery.mockResolvedValueOnce({ rows: [{ user_id: 'u1', first_name: 'Test', email: 'test@test.com' }], rowCount: 1 } as any);
+        // createPasswordResetToken: INSERT token
+        mockDbQuery.mockResolvedValueOnce({ rows: [], rowCount: 1 } as any);
+
+        const res = await request(testApp).post('/api/auth/forgot-password').send({ email: 'test@test.com' });
+        expect(res.status).toBe(200);
+        expect(res.body.message).toMatch(/reset link/i);
+    });
+
+    it('returns 200 when email does not exist (no leakage)', async () => {
+        // createPasswordResetToken: SELECT user returns empty
+        mockDbQuery.mockResolvedValueOnce({ rows: [], rowCount: 0 } as any);
+
+        const res = await request(testApp).post('/api/auth/forgot-password').send({ email: 'unknown@test.com' });
+        expect(res.status).toBe(200);
+        expect(res.body.message).toMatch(/reset link/i);
+    });
+});
+
+// ─── POST /api/auth/reset-password ────────────────────────────────────────────
+describe('POST /api/auth/reset-password', () => {
+    it('returns 400 when token is missing', async () => {
+        const res = await request(testApp).post('/api/auth/reset-password').send({ newPassword: 'Newpass123' });
+        expect(res.status).toBe(400);
+        expect(res.body.message).toMatch(/token.*password/i);
+    });
+
+    it('returns 400 when newPassword is missing', async () => {
+        const res = await request(testApp).post('/api/auth/reset-password').send({ token: 'abc123' });
+        expect(res.status).toBe(400);
+    });
+
+    it('returns 400 when new password fails validation', async () => {
+        const res = await request(testApp).post('/api/auth/reset-password').send({ token: 'abc123', newPassword: 'short' });
+        expect(res.status).toBe(400);
+    });
+
+    it('returns 400 for invalid/expired token', async () => {
+        // resetPassword: SELECT token_hash returns empty
+        mockDbQuery.mockResolvedValueOnce({ rows: [], rowCount: 0 } as any);
+
+        const res = await request(testApp).post('/api/auth/reset-password').send({ token: 'abc123def456', newPassword: 'ValidPass123!' });
+        expect(res.status).toBe(400);
+        expect(res.body.message).toMatch(/invalid|expired/i);
+    });
+
+    it('returns 200 on successful password reset', async () => {
+        // resetPassword: SELECT token row (valid, not expired)
+        mockDbQuery.mockResolvedValueOnce({
+            rows: [{ user_id: 'u1', expires_at: new Date(Date.now() + 3600000).toISOString() }],
+            rowCount: 1,
+        } as any);
+        // UPDATE auth SET password_hash
+        mockDbQuery.mockResolvedValueOnce({ rows: [], rowCount: 1 } as any);
+        // DELETE FROM password_reset_tokens
+        mockDbQuery.mockResolvedValueOnce({ rows: [], rowCount: 1 } as any);
+        // DELETE FROM refresh_tokens (revokeAll)
+        mockDbQuery.mockResolvedValueOnce({ rows: [], rowCount: 0 } as any);
+        (mockBcryptHash as jest.Mock).mockResolvedValueOnce('newhash');
+
+        const res = await request(testApp).post('/api/auth/reset-password').send({ token: 'validtoken123', newPassword: 'ValidPass123!' });
+        expect(res.status).toBe(200);
+        expect(res.body.message).toMatch(/password.*reset/i);
+    });
+});
+
+// ─── POST /api/auth/verify-email ──────────────────────────────────────────────
+describe('POST /api/auth/verify-email', () => {
+    it('returns 400 when token is missing', async () => {
+        const res = await request(testApp).post('/api/auth/verify-email').send({});
+        expect(res.status).toBe(400);
+        expect(res.body.message).toMatch(/token/i);
+    });
+
+    it('returns 400 for invalid/expired token', async () => {
+        // verifyEmail: SELECT token_hash returns empty
+        mockDbQuery.mockResolvedValueOnce({ rows: [], rowCount: 0 } as any);
+
+        const res = await request(testApp).post('/api/auth/verify-email').send({ token: 'badtoken' });
+        expect(res.status).toBe(400);
+        expect(res.body.message).toMatch(/invalid|expired/i);
+    });
+
+    it('returns 400 when token is expired', async () => {
+        // verifyEmail: SELECT returns expired token
+        mockDbQuery.mockResolvedValueOnce({
+            rows: [{ user_id: 'u1', expires_at: new Date(Date.now() - 1000).toISOString() }],
+            rowCount: 1,
+        } as any);
+        // DELETE expired token
+        mockDbQuery.mockResolvedValueOnce({ rows: [], rowCount: 1 } as any);
+
+        const res = await request(testApp).post('/api/auth/verify-email').send({ token: 'expiredtoken' });
+        expect(res.status).toBe(400);
+        expect(res.body.message).toMatch(/expired/i);
+    });
+
+    it('returns 200 on successful verification', async () => {
+        // verifyEmail: SELECT valid token
+        mockDbQuery.mockResolvedValueOnce({
+            rows: [{ user_id: 'u1', expires_at: new Date(Date.now() + 3600000).toISOString() }],
+            rowCount: 1,
+        } as any);
+        // UPDATE auth SET email_verified=true
+        mockDbQuery.mockResolvedValueOnce({ rows: [], rowCount: 1 } as any);
+        // DELETE FROM email_verification_tokens
+        mockDbQuery.mockResolvedValueOnce({ rows: [], rowCount: 1 } as any);
+
+        const res = await request(testApp).post('/api/auth/verify-email').send({ token: 'validtoken' });
+        expect(res.status).toBe(200);
+        expect(res.body.message).toMatch(/verified/i);
+    });
+});
+
+// ─── POST /api/auth/resend-verification ───────────────────────────────────────
+describe('POST /api/auth/resend-verification', () => {
+    it('returns 401 with no token', async () => {
+        const res = await request(testApp).post('/api/auth/resend-verification');
+        expect(res.status).toBe(401);
+    });
+
+    it('returns 200 when email is already verified', async () => {
+        const token = validToken();
+        // createEmailVerificationTokenByEmail: SELECT user where email_verified=true
+        mockDbQuery.mockResolvedValueOnce({
+            rows: [{ user_id: 'u1', first_name: 'Test', email_verified: true }],
+            rowCount: 1,
+        } as any);
+
+        const res = await request(testApp).post('/api/auth/resend-verification').set('Authorization', `Bearer ${token}`);
+        expect(res.status).toBe(200);
+        expect(res.body.message).toMatch(/already verified/i);
+    });
+
+    it('returns 200 and sends verification email when not yet verified', async () => {
+        const token = validToken();
+        // createEmailVerificationTokenByEmail: SELECT user not verified
+        mockDbQuery.mockResolvedValueOnce({
+            rows: [{ user_id: 'u1', first_name: 'Test', email_verified: false }],
+            rowCount: 1,
+        } as any);
+        // createEmailVerificationToken: DELETE existing tokens
+        mockDbQuery.mockResolvedValueOnce({ rows: [], rowCount: 0 } as any);
+        // createEmailVerificationToken: INSERT new token
+        mockDbQuery.mockResolvedValueOnce({ rows: [], rowCount: 1 } as any);
+
+        const res = await request(testApp).post('/api/auth/resend-verification').set('Authorization', `Bearer ${token}`);
+        expect(res.status).toBe(200);
+        expect(res.body.message).toMatch(/verification email sent/i);
+    });
+});
