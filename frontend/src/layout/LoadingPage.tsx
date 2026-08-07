@@ -5,7 +5,7 @@ type LoadingPageProps = {
 }
 const LoadingPage = ({loadingText = 'Loading...'} : LoadingPageProps ) => (
     <main className="loading-main">
-        <div className="loading-spinner" aria-label="Loading" />
+        <div className="loading-spinner" role="status" aria-label="Loading" />
         <p>{loadingText}</p>
     </main>
 )
