@@ -206,6 +206,7 @@ const ScorecardViewer = () => {
                         <div style={{ marginBottom: '1rem' }}>
                             <button
                                 onClick={() => setShowEditLog(!showEditLog)}
+                                aria-expanded={showEditLog}
                                 style={{ background: 'none', border: 'none', padding: 0, cursor: 'pointer', color: 'var(--primary)', fontSize: '0.875rem', fontWeight: 600, textDecoration: 'underline' }}
                             >
                                 Ballot contains {editLog.length} edit{editLog.length !== 1 ? 's' : ''}
@@ -241,9 +242,10 @@ const ScorecardViewer = () => {
                             )}
                             <button
                                 className="org-back-btn"
-                                style={{ backgroundColor: '#d32f2f', color: '#fff', border: 'none' }}
+                                style={{ backgroundColor: '#d32f2f', color: '#fff', borderColor: '#d32f2f' }}
                                 onClick={() => setShowDeleteModal(true)}
                                 disabled={deleting}
+                                aria-label="Delete ballot permanently"
                             >
                                 {deleting ? 'Deleting…' : 'Delete Ballot'}
                             </button>
@@ -317,6 +319,7 @@ const ScorecardViewer = () => {
                                                                                 inputMode="numeric"
                                                                                 className="score-input"
                                                                                 style={{ width: '4rem', textAlign: 'center', fontWeight: 'bold' }}
+                                                                                aria-label={`${prosecutionLabel} score for ${a.assignmentName}`}
                                                                                 value={editedScores[`${a.assignmentKey}:P`] ?? ''}
                                                                                 onChange={e => setEditedScores(prev => ({ ...prev, [`${a.assignmentKey}:P`]: Number(e.target.value) }))}
                                                                             />
@@ -344,6 +347,7 @@ const ScorecardViewer = () => {
                                                                                 inputMode="numeric"
                                                                                 className="score-input"
                                                                                 style={{ width: '4rem', textAlign: 'center', fontWeight: 'bold' }}
+                                                                                aria-label={`Defense score for ${a.assignmentName}`}
                                                                                 value={editedScores[`${a.assignmentKey}:D`] ?? ''}
                                                                                 onChange={e => setEditedScores(prev => ({ ...prev, [`${a.assignmentKey}:D`]: Number(e.target.value) }))}
                                                                             />
@@ -418,9 +422,9 @@ const ScorecardViewer = () => {
         </main>
 
         {showDeleteModal && (
-            <div className="modal-backdrop" onClick={() => !deleting && setShowDeleteModal(false)}>
+            <div className="modal-backdrop" role="dialog" aria-modal="true" aria-labelledby="delete-modal-title" onClick={() => !deleting && setShowDeleteModal(false)}>
                 <div className="confirm-modal" onClick={e => e.stopPropagation()}>
-                    <h2 style={{ margin: '0 0 0.75rem', color: '#d32f2f' }}>Delete Ballot</h2>
+                    <h2 id="delete-modal-title" style={{ margin: '0 0 0.75rem', color: '#d32f2f' }}>Delete Ballot</h2>
                     <p style={{ margin: '0 0 0.5rem', lineHeight: 1.6 }}>
                         Are you sure you want to delete this ballot? This action cannot be undone.
                     </p>
@@ -438,9 +442,9 @@ const ScorecardViewer = () => {
         )}
 
         {showSaveModal && (
-            <div className="modal-backdrop" onClick={() => !saving && setShowSaveModal(false)}>
+            <div className="modal-backdrop" role="dialog" aria-modal="true" aria-labelledby="save-modal-title" onClick={() => !saving && setShowSaveModal(false)}>
                 <div className="confirm-modal" onClick={e => e.stopPropagation()}>
-                    <h2 style={{ margin: '0 0 0.75rem' }}>Save Ballot Edits</h2>
+                    <h2 id="save-modal-title" style={{ margin: '0 0 0.75rem' }}>Save Ballot Edits</h2>
                     <p style={{ margin: '0 0 1rem', lineHeight: 1.6, fontSize: '0.9rem' }}>
                         Please provide a reason for this edit. This will be logged for audit purposes.
                     </p>
