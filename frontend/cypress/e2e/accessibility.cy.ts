@@ -93,5 +93,64 @@ describe('Accessibility', () => {
                 },
             }, terminalLog)
         })
+
+        it('Scorecard viewer has no critical a11y violations', () => {
+            cy.intercept('GET', '/api/organizer/tournament/t1/pairings/p1/scoresheets/j1', {
+                statusCode: 200,
+                body: {
+                    sheet: {
+                        isCriminal: true,
+                        ballotOptions: { showTiebreaker: true, fillableScores: true },
+                        pairingID: 'p1',
+                        scorer: { firstName: 'Jane', lastName: 'Judge', scorerID: 'j1', isPaper: false },
+                        presiderName: 'Hon. Smith',
+                        courtroomNumber: '101',
+                        caseName: 'State v. Doe',
+                        prosecutionCode: 'P1',
+                        defenseCode: 'D1',
+                        students: {
+                            's1': { name: 'Alice Witness', pronouns: 'she/her', schoolId: 'sch1' },
+                            's2': { name: 'Bob Attorney', pronouns: null, schoolId: 'sch2' },
+                        },
+                        witnesses: { 'w1': { characterName: 'Chris Expert' } },
+                        scoringCategories: {
+                            'cat1': {
+                                categoryName: 'Opening',
+                                witnessId: null,
+                                categoryAssignments: [{
+                                    assignmentName: 'Opening Statement',
+                                    assignmentKey: 'open1',
+                                    pStudentId: 's1',
+                                    dStudentId: 's2',
+                                    side: 'BOTH' as const,
+                                    minScore: 1,
+                                    maxScore: 10,
+                                }],
+                            },
+                        },
+                        categoryOrder: ['cat1'],
+                    },
+                    ballot: {
+                        pairingID: 'p1',
+                        scores: [
+                            { categoryId: 'cat1', assignmentKey: 'open1', side: 'P', studentId: 's1', score: 8 },
+                            { categoryId: 'cat1', assignmentKey: 'open1', side: 'D', studentId: 's2', score: 7 },
+                        ],
+                        nominations: [],
+                        tiebreaker: 'P1',
+                    },
+                    editLog: [],
+                },
+            })
+            cy.visit('/organizer/t1/scoresheet/p1/j1')
+            cy.contains('Scorecard').should('be.visible')
+            cy.injectAxe()
+            cy.checkA11y(null, {
+                includedImpacts: ['critical', 'serious'],
+                rules: {
+                    'frame-title': { enabled: false },
+                },
+            }, terminalLog)
+        })
     })
 })
