@@ -114,11 +114,13 @@
 .auth-google {
     display: flex;
     justify-content: center;
+    width: 100%;
+    overflow: hidden;
 }
 
-.auth-google > div,
-.auth-google iframe {
-    width: 100% !important;
+.auth-google > div {
+    display: flex;
+    justify-content: center;
 }
 
 .pw-requirements {
