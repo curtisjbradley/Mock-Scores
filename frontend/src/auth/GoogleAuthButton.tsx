@@ -15,7 +15,7 @@ interface Props {
 export default function GoogleAuthButton({ onSuccess, onError }: Props) {
     return (
         <GoogleOAuthProvider clientId={GOOGLE_CLIENT_ID}>
-            <GoogleLogin onSuccess={async (credentialResponse) => {
+            <GoogleLogin width="280" onSuccess={async (credentialResponse) => {
                 if (!credentialResponse.credential) return
                 const res = await fetch('/api/auth/google/login', {
                     method: 'POST',

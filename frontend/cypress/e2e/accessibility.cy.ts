@@ -6,6 +6,18 @@
  * Violations are logged to the Cypress command log with details.
  */
 
+function terminalLog(violations: { id: string; impact: string; description: string; helpUrl: string; nodes: { html: string; failureSummary: string }[] }[]) {
+    cy.task('log', `\n${violations.length} accessibility violation(s) detected:`)
+    violations.forEach(v => {
+        cy.task('log', `  [${v.impact}] ${v.id}: ${v.description}`)
+        cy.task('log', `    ${v.helpUrl}`)
+        v.nodes.forEach(n => {
+            cy.task('log', `    - ${n.html.slice(0, 120)}`)
+            cy.task('log', `      ${n.failureSummary}`)
+        })
+    })
+}
+
 describe('Accessibility', () => {
     beforeEach(() => {
         // Stub auth for protected pages
@@ -23,7 +35,11 @@ describe('Accessibility', () => {
             cy.injectAxe()
             cy.checkA11y(null, {
                 includedImpacts: ['critical', 'serious'],
-            })
+                rules: {
+                    // Google Sign-In iframe is third-party and not under our control
+                    'frame-title': { enabled: false },
+                },
+            }, terminalLog)
         })
 
         it('Register page has no critical a11y violations', () => {
@@ -31,7 +47,10 @@ describe('Accessibility', () => {
             cy.injectAxe()
             cy.checkA11y(null, {
                 includedImpacts: ['critical', 'serious'],
-            })
+                rules: {
+                    'frame-title': { enabled: false },
+                },
+            }, terminalLog)
         })
 
         it('Home page has no critical a11y violations', () => {
@@ -39,7 +58,10 @@ describe('Accessibility', () => {
             cy.injectAxe()
             cy.checkA11y(null, {
                 includedImpacts: ['critical', 'serious'],
-            })
+                rules: {
+                    'frame-title': { enabled: false },
+                },
+            }, terminalLog)
         })
     })
 
@@ -66,7 +88,10 @@ describe('Accessibility', () => {
             cy.injectAxe()
             cy.checkA11y(null, {
                 includedImpacts: ['critical', 'serious'],
-            })
+                rules: {
+                    'frame-title': { enabled: false },
+                },
+            }, terminalLog)
         })
     })
 })
