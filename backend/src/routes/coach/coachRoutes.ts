@@ -243,10 +243,8 @@ router.get("/tournaments/:tournamentId/pairings/:pairingId/ballots/:assignmentId
     if (!await coach.isAssignmentInPairingWithPublicResults(tournamentId, pairingId, assignmentId))
         return res.status(404).json({ message: "Ballot not found" });
 
-    const [sheet, ballot] = await Promise.all([
-        getScoreSheet(assignmentId, { skipGuards: true }).catch(() => null),
-        getBallot(assignmentId),
-    ]);
+    const sheet = await getScoreSheet(assignmentId, { skipGuards: true }).catch(() => null);
+    const ballot = await getBallot(assignmentId);
 
     if (!sheet && !ballot) return res.status(404).json({ message: "Ballot not found" });
 

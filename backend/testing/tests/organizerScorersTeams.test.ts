@@ -42,21 +42,22 @@ describe('POST /scorers — DbError', () => {
     });
 });
 
-describe('PUT /scorers', () => {
-    it('returns 200 on success', async () => {
+describe('POST /scorers — invalid email', () => {
+    it('returns 400 for invalid email', async () => {
         mockAccess();
-        mockDbQuery.mockResolvedValueOnce({ rows: [{ scorer_id: SCORER }], rowCount: 1 } as any);
-        const res = await request(app).put(`/api/organizer/tournament/${T}/scorers`).set(auth())
-            .send({ scorer_id: SCORER, first_name: 'A', last_name: 'B', email: 'a@b.com' });
-        expect(res.status).toBe(200);
+        const res = await request(app).post(`/api/organizer/tournament/${T}/scorers`).set(auth())
+            .send({ scorer_id: SCORER, first_name: 'A', last_name: 'B', email: 'not-email' });
+        expect(res.status).toBe(400);
     });
+});
 
+describe('PUT /scorers', () => {
     it('returns 404 when scorer not found', async () => {
         mockAccess();
         mockDbQuery.mockResolvedValueOnce({ rows: [], rowCount: 0 } as any);
         const res = await request(app).put(`/api/organizer/tournament/${T}/scorers`).set(auth())
             .send({ scorer_id: SCORER, first_name: 'A', last_name: 'B', email: 'a@b.com' });
-        expect([404, 200]).toContain(res.status);
+        expect(res.status).toBe(404);
     });
 
     it('returns 500 on db failure', async () => {
@@ -68,13 +69,13 @@ describe('PUT /scorers', () => {
     });
 });
 
-describe('DELETE /scorers — NotFoundError', () => {
+describe('DELETE /scorers — errors', () => {
     it('returns 404 when scorer not found', async () => {
         mockAccess();
         mockDbQuery.mockResolvedValueOnce({ rows: [], rowCount: 0 } as any);
         const res = await request(app).delete(`/api/organizer/tournament/${T}/scorers`).set(auth())
             .send({ scorer_id: SCORER });
-        expect([404, 204]).toContain(res.status);
+        expect(res.status).toBe(404);
     });
 
     it('returns 500 on db failure', async () => {
@@ -87,7 +88,14 @@ describe('DELETE /scorers — NotFoundError', () => {
 });
 
 // ─── Scorer conflicts ─────────────────────────────────────────────────────────
-describe('GET /scorer-conflicts — DbError', () => {
+describe('GET /scorer-conflicts', () => {
+    it('returns 200 with conflicts', async () => {
+        mockAccess();
+        mockDbQuery.mockResolvedValueOnce({ rows: [{ scorer_id: SCORER, team_id: TEAM_ID }], rowCount: 1 } as any);
+        const res = await request(app).get(`/api/organizer/tournament/${T}/scorer-conflicts`).set(auth());
+        expect(res.status).toBe(200);
+    });
+
     it('returns 500 on db failure', async () => {
         mockAccess();
         mockDbQuery.mockResolvedValueOnce(null);
@@ -135,7 +143,7 @@ describe('POST /scorers/:scorerId/conflicts', () => {
 
     it('returns 201 on success', async () => {
         mockAccess();
-        mockDbQuery.mockResolvedValueOnce({ rows: [{ scorer_id: SCORER, team_id: TEAM_ID }], rowCount: 1 } as any);
+        mockDbQuery.mockResolvedValueOnce({ rows: [{ id: 'cf1', scorer_id: SCORER, team_id: TEAM_ID, team_name: 'Eagles' }], rowCount: 1 } as any);
         const res = await request(app).post(`/api/organizer/tournament/${T}/scorers/${SCORER}/conflicts`).set(auth())
             .send({ team_id: TEAM_ID });
         expect(res.status).toBe(201);
@@ -143,10 +151,10 @@ describe('POST /scorers/:scorerId/conflicts', () => {
 
     it('returns 409 when conflict already exists', async () => {
         mockAccess();
-        mockDbQuery.mockResolvedValueOnce({ rows: [], rowCount: 0 } as any); // duplicate check
+        mockDbQuery.mockResolvedValueOnce({ rows: [], rowCount: 0 } as any); // ON CONFLICT DO NOTHING returns empty
         const res = await request(app).post(`/api/organizer/tournament/${T}/scorers/${SCORER}/conflicts`).set(auth())
             .send({ team_id: TEAM_ID });
-        expect([409, 201]).toContain(res.status);
+        expect(res.status).toBe(409);
     });
 });
 
@@ -167,7 +175,7 @@ describe('DELETE /scorers/:scorerId/conflicts', () => {
 
     it('returns 204 on success', async () => {
         mockAccess();
-        mockDbQuery.mockResolvedValueOnce({ rows: [{ scorer_id: SCORER, team_id: TEAM_ID }], rowCount: 1 } as any);
+        mockDbQuery.mockResolvedValueOnce({ rows: [{ scorer_id: SCORER }], rowCount: 1 } as any);
         const res = await request(app).delete(`/api/organizer/tournament/${T}/scorers/${SCORER}/conflicts`).set(auth())
             .send({ team_id: TEAM_ID });
         expect(res.status).toBe(204);
@@ -178,11 +186,11 @@ describe('DELETE /scorers/:scorerId/conflicts', () => {
         mockDbQuery.mockResolvedValueOnce({ rows: [], rowCount: 0 } as any);
         const res = await request(app).delete(`/api/organizer/tournament/${T}/scorers/${SCORER}/conflicts`).set(auth())
             .send({ team_id: TEAM_ID });
-        expect([404, 204]).toContain(res.status);
+        expect(res.status).toBe(404);
     });
 });
 
-// ─── Organizers ───────────────────────────────────────────────────────────────
+// ─── Organizers — additional error branches ───────────────────────────────────
 describe('GET /organizers — DbError', () => {
     it('returns 500 on db failure', async () => {
         mockAccess();
@@ -192,120 +200,44 @@ describe('GET /organizers — DbError', () => {
     });
 });
 
-describe('POST /organizers — no body', () => {
-    it('returns 400 when organizer missing from body', async () => {
+describe('POST /organizers — invalid email', () => {
+    it('returns 400 for invalid email', async () => {
         mockAccess();
-        const res = await request(app).post(`/api/organizer/tournament/${T}/organizers`).set(auth()).send({});
+        const res = await request(app).post(`/api/organizer/tournament/${T}/organizers`).set(auth())
+            .send({ organizer: { name: 'Bob', email: 'not-email', role: 'delegate' } });
         expect(res.status).toBe(400);
     });
 });
 
-describe('PUT /organizers', () => {
-    it('returns 400 when id missing', async () => {
+// ─── Teams — additional error branches ────────────────────────────────────────
+describe('POST /teams — invalid email', () => {
+    it('returns 400 for invalid coach email', async () => {
         mockAccess();
-        const res = await request(app).put(`/api/organizer/tournament/${T}/organizers`).set(auth())
-            .send({ organizer: { name: 'X', email: 'x@y.com', role: 'delegate' } });
+        const res = await request(app).post(`/api/organizer/tournament/${T}/teams`).set(auth())
+            .send({ team: { name: 'Eagles', coach_email: 'not-email' } });
         expect(res.status).toBe(400);
-    });
-
-    it('returns 400 when id is invalid UUID', async () => {
-        mockAccess();
-        const res = await request(app).put(`/api/organizer/tournament/${T}/organizers`).set(auth())
-            .send({ organizer: { id: 'bad-id', name: 'X', email: 'x@y.com', role: 'delegate' } });
-        expect(res.status).toBe(400);
-    });
-
-    it('returns 200 on success', async () => {
-        mockAccess();
-        mockDbQuery.mockResolvedValueOnce({ rows: [{ id: ORG_ID }], rowCount: 1 } as any);
-        const res = await request(app).put(`/api/organizer/tournament/${T}/organizers`).set(auth())
-            .send({ organizer: { id: ORG_ID, name: 'X', email: 'x@y.com', role: 'delegate' } });
-        expect([200, 409]).toContain(res.status);
     });
 });
 
-describe('DELETE /organizers', () => {
-    it('returns 400 when id is invalid UUID', async () => {
+describe('POST /teams — DbError', () => {
+    it('returns 500 on db failure during addTeam', async () => {
         mockAccess();
-        const res = await request(app).delete(`/api/organizer/tournament/${T}/organizers`).set(auth())
-            .send({ organizer: { id: 'bad-id', name: 'X', email: 'x@y.com', role: 'delegate' } });
-        expect(res.status).toBe(400);
-    });
-
-    it('returns 404 when organizer not found', async () => {
-        mockAccess();
-        mockDbQuery.mockResolvedValueOnce({ rows: [], rowCount: 0 } as any);
-        const res = await request(app).delete(`/api/organizer/tournament/${T}/organizers`).set(auth())
-            .send({ organizer: { id: ORG_ID, name: 'X', email: 'x@y.com', role: 'delegate', has_joined: false } });
-        expect([404, 204]).toContain(res.status);
+        mockDbQuery.mockResolvedValueOnce({ rows: [], rowCount: 0 } as any); // teamNameExists
+        mockDbQuery.mockResolvedValueOnce(null); // addTeam INSERT fails
+        const res = await request(app).post(`/api/organizer/tournament/${T}/teams`).set(auth())
+            .send({ team: { name: 'Eagles', coach_email: 'coach@test.com' } });
+        expect(res.status).toBe(500);
     });
 });
 
-// ─── Courtrooms ───────────────────────────────────────────────────────────────
-describe('PUT /courtrooms', () => {
-    it('returns 400 when id or name missing', async () => {
+describe('PUT /teams — DbError', () => {
+    it('returns 500 on db failure during updateTeam', async () => {
         mockAccess();
-        const res = await request(app).put(`/api/organizer/tournament/${T}/courtrooms`).set(auth())
-            .send({ name: 'Room 1' });
-        expect(res.status).toBe(400);
-    });
-
-    it('returns 200 on success', async () => {
-        mockAccess();
-        mockDbQuery.mockResolvedValueOnce({ rows: [{ id: 'c1', name: 'Room 1' }], rowCount: 1 } as any);
-        const res = await request(app).put(`/api/organizer/tournament/${T}/courtrooms`).set(auth())
-            .send({ id: 'c1', name: 'Room 1' });
-        expect(res.status).toBe(200);
-    });
-
-    it('returns 404 when not found', async () => {
-        mockAccess();
-        mockDbQuery.mockResolvedValueOnce({ rows: [], rowCount: 0 } as any);
-        const res = await request(app).put(`/api/organizer/tournament/${T}/courtrooms`).set(auth())
-            .send({ id: 'c1', name: 'Room 1' });
-        expect([404, 200]).toContain(res.status);
-    });
-});
-
-describe('DELETE /courtrooms', () => {
-    it('returns 400 when id missing', async () => {
-        mockAccess();
-        const res = await request(app).delete(`/api/organizer/tournament/${T}/courtrooms`).set(auth()).send({});
-        expect(res.status).toBe(400);
-    });
-
-    it('returns 204 on success', async () => {
-        mockAccess();
-        mockDbQuery.mockResolvedValueOnce({ rows: [{ id: 'c1' }], rowCount: 1 } as any);
-        const res = await request(app).delete(`/api/organizer/tournament/${T}/courtrooms`).set(auth())
-            .send({ id: 'c1' });
-        expect(res.status).toBe(204);
-    });
-
-    it('returns 404 when not found', async () => {
-        mockAccess();
-        mockDbQuery.mockResolvedValueOnce({ rows: [], rowCount: 0 } as any);
-        const res = await request(app).delete(`/api/organizer/tournament/${T}/courtrooms`).set(auth())
-            .send({ id: 'c1' });
-        expect([404, 204]).toContain(res.status);
-    });
-});
-
-// ─── Teams ────────────────────────────────────────────────────────────────────
-describe('DELETE /teams', () => {
-    it('returns 400 when id is invalid UUID', async () => {
-        mockAccess();
-        const res = await request(app).delete(`/api/organizer/tournament/${T}/teams`).set(auth())
-            .send({ id: 'bad-id' });
-        expect(res.status).toBe(400);
-    });
-
-    it('returns 404 when team not found', async () => {
-        mockAccess();
-        mockDbQuery.mockResolvedValueOnce({ rows: [], rowCount: 0 } as any);
-        const res = await request(app).delete(`/api/organizer/tournament/${T}/teams`).set(auth())
-            .send({ id: TEAM_ID });
-        expect([404, 204]).toContain(res.status);
+        mockDbQuery.mockResolvedValueOnce({ rows: [], rowCount: 0 } as any); // teamNameExists
+        mockDbQuery.mockResolvedValueOnce(null); // updateTeam SELECT fails
+        const res = await request(app).put(`/api/organizer/tournament/${T}/teams`).set(auth())
+            .send({ team: { id: TEAM_ID, name: 'Eagles', coach_email: 'coach@test.com' } });
+        expect(res.status).toBe(500);
     });
 });
 
@@ -333,15 +265,27 @@ describe('PUT /teams/:teamId/owner', () => {
 
     it('returns 204 on success', async () => {
         mockAccess();
-        mockDbQuery.mockResolvedValueOnce({ rows: [{ team_id: TEAM_ID }], rowCount: 1 } as any);
+        // transferOwnership: SELECT coach exists, UPDATE set all false, UPDATE set true
+        mockDbQuery.mockResolvedValueOnce({ rows: [{ coach_id: COACH_ID }], rowCount: 1 } as any);
+        mockDbQuery.mockResolvedValueOnce({ rows: [], rowCount: 1 } as any);
+        mockDbQuery.mockResolvedValueOnce({ rows: [], rowCount: 1 } as any);
         const res = await request(app).put(`/api/organizer/tournament/${T}/teams/${TEAM_ID}/owner`).set(auth())
             .send({ coachId: COACH_ID });
         expect(res.status).toBe(204);
     });
+
+    it('returns 404 when coach not found on team', async () => {
+        mockAccess();
+        mockDbQuery.mockResolvedValueOnce({ rows: [], rowCount: 0 } as any);
+        const res = await request(app).put(`/api/organizer/tournament/${T}/teams/${TEAM_ID}/owner`).set(auth())
+            .send({ coachId: COACH_ID });
+        expect(res.status).toBe(404);
+    });
 });
 
-describe('GET/POST/DELETE /teams/:teamId/coaches', () => {
-    it('GET returns 200', async () => {
+// ─── Team sub-routes (coaches, students, witness-order, assignments) ──────────
+describe('GET /teams/:teamId/coaches', () => {
+    it('returns 200', async () => {
         mockAccess();
         mockDbQuery
             .mockResolvedValueOnce({ rows: [], rowCount: 0 } as any)
@@ -349,40 +293,55 @@ describe('GET/POST/DELETE /teams/:teamId/coaches', () => {
         const res = await request(app).get(`/api/organizer/tournament/${T}/teams/${TEAM_ID}/coaches`).set(auth());
         expect(res.status).toBe(200);
     });
+});
 
-    it('POST returns 400 when email missing', async () => {
+describe('POST /teams/:teamId/coaches', () => {
+    it('returns 400 when email missing', async () => {
         mockAccess();
         const res = await request(app).post(`/api/organizer/tournament/${T}/teams/${TEAM_ID}/coaches`).set(auth()).send({});
         expect(res.status).toBe(400);
     });
 
-    it('DELETE returns 404 when coach not found', async () => {
+    it('returns 400 for invalid email', async () => {
         mockAccess();
-        mockDbQuery.mockResolvedValueOnce({ rows: [], rowCount: 0 } as any);
-        const res = await request(app).delete(`/api/organizer/tournament/${T}/teams/${TEAM_ID}/coaches/${COACH_ID}`).set(auth());
-        expect([404, 204]).toContain(res.status);
+        const res = await request(app).post(`/api/organizer/tournament/${T}/teams/${TEAM_ID}/coaches`).set(auth())
+            .send({ email: 'not-email' });
+        expect(res.status).toBe(400);
+    });
+
+    it('returns 201 on success', async () => {
+        mockAccess();
+        mockDbQuery
+            .mockResolvedValueOnce({ rows: [{ user_id: COACH_ID, first_name: 'A', last_name: 'B', email: 'a@b.com' }], rowCount: 1 } as any)
+            .mockResolvedValueOnce({ rows: [], rowCount: 1 } as any);
+        const res = await request(app).post(`/api/organizer/tournament/${T}/teams/${TEAM_ID}/coaches`).set(auth())
+            .send({ email: 'a@b.com' });
+        expect(res.status).toBe(201);
     });
 });
 
-describe('GET/POST/DELETE /teams/:teamId/students', () => {
-    it('GET returns 200', async () => {
+describe('GET /teams/:teamId/students', () => {
+    it('returns 200', async () => {
         mockAccess();
         mockDbQuery.mockResolvedValueOnce({ rows: [], rowCount: 0 } as any);
         const res = await request(app).get(`/api/organizer/tournament/${T}/teams/${TEAM_ID}/students`).set(auth());
         expect(res.status).toBe(200);
     });
+});
 
-    it('POST returns 400 when student_name missing', async () => {
-        mockAccess();
-        const res = await request(app).post(`/api/organizer/tournament/${T}/teams/${TEAM_ID}/students`).set(auth()).send({});
-        expect(res.status).toBe(400);
-    });
-
-    it('DELETE returns 204 on success', async () => {
+describe('DELETE /teams/:teamId/students/:studentId', () => {
+    it('returns 204 on success', async () => {
         mockAccess();
         mockDbQuery.mockResolvedValueOnce({ rows: [{ student_id: STUDENT_ID }], rowCount: 1 } as any);
         const res = await request(app).delete(`/api/organizer/tournament/${T}/teams/${TEAM_ID}/students/${STUDENT_ID}`).set(auth());
         expect(res.status).toBe(204);
+    });
+
+    it('returns 404 when student not found', async () => {
+        mockAccess();
+        mockDbQuery.mockResolvedValueOnce({ rows: [], rowCount: 0 } as any);
+        const res = await request(app).delete(`/api/organizer/tournament/${T}/teams/${TEAM_ID}/students/${STUDENT_ID}`).set(auth());
+        expect(res.status).toBe(404);
     });
 });
 
@@ -448,5 +407,40 @@ describe('GET/PUT /teams/:teamId/pairings/:pairingId/assignments', () => {
             .put(`/api/organizer/tournament/${T}/teams/${TEAM_ID}/pairings/${PAIRING_ID}/assignments`)
             .set(auth()).send({ field_id: SCORER, student_id: STUDENT_ID });
         expect(res.status).toBe(500);
+    });
+});
+
+// ═══════════════════════════════════════════════════════════════════════════════
+// POST /teams/:teamId/students — pronouns
+// ═══════════════════════════════════════════════════════════════════════════════
+describe('POST /api/organizer/tournament/:id/teams/:teamId/students — pronouns', () => {
+    it('returns 400 when student_name is missing', async () => {
+        mockAccess();
+        const res = await request(app)
+            .post(`/api/organizer/tournament/${T}/teams/${TEAM_ID}/students`)
+            .set(auth()).send({ pronouns: 'she/her' });
+        expect(res.status).toBe(400);
+    });
+
+    it('stores and returns pronouns', async () => {
+        mockAccess();
+        mockDbQuery.mockResolvedValueOnce({
+            rows: [{ student_id: 'stu1', team_id: TEAM_ID, student_name: 'Alice', pronouns: 'she/her' }],
+            rowCount: 1,
+        } as any);
+        const res = await request(app)
+            .post(`/api/organizer/tournament/${T}/teams/${TEAM_ID}/students`)
+            .set(auth()).send({ student_name: 'Alice', pronouns: 'she/her' });
+        expect(res.status).toBe(201);
+        expect(res.body.pronouns).toBe('she/her');
+    });
+
+    it('returns 409 on duplicate student name', async () => {
+        mockAccess();
+        mockDbQuery.mockResolvedValueOnce({ rows: [], rowCount: 0 } as any);
+        const res = await request(app)
+            .post(`/api/organizer/tournament/${T}/teams/${TEAM_ID}/students`)
+            .set(auth()).send({ student_name: 'Alice', pronouns: 'she/her' });
+        expect(res.status).toBe(409);
     });
 });

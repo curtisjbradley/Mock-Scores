@@ -193,12 +193,14 @@ export async function getOrganizerStandingsData(tournamentID: string): Promise<{
         ),
     ]);
 
-    const row = configRow?.rows[0];
+    if (!configRow || !teamsRows || !roundsRows || !ballotsRows) throw new DbError('getOrganizerStandingsData');
+
+    const row = configRow.rows[0];
     return {
         config: row ? { statsXml: row.stats_xml, standingsXml: row.standings_xml } : null,
-        teams: teamsRows?.rows ?? [],
-        ballots: ballotsRows?.rows ?? [],
-        rounds: roundsRows?.rows ?? [],
+        teams: teamsRows.rows,
+        ballots: ballotsRows.rows,
+        rounds: roundsRows.rows,
     };
 }
 
@@ -493,7 +495,9 @@ export async function addTeam(tournamentID: string, name: string, coachEmail: st
 }
 
 export async function updateTeam(teamId: string, name: string, coachEmail: string, code: string): Promise<ITeam> {
-    const team = (await dbQuery<ITeamRow>('SELECT * FROM teams WHERE id=$1', [teamId]))?.rows[0];
+    const result = await dbQuery<ITeamRow>('SELECT * FROM teams WHERE id=$1', [teamId]);
+    if (!result) throw new DbError('updateTeam');
+    const team = result.rows[0];
     if (!team) throw new NotFoundError('team');
     await dbQuery('UPDATE teams SET name=$1, code=$2 WHERE id=$3', [name, code || name, teamId]);
     const hasJoinedCoach = !!(await dbQuery<{ coach_id: string }>('SELECT coach_id FROM team_coaches WHERE team_id=$1 AND is_owner=true LIMIT 1', [teamId]))?.rows[0];
@@ -788,8 +792,9 @@ async function duplicateTiebreaker(sourceTournamentID: string, newTournamentID: 
 }
 
 export async function deleteBallot(assignmentId: string): Promise<void> {
-    const row = (await dbQuery('DELETE FROM ballots WHERE scorer_assignment_id=$1 RETURNING ballot_id', [assignmentId]))?.rows[0];
-    if (!row) throw new NotFoundError('ballot');
+    const result = await dbQuery('DELETE FROM ballots WHERE scorer_assignment_id=$1 RETURNING ballot_id', [assignmentId]);
+    if (!result) throw new DbError('deleteBallot');
+    if (!result.rows[0]) throw new NotFoundError('ballot');
 }
 
 export async function editBallot(
@@ -799,10 +804,12 @@ export async function editBallot(
     reason: string,
 ): Promise<void> {
     // Get current ballot
-    const current = (await dbQuery<{ ballot_id: string; ballot_json: string; p_points: number; d_points: number }>(
+    const result = await dbQuery<{ ballot_id: string; ballot_json: string; p_points: number; d_points: number }>(
         'SELECT ballot_id, ballot_json, p_points, d_points FROM ballots WHERE scorer_assignment_id=$1',
         [assignmentId],
-    ))?.rows[0];
+    );
+    if (!result) throw new DbError('editBallot');
+    const current = result.rows[0];
     if (!current) throw new NotFoundError('ballot');
 
     const beforeJson = current.ballot_json;
@@ -818,11 +825,11 @@ export async function editBallot(
     const updatedBallot = { ...originalBallot, scores: newPayload.scores };
 
     // Update the ballot
-    const result = await dbQuery(
+    const updateResult = await dbQuery(
         'UPDATE ballots SET ballot_json=$1, p_points=$2, d_points=$3 WHERE ballot_id=$4',
         [JSON.stringify(updatedBallot), pPointsAfter, dPointsAfter, current.ballot_id],
     );
-    if (!result) throw new DbError('editBallot update');
+    if (!updateResult) throw new DbError('editBallot update');
 
     // Insert audit log entry
     await dbQuery(
