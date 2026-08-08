@@ -79,15 +79,48 @@ function computeFromBallots(
 }
 
 async function downloadCsv(tournamentId: string, type: 'standings' | 'results') {
-    const res = await apiFetch(`/api/organizer/tournament/${tournamentId}/export/${type}`)
-    if (!res.ok) return
-    const blob = await res.blob()
+    if (type === 'results') {
+        // Results CSV still uses the backend endpoint (raw ballot data)
+        const res = await apiFetch(`/api/organizer/tournament/${tournamentId}/export/results`)
+        if (!res.ok) return
+        const blob = await res.blob()
+        const url = URL.createObjectURL(blob)
+        const a = document.createElement('a')
+        a.href = url
+        a.download = 'results.csv'
+        a.click()
+        URL.revokeObjectURL(url)
+    }
+}
+
+function downloadStandingsCsv(
+    rows: Record<string, unknown>[],
+    cols: { stat: string; label: string }[],
+) {
+    const header = ['#', 'Code', 'Team', ...cols.map(c => c.label || c.stat)]
+    const csvRows = rows.map((team, i) => {
+        const vals = cols.map(c => {
+            const val = team[c.stat]
+            const num = typeof val === 'number' ? val : NaN
+            return isNaN(num) ? '' : Number.isInteger(num) ? String(num) : num.toFixed(3)
+        })
+        return [String(i + 1), escapeCsvField(String(team.code ?? '')), escapeCsvField(String(team.name ?? '')), ...vals]
+    })
+    const csv = [header.join(','), ...csvRows.map(r => r.join(','))].join('\n')
+    const blob = new Blob([csv], { type: 'text/csv' })
     const url = URL.createObjectURL(blob)
     const a = document.createElement('a')
     a.href = url
-    a.download = `${type}.csv`
+    a.download = 'standings.csv'
     a.click()
     URL.revokeObjectURL(url)
+}
+
+function escapeCsvField(value: string): string {
+    if (value.includes(',') || value.includes('"') || value.includes('\n')) {
+        return `"${value.replace(/"/g, '""')}"`
+    }
+    return value
 }
 
 export default function StandingsTab({ tournamentId }: { tournamentId: string }) {
@@ -183,7 +216,8 @@ export default function StandingsTab({ tournamentId }: { tournamentId: string })
                 <div style={{ marginBottom: '1rem', display: 'flex', gap: '0.5rem' }}>
                     <button
                         className="btn btn-secondary"
-                        onClick={() => downloadCsv(tournamentId, 'standings')}
+                        disabled={!result}
+                        onClick={() => result && downloadStandingsCsv(result.rows, result.cols)}
                     >
                         Download Standings CSV
                     </button>
