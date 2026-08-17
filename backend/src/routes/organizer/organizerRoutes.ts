@@ -10,7 +10,7 @@ const router = Router();
 
 /**
  * @swagger
- * /api/organizer/tournament:
+ * /organizer/tournament:
  *   get:
  *     summary: List tournaments for the authenticated organizer
  *     tags: [Organizer - Tournaments]
@@ -29,7 +29,7 @@ router.get("/", authedHandler(async (req, res) => {
 
 /**
  * @swagger
- * /api/organizer/tournament/standings-templates:
+ * /organizer/tournament/standings-templates:
  *   get:
  *     summary: Get available standings templates
  *     tags: [Organizer - Tournaments]
@@ -48,7 +48,7 @@ router.get("/standings-templates", async (req: Request, res: Response) => {
 
 /**
  * @swagger
- * /api/organizer/tournament:
+ * /organizer/tournament:
  *   post:
  *     summary: Create a new tournament
  *     tags: [Organizer - Tournaments]
@@ -76,7 +76,7 @@ router.post("/", authedHandler(async (req, res) => {
 
 /**
  * @swagger
- * /api/organizer/tournament/duplicate/{tournamentId}:
+ * /organizer/tournament/duplicate/{tournamentId}:
  *   post:
  *     summary: Duplicate an existing tournament
  *     tags: [Organizer - Tournaments]
@@ -117,7 +117,7 @@ router.post("/duplicate/:tournamentId", verifyTournamentAccess, tournamentHandle
 
 /**
  * @swagger
- * /api/organizer/tournament/{tournamentId}:
+ * /organizer/tournament/{tournamentId}:
  *   delete:
  *     summary: Delete a tournament (owner only)
  *     tags: [Organizer - Tournaments]
