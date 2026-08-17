@@ -15,7 +15,7 @@ const OrganizerHome = () => {
     const [statusFilter, setStatusFilter] = useState<'all' | 'active' | 'completed' | 'archived'>('all')
 
     useEffect(() => {
-        apiFetch('/api/organizer/tournament')
+        apiFetch('/organizer/tournament')
             .then(res => res.ok ? res.json() : [])
             .then((data: ITournament[]) => setTournaments(data))
             .catch(console.error)
@@ -23,7 +23,7 @@ const OrganizerHome = () => {
 
     const handleDuplicate = async (options: IDuplicateOptions) => {
         if (!duplicating) return
-        const res = await apiFetch(`/api/organizer/tournament/duplicate/${duplicating.id}`, {
+        const res = await apiFetch(`/organizer/tournament/duplicate/${duplicating.id}`, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify(options),

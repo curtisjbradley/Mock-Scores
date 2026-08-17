@@ -81,7 +81,7 @@ function computeFromBallots(
 async function downloadCsv(tournamentId: string, type: 'standings' | 'results') {
     if (type === 'results') {
         // Results CSV still uses the backend endpoint (raw ballot data)
-        const res = await apiFetch(`/api/organizer/tournament/${tournamentId}/export/results`)
+        const res = await apiFetch(`/organizer/tournament/${tournamentId}/export/results`)
         if (!res.ok) return
         const blob = await res.blob()
         const url = URL.createObjectURL(blob)
@@ -131,7 +131,7 @@ export default function StandingsTab({ tournamentId }: { tournamentId: string })
 
     // Single fetch on mount — all data comes back at once
     useEffect(() => {
-        apiFetch(`/api/organizer/tournament/${tournamentId}/standings`)
+        apiFetch(`/organizer/tournament/${tournamentId}/standings`)
             .then(r => r.ok ? r.json() : null)
             .then((data: StandingsApiPayload | null) => {
                 if (!data) { setError('Failed to load standings.'); return }
@@ -140,7 +140,7 @@ export default function StandingsTab({ tournamentId }: { tournamentId: string })
             })
             .catch(() => setError('Failed to load standings.'))
 
-        apiFetch(`/api/organizer/tournament/${tournamentId}/awards`)
+        apiFetch(`/organizer/tournament/${tournamentId}/awards`)
             .then(r => r.ok ? r.json() : [])
             .then((data: AwardEntry[]) => setAwards(data))
             .catch(() => setAwards([]))

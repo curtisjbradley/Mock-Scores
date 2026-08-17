@@ -16,7 +16,7 @@ export default function CourtroomsTab({ tournamentId }: { tournamentId: string }
     const [location, setLocation] = useState('')
 
     useEffect(() => {
-        apiFetch(`/api/organizer/tournament/${tournamentId}/courtrooms`)
+        apiFetch(`/organizer/tournament/${tournamentId}/courtrooms`)
             .then(res => { if (!res.ok) throw new Error('Courtrooms not found.'); return res.json() })
             .then(setCourtrooms).catch(console.error)
     }, [tournamentId])
@@ -28,12 +28,12 @@ export default function CourtroomsTab({ tournamentId }: { tournamentId: string }
         if (!name.trim()) return
         if (editingId) {
             const modified: ICourtroom = { id: editingId, name: name.trim(), location: location.trim() }
-            apiFetch(`/api/organizer/tournament/${tournamentId}/courtrooms`, { method: 'PUT', body: JSON.stringify(modified) })
+            apiFetch(`/organizer/tournament/${tournamentId}/courtrooms`, { method: 'PUT', body: JSON.stringify(modified) })
                 .then(res => { if (!res.ok) throw new Error('Courtroom not found.') }).catch(console.error)
             setCourtrooms(prev => prev.map(c => c.id === editingId ? modified : c))
         } else {
             const created: ICourtroom = { id: randomUUID(), name: name.trim(), location: location.trim() }
-            apiFetch(`/api/organizer/tournament/${tournamentId}/courtrooms`, { method: 'POST', body: JSON.stringify(created) })
+            apiFetch(`/organizer/tournament/${tournamentId}/courtrooms`, { method: 'POST', body: JSON.stringify(created) })
                 .then(res => { if (!res.ok) throw new Error('Courtroom not found.') }).catch(console.error)
             setCourtrooms(prev => [...prev, created])
         }
@@ -95,7 +95,7 @@ export default function CourtroomsTab({ tournamentId }: { tournamentId: string }
                     message={`Remove ${confirmRemove.pending.name} from the courtroom list?`}
                     onCancel={confirmRemove.clear}
                     onConfirm={() => {
-                        apiFetch(`/api/organizer/tournament/${tournamentId}/courtrooms`, { method: 'DELETE', body: JSON.stringify(confirmRemove.pending) })
+                        apiFetch(`/organizer/tournament/${tournamentId}/courtrooms`, { method: 'DELETE', body: JSON.stringify(confirmRemove.pending) })
                             .then(res => { if (!res.ok) throw new Error('Courtroom not found.') }).catch(console.error)
                         setCourtrooms(prev => prev.filter(c => c.id !== confirmRemove.pending!.id))
                         confirmRemove.clear()

@@ -1,3 +1,4 @@
+import { API_BASE } from '../../config';
 import "../styles/modal.css";
 import "../styles/scoresheet.css";
 import { useState } from "react";
@@ -42,7 +43,7 @@ function TiebreakerOnly({ details, storageKey, onSubmitSuccess }: TiebreakerOnly
         setSubmitting(true);
         setSubmitError(null);
         try {
-            const res = await fetch(`/api/score/${details.scorer.scorerID}/ballot`, {
+            const res = await fetch(`${API_BASE}/score/${details.scorer.scorerID}/ballot`, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify(payload),

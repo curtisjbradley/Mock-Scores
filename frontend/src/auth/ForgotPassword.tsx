@@ -12,7 +12,7 @@ const ForgotPassword = () => {
         e.preventDefault()
         setError('')
         if (!email.trim()) { setError('Please enter your email address.'); return }
-        const { ok, data } = await postJson<{ message: string }>('/api/auth/forgot-password', { email: email.trim() })
+        const { ok, data } = await postJson<{ message: string }>('/auth/forgot-password', { email: email.trim() })
         if (!ok && data?.message) { setError(data.message); return }
         setSent(true)
     }

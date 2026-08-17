@@ -33,7 +33,7 @@ interface ComputedStandings {
  * under the cognitive complexity threshold and to make this computation
  * independently testable.
  *
- * @param data - Raw API response from `/api/coach/tournaments/:id/standings`
+ * @param data - Raw API response from `/coach/tournaments/:id/standings`
  */
 function computeStandingsFromData(data: StandingsApiPayload): ComputedStandings {
     // Register Blockly blocks (safe to call multiple times)
@@ -104,7 +104,7 @@ export function useCoachStandings(
     useEffect(() => {
         if (!id || !tournament || tab !== 'standings' || standingsRows.length > 0) return
 
-        apiFetch(`/api/coach/tournaments/${id}/standings`)
+        apiFetch(`/coach/tournaments/${id}/standings`)
             .then(r => r.ok ? r.json() : null)
             .then((data: StandingsApiPayload | null) => {
                 if (!data?.config) return

@@ -37,16 +37,36 @@ app.use(express.urlencoded({ extended: true }));
 app.use(express.json());
 app.use(cookieParser());
 
-app.use('/api/docs', swaggerUi.serve, swaggerUi.setup(swaggerSpec));
-app.get('/api/docs-json', (_req: Request, res: Response) => res.json(swaggerSpec));
+// CORS — allow the frontend origin to make credentialed cross-origin requests
+const ALLOWED_ORIGINS = [
+    process.env.FRONTEND_URL,          // https://app.mockscores.org in production
+    'https://www.mockscores.org',
+    'https://mockscores.org',
+    'http://localhost:5173',            // Vite dev server
+].filter(Boolean) as string[];
 
-// Health check for ECS load balancer
-app.get('/api/health', (_req: Request, res: Response) => res.json({ status: 'ok' }));
+app.use((req: Request, res: Response, next: NextFunction) => {
+    const origin = req.headers.origin;
+    if (origin && ALLOWED_ORIGINS.includes(origin)) {
+        res.setHeader('Access-Control-Allow-Origin', origin);
+        res.setHeader('Access-Control-Allow-Credentials', 'true');
+        res.setHeader('Access-Control-Allow-Methods', 'GET,POST,PUT,PATCH,DELETE,OPTIONS');
+        res.setHeader('Access-Control-Allow-Headers', 'Content-Type,Authorization,X-CSRF-Token');
+    }
+    if (req.method === 'OPTIONS') return res.sendStatus(204);
+    next();
+});
 
-app.use('/api/auth', authLimiter, authRouter);
-app.use('/api/organizer/tournament', globalLimiter, verifyUser, organizerTournamentRouter);
-app.use('/api/coach', globalLimiter, verifyUser, coachRouter);
-app.use('/api/score', globalLimiter, scorerRouter);
+app.use('/docs', swaggerUi.serve, swaggerUi.setup(swaggerSpec));
+app.get('/docs-json', (_req: Request, res: Response) => res.json(swaggerSpec));
+
+// Health check for load balancer / monitoring
+app.get('/health', (_req: Request, res: Response) => res.json({ status: 'ok' }));
+
+app.use('/auth', authLimiter, authRouter);
+app.use('/organizer/tournament', globalLimiter, verifyUser, organizerTournamentRouter);
+app.use('/coach', globalLimiter, verifyUser, coachRouter);
+app.use('/score', globalLimiter, scorerRouter);
 app.use('/webhooks', globalLimiter, express.text({ type: '*/*' }), webhookRouter);
 
 // Static assets — only in local dev. In production, CloudFront + S3 serves the frontend.

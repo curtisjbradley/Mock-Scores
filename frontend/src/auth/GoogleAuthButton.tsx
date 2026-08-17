@@ -1,5 +1,6 @@
 import { GoogleLogin, GoogleOAuthProvider } from '@react-oauth/google'
 import { GOOGLE_CLIENT_ID, setAccessToken } from './auth'
+import { API_BASE } from '../config'
 
 interface Props {
     onSuccess: () => void
@@ -17,9 +18,9 @@ export default function GoogleAuthButton({ onSuccess, onError }: Props) {
         <GoogleOAuthProvider clientId={GOOGLE_CLIENT_ID}>
             <GoogleLogin width="280" onSuccess={async (credentialResponse) => {
                 if (!credentialResponse.credential) return
-                const res = await fetch('/api/auth/google/login', {
+                const res = await fetch(`${API_BASE}/auth/google/login`, {
                     method: 'POST',
-                    credentials: 'same-origin',
+                    credentials: 'include',
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({ token: credentialResponse.credential }),
                 })

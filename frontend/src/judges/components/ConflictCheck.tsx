@@ -1,3 +1,4 @@
+import { API_BASE } from '../../config';
 import "../styles/conflict-check.css";
 import { useState } from "react";
 import type { IScoreSheetFormat } from "@mock-scores/shared";
@@ -22,7 +23,7 @@ function ConflictCheck({ details, onProceed }: ConflictCheckProps) {
     const handleReportConflict = async () => {
         setReporting(true);
         try {
-            await fetch(`/api/score/${details.scorer.scorerID}/conflict`, { method: 'POST' });
+            await fetch(`${API_BASE}/score/${details.scorer.scorerID}/conflict`, { method: 'POST' });
         } catch {
             // best-effort — always show the confirmation
         }
