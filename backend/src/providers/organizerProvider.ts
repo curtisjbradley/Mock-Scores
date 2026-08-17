@@ -1,7 +1,7 @@
 import { dbQuery } from '../db';
 import type {
     IScorer, TournamentPayload, ITournament, IOrganizer, IWitnesses, IScoringCategory, ICourtroom, ITeam,
-    IRound, IDuplicateOptions, IBallotStatus
+    IRound, IDuplicateOptions, IBallotStatus, IIndividualAwardCategory
 } from '@mock-scores/shared';
 import type {
     ICaseWitnessRow, IScoringCategoryRow, IScoringFieldRow, IRoundRow,
@@ -31,8 +31,8 @@ async function insertCategories(tournamentID: string, categories: TournamentPayl
         );
         await Promise.all(cat.fields.map(f =>
             dbQuery(
-                'INSERT INTO scoring_fields (category_id, label, min_score, max_score, multiplier, assignable, eligible_for_award, visible_to_scorers, prosecution, defense, calling, crossing, position) VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13)',
-                [categoryID, f.label, f.min, f.max, f.multiplier, f.assignable, f.eligibleForAward, f.visibleToScorers, f.prosecution, f.defense, f.calling, f.crossing, f.position]
+                'INSERT INTO scoring_fields (category_id, label, min_score, max_score, multiplier, assignable, eligible_for_award, visible_to_scorers, prosecution, defense, calling, crossing, position, award_category_id) VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14)',
+                [categoryID, f.label, f.min, f.max, f.multiplier, f.assignable, f.eligibleForAward, f.visibleToScorers, f.prosecution, f.defense, f.calling, f.crossing, f.position, f.awardCategoryId ?? null]
             )
         ));
     }));
@@ -92,7 +92,7 @@ export async function getScoringCategories(tournamentID: string): Promise<IScori
     const catIds = cats.map(c => c.id);
     const fields = catIds.length > 0
         ? (await dbQuery<IScoringFieldRow>(
-            `SELECT id, category_id, label, min_score, max_score, multiplier, assignable, eligible_for_award, visible_to_scorers, prosecution, defense, calling, crossing, position
+            `SELECT id, category_id, label, min_score, max_score, multiplier, assignable, eligible_for_award, visible_to_scorers, prosecution, defense, calling, crossing, position, award_category_id
              FROM scoring_fields WHERE category_id IN (${catIds.map((_, i) => `$${i + 1}`).join(',')}) ORDER BY position`,
             catIds
         ))?.rows ?? []
@@ -104,6 +104,7 @@ export async function getScoringCategories(tournamentID: string): Promise<IScori
             multiplier: Number(f.multiplier), assignable: f.assignable,
             eligibleForAward: f.eligible_for_award, visibleToScorers: f.visible_to_scorers,
             prosecution: f.prosecution, defense: f.defense, calling: f.calling, crossing: f.crossing,
+            awardCategoryId: f.award_category_id,
         })),
     }));
 }
@@ -890,4 +891,55 @@ export async function duplicateTournament(sourceTournamentID: string, options: I
     const row = (await dbQuery<ITournament>('SELECT * FROM tournaments WHERE id=$1', [newTournamentID]))?.rows[0];
     if (!row) throw new DbError('duplicateTournament select');
     return row;
+}
+
+// ─── Individual Award Categories ──────────────────────────────────────────────
+
+export async function getAwardCategories(tournamentId: string): Promise<IIndividualAwardCategory[]> {
+    const result = await dbQuery<{ id: string; name: string; min_nominees: number; max_nominees: number }>(
+        'SELECT id, name, min_nominees, max_nominees FROM individual_award_categories WHERE tournament_id = $1 ORDER BY name',
+        [tournamentId]
+    );
+    if (!result) throw new DbError('getAwardCategories');
+    return result.rows.map(r => ({
+        id: r.id,
+        name: r.name,
+        minNominees: r.min_nominees,
+        maxNominees: r.max_nominees,
+    }));
+}
+
+export async function createAwardCategory(
+    tournamentId: string,
+    name: string,
+    minNominees: number,
+    maxNominees: number,
+): Promise<IIndividualAwardCategory> {
+    const row = (await dbQuery<{ id: string; name: string; min_nominees: number; max_nominees: number }>(
+        `INSERT INTO individual_award_categories (tournament_id, name, min_nominees, max_nominees)
+         VALUES ($1, $2, $3, $4) RETURNING id, name, min_nominees, max_nominees`,
+        [tournamentId, name, minNominees, maxNominees]
+    ))?.rows[0];
+    if (!row) throw new DbError('createAwardCategory');
+    return { id: row.id, name: row.name, minNominees: row.min_nominees, maxNominees: row.max_nominees };
+}
+
+export async function updateAwardCategory(
+    categoryId: string,
+    name: string,
+    minNominees: number,
+    maxNominees: number,
+): Promise<IIndividualAwardCategory> {
+    const row = (await dbQuery<{ id: string; name: string; min_nominees: number; max_nominees: number }>(
+        `UPDATE individual_award_categories SET name = $1, min_nominees = $2, max_nominees = $3
+         WHERE id = $4 RETURNING id, name, min_nominees, max_nominees`,
+        [name, minNominees, maxNominees, categoryId]
+    ))?.rows[0];
+    if (!row) throw new NotFoundError('award category');
+    return { id: row.id, name: row.name, minNominees: row.min_nominees, maxNominees: row.max_nominees };
+}
+
+export async function deleteAwardCategory(categoryId: string): Promise<void> {
+    const row = (await dbQuery('DELETE FROM individual_award_categories WHERE id = $1 RETURNING id', [categoryId]))?.rows[0];
+    if (!row) throw new NotFoundError('award category');
 }

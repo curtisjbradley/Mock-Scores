@@ -135,6 +135,8 @@ describe('GET /api/coach/tournaments/:id/pairings/:pairingId/ballots/:assignment
         mockDbQuery.mockResolvedValueOnce({ rows: [], rowCount: 0 } as any);
         // student assignments
         mockDbQuery.mockResolvedValueOnce({ rows: [], rowCount: 0 } as any);
+        // award categories
+        mockDbQuery.mockResolvedValueOnce({ rows: [], rowCount: 0 } as any);
         // getBallot
         mockDbQuery.mockResolvedValueOnce({
             rows: [{ ballot_json: { scores: [], nominations: [] } }],

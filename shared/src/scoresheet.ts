@@ -24,6 +24,15 @@ export interface IWitnessInfo {
     characterName: string;
 }
 
+/** Award category info sent to the scorer for post-ballot nominations */
+export interface IAwardCategoryInfo {
+    name: string;
+    minNominees: number;
+    maxNominees: number;
+    /** Student IDs eligible for nomination in this category (scored on linked fields) */
+    eligibleStudentIds: string[];
+}
+
 export interface IScoreSheetFormat {
     isCriminal: boolean;
     ballotOptions: {
@@ -42,6 +51,8 @@ export interface IScoreSheetFormat {
     witnesses: Record<string, IWitnessInfo>;
     scoringCategories: Record<string, IScoreCategory>;
     categoryOrder: string[];
+    /** Award categories for post-ballot nomination step. Empty object if none configured. */
+    awardCategories: Record<string, IAwardCategoryInfo>;
 }
 
 export interface IScoringUser {

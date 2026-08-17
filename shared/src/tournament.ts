@@ -28,6 +28,8 @@ export interface TournamentPayload {
             multiplier: number
             assignable: boolean
             eligibleForAward: boolean
+            /** ID of the award category this field is linked to, or null */
+            awardCategoryId: string | null
             visibleToScorers: boolean
             prosecution: boolean
             defense: boolean

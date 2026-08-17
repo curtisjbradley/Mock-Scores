@@ -1,15 +1,11 @@
 import { API_BASE } from '../../config';
 import "../styles/modal.css";
-import { type Dispatch, type SetStateAction, useEffect, useMemo, useRef, useState } from "react";
-import type { ScorecardPayload, IScoreSheetFormat } from '@mock-scores/shared';
-import type { Nominee, NomineeRanks, ScoreResults } from "./ScoreSheet.tsx";
-import type {ScoreSection} from "@mock-scores/shared";
+import { useEffect, useMemo, useRef, useState } from "react";
+import type { ScorecardPayload, IScoreSheetFormat, IAwardCategoryInfo } from '@mock-scores/shared';
+import type { ScoreResults } from "./ScoreSheet.tsx";
+import type { ScoreSection } from "@mock-scores/shared";
 
 interface IConfirmSubmitModalProps {
-    nominees: Nominee[];
-    setNominees: (nominees: Nominee[]) => void;
-    nomineeRanks: NomineeRanks;
-    setNomineeRanks: Dispatch<SetStateAction<NomineeRanks>>;
     setShowConfirm: (confirm: boolean) => void;
     /** The raw form values captured at submit time. Used to build the structured payload. */
     pendingScores: ScoreResults | null;
@@ -36,14 +32,15 @@ const FOCUSABLE = [
     'select:not([disabled])', '[tabindex]:not([tabindex="-1"])',
 ].join(', ');
 
+/** Per-category nomination selections: categoryId → array of selected studentIds */
+type NominationSelections = Record<string, string[]>;
+
 /**
  * Confirmation modal shown before final scoresheet submission.
- * Handles nominee ranking, optional presider tiebreaker selection,
+ * Handles award category nominations, optional presider tiebreaker selection,
  * focus trapping, and Escape-to-close.
- * Builds a structured payload from raw form values before sending.
  */
 const ConfirmSubmitModal = ({
-    nominees, setNominees, nomineeRanks, setNomineeRanks,
     setShowConfirm, pendingScores, setPendingScores, storageKey,
     showTiebreaker, prosecution, defense, prosecutionLabel, details, onSubmitSuccess,
 }: IConfirmSubmitModalProps) => {
@@ -51,6 +48,10 @@ const ConfirmSubmitModal = ({
     const [submitting, setSubmitting] = useState(false);
     const [submitError, setSubmitError] = useState<string | null>(null);
     const [tiebreaker, setTiebreaker] = useState<string>("");
+    const [nominations, setNominations] = useState<NominationSelections>({});
+
+    const awardCategories = useMemo(() => details.awardCategories ?? {}, [details.awardCategories]);
+    const hasAwardCategories = Object.keys(awardCategories).length > 0;
 
     useEffect(() => {
         dialogRef.current?.querySelector<HTMLElement>(FOCUSABLE)?.focus();
@@ -60,8 +61,7 @@ const ConfirmSubmitModal = ({
     const reset = () => {
         setShowConfirm(false);
         setPendingScores(null);
-        setNominees([]);
-        setNomineeRanks({});
+        setNominations({});
         setTiebreaker("");
     };
 
@@ -81,24 +81,53 @@ const ConfirmSubmitModal = ({
         document.addEventListener("keydown", onKey);
         return () => document.removeEventListener("keydown", onKey);
     // eslint-disable-next-line react-hooks/exhaustive-deps
-    }, [nominees]);
+    }, []);
 
-    const isRankingValid = useMemo(
-        () => nominees.every((n) => nomineeRanks[n.id] != null),
-        [nominees, nomineeRanks]
-    );
+    const toggleNominee = (categoryId: string, studentId: string, maxNominees: number) => {
+        setNominations(prev => {
+            const current = prev[categoryId] ?? [];
+            if (current.includes(studentId)) {
+                return { ...prev, [categoryId]: current.filter(id => id !== studentId) };
+            }
+            if (current.length >= maxNominees) return prev; // at max
+            return { ...prev, [categoryId]: [...current, studentId] };
+        });
+    };
+
+    const reorderNominee = (categoryId: string, fromIndex: number, toIndex: number) => {
+        setNominations(prev => {
+            const current = [...(prev[categoryId] ?? [])];
+            const [moved] = current.splice(fromIndex, 1);
+            current.splice(toIndex, 0, moved);
+            return { ...prev, [categoryId]: current };
+        });
+    };
+
+    const isNominationsValid = useMemo(() => {
+        for (const [catId, catInfo] of Object.entries(awardCategories)) {
+            const selected = nominations[catId] ?? [];
+            const eligible = catInfo.eligibleStudentIds.length;
+            // If fewer eligible students than min, all must be selected
+            // Otherwise, at least minNominees must be selected
+            const required = Math.min(catInfo.minNominees, eligible);
+            if (eligible > 0 && selected.length < required) {
+                return false;
+            }
+        }
+        return true;
+    }, [awardCategories, nominations]);
 
     const isTiebreakerValid = !showTiebreaker || tiebreaker !== "";
 
     /**
      * Transforms the flat `ScoreResults` form map into a structured array of score entries,
-     * then POSTs the payload to /api/score/:assignmentId/ballot.
-     * Each entry includes categoryId, assignmentKey, side, studentId, and score value.
+     * then POSTs the payload to /score/:assignmentId/ballot.
+     * After successful ballot submission, submits nominations separately.
      */
     const handleConfirm = async () => {
-        if (!pendingScores || !isRankingValid || !isTiebreakerValid || submitting) return;
+        if (!pendingScores || !isNominationsValid || !isTiebreakerValid || submitting) return;
 
-        const scores : ScoreSection[]  = details.categoryOrder.flatMap((catId) => {
+        const scores: ScoreSection[] = details.categoryOrder.flatMap((catId) => {
             const cat = details.scoringCategories[catId];
             return cat.categoryAssignments.flatMap((a) => {
                 const entries = [];
@@ -116,10 +145,15 @@ const ConfirmSubmitModal = ({
             });
         }) as ScoreSection[];
 
+        // Build nominations in the new format: { awardCategoryId, studentId, rank }
+        const nominationPayload = Object.entries(nominations).flatMap(([catId, studentIds]) =>
+            studentIds.map((studentId, idx) => ({ awardCategoryId: catId, studentId, rank: idx + 1 }))
+        );
+
         const payload: ScorecardPayload = {
             pairingID: details.pairingID,
             scores,
-            nominations: nominees.map((n) => ({ studentId: n.id, rank: nomineeRanks[n.id] })),
+            nominations: nominationPayload,
             ...(showTiebreaker && { tiebreaker }),
         };
 
@@ -152,7 +186,7 @@ const ConfirmSubmitModal = ({
         onSubmitSuccess();
     };
 
-    const canConfirm = isRankingValid && isTiebreakerValid && !submitting;
+    const canConfirm = isNominationsValid && isTiebreakerValid && !submitting;
 
     return (
         <div
@@ -171,41 +205,26 @@ const ConfirmSubmitModal = ({
                 <h2 id="confirm-title">Submit score sheet?</h2>
                 <p id="confirm-desc">Please confirm your scores. This cannot be undone.</p>
 
-                {nominees.length > 0 && (
+                {hasAwardCategories && (
                     <div className="nominee-ranking">
-                        <h3>Rank nominated students</h3>
-                        <p>Lower numbers mean better performance. Duplicates are allowed.</p>
-                        {nominees.map((nominee) => (
-                            <div key={nominee.id} className="nominee-rank-row">
-                                <div className="nominee-info">
-                                    <strong>{nominee.name} <span className="nominee-side">({nominee.side})</span></strong>
-                                    <div className="nominee-roles">
-                                        {nominee.roles.map((role) => <div key={role}>{role}</div>)}
-                                    </div>
-                                </div>
-                                <label className="sr-only" htmlFor={`rank-${nominee.id}`}>
-                                    Rank for {nominee.name}
-                                </label>
-                                <select
-                                    id={`rank-${nominee.id}`}
-                                    className="rank-selection"
-                                    value={nomineeRanks[nominee.id] ?? ""}
-                                    onChange={(e) =>
-                                        setNomineeRanks((cur) => ({ ...cur, [nominee.id]: Number(e.target.value) }))
-                                    }
-                                >
-                                    <option value="" disabled>Select rank</option>
-                                    {nominees.map((_, i) => (
-                                        <option key={i + 1} value={i + 1}>{i + 1}</option>
-                                    ))}
-                                </select>
-                            </div>
+                        <h3>Individual Award Nominations</h3>
+                        <p>Select students for each award category.</p>
+                        {Object.entries(awardCategories).map(([catId, catInfo]) => (
+                            <NominationCategory
+                                key={catId}
+                                categoryId={catId}
+                                category={catInfo}
+                                students={details.students}
+                                selected={nominations[catId] ?? []}
+                                onToggle={(studentId) => toggleNominee(catId, studentId, catInfo.maxNominees)}
+                                onReorder={reorderNominee}
+                            />
                         ))}
                     </div>
                 )}
 
-                {nominees.length > 0 && !isRankingValid && (
-                    <p className="ranking-error" role="alert">Please rank all nominated students.</p>
+                {hasAwardCategories && !isNominationsValid && (
+                    <p className="ranking-error" role="alert">Please select the minimum number of nominees for each category.</p>
                 )}
 
                 {showTiebreaker && (
@@ -243,5 +262,76 @@ const ConfirmSubmitModal = ({
         </div>
     );
 };
+
+/** Renders a single award category with selection checkboxes and ordered ranking. */
+function NominationCategory({ categoryId, category, students, selected, onToggle, onReorder }: {
+    categoryId: string;
+    category: IAwardCategoryInfo;
+    students: Record<string, { name: string; pronouns: string | null; schoolId: string }>;
+    selected: string[];
+    onToggle: (studentId: string) => void;
+    onReorder: (categoryId: string, fromIndex: number, toIndex: number) => void;
+}) {
+    const atMax = selected.length >= category.maxNominees;
+    const eligible = category.eligibleStudentIds.length;
+    const required = Math.min(category.minNominees, eligible);
+
+    return (
+        <div className="nomination-category">
+            <h4 className="nomination-category-name">
+                {category.name}
+                <span className="nomination-category-count">
+                    {' '}({selected.length}/{category.maxNominees}{required > 0 ? `, min ${required}` : ''})
+                </span>
+            </h4>
+
+            {/* Selection checkboxes for eligible students */}
+            <div className="nomination-students">
+                {category.eligibleStudentIds.map(studentId => {
+                    const info = students[studentId];
+                    if (!info) return null;
+                    const isSelected = selected.includes(studentId);
+                    const disabled = !isSelected && atMax;
+                    return (
+                        <label key={studentId} className={`nomination-student${isSelected ? ' nomination-student--selected' : ''}${disabled ? ' nomination-student--disabled' : ''}`}>
+                            <input
+                                type="checkbox"
+                                checked={isSelected}
+                                disabled={disabled}
+                                onChange={() => onToggle(studentId)}
+                            />
+                            <span>{info.name}</span>
+                            {info.pronouns && <span className="student-pronouns"> ({info.pronouns})</span>}
+                        </label>
+                    );
+                })}
+                {category.eligibleStudentIds.length === 0 && (
+                    <p className="nomination-empty">No eligible students for this category.</p>
+                )}
+            </div>
+
+            {/* Ordered ranking list — only shown when students are selected */}
+            {selected.length > 1 && (
+                <div className="nomination-ranking-list">
+                    <p className="nomination-ranking-hint">Drag or use arrows to rank. #1 = best.</p>
+                    {selected.map((studentId, idx) => {
+                        const info = students[studentId];
+                        if (!info) return null;
+                        return (
+                            <div key={studentId} className="nomination-rank-item">
+                                <span className="nomination-rank-number">{idx + 1}</span>
+                                <span className="nomination-rank-name">{info.name}</span>
+                                <div className="nomination-rank-arrows">
+                                    <button type="button" disabled={idx === 0} onClick={() => onReorder(categoryId, idx, idx - 1)} aria-label="Move up">↑</button>
+                                    <button type="button" disabled={idx === selected.length - 1} onClick={() => onReorder(categoryId, idx, idx + 1)} aria-label="Move down">↓</button>
+                                </div>
+                            </div>
+                        );
+                    })}
+                </div>
+            )}
+        </div>
+    );
+}
 
 export default ConfirmSubmitModal;

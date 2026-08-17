@@ -5,15 +5,22 @@ import { computeStandings } from '../blockly/standingsEngine'
 import { extractStandingsConfig, parseColumnsFromXml } from '../blockly/standingsGenerator'
 import { standingsBlockDefs } from '../blockly/standingsBlocks'
 import { tiebreakerBlockDefs } from '../blockly/tiebreakerBlocks'
-import type { IStandingsTeam } from '@mock-scores/shared'
+import type { IStandingsTeam, IIndividualAwardCategory } from '@mock-scores/shared'
 
-interface AwardEntry {
+interface NominationRow {
+    award_category_id: string
     student_id: string
     student_name: string
     team_name: string
     team_code: string
-    total_nominations: number
-    average_rank: number
+    rank: number
+    round_id: string
+    side: 'P' | 'D'
+}
+
+interface AwardsDetailsPayload {
+    nominations: NominationRow[]
+    categories: IIndividualAwardCategory[]
 }
 
 const TiebreakerViewer = lazy(() => import('../blockly/TiebreakerViewer'))
@@ -127,7 +134,8 @@ export default function StandingsTab({ tournamentId }: { tournamentId: string })
     const [payload, setPayload] = useState<StandingsApiPayload | null>(null)
     const [selected, setSelected] = useState<Set<string>>(new Set())
     const [error, setError] = useState<string | null>(null)
-    const [awards, setAwards] = useState<AwardEntry[]>([])
+    const [awardsData, setAwardsData] = useState<AwardsDetailsPayload | null>(null)
+    const [sideConstrained, setSideConstrained] = useState(false)
 
     // Single fetch on mount — all data comes back at once
     useEffect(() => {
@@ -140,10 +148,10 @@ export default function StandingsTab({ tournamentId }: { tournamentId: string })
             })
             .catch(() => setError('Failed to load standings.'))
 
-        apiFetch(`/organizer/tournament/${tournamentId}/awards`)
-            .then(r => r.ok ? r.json() : [])
-            .then((data: AwardEntry[]) => setAwards(data))
-            .catch(() => setAwards([]))
+        apiFetch(`/organizer/tournament/${tournamentId}/awards/details`)
+            .then(r => r.ok ? r.json() : null)
+            .then((data: AwardsDetailsPayload | null) => setAwardsData(data))
+            .catch(() => setAwardsData(null))
     }, [tournamentId])
 
     const toggleRound = (roundId: string) =>
@@ -215,14 +223,14 @@ export default function StandingsTab({ tournamentId }: { tournamentId: string })
             {payload.ballots.length > 0 && (
                 <div style={{ marginBottom: '1rem', display: 'flex', gap: '0.5rem' }}>
                     <button
-                        className="btn btn-secondary"
+                        className="org-new-btn"
                         disabled={!result}
                         onClick={() => result && downloadStandingsCsv(result.rows, result.cols)}
                     >
                         Download Standings CSV
                     </button>
                     <button
-                        className="btn btn-secondary"
+                        className="org-new-btn"
                         onClick={() => downloadCsv(tournamentId, 'results')}
                     >
                         Download Results CSV
@@ -278,38 +286,132 @@ export default function StandingsTab({ tournamentId }: { tournamentId: string })
                 </>
             )}
 
-            {/* Awards / Nominations */}
-            {awards.length > 0 && (
-                <div style={{ marginTop: '2rem' }}>
-                    <strong style={{ display: 'block', marginBottom: '0.5rem', fontSize: '1.1rem' }}>
-                        Outstanding Performer Nominations
+            {/* Individual Award Summary */}
+            {awardsData && awardsData.nominations.length > 0 && (
+                <AwardsSummary
+                    data={awardsData}
+                    selectedRounds={selected}
+                    sideConstrained={sideConstrained}
+                    onToggleSideConstrained={() => setSideConstrained(s => !s)}
+                />
+            )}
+        </div>
+    )
+}
+
+interface AwardsSummaryProps {
+    data: AwardsDetailsPayload
+    selectedRounds: Set<string>
+    sideConstrained: boolean
+    onToggleSideConstrained: () => void
+}
+
+interface AggregatedNominee {
+    student_id: string
+    student_name: string
+    team_name: string
+    team_code: string
+    side?: 'P' | 'D'
+    average_rank: number
+    num_rounds: number
+}
+
+function AwardsSummary({ data, selectedRounds, sideConstrained, onToggleSideConstrained }: AwardsSummaryProps) {
+    const grouped = useMemo(() => {
+        // Filter nominations by selected rounds
+        const filtered = data.nominations.filter(n => selectedRounds.has(n.round_id))
+
+        // Group by category, then by student (and optionally by side)
+        const catMap = new Map<string, Map<string, { ranks: number[]; info: NominationRow }>>()
+
+        for (const n of filtered) {
+            const catKey = n.award_category_id
+            const studentKey = sideConstrained ? `${n.student_id}:${n.side}` : n.student_id
+
+            if (!catMap.has(catKey)) catMap.set(catKey, new Map())
+            const students = catMap.get(catKey)!
+
+            if (!students.has(studentKey)) {
+                students.set(studentKey, { ranks: [], info: n })
+            }
+            students.get(studentKey)!.ranks.push(n.rank)
+        }
+
+        // Build result grouped by category
+        const categoryNameMap = new Map(data.categories.map(c => [c.id, c.name]))
+
+        const result: { categoryId: string; categoryName: string; nominees: AggregatedNominee[] }[] = []
+
+        for (const [catId, students] of catMap) {
+            const nominees: AggregatedNominee[] = []
+            for (const [, { ranks, info }] of students) {
+                nominees.push({
+                    student_id: info.student_id,
+                    student_name: info.student_name,
+                    team_name: info.team_name,
+                    team_code: info.team_code,
+                    side: sideConstrained ? info.side : undefined,
+                    average_rank: ranks.reduce((a, b) => a + b, 0) / ranks.length,
+                    num_rounds: ranks.length,
+                })
+            }
+            // Sort by num_rounds DESC, then average_rank ASC
+            nominees.sort((a, b) => b.num_rounds - a.num_rounds || a.average_rank - b.average_rank)
+            result.push({
+                categoryId: catId,
+                categoryName: categoryNameMap.get(catId) ?? 'Unknown Category',
+                nominees,
+            })
+        }
+
+        // Sort categories alphabetically
+        result.sort((a, b) => a.categoryName.localeCompare(b.categoryName))
+        return result
+    }, [data, selectedRounds, sideConstrained])
+
+    if (grouped.length === 0) return null
+
+    return (
+        <div style={{ marginTop: '2rem' }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '1rem', marginBottom: '0.75rem' }}>
+                <strong style={{ fontSize: '1.1rem' }}>Individual Award Summary</strong>
+                <label style={{ display: 'flex', alignItems: 'center', gap: '0.3rem', cursor: 'pointer', fontSize: '0.875rem' }}>
+                    <input type="checkbox" checked={sideConstrained} onChange={onToggleSideConstrained} />
+                    Side constrain awards
+                </label>
+            </div>
+
+            {grouped.map(cat => (
+                <div key={cat.categoryId} style={{ marginBottom: '1.5rem' }}>
+                    <strong style={{ display: 'block', marginBottom: '0.4rem', fontSize: '1rem' }}>
+                        {cat.categoryName}
                     </strong>
                     <div className="dash-table-scroll">
                         <table className="dash-standings-table">
                             <thead>
                                 <tr>
-                                    <th>#</th>
-                                    <th>Student</th>
+                                    <th>Name</th>
                                     <th>Team</th>
-                                    <th>Nominations</th>
+                                    {sideConstrained && <th>Side</th>}
                                     <th>Avg Rank</th>
+                                    <th># Rounds</th>
                                 </tr>
                             </thead>
                             <tbody>
-                                {awards.map((a, i) => (
-                                    <tr key={a.student_id}>
-                                        <td>{i + 1}</td>
-                                        <td>{a.student_name}</td>
-                                        <td>{a.team_name} ({a.team_code})</td>
-                                        <td>{a.total_nominations}</td>
-                                        <td>{a.average_rank.toFixed(2)}</td>
+                                {cat.nominees.map((n, i) => (
+                                    <tr key={`${n.student_id}-${n.side ?? ''}-${i}`}>
+                                        <td>{n.student_name}</td>
+                                        <td>{n.team_name} ({n.team_code})</td>
+                                        {sideConstrained && <td>{n.side}</td>}
+                                        <td>{n.average_rank.toFixed(2)}</td>
+                                        <td>{n.num_rounds}</td>
                                     </tr>
                                 ))}
                             </tbody>
                         </table>
                     </div>
                 </div>
-            )}
+            ))}
         </div>
     )
 }

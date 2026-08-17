@@ -6,6 +6,8 @@ export interface IScoringFieldFull {
     multiplier: number;
     assignable: boolean;
     eligibleForAward: boolean;
+    /** ID of the individual award category this field is eligible for, or null */
+    awardCategoryId: string | null;
     visibleToScorers: boolean;
     prosecution: boolean;
     defense: boolean;
@@ -33,8 +35,17 @@ export interface ScorecardPayload {
     pairingID: string
     scores: ScoreSection[]
     nominations: {
+        awardCategoryId: string
         studentId: string
         rank: number
     }[]
     tiebreaker?: string
+}
+
+/** Individual award category as configured by the organizer */
+export interface IIndividualAwardCategory {
+    id: string
+    name: string
+    minNominees: number
+    maxNominees: number
 }

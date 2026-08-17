@@ -159,9 +159,11 @@ export async function getScoreSheet(assignmentId: string, options?: { skipGuards
         crossing: boolean;
         visible_to_scorers: boolean;
         position: number;
+        award_category_id: string | null;
     }>(
         `SELECT id, category_id, label, min_score, max_score, assignable,
-                prosecution, defense, calling, crossing, visible_to_scorers, position
+                prosecution, defense, calling, crossing, visible_to_scorers, position,
+                award_category_id
          FROM scoring_fields
          WHERE category_id = ANY($1)
            AND visible_to_scorers = true
@@ -330,6 +332,47 @@ export async function getScoreSheet(assignmentId: string, options?: { skipGuards
     const showTiebreaker = isPresider && asg.show_scores === false;
     const fillableScores = !isPresider || asg.show_scores === true;
 
+    // ── 12. Award categories ──────────────────────────────────────────────────
+    // Determine which award categories exist for this tournament and which
+    // students are eligible for each (those scored on fields linked to that category).
+    const awardCatRows = (await dbQuery<{
+        id: string; name: string; min_nominees: number; max_nominees: number;
+    }>(
+        'SELECT id, name, min_nominees, max_nominees FROM individual_award_categories WHERE tournament_id = $1 ORDER BY name',
+        [tournament_id],
+    ))?.rows ?? [];
+
+    const awardCategories: IScoreSheetFormat['awardCategories'] = {};
+    if (awardCatRows.length > 0) {
+        // Build a map: award_category_id → set of field IDs linked to it
+        const fieldsByAwardCat = new Map<string, string[]>();
+        for (const f of fieldRows) {
+            if (f.award_category_id) {
+                if (!fieldsByAwardCat.has(f.award_category_id)) fieldsByAwardCat.set(f.award_category_id, []);
+                fieldsByAwardCat.get(f.award_category_id)!.push(f.id);
+            }
+        }
+
+        // For each award category, find eligible students: those assigned to any field in that category
+        for (const ac of awardCatRows) {
+            const linkedFieldIds = fieldsByAwardCat.get(ac.id) ?? [];
+            const eligibleStudentIds = new Set<string>();
+
+            for (const sa of studentAsgRows) {
+                if (linkedFieldIds.includes(sa.field_id)) {
+                    eligibleStudentIds.add(sa.student_id);
+                }
+            }
+
+            awardCategories[ac.id] = {
+                name: ac.name,
+                minNominees: ac.min_nominees,
+                maxNominees: ac.max_nominees,
+                eligibleStudentIds: [...eligibleStudentIds],
+            };
+        }
+    }
+
     return {
         isCriminal: tourney.criminal_case,
         ballotOptions: { showTiebreaker, fillableScores },
@@ -349,6 +392,7 @@ export async function getScoreSheet(assignmentId: string, options?: { skipGuards
         witnesses: witnessesRecord,
         scoringCategories,
         categoryOrder,
+        awardCategories,
     };
 }
 
@@ -385,6 +429,22 @@ export async function submitBallot(assignmentId: string, payload: ScorecardPaylo
         [assignmentId, asg.tournament_id, asg.pairing_id, JSON.stringify(payload), asg.p_team, asg.d_team, pPoints, dPoints],
     );
     if (!result) throw new DbError('Failed to insert ballot');
+
+    // Insert nominations into the structured table if present
+    if (payload.nominations && payload.nominations.length > 0) {
+        const ballot = (await dbQuery<{ ballot_id: string }>(
+            'SELECT ballot_id FROM ballots WHERE scorer_assignment_id = $1',
+            [assignmentId],
+        ))?.rows[0];
+        if (ballot) {
+            await Promise.all(payload.nominations.map(nom =>
+                dbQuery(
+                    'INSERT INTO nominations (ballot_id, award_category_id, student_id, rank) VALUES ($1, $2, $3, $4)',
+                    [ballot.ballot_id, nom.awardCategoryId, nom.studentId, nom.rank],
+                )
+            ));
+        }
+    }
 }
 
 // ─── reportConflict ───────────────────────────────────────────────────────────
@@ -482,4 +542,48 @@ export async function getBallot(assignmentId: string): Promise<ScorecardPayload 
         [assignmentId],
     ))?.rows[0];
     return row?.ballot_json ?? null;
+}
+
+// ─── submitNominations ────────────────────────────────────────────────────────
+
+/**
+ * Updates an existing ballot's ballot_json with nominations and inserts
+ * structured rows into the nominations table.
+ * This is the post-ballot step: after submitting scores, the scorer selects
+ * students for each award category.
+ * Throws NotFoundError if no ballot exists for this assignment.
+ */
+export async function submitNominations(
+    assignmentId: string,
+    nominations: { awardCategoryId: string; studentId: string; rank: number }[],
+): Promise<void> {
+    const existing = (await dbQuery<{ ballot_id: string; ballot_json: ScorecardPayload }>(
+        'SELECT ballot_id, ballot_json FROM ballots WHERE scorer_assignment_id = $1',
+        [assignmentId],
+    ))?.rows[0];
+
+    if (!existing) throw new NotFoundError('Ballot not found — submit scores first');
+
+    // Merge nominations into the existing ballot_json
+    const updatedPayload = {
+        ...(typeof existing.ballot_json === 'string' ? JSON.parse(existing.ballot_json) : existing.ballot_json),
+        nominations,
+    };
+
+    const result = await dbQuery(
+        'UPDATE ballots SET ballot_json = $1 WHERE ballot_id = $2',
+        [JSON.stringify(updatedPayload), existing.ballot_id],
+    );
+    if (!result) throw new DbError('submitNominations');
+
+    // Insert structured nomination rows (replace any existing for this ballot)
+    await dbQuery('DELETE FROM nominations WHERE ballot_id = $1', [existing.ballot_id]);
+    if (nominations.length > 0) {
+        await Promise.all(nominations.map(nom =>
+            dbQuery(
+                'INSERT INTO nominations (ballot_id, award_category_id, student_id, rank) VALUES ($1, $2, $3, $4)',
+                [existing.ballot_id, nom.awardCategoryId, nom.studentId, nom.rank],
+            )
+        ));
+    }
 }
