@@ -13,7 +13,7 @@ const router = Router();
 
 /**
  * @swagger
- * /api/organizer/tournament/{tournamentId}/rounds/{round}:
+ * /organizer/tournament/{tournamentId}/rounds/{round}:
  *   get:
  *     summary: Get a round
  *     tags: [Organizer - Rounds]
@@ -36,7 +36,7 @@ router.get("/", roundHandler(async (req, res) => {
 
 /**
  * @swagger
- * /api/organizer/tournament/{tournamentId}/rounds/{round}:
+ * /organizer/tournament/{tournamentId}/rounds/{round}:
  *   patch:
  *     summary: Update a round
  *     tags: [Organizer - Rounds]
@@ -100,7 +100,7 @@ router.patch("/", roundHandler(async (req, res) => {
 
 /**
  * @swagger
- * /api/organizer/tournament/{tournamentId}/rounds/{round}:
+ * /organizer/tournament/{tournamentId}/rounds/{round}:
  *   delete:
  *     summary: Delete a round
  *     tags: [Organizer - Rounds]
@@ -129,7 +129,7 @@ router.delete("/", roundHandler(async (req, res) => {
 
 /**
  * @swagger
- * /api/organizer/tournament/{tournamentId}/rounds/{round}/pairings:
+ * /organizer/tournament/{tournamentId}/rounds/{round}/pairings:
  *   get:
  *     summary: Get pairings for a round
  *     tags: [Organizer - Rounds]
@@ -157,7 +157,7 @@ router.get('/pairings', roundHandler(async (req, res) => {
 
 /**
  * @swagger
- * /api/organizer/tournament/{tournamentId}/rounds/{round}/pairings:
+ * /organizer/tournament/{tournamentId}/rounds/{round}/pairings:
  *   post:
  *     summary: Create a pairing in a round
  *     tags: [Organizer - Rounds]
@@ -204,7 +204,7 @@ router.post('/pairings', roundHandler(async (req, res) => {
 
 /**
  * @swagger
- * /api/organizer/tournament/{tournamentId}/rounds/{round}/pairings/{pairing}:
+ * /organizer/tournament/{tournamentId}/rounds/{round}/pairings/{pairing}:
  *   delete:
  *     summary: Delete a pairing
  *     tags: [Organizer - Rounds]
@@ -240,7 +240,7 @@ router.delete('/pairings/:pairing', async (req: Request, res: Response) => {
 
 /**
  * @swagger
- * /api/organizer/tournament/{tournamentId}/rounds/{round}/pairings/{pairing}/scorers:
+ * /organizer/tournament/{tournamentId}/rounds/{round}/pairings/{pairing}/scorers:
  *   get:
  *     summary: Get scorers assigned to a pairing
  *     tags: [Organizer - Rounds]
@@ -269,7 +269,7 @@ router.get('/pairings/:pairing/scorers', async (req: Request, res: Response) => 
 
 /**
  * @swagger
- * /api/organizer/tournament/{tournamentId}/rounds/{round}/pairings/{pairing}/scorers:
+ * /organizer/tournament/{tournamentId}/rounds/{round}/pairings/{pairing}/scorers:
  *   post:
  *     summary: Assign a scorer to a pairing
  *     tags: [Organizer - Rounds]
@@ -321,7 +321,7 @@ router.post('/pairings/:pairing/scorers', async (req: Request, res: Response) =>
 
 /**
  * @swagger
- * /api/organizer/tournament/{tournamentId}/rounds/{round}/pairings/{pairing}/scorers/{assignment}:
+ * /organizer/tournament/{tournamentId}/rounds/{round}/pairings/{pairing}/scorers/{assignment}:
  *   delete:
  *     summary: Remove a scorer assignment from a pairing
  *     tags: [Organizer - Rounds]
@@ -361,7 +361,7 @@ router.delete('/pairings/:pairing/scorers/:assignment', async (req: Request, res
 
 /**
  * @swagger
- * /api/organizer/tournament/{tournamentId}/rounds/{round}/pairings/{pairing}/presider:
+ * /organizer/tournament/{tournamentId}/rounds/{round}/pairings/{pairing}/presider:
  *   put:
  *     summary: Set the presiding scorer for a pairing
  *     tags: [Organizer - Rounds]
@@ -408,7 +408,7 @@ router.put('/pairings/:pairing/presider', async (req: Request, res: Response) =>
 
 /**
  * @swagger
- * /api/organizer/tournament/{tournamentId}/rounds/{round}/pairings/{pairing}/presider:
+ * /organizer/tournament/{tournamentId}/rounds/{round}/pairings/{pairing}/presider:
  *   delete:
  *     summary: Clear the presiding scorer for a pairing
  *     tags: [Organizer - Rounds]
@@ -438,7 +438,7 @@ router.delete('/pairings/:pairing/presider', async (req: Request, res: Response)
 
 /**
  * @swagger
- * /api/organizer/tournament/{tournamentId}/rounds/{round}/ballot-status:
+ * /organizer/tournament/{tournamentId}/rounds/{round}/ballot-status:
  *   get:
  *     summary: Get ballot submission status for all pairings in a round
  *     tags: [Organizer - Rounds]
@@ -476,7 +476,7 @@ router.get('/ballot-status', roundHandler(async (req, res) => {
 }));
 
 /**
- * POST /api/organizer/tournament/:tournamentId/rounds/:round/send-scoring-links
+ * POST /organizer/tournament/:tournamentId/rounds/:round/send-scoring-links
  * Sends scorecard invite emails to all registered scorers assigned to pairings
  * in this round. Fire-and-forget per email so one bad address doesn't block others.
  * Returns the count of emails dispatched.
@@ -496,7 +496,7 @@ router.post('/send-scoring-links', roundHandler(async (req, res) => {
 }));
 
 /**
- * POST /api/organizer/tournament/:tournamentId/rounds/:round/generate-pairings
+ * POST /organizer/tournament/:tournamentId/rounds/:round/generate-pairings
  * Automatically generates pairings for the round using the specified method.
  * Accepts optional body: { method: 'random' | 'power' } (default: 'power')
  * Returns the array of created pairings.
@@ -644,7 +644,7 @@ router.post('/generate-pairings', roundHandler(async (req, res) => {
 }));
 
 /**
- * POST /api/organizer/tournament/:tournamentId/rounds/:round/pairings/:pairing/scorers/:assignment/resend-link
+ * POST /organizer/tournament/:tournamentId/rounds/:round/pairings/:pairing/scorers/:assignment/resend-link
  * Resends the scorecard invite email to a specific scorer assignment.
  * Only works for registered scorers (paper scorers have no email).
  * Returns 200 with { sent: true } on success, 404 if context not found.

@@ -23,9 +23,6 @@ import RateLimit from 'express-rate-limit';
 const app = express();
 app.set('trust proxy', 1);
 
-const STATIC_DIR = path.resolve(__dirname, "../../frontend/dist");
-const PUBLIC_DIR = path.resolve(__dirname, "../../frontend/public");
-
 // Rate limit applied to API routes only — never to static assets.
 // Static files are served below all API routes so they are never affected.
 const globalLimiter = RateLimit({ windowMs: 500, max: 20, skip: () => process.env.NODE_ENV === 'test' });
@@ -68,16 +65,6 @@ app.use('/organizer/tournament', globalLimiter, verifyUser, organizerTournamentR
 app.use('/coach', globalLimiter, verifyUser, coachRouter);
 app.use('/score', globalLimiter, scorerRouter);
 app.use('/webhooks', globalLimiter, express.text({ type: '*/*' }), webhookRouter);
-
-// Static assets — only in local dev. In production, CloudFront + S3 serves the frontend.
-if (process.env.NODE_ENV !== 'production') {
-    app.use(express.static(PUBLIC_DIR));
-    app.use(express.static(STATIC_DIR));
-
-    app.get(/(.*)/, (_req: Request, res: Response) => {
-        res.sendFile(path.join(STATIC_DIR, "index.html"));
-    });
-}
 
 // Global error handler — catches anything thrown from route handlers
 // eslint-disable-next-line @typescript-eslint/no-unused-vars

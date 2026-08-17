@@ -27,7 +27,7 @@ router.use(verifyTeamAccess);
 
 /**
  * @swagger
- * /api/coach/teams/{teamId}/coaches:
+ * /coach/teams/{teamId}/coaches:
  *   get:
  *     summary: List coaches on a team
  *     tags: [Coach - Team]
@@ -45,7 +45,7 @@ router.get("/coaches", authedHandler(async (req, res) => {
 
 /**
  * @swagger
- * /api/coach/teams/{teamId}/coaches:
+ * /coach/teams/{teamId}/coaches:
  *   post:
  *     summary: Add a coach to a team by email
  *     tags: [Coach - Team]
@@ -90,7 +90,7 @@ router.post("/coaches", authedHandler(async (req, res) => {
 
 /**
  * @swagger
- * /api/coach/teams/{teamId}/coaches/{coachId}:
+ * /coach/teams/{teamId}/coaches/{coachId}:
  *   delete:
  *     summary: Remove a coach from a team
  *     tags: [Coach - Team]
@@ -111,7 +111,7 @@ router.delete("/coaches/:coachId", removeCoachHandler);
 
 /**
  * @swagger
- * /api/coach/teams/{teamId}/students:
+ * /coach/teams/{teamId}/students:
  *   get:
  *     summary: List students on a team roster
  *     tags: [Coach - Team]
@@ -129,7 +129,7 @@ router.get("/students", authedHandler(async (req, res) => {
 
 /**
  * @swagger
- * /api/coach/teams/{teamId}/students:
+ * /coach/teams/{teamId}/students:
  *   post:
  *     summary: Add a student to the team roster
  *     tags: [Coach - Team]
@@ -157,7 +157,7 @@ router.post("/students", addStudentHandler);
 
 /**
  * @swagger
- * /api/coach/teams/{teamId}/students/{studentId}:
+ * /coach/teams/{teamId}/students/{studentId}:
  *   delete:
  *     summary: Remove a student from the roster
  *     tags: [Coach - Team]
@@ -189,7 +189,7 @@ router.delete("/students/:studentId", authedHandler(async (req, res) => {
 
 /**
  * @swagger
- * /api/coach/teams/{teamId}/pairings/{pairingId}/witness-order:
+ * /coach/teams/{teamId}/pairings/{pairingId}/witness-order:
  *   get:
  *     summary: Get witness call order for a team in a pairing
  *     tags: [Coach - Team]
@@ -214,7 +214,7 @@ router.get("/pairings/:pairingId/witness-order", authedHandler(async (req, res) 
 
 /**
  * @swagger
- * /api/coach/teams/{teamId}/pairings/{pairingId}/witness-order:
+ * /coach/teams/{teamId}/pairings/{pairingId}/witness-order:
  *   put:
  *     summary: Set witness call order for a team in a pairing
  *     tags: [Coach - Team]
@@ -253,7 +253,7 @@ router.put("/pairings/:pairingId/witness-order", authedHandler(async (req, res) 
 
 /**
  * @swagger
- * /api/coach/teams/{teamId}/pairings/{pairingId}/assignments:
+ * /coach/teams/{teamId}/pairings/{pairingId}/assignments:
  *   get:
  *     summary: Get student role assignments for a team in a pairing
  *     tags: [Coach - Team]
@@ -278,7 +278,7 @@ router.get("/pairings/:pairingId/assignments", authedHandler(async (req, res) =>
 
 /**
  * @swagger
- * /api/coach/teams/{teamId}/pairings/{pairingId}/assignments:
+ * /coach/teams/{teamId}/pairings/{pairingId}/assignments:
  *   put:
  *     summary: Upsert a student assignment for a scoring field
  *     tags: [Coach - Team]
