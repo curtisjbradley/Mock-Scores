@@ -2,8 +2,12 @@ import express, { NextFunction, Request, Response } from "express";
 import path from "path";
 import dotenv from 'dotenv';
 import { expand } from 'dotenv-expand';
-const env = dotenv.config({ path: path.resolve(__dirname, '../.env') });
-expand(env);
+
+// In production (ECS), env vars are injected by the container runtime via Secrets Manager.
+// Only load .env file for local development.
+if (process.env.NODE_ENV !== 'production') {
+    expand(dotenv.config({ path: path.resolve(__dirname, '../.env') }));
+}
 import cookieParser from 'cookie-parser';
 import swaggerUi from 'swagger-ui-express';
 import { swaggerSpec } from './swaggerConfig';
@@ -36,19 +40,24 @@ app.use(cookieParser());
 app.use('/api/docs', swaggerUi.serve, swaggerUi.setup(swaggerSpec));
 app.get('/api/docs-json', (_req: Request, res: Response) => res.json(swaggerSpec));
 
+// Health check for ECS load balancer
+app.get('/api/health', (_req: Request, res: Response) => res.json({ status: 'ok' }));
+
 app.use('/api/auth', authLimiter, authRouter);
 app.use('/api/organizer/tournament', globalLimiter, verifyUser, organizerTournamentRouter);
 app.use('/api/coach', globalLimiter, verifyUser, coachRouter);
 app.use('/api/score', globalLimiter, scorerRouter);
 app.use('/webhooks', globalLimiter, express.text({ type: '*/*' }), webhookRouter);
 
-// Static assets — served after all API routes, never rate limited
-app.use(express.static(PUBLIC_DIR));
-app.use(express.static(STATIC_DIR));
+// Static assets — only in local dev. In production, CloudFront + S3 serves the frontend.
+if (process.env.NODE_ENV !== 'production') {
+    app.use(express.static(PUBLIC_DIR));
+    app.use(express.static(STATIC_DIR));
 
-app.get(/(.*)/, (_req: Request, res: Response) => {
-    res.sendFile(path.join(STATIC_DIR, "index.html"));
-});
+    app.get(/(.*)/, (_req: Request, res: Response) => {
+        res.sendFile(path.join(STATIC_DIR, "index.html"));
+    });
+}
 
 // Global error handler — catches anything thrown from route handlers
 // eslint-disable-next-line @typescript-eslint/no-unused-vars
