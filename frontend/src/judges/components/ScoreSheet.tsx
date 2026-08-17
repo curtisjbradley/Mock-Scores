@@ -12,23 +12,17 @@ import {
 import type { IScoreSheetFormat, IStudentInfo } from "@mock-scores/shared";
 import ConfirmSubmitModal from "./ConfirmSubmitModal.tsx";
 
-/** Flat map of form field IDs to their values. Scores are numbers; nomination checkboxes are booleans. */
-export type ScoreResults = Record<string, number | boolean>;
+/** Flat map of form field IDs to their values. Scores are numbers. */
+export type ScoreResults = Record<string, number>;
 
-/** Map of score field ID to the rank assigned to that nominee. */
-export type NomineeRanks = Record<string, number>;
-
-/** A student nominated for outstanding performance, with the roles they were nominated for. */
-export type Nominee = {
-    /** The student's ID from the `students` map. Used as a stable key for ranking. */
-    id: string;
-    /** Student's display name. */
-    name: string;
-    /** Which side the student performed on: "P" for prosecution/plaintiff, "D" for defense. */
-    side: "P" | "D";
-    /** List of role descriptions the student was nominated under. */
-    roles: string[];
-};
+/**
+ * Builds the form field ID for a score input.
+ * @param assignmentKey - The assignment's stable key.
+ * @param side - "P" for prosecution, "D" for defense.
+ */
+function buildScoreId(assignmentKey: string, side: "P" | "D") {
+    return `${assignmentKey}${side}`;
+}
 
 interface ScoreBoxProps {
     /** Unique form field ID for this score input. */
@@ -43,11 +37,10 @@ interface ScoreBoxProps {
 }
 
 /**
- * A single score input cell, including the student name, pronouns, and nomination checkbox.
+ * A single score input cell with the student name and pronouns.
  * Scrolls itself into view on focus to avoid being hidden behind the sticky nav on mobile.
  */
 function ScoreBox({ id, student, register, control, minScore, maxScore, submitAttempt }: ScoreBoxProps) {
-    const nominationId = `${id}student-nom`;
     const { errors } = useFormState({ control, name: id as keyof ScoreResults });
     const hasError = !!errors[id];
     const registered = register(id, {
@@ -82,12 +75,6 @@ function ScoreBox({ id, student, register, control, minScore, maxScore, submitAt
                     {student.pronouns && <span className="student-pronouns"> ({student.pronouns})</span>}
                 </p>
             )}
-            {student && (
-                <span className="student-nom">
-                    <label className="student-name" htmlFor={nominationId}>Nominate:</label>
-                    <input id={nominationId} type="checkbox" {...register(nominationId)} tabIndex={-1} />
-                </span>
-            )}
         </div>
     );
 }
@@ -110,23 +97,6 @@ function ScoreError({ id, minScore, maxScore, submitAttempt }: {
 }
 
 /**
- * Builds the form field ID for a score input.
- * @param assignmentKey - The assignment's stable key.
- * @param side - "P" for prosecution, "D" for defense.
- */
-function buildScoreId(assignmentKey: string, side: "P" | "D") {
-    return `${assignmentKey}${side}`;
-}
-
-/**
- * Builds the form field ID for a nomination checkbox from its score field ID.
- * @param scoreId - The score input's field ID.
- */
-function buildNominationId(scoreId: string) {
-    return `${scoreId}student-nom`;
-}
-
-/**
  * The main scoresheet form. Renders all scoring categories in `categoryOrder` order,
  * with mobile step-through navigation and a desktop submit button.
  * Persists in-progress scores to localStorage keyed by tournamentID.
@@ -143,8 +113,6 @@ function ScoreSheet(details: IScoreSheetFormat & { onSubmitSuccess: () => void }
     const [submitAttempt, setSubmitAttempt] = useState(0);
     const [showConfirm, setShowConfirm] = useState(false);
     const [pendingScores, setPendingScores] = useState<ScoreResults | null>(null);
-    const [nominees, setNominees] = useState<Nominee[]>([]);
-    const [nomineeRanks, setNomineeRanks] = useState<NomineeRanks>({});
 
     const { register, handleSubmit, watch, reset, getValues, control } = useForm<ScoreResults>({ mode: "onBlur", reValidateMode: "onBlur" });
 
@@ -179,35 +147,8 @@ function ScoreSheet(details: IScoreSheetFormat & { onSubmitSuccess: () => void }
     // eslint-disable-next-line react-hooks/exhaustive-deps
     }, []);
 
-    /**
-     * Collects all checked nomination checkboxes from the submitted scores
-     * and returns a deduplicated list of nominees with their roles.
-     */
-    const getNominees = (scores: ScoreResults): Nominee[] => {
-        const map = new Map<string, Nominee>();
-        categoryOrder.forEach((catId) => {
-            const cat = scoringCategories[catId];
-            cat.categoryAssignments.forEach((a) => {
-                const role = `${cat.categoryName} — ${a.assignmentName}`;
-                const add = (scoreId: string, studentId: string, side: "P" | "D") => {
-                    if (scores[buildNominationId(scoreId)] !== true) return;
-                    const info = details.students[studentId];
-                    if (!info) return;
-                    const existing = map.get(studentId);
-                    if (existing) { if (!existing.roles.includes(role)) existing.roles.push(role); return; }
-                    map.set(studentId, { id: studentId, name: info.name, side, roles: [role] });
-                };
-                if (a.pStudentId) add(buildScoreId(a.assignmentKey, "P"), a.pStudentId, "P");
-                if (a.dStudentId) add(buildScoreId(a.assignmentKey, "D"), a.dStudentId, "D");
-            });
-        });
-        return Array.from(map.values());
-    };
-
     const onSubmit: SubmitHandler<ScoreResults> = (scores) => {
         setPendingScores(scores);
-        setNominees(getNominees(scores));
-        setNomineeRanks({});
         setShowConfirm(true);
     };
 
@@ -255,6 +196,7 @@ function ScoreSheet(details: IScoreSheetFormat & { onSubmitSuccess: () => void }
 
     return (
         <>
+            {/* eslint-disable-next-line jsx-a11y/no-noninteractive-element-interactions */}
             <form
                 id="scores"
                 onSubmit={handleSubmit(onSubmit, onInvalid)}
@@ -362,14 +304,10 @@ function ScoreSheet(details: IScoreSheetFormat & { onSubmitSuccess: () => void }
 
             {showConfirm && (
                 <ConfirmSubmitModal
-                    nominees={nominees}
-                    setNominees={setNominees}
                     setShowConfirm={setShowConfirm}
-                    setNomineeRanks={setNomineeRanks}
                     storageKey={storageKey}
                     setPendingScores={setPendingScores}
                     pendingScores={pendingScores}
-                    nomineeRanks={nomineeRanks}
                     showTiebreaker={details.ballotOptions.showTiebreaker}
                     prosecution={details.prosecutionCode}
                     defense={details.defenseCode}

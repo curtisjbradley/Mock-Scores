@@ -20,6 +20,7 @@ import ScorersTab from '../tabs/ScorersTab'
 import CourtroomsTab from '../tabs/CourtroomsTab'
 import TournamentSettingsTab from '../tabs/TournamentSettingsTab'
 import TiebreakersTab from '../tabs/TiebreakersTab'
+import AwardCategoriesTab from '../tabs/AwardCategoriesTab'
 
 const MAIN_CARDS: { label: string; screen: OrganizerScreen }[] = [
     { label: 'Manage Rounds',        screen: 'rounds' },
@@ -28,17 +29,18 @@ const MAIN_CARDS: { label: string; screen: OrganizerScreen }[] = [
     { label: 'Manage Scorers',       screen: 'scorers' },
     { label: 'Manage Courtrooms',    screen: 'courtrooms' },
     { label: 'Manage Organizers',    screen: 'organizers' },
-    { label: 'Manage Tournament',    screen: 'tournament' },
     { label: 'Tournament Structure', screen: 'structure' },
 ]
 
 const STRUCTURE_CARDS: { label: string; tab: OrganizerTab }[] = [
-    { label: 'Manage Scorecard',   tab: 'scoring' },
-    { label: 'Manage Witnesses',   tab: 'witnesses' },
-    { label: 'Manage Tiebreakers', tab: 'tiebreakers' },
+    { label: 'Tournament Details',  tab: 'tournament' },
+    { label: 'Manage Scorecard',    tab: 'scoring' },
+    { label: 'Manage Witnesses',    tab: 'witnesses' },
+    { label: 'Manage Awards',       tab: 'awards' },
+    { label: 'Manage Tiebreakers',  tab: 'tiebreakers' },
 ]
 
-const STRUCTURE_TABS = new Set<OrganizerTab>(['scoring', 'witnesses', 'tiebreakers'])
+const STRUCTURE_TABS = new Set<OrganizerTab>(['tournament', 'scoring', 'witnesses', 'tiebreakers', 'awards'])
 
 export default function TournamentDashboard() {
     const { id } = useParams<{ id: string }>()
@@ -125,6 +127,7 @@ export default function TournamentDashboard() {
                 {visitedTabs.has('rounds')     && <div hidden={activeTab !== 'rounds'}><RoundsTab tournamentId={id} /></div>}
                 {visitedTabs.has('standings')  && <div hidden={activeTab !== 'standings'}><StandingsTab tournamentId={id} /></div>}
                 {visitedTabs.has('tiebreakers')&& <div hidden={activeTab !== 'tiebreakers'}><TiebreakersTab tournamentId={id} /></div>}
+                {visitedTabs.has('awards')     && <div hidden={activeTab !== 'awards'}><AwardCategoriesTab tournamentId={id} /></div>}
             </div>
         </main>
     )

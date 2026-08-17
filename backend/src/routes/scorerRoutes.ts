@@ -31,6 +31,7 @@ router.get('/:assignmentId', async (req: Request, res: Response) => {
 /**
  * POST /score/:assignmentId/ballot
  * Accepts a ScorecardPayload and persists it to the ballots table.
+ * Nominations are included in the payload and stored in ballot_json.
  * Returns 409 if a ballot has already been submitted for this assignment.
  * Public — no JWT required.
  */
@@ -54,6 +55,31 @@ router.post('/:assignmentId/ballot', async (req: Request, res: Response) => {
         if (code === '23505' || detail.includes('scorer_assignment_id')) {
             return res.status(409).json({ message: 'Ballot already submitted for this assignment' });
         }
+        throw e;
+    }
+});
+
+/**
+ * POST /score/:assignmentId/nominations
+ * Accepts nominations and updates the existing ballot's ballot_json.
+ * This is the post-ballot step where the scorer selects students for each
+ * award category. Requires that a ballot has already been submitted.
+ * Public — no JWT required.
+ */
+router.post('/:assignmentId/nominations', async (req: Request, res: Response) => {
+    const assignmentId = req.params.assignmentId as string;
+    if (!uuidRegex.test(assignmentId)) return res.status(400).json({ message: 'Invalid assignment ID' });
+
+    const { nominations } = req.body as { nominations?: { awardCategoryId: string; studentId: string; rank: number }[] };
+    if (!Array.isArray(nominations)) {
+        return res.status(400).json({ message: 'nominations array is required' });
+    }
+
+    try {
+        await scorer.submitNominations(assignmentId, nominations);
+        return res.status(200).json({ message: 'Nominations saved' });
+    } catch (e) {
+        if (e instanceof NotFoundError) return res.status(404).json({ message: e.message });
         throw e;
     }
 });

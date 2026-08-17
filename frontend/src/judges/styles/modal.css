@@ -317,3 +317,152 @@
     cursor: pointer;
     padding: 0.25rem 0;
 }
+
+/* ── Nomination categories ──────────────────────────────────────────────── */
+
+.nomination-category {
+    margin-bottom: 1rem;
+    padding-bottom: 0.75rem;
+    border-bottom: 1px solid var(--border);
+}
+
+.nomination-category:last-child {
+    border-bottom: none;
+    margin-bottom: 0;
+}
+
+.nomination-category-name {
+    margin: 0 0 0.5rem;
+    font-size: 0.95rem;
+    font-weight: 700;
+}
+
+.nomination-category-count {
+    font-weight: 500;
+    color: var(--text-muted);
+    font-size: 0.8rem;
+}
+
+.nomination-students {
+    display: flex;
+    flex-direction: column;
+    gap: 0.35rem;
+}
+
+.nomination-student {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    padding: 0.4rem 0.6rem;
+    border-radius: var(--radius);
+    cursor: pointer;
+    font-size: 0.9rem;
+    transition: background 100ms ease;
+}
+
+.nomination-student:hover {
+    background: var(--surface-muted);
+}
+
+.nomination-student--selected {
+    background: var(--primary-subtle);
+    font-weight: 600;
+}
+
+.nomination-student--disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+}
+
+.nomination-student input[type="checkbox"] {
+    width: 1rem;
+    height: 1rem;
+    accent-color: var(--primary);
+    cursor: inherit;
+}
+
+.nomination-empty {
+    color: var(--text-muted);
+    font-size: 0.85rem;
+    font-style: italic;
+    margin: 0;
+}
+
+/* ── Nomination ranking list ────────────────────────────────────────────── */
+
+.nomination-ranking-list {
+    margin-top: 0.75rem;
+    padding: 0.5rem;
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    background: var(--surface-muted);
+}
+
+.nomination-ranking-hint {
+    margin: 0 0 0.5rem;
+    font-size: 0.8rem;
+    color: var(--text-muted);
+    font-style: italic;
+}
+
+.nomination-rank-item {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    padding: 0.4rem 0.5rem;
+    border-radius: var(--radius);
+    background: var(--surface);
+    margin-bottom: 0.3rem;
+}
+
+.nomination-rank-item:last-child {
+    margin-bottom: 0;
+}
+
+.nomination-rank-number {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 1.5rem;
+    height: 1.5rem;
+    border-radius: 50%;
+    background: var(--primary);
+    color: var(--white);
+    font-size: 0.75rem;
+    font-weight: 800;
+    flex-shrink: 0;
+}
+
+.nomination-rank-name {
+    flex: 1;
+    font-size: 0.9rem;
+    font-weight: 600;
+}
+
+.nomination-rank-arrows {
+    display: flex;
+    gap: 0.2rem;
+}
+
+.nomination-rank-arrows button {
+    width: 1.75rem;
+    height: 1.75rem;
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    background: var(--surface);
+    cursor: pointer;
+    font-size: 0.85rem;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: background 100ms ease;
+}
+
+.nomination-rank-arrows button:hover:not(:disabled) {
+    background: var(--primary-subtle);
+}
+
+.nomination-rank-arrows button:disabled {
+    opacity: 0.3;
+    cursor: not-allowed;
+}

@@ -1876,6 +1876,156 @@ router.get('/export/results', tournamentHandler(async (req, res) => {
     }
 }));
 
+// ── Award Categories ──────────────────────────────────────────────────────────
+
+/**
+ * @swagger
+ * /organizer/tournament/{tournamentId}/award-categories:
+ *   get:
+ *     summary: List individual award categories for a tournament
+ *     tags: [Organizer - Tournament]
+ *     parameters:
+ *       - in: path
+ *         name: tournamentId
+ *         required: true
+ *         schema: { type: string, format: uuid }
+ *     responses:
+ *       200: { description: Array of award categories }
+ *       500: { description: Database error }
+ */
+router.get("/award-categories", tournamentHandler(async (req, res) => {
+    try {
+        return res.status(200).json(await organizer.getAwardCategories(req.tournament));
+    } catch (e) {
+        if (e instanceof DbError) return res.status(500).json({ message: 'Database error' });
+        throw e;
+    }
+}));
+
+/**
+ * @swagger
+ * /organizer/tournament/{tournamentId}/award-categories:
+ *   post:
+ *     summary: Create an individual award category
+ *     tags: [Organizer - Tournament]
+ *     parameters:
+ *       - in: path
+ *         name: tournamentId
+ *         required: true
+ *         schema: { type: string, format: uuid }
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             required: [name, minNominees, maxNominees]
+ *             properties:
+ *               name: { type: string }
+ *               minNominees: { type: integer, minimum: 0 }
+ *               maxNominees: { type: integer, minimum: 1 }
+ *     responses:
+ *       201: { description: Award category created }
+ *       400: { description: Missing or invalid fields }
+ *       500: { description: Database error }
+ */
+router.post("/award-categories", tournamentHandler(async (req, res) => {
+    const { name, minNominees, maxNominees } = req.body as { name?: string; minNominees?: number; maxNominees?: number };
+    if (!name?.trim()) return res.status(400).json({ message: 'Name is required' });
+    if (minNominees == null || maxNominees == null) return res.status(400).json({ message: 'minNominees and maxNominees are required' });
+    if (minNominees < 0) return res.status(400).json({ message: 'minNominees must be >= 0' });
+    if (maxNominees < 1) return res.status(400).json({ message: 'maxNominees must be >= 1' });
+    if (minNominees > maxNominees) return res.status(400).json({ message: 'minNominees cannot exceed maxNominees' });
+    try {
+        return res.status(201).json(await organizer.createAwardCategory(req.tournament, name.trim(), minNominees, maxNominees));
+    } catch (e) {
+        if (e instanceof DbError) return res.status(500).json({ message: 'Unable to create award category' });
+        throw e;
+    }
+}));
+
+/**
+ * @swagger
+ * /organizer/tournament/{tournamentId}/award-categories/{categoryId}:
+ *   put:
+ *     summary: Update an individual award category
+ *     tags: [Organizer - Tournament]
+ *     parameters:
+ *       - in: path
+ *         name: tournamentId
+ *         required: true
+ *         schema: { type: string, format: uuid }
+ *       - in: path
+ *         name: categoryId
+ *         required: true
+ *         schema: { type: string, format: uuid }
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             required: [name, minNominees, maxNominees]
+ *             properties:
+ *               name: { type: string }
+ *               minNominees: { type: integer, minimum: 0 }
+ *               maxNominees: { type: integer, minimum: 1 }
+ *     responses:
+ *       200: { description: Updated }
+ *       400: { description: Invalid fields }
+ *       404: { description: Not found }
+ *       500: { description: Database error }
+ */
+router.put("/award-categories/:categoryId", tournamentHandler(async (req, res) => {
+    const categoryId = req.params.categoryId as string;
+    if (!uuidRegex.test(categoryId)) return res.status(400).json({ message: 'Invalid category ID' });
+    const { name, minNominees, maxNominees } = req.body as { name?: string; minNominees?: number; maxNominees?: number };
+    if (!name?.trim()) return res.status(400).json({ message: 'Name is required' });
+    if (minNominees == null || maxNominees == null) return res.status(400).json({ message: 'minNominees and maxNominees are required' });
+    if (minNominees < 0) return res.status(400).json({ message: 'minNominees must be >= 0' });
+    if (maxNominees < 1) return res.status(400).json({ message: 'maxNominees must be >= 1' });
+    if (minNominees > maxNominees) return res.status(400).json({ message: 'minNominees cannot exceed maxNominees' });
+    try {
+        return res.status(200).json(await organizer.updateAwardCategory(categoryId, name.trim(), minNominees, maxNominees));
+    } catch (e) {
+        if (e instanceof NotFoundError) return res.status(404).json({ message: e.message });
+        if (e instanceof DbError) return res.status(500).json({ message: 'Unable to update award category' });
+        throw e;
+    }
+}));
+
+/**
+ * @swagger
+ * /organizer/tournament/{tournamentId}/award-categories/{categoryId}:
+ *   delete:
+ *     summary: Delete an individual award category
+ *     tags: [Organizer - Tournament]
+ *     parameters:
+ *       - in: path
+ *         name: tournamentId
+ *         required: true
+ *         schema: { type: string, format: uuid }
+ *       - in: path
+ *         name: categoryId
+ *         required: true
+ *         schema: { type: string, format: uuid }
+ *     responses:
+ *       204: { description: Deleted }
+ *       400: { description: Invalid category ID }
+ *       404: { description: Not found }
+ */
+router.delete("/award-categories/:categoryId", tournamentHandler(async (req, res) => {
+    const categoryId = req.params.categoryId as string;
+    if (!uuidRegex.test(categoryId)) return res.status(400).json({ message: 'Invalid category ID' });
+    try {
+        await organizer.deleteAwardCategory(categoryId);
+        return res.status(204).send();
+    } catch (e) {
+        if (e instanceof NotFoundError) return res.status(404).json({ message: e.message });
+        throw e;
+    }
+}));
+
 // ── Awards / Nominations ──────────────────────────────────────────────────────
 
 /**
@@ -1909,38 +2059,30 @@ router.get('/export/results', tournamentHandler(async (req, res) => {
  */
 router.get('/awards', tournamentHandler(async (req, res) => {
     try {
-        const ballotsResult = await dbQuery<{ ballot_json: { nominations?: { studentId: string; rank: number }[] } }>(
-            `SELECT ballot_json FROM ballots WHERE tournament_id = $1`,
+        // Query aggregated nominations directly from the nominations table
+        const nominationsResult = await dbQuery<{
+            award_category_id: string;
+            student_id: string;
+            total_nominations: number;
+            average_rank: number;
+        }>(
+            `SELECT n.award_category_id, n.student_id,
+                    COUNT(*)::int AS total_nominations,
+                    ROUND(AVG(n.rank)::numeric, 2) AS average_rank
+             FROM nominations n
+             JOIN ballots b ON b.ballot_id = n.ballot_id
+             WHERE b.tournament_id = $1
+             GROUP BY n.award_category_id, n.student_id
+             ORDER BY n.award_category_id, COUNT(*) DESC, AVG(n.rank) ASC`,
             [req.tournament]
         );
 
-        if (!ballotsResult || ballotsResult.rows.length === 0) {
+        if (!nominationsResult || nominationsResult.rows.length === 0) {
             return res.status(200).json([]);
         }
 
-        // Aggregate nominations from all ballots
-        const nominationMap = new Map<string, { totalNominations: number; totalRank: number }>();
-        for (const row of ballotsResult.rows) {
-            const nominations = row.ballot_json?.nominations;
-            if (!Array.isArray(nominations)) continue;
-            for (const nom of nominations) {
-                if (!nom.studentId || typeof nom.rank !== 'number') continue;
-                const existing = nominationMap.get(nom.studentId);
-                if (existing) {
-                    existing.totalNominations++;
-                    existing.totalRank += nom.rank;
-                } else {
-                    nominationMap.set(nom.studentId, { totalNominations: 1, totalRank: nom.rank });
-                }
-            }
-        }
-
-        if (nominationMap.size === 0) {
-            return res.status(200).json([]);
-        }
-
-        // Fetch student and team info for nominated students
-        const studentIds = [...nominationMap.keys()];
+        // Fetch student and team info
+        const studentIds = [...new Set(nominationsResult.rows.map(r => r.student_id))];
         const studentsResult = await dbQuery<{ student_id: string; student_name: string; team_name: string; team_code: string }>(
             `SELECT s.student_id, s.student_name, t.name AS team_name, t.code AS team_code
              FROM team_rostered_students s
@@ -1956,23 +2098,84 @@ router.get('/awards', tournamentHandler(async (req, res) => {
             }
         }
 
+        // Fetch award category names
+        const awardCats = await organizer.getAwardCategories(req.tournament);
+        const catNameMap = new Map(awardCats.map(c => [c.id, c.name]));
+
         // Build response array
-        const awards = studentIds
-            .map(studentId => {
-                const stats = nominationMap.get(studentId)!;
-                const info = studentInfo.get(studentId);
-                return {
-                    student_id: studentId,
-                    student_name: info?.student_name ?? 'Unknown',
-                    team_name: info?.team_name ?? 'Unknown',
-                    team_code: info?.team_code ?? '',
-                    total_nominations: stats.totalNominations,
-                    average_rank: Math.round((stats.totalRank / stats.totalNominations) * 100) / 100,
-                };
-            })
-            .sort((a, b) => b.total_nominations - a.total_nominations || a.average_rank - b.average_rank);
+        const awards = nominationsResult.rows.map(entry => {
+            const info = studentInfo.get(entry.student_id);
+            return {
+                award_category_id: entry.award_category_id,
+                award_category_name: catNameMap.get(entry.award_category_id) ?? 'Uncategorized',
+                student_id: entry.student_id,
+                student_name: info?.student_name ?? 'Unknown',
+                team_name: info?.team_name ?? 'Unknown',
+                team_code: info?.team_code ?? '',
+                total_nominations: entry.total_nominations,
+                average_rank: Number(entry.average_rank),
+            };
+        });
 
         return res.status(200).json(awards);
+    } catch (e) {
+        if (e instanceof DbError) return res.status(500).json({ message: 'Database error' });
+        throw e;
+    }
+}));
+
+/**
+ * @swagger
+ * /organizer/tournament/{tournamentId}/awards/details:
+ *   get:
+ *     summary: Get raw nomination details with round and side info for client-side aggregation
+ *     tags: [Organizer - Tournament]
+ *     parameters:
+ *       - in: path
+ *         name: tournamentId
+ *         required: true
+ *         schema: { type: string, format: uuid }
+ *     responses:
+ *       200:
+ *         description: Array of individual nominations with round_id and side
+ *       500: { description: Database error }
+ */
+router.get('/awards/details', tournamentHandler(async (req, res) => {
+    try {
+        // Return each nomination row with round_id and the side the student was on
+        const result = await dbQuery<{
+            award_category_id: string;
+            student_id: string;
+            student_name: string;
+            team_name: string;
+            team_code: string;
+            rank: number;
+            round_id: string;
+            side: 'P' | 'D';
+        }>(
+            `SELECT n.award_category_id, n.student_id, n.rank,
+                    s.student_name, t.name AS team_name, t.code AS team_code,
+                    p.round_id,
+                    CASE WHEN s.team_id = p.p_team THEN 'P' ELSE 'D' END AS side
+             FROM nominations n
+             JOIN ballots b ON b.ballot_id = n.ballot_id
+             JOIN team_rostered_students s ON s.student_id = n.student_id
+             JOIN teams t ON t.id = s.team_id
+             JOIN pairings p ON p.pairing_id = b.pairing_id
+             WHERE b.tournament_id = $1
+             ORDER BY n.award_category_id, n.student_id, n.rank`,
+            [req.tournament]
+        );
+
+        if (!result) return res.status(500).json({ message: 'Database error' });
+
+        // Also return award category names
+        const categories = await organizer.getAwardCategories(req.tournament);
+
+        return res.status(200).json({
+            nominations: result.rows,
+            categories,
+        });
     } catch (e) {
         if (e instanceof DbError) return res.status(500).json({ message: 'Database error' });
         throw e;
@@ -1982,7 +2185,6 @@ router.get('/awards', tournamentHandler(async (req, res) => {
 // ── Email delivery status ─────────────────────────────────────────────────────
 
 /**
- * @swagger
  * /organizer/tournament/{tournamentId}/bounced-emails:
  *   get:
  *     summary: Get list of emails that have bounced (delivery failures)
