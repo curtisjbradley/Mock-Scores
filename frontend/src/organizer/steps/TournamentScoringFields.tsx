@@ -5,6 +5,7 @@ import { templates, getTemplate } from '../data/templates'
 import type { ScoringFieldDef, ScoringCategoryDef } from '../data/templates'
 import ScoringCategoryCard from '../components/ScoringCategoryCard'
 import TemplateModal from '../components/TemplateModal'
+import type { IIndividualAwardCategory } from '@mock-scores/shared'
 
 const hydrateField = (f: ScoringFieldDef): ScoringField => {
     const { id: _id, ...rest } = f as ScoringFieldDef & { id?: string }
@@ -28,9 +29,10 @@ interface Props {
     onBack?: () => void
     isEditing?: boolean
     submitLabel?: string
+    awardCategories?: IIndividualAwardCategory[]
 }
 
-export default function TournamentScoringFields({ categories, onChange, caseFormat, onSubmit, isEditing, submitLabel }: Props) {
+export default function TournamentScoringFields({ categories, onChange, caseFormat, onSubmit, isEditing, submitLabel, awardCategories }: Props) {
     const [submitted, setSubmitted] = useState(false)
     const [selectedTemplate, setSelectedTemplate] = useState('manual')
     const [showModal, setShowModal] = useState(!isEditing)
@@ -63,7 +65,7 @@ export default function TournamentScoringFields({ categories, onChange, caseForm
     const updateCatName = (catId: string, name: string) => { markManual(); onChange(categories.map(c => c.id === catId ? { ...c, name } : c)) }
     const removeCategory = (catId: string) => { markManual(); onChange(categories.filter(c => c.id !== catId)) }
     const addCategory = () => { markManual(); onChange([...categories, makeCategory()]) }
-    const updateField = (catId: string, fId: string, key: keyof ScoringField, value: string | boolean | number) => {
+    const updateField = (catId: string, fId: string, key: keyof ScoringField, value: string | boolean | number | null) => {
         markManual()
         onChange(categories.map(c => c.id !== catId ? c : { ...c, fields: c.fields.map(f => f.id === fId ? { ...f, [key]: value } : f) }))
     }
@@ -127,6 +129,7 @@ export default function TournamentScoringFields({ categories, onChange, caseForm
                         onAddField={() => addField(cat.id)}
                         onRemoveField={fId => removeField(cat.id, fId)}
                         fieldError={fieldError}
+                        awardCategories={awardCategories}
                     />
                 ))}
 

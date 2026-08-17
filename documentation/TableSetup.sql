@@ -110,6 +110,23 @@ create table scoring_categories
     unique (tournament_id, position)
 );
 
+create table individual_award_categories
+(
+    id             uuid     default gen_random_uuid() not null
+        primary key,
+    tournament_id  uuid                               not null
+        references tournaments
+            on delete cascade,
+    name           text                               not null,
+    min_nominees   smallint default 1                  not null
+        constraint award_categories_min_nominees_check check (min_nominees >= 0),
+    max_nominees   smallint default 3                  not null
+        constraint award_categories_max_nominees_check check (max_nominees >= 1),
+    constraint award_categories_min_max_check check (min_nominees <= max_nominees)
+);
+
+create index individual_award_categories_tournament_id_idx on individual_award_categories (tournament_id);
+
 create table scoring_fields
 (
     id                 uuid          default gen_random_uuid() not null
@@ -131,6 +148,9 @@ create table scoring_fields
     calling            boolean       default false             not null,
     crossing           boolean       default false             not null,
     position           smallint                                not null,
+    award_category_id  uuid
+        references individual_award_categories (id)
+            on delete set null,
     unique (category_id, position),
     constraint scoring_fields_check
         check (min_score <= max_score)
@@ -353,6 +373,28 @@ create table ballots
 
 create index ballots_tournament_id_idx on ballots (tournament_id);
 create index ballots_pairing_id_idx    on ballots (pairing_id);
+
+create table nominations
+(
+    id                 uuid     default gen_random_uuid() not null
+        primary key,
+    ballot_id          uuid                               not null
+        references ballots (ballot_id)
+            on delete cascade,
+    award_category_id  uuid                               not null
+        references individual_award_categories (id)
+            on delete cascade,
+    student_id         uuid                               not null
+        references team_rostered_students (student_id)
+            on delete cascade,
+    rank               smallint                           not null
+        constraint nominations_rank_check check (rank >= 1)
+);
+
+create index nominations_ballot_id_idx on nominations (ballot_id);
+create index nominations_award_category_id_idx on nominations (award_category_id);
+create index nominations_student_id_idx on nominations (student_id);
+create unique index nominations_unique_idx on nominations (ballot_id, award_category_id, student_id);
 
 create table email_complaints
 (

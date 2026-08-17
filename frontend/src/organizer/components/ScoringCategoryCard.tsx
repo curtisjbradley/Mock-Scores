@@ -1,4 +1,5 @@
 import type { ScoringCategory, ScoringField } from '../types/tournament'
+import type { IIndividualAwardCategory } from '@mock-scores/shared'
 
 interface Props {
     cat: ScoringCategory
@@ -12,18 +13,21 @@ interface Props {
     onDragEnd: () => void
     onUpdateName: (name: string) => void
     onRemoveCategory: () => void
-    onUpdateField: (fId: string, key: keyof ScoringField, value: string | boolean | number) => void
+    onUpdateField: (fId: string, key: keyof ScoringField, value: string | boolean | number | null) => void
     onAddField: () => void
     onRemoveField: (fId: string) => void
     fieldError: (f: ScoringField, isWitness?: boolean) => boolean
+    awardCategories?: IIndividualAwardCategory[]
 }
 
 export default function ScoringCategoryCard({
     cat, submitted, draggingId, dragOver,
     onDragStart, onDragOver, onDragLeave, onDrop, onDragEnd,
     onUpdateName, onRemoveCategory, onUpdateField, onAddField, onRemoveField, fieldError,
+    awardCategories,
 }: Props) {
     return (
+        // eslint-disable-next-line jsx-a11y/no-static-element-interactions
         <div
             className={`sf-category-card${dragOver === cat.id && draggingId !== cat.id ? ' sf-category-card--over' : ''}${draggingId === cat.id ? ' sf-category-card--dragging' : ''}`}
             onDragOver={onDragOver}
@@ -61,7 +65,17 @@ export default function ScoringCategoryCard({
                                     <td><input type="number" className={`tc-input sf-num${err ? ' tc-input--invalid' : ''}`} value={f.max} onChange={e => onUpdateField(f.id, 'max', +e.target.value)} /></td>
                                     <td><input type="number" step="0.1" className={`tc-input sf-num${err ? ' tc-input--invalid' : ''}`} value={f.multiplier} onChange={e => onUpdateField(f.id, 'multiplier', +e.target.value)} /></td>
                                     <td className="sf-assignable-cell"><input type="checkbox" checked={f.assignable} onChange={e => onUpdateField(f.id, 'assignable', e.target.checked)} /></td>
-                                    <td className="sf-assignable-cell"><input type="checkbox" checked={f.eligibleForAward} onChange={e => onUpdateField(f.id, 'eligibleForAward', e.target.checked)} /></td>
+                                    <td className="sf-award-cell">
+                                        <select className="tc-input sf-award-select" value={f.awardCategoryId ?? ''} onChange={e => {
+                                            const val = e.target.value || null
+                                            onUpdateField(f.id, 'awardCategoryId', val)
+                                        }}>
+                                            <option value="">None</option>
+                                            {awardCategories?.map(ac => (
+                                                <option key={ac.id} value={ac.id}>{ac.name}</option>
+                                            ))}
+                                        </select>
+                                    </td>
                                     <td className="sf-assignable-cell"><input type="checkbox" checked={f.visibleToScorers} onChange={e => onUpdateField(f.id, 'visibleToScorers', e.target.checked)} /></td>
                                     {!cat.witnessCategory && <td className="sf-assignable-cell"><input type="checkbox" checked={f.prosecution} onChange={e => onUpdateField(f.id, 'prosecution', e.target.checked)} /></td>}
                                     {!cat.witnessCategory && <td className="sf-assignable-cell"><input type="checkbox" checked={f.defense} onChange={e => onUpdateField(f.id, 'defense', e.target.checked)} /></td>}

@@ -34,17 +34,10 @@ app.use(express.urlencoded({ extended: true }));
 app.use(express.json());
 app.use(cookieParser());
 
-// CORS — allow the frontend origin to make credentialed cross-origin requests
-const ALLOWED_ORIGINS = [
-    process.env.FRONTEND_URL,          // https://app.mockscores.org in production
-    'https://www.mockscores.org',
-    'https://mockscores.org',
-    'http://localhost:5173',            // Vite dev server
-].filter(Boolean) as string[];
-
+// CORS — allow any mockscores.org subdomain to make credentialed cross-origin requests
 app.use((req: Request, res: Response, next: NextFunction) => {
     const origin = req.headers.origin;
-    if (origin && ALLOWED_ORIGINS.includes(origin)) {
+    if (origin && (/^https:\/\/([a-z0-9-]+\.)?mockscores\.org$/.test(origin) || origin === 'http://localhost:5173')) {
         res.setHeader('Access-Control-Allow-Origin', origin);
         res.setHeader('Access-Control-Allow-Credentials', 'true');
         res.setHeader('Access-Control-Allow-Methods', 'GET,POST,PUT,PATCH,DELETE,OPTIONS');

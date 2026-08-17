@@ -318,23 +318,10 @@ describe('GET /api/organizer/tournament/:id/export/results', () => {
 describe('GET /api/organizer/tournament/:id/awards', () => {
     const url = `/organizer/tournament/${T}/awards`;
 
-    it('returns empty array when no ballots exist', async () => {
+    it('returns empty array when no nominations exist', async () => {
         mockAccess();
+        // nominations query returns empty
         mockDbQuery.mockResolvedValueOnce({ rows: [], rowCount: 0 } as any);
-        const res = await request(app).get(url).set(auth());
-        expect(res.status).toBe(200);
-        expect(res.body).toEqual([]);
-    });
-
-    it('returns empty array when ballots have no nominations', async () => {
-        mockAccess();
-        mockDbQuery.mockResolvedValueOnce({
-            rows: [
-                { ballot_json: { scores: [], nominations: [] } },
-                { ballot_json: { scores: [] } }, // no nominations key
-            ],
-            rowCount: 2,
-        } as any);
         const res = await request(app).get(url).set(auth());
         expect(res.status).toBe(200);
         expect(res.body).toEqual([]);
@@ -344,11 +331,12 @@ describe('GET /api/organizer/tournament/:id/awards', () => {
         mockAccess();
         const s1 = 'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa';
         const s2 = 'bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbbbb';
-        // ballots with nominations
+        const cat1 = 'cccccccc-cccc-cccc-cccc-cccccccccccc';
+        // nominations aggregation query
         mockDbQuery.mockResolvedValueOnce({
             rows: [
-                { ballot_json: { nominations: [{ studentId: s1, rank: 1 }, { studentId: s2, rank: 2 }] } },
-                { ballot_json: { nominations: [{ studentId: s1, rank: 2 }] } },
+                { award_category_id: cat1, student_id: s1, total_nominations: 2, average_rank: 1.5 },
+                { award_category_id: cat1, student_id: s2, total_nominations: 1, average_rank: 2.0 },
             ],
             rowCount: 2,
         } as any);
@@ -360,13 +348,15 @@ describe('GET /api/organizer/tournament/:id/awards', () => {
             ],
             rowCount: 2,
         } as any);
+        // getAwardCategories
+        mockDbQuery.mockResolvedValueOnce({ rows: [{ id: cat1, name: 'Best Attorney', min_nominees: 1, max_nominees: 3 }], rowCount: 1 } as any);
         const res = await request(app).get(url).set(auth());
         expect(res.status).toBe(200);
         expect(res.body).toHaveLength(2);
-        // s1 has 2 nominations, s2 has 1 — s1 should be first
         expect(res.body[0].student_id).toBe(s1);
         expect(res.body[0].total_nominations).toBe(2);
         expect(res.body[0].average_rank).toBe(1.5);
+        expect(res.body[0].award_category_name).toBe('Best Attorney');
         expect(res.body[1].student_id).toBe(s2);
         expect(res.body[1].total_nominations).toBe(1);
     });
@@ -374,26 +364,19 @@ describe('GET /api/organizer/tournament/:id/awards', () => {
     it('handles nominations with unknown students', async () => {
         mockAccess();
         const s1 = 'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa';
+        const cat1 = 'cccccccc-cccc-cccc-cccc-cccccccccccc';
+        // nominations aggregation
         mockDbQuery.mockResolvedValueOnce({
-            rows: [{ ballot_json: { nominations: [{ studentId: s1, rank: 1 }] } }],
+            rows: [{ award_category_id: cat1, student_id: s1, total_nominations: 1, average_rank: 1.0 }],
             rowCount: 1,
         } as any);
         // student lookup returns empty
         mockDbQuery.mockResolvedValueOnce({ rows: [], rowCount: 0 } as any);
+        // getAwardCategories
+        mockDbQuery.mockResolvedValueOnce({ rows: [], rowCount: 0 } as any);
         const res = await request(app).get(url).set(auth());
         expect(res.status).toBe(200);
         expect(res.body[0].student_name).toBe('Unknown');
-    });
-
-    it('skips invalid nomination entries', async () => {
-        mockAccess();
-        mockDbQuery.mockResolvedValueOnce({
-            rows: [{ ballot_json: { nominations: [{ studentId: null, rank: 1 }, { studentId: 'x', rank: 'bad' }] } }],
-            rowCount: 1,
-        } as any);
-        const res = await request(app).get(url).set(auth());
-        expect(res.status).toBe(200);
-        expect(res.body).toEqual([]);
     });
 });
 

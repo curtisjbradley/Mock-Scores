@@ -65,7 +65,8 @@ export async function saveScoringCategories(tournamentId: string, cats: ScoringC
         name: cat.name, witnessCategory: !!cat.witnessCategory, position: catPos,
         fields: cat.fields.map((f, fPos) => ({
             label: f.label, min: f.min, max: f.max, multiplier: f.multiplier,
-            assignable: f.assignable, eligibleForAward: f.eligibleForAward,
+            assignable: f.assignable, eligibleForAward: !!f.awardCategoryId,
+            awardCategoryId: f.awardCategoryId ?? null,
             visibleToScorers: f.visibleToScorers, prosecution: f.prosecution,
             defense: f.defense, calling: f.calling, crossing: f.crossing, position: fPos,
         })),

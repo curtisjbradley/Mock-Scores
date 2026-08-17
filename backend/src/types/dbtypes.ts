@@ -62,6 +62,7 @@ export interface IScoringFieldRow {
     calling: boolean;
     crossing: boolean;
     position: number;
+    award_category_id: string | null;
 }
 
 export interface ITournamentOwnerRow {
