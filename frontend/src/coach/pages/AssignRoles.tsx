@@ -32,11 +32,11 @@ export default function AssignRoles() {
     useEffect(() => {
         if (!tournamentId || !teamId || !pairingId) return
         Promise.all([
-            apiFetch(`/api/coach/tournaments/${tournamentId}/scoring-categories`).then(r => r.ok ? r.json() : []),
-            apiFetch(`/api/coach/tournaments/${tournamentId}/witnesses`).then(r => r.ok ? r.json() : []),
-            apiFetch(`/api/coach/teams/${teamId}/students`).then(r => r.ok ? r.json() : []),
-            apiFetch(`/api/coach/teams/${teamId}/pairings/${pairingId}/assignments`).then(r => r.ok ? r.json() : []),
-            apiFetch(`/api/coach/teams/${teamId}/default-assignments`).then(r => r.ok ? r.json() : []),
+            apiFetch(`/coach/tournaments/${tournamentId}/scoring-categories`).then(r => r.ok ? r.json() : []),
+            apiFetch(`/coach/tournaments/${tournamentId}/witnesses`).then(r => r.ok ? r.json() : []),
+            apiFetch(`/coach/teams/${teamId}/students`).then(r => r.ok ? r.json() : []),
+            apiFetch(`/coach/teams/${teamId}/pairings/${pairingId}/assignments`).then(r => r.ok ? r.json() : []),
+            apiFetch(`/coach/teams/${teamId}/default-assignments`).then(r => r.ok ? r.json() : []),
         ]).then(([cats, wits, studs, assigns, defaults]: [IScoringCategory[], Witness[], IStudent[], IStudentAssignment[], IStudentAssignment[]]) => {
             setCategories(cats)
             setWitnesses(wits)
@@ -86,7 +86,7 @@ export default function AssignRoles() {
         const assignments = rows
             .filter(r => pending.get(r.key))
             .map(r => ({ field_id: r.fieldId, student_id: pending.get(r.key)!, witness_id: r.witnessId ?? null }))
-        await apiFetch(`/api/coach/teams/${teamId}/pairings/${pairingId}/assignments/bulk`, {
+        await apiFetch(`/coach/teams/${teamId}/pairings/${pairingId}/assignments/bulk`, {
             method: 'POST',
             body: JSON.stringify({ assignments }),
         })

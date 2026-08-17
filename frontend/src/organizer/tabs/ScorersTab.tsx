@@ -18,9 +18,9 @@ function ManageConflictsModal({ scorer, tournamentId, onClose }: {
     const [teams, setTeams] = useState<ITeam[]>([])
 
     useEffect(() => {
-        apiFetch(`/api/organizer/tournament/${tournamentId}/scorers/${scorer.scorer_id}/conflicts`)
+        apiFetch(`/organizer/tournament/${tournamentId}/scorers/${scorer.scorer_id}/conflicts`)
             .then(r => r.ok ? r.json() : []).then(setConflicts).catch(() => {})
-        apiFetch(`/api/organizer/tournament/${tournamentId}/teams`)
+        apiFetch(`/organizer/tournament/${tournamentId}/teams`)
             .then(r => r.ok ? r.json() : []).then(setTeams).catch(() => {})
     }, [tournamentId, scorer.scorer_id])
 
@@ -28,7 +28,7 @@ function ManageConflictsModal({ scorer, tournamentId, onClose }: {
     const available = teams.filter(t => !conflictTeamIds.has(t.id))
 
     const addConflict = (team: ITeam) => {
-        apiFetch(`/api/organizer/tournament/${tournamentId}/scorers/${scorer.scorer_id}/conflicts`, {
+        apiFetch(`/organizer/tournament/${tournamentId}/scorers/${scorer.scorer_id}/conflicts`, {
             method: 'POST', body: JSON.stringify({ team_id: team.id })
         }).then(r => r.ok ? r.json() : null).then(c => {
             if (c) setConflicts(prev => [...prev, c])
@@ -36,7 +36,7 @@ function ManageConflictsModal({ scorer, tournamentId, onClose }: {
     }
 
     const removeConflict = (conflict: IConflict) => {
-        apiFetch(`/api/organizer/tournament/${tournamentId}/scorers/${scorer.scorer_id}/conflicts`, {
+        apiFetch(`/organizer/tournament/${tournamentId}/scorers/${scorer.scorer_id}/conflicts`, {
             method: 'DELETE', body: JSON.stringify({ team_id: conflict.team_id })
         }).then(r => { if (r.ok) setConflicts(prev => prev.filter(c => c.team_id !== conflict.team_id)) }).catch(() => {})
     }
@@ -92,11 +92,11 @@ export default function ScorersTab({ tournamentId }: { tournamentId: string }) {
     const [showImport, setShowImport] = useState(false)
 
     useEffect(() => {
-        apiFetch(`/api/organizer/tournament/${tournamentId}/scorers`)
+        apiFetch(`/organizer/tournament/${tournamentId}/scorers`)
             .then(r => r.ok ? r.json() : [])
             .then((data: IScorer[]) => setScorers(Array.isArray(data) ? data : []))
             .catch(() => setScorers([]))
-        apiFetch(`/api/organizer/tournament/${tournamentId}/bounced-emails`)
+        apiFetch(`/organizer/tournament/${tournamentId}/bounced-emails`)
             .then(r => r.ok ? r.json() : [])
             .then((emails: string[]) => setBouncedEmails(new Set(emails.map(e => e.toLowerCase()))))
             .catch(() => {})
@@ -120,18 +120,18 @@ export default function ScorersTab({ tournamentId }: { tournamentId: string }) {
             if (!updated) return
             const payload = { ...updated, first_name: firstName.trim(), last_name: lastName.trim(), email: email.trim() }
             setScorers(prev => prev.map(s => s.scorer_id === editingId ? payload : s))
-            apiFetch(`/api/organizer/tournament/${tournamentId}/scorers`, { method: 'PUT', body: JSON.stringify(payload) }).catch(console.error)
+            apiFetch(`/organizer/tournament/${tournamentId}/scorers`, { method: 'PUT', body: JSON.stringify(payload) }).catch(console.error)
         } else {
             const newScorer: IScorer = { scorer_id: randomUUID(), first_name: firstName.trim(), last_name: lastName.trim(), email: email.trim() }
             setScorers(prev => [...prev, newScorer])
-            apiFetch(`/api/organizer/tournament/${tournamentId}/scorers`, { method: 'POST', body: JSON.stringify(newScorer) }).catch(console.error)
+            apiFetch(`/organizer/tournament/${tournamentId}/scorers`, { method: 'POST', body: JSON.stringify(newScorer) }).catch(console.error)
         }
         setShowModal(false)
     }
 
     const handleRemove = () => {
         if (!confirmRemove.pending) return
-        apiFetch(`/api/organizer/tournament/${tournamentId}/scorers`, { method: 'DELETE', body: JSON.stringify({ scorer_id: confirmRemove.pending.scorer_id }) }).catch(console.error)
+        apiFetch(`/organizer/tournament/${tournamentId}/scorers`, { method: 'DELETE', body: JSON.stringify({ scorer_id: confirmRemove.pending.scorer_id }) }).catch(console.error)
         setScorers(prev => prev.filter(s => s.scorer_id !== confirmRemove.pending!.scorer_id))
         confirmRemove.clear()
     }
@@ -227,13 +227,13 @@ export default function ScorersTab({ tournamentId }: { tournamentId: string }) {
                     onClose={() => {
                         setShowImport(false)
                         // Refresh scorers list after import
-                        apiFetch(`/api/organizer/tournament/${tournamentId}/scorers`)
+                        apiFetch(`/organizer/tournament/${tournamentId}/scorers`)
                             .then(r => r.ok ? r.json() : [])
                             .then((data: IScorer[]) => setScorers(Array.isArray(data) ? data : []))
                             .catch(() => {})
                     }}
                     onImport={async (csv) => {
-                        const res = await apiFetch(`/api/organizer/tournament/${tournamentId}/import/scorers`, {
+                        const res = await apiFetch(`/organizer/tournament/${tournamentId}/import/scorers`, {
                             method: 'POST',
                             body: JSON.stringify({ csv }),
                         })

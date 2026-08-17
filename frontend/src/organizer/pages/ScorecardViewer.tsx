@@ -58,13 +58,13 @@ const ScorecardViewer = () => {
                 const original = ballot.scores.find(s => s.assignmentKey === assignmentKey && s.side === side)
                 return { assignmentKey, side, score, studentId: original?.studentId ?? null, categoryId: original?.categoryId ?? '' }
             })
-            const res = await apiFetch(`/api/organizer/tournament/${id}/pairings/${pairingId}/scoresheets/${ballotAssignmentId}`, {
+            const res = await apiFetch(`/organizer/tournament/${id}/pairings/${pairingId}/scoresheets/${ballotAssignmentId}`, {
                 method: 'PUT',
                 body: JSON.stringify({ scores, reason: editReason.trim() }),
             })
             if (!res.ok) throw new Error('Failed to save edits')
             // Refresh data
-            const refreshRes = await apiFetch(`/api/organizer/tournament/${id}/pairings/${pairingId}/scoresheets/${ballotAssignmentId}`)
+            const refreshRes = await apiFetch(`/organizer/tournament/${id}/pairings/${pairingId}/scoresheets/${ballotAssignmentId}`)
             if (refreshRes.ok) {
                 const data = await refreshRes.json() as { sheet: IScoreSheetFormat | null; ballot: ScorecardPayload | null; editLog: { editor_email: string; edited_at: string; reason: string; p_points_before: number; p_points_after: number; d_points_before: number; d_points_after: number }[] }
                 setSheet(data.sheet)
@@ -85,7 +85,7 @@ const ScorecardViewer = () => {
         if (!id || !pairingId || !ballotAssignmentId) return
         setDeleting(true)
         try {
-            const res = await apiFetch(`/api/organizer/tournament/${id}/pairings/${pairingId}/scoresheets/${ballotAssignmentId}`, { method: 'DELETE' })
+            const res = await apiFetch(`/organizer/tournament/${id}/pairings/${pairingId}/scoresheets/${ballotAssignmentId}`, { method: 'DELETE' })
             if (!res.ok) throw new Error('Failed to delete ballot')
             navigate(-1)
         } catch (e) {
@@ -103,8 +103,8 @@ const ScorecardViewer = () => {
             setError(null)
             try {
                 const url = isCoachView
-                    ? `/api/coach/tournaments/${id}/pairings/${pairingId}/ballots/${ballotAssignmentId}`
-                    : `/api/organizer/tournament/${id}/pairings/${pairingId}/scoresheets/${ballotAssignmentId}`
+                    ? `/coach/tournaments/${id}/pairings/${pairingId}/ballots/${ballotAssignmentId}`
+                    : `/organizer/tournament/${id}/pairings/${pairingId}/scoresheets/${ballotAssignmentId}`
                 const res = await apiFetch(url)
                 if (!res.ok) throw new Error('Failed to load scorecard')
                 const data = await res.json() as { sheet: IScoreSheetFormat | null; ballot: ScorecardPayload | null; editLog?: { editor_email: string; edited_at: string; reason: string; p_points_before: number; p_points_after: number; d_points_before: number; d_points_after: number }[] }

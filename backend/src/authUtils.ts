@@ -183,8 +183,9 @@ export function csrfCookieOptions() {
     return {
         httpOnly: false,
         secure:   isProd,
-        sameSite: (isProd ? 'strict' : 'lax') as 'strict' | 'lax',
+        sameSite: (isProd ? 'none' : 'lax') as 'none' | 'lax',
         path:     '/',
+        domain:   isProd ? '.mockscores.org' : undefined,
         maxAge:   Math.floor(REFRESH_TOKEN_TTL_MS / 1000),
     };
 }
@@ -193,19 +194,18 @@ export function csrfCookieOptions() {
  * Options for the refresh token cookie:
  * - `httpOnly`  — JS cannot read it (eliminates XSS-based token theft)
  * - `secure`    — only transmitted over HTTPS in production
- * - `sameSite`  — 'lax' in dev (avoids Vite proxy issues), 'strict' in prod
- * - `path`      — '/' so the browser sends it on all same-origin requests;
- *                 the cookie is still only useful at /api/auth/refresh, but
- *                 scoping to /api/auth caused Chrome to drop it in some
- *                 redirect flows with Vite's dev proxy.
+ * - `sameSite`  — 'none' in prod (cross-origin between app. and api. subdomains)
+ * - `domain`    — '.mockscores.org' so the cookie is shared across subdomains
+ * - `path`      — '/' so the browser sends it on all requests
  */
 export function refreshCookieOptions() {
     const isProd = process.env.NODE_ENV === 'production';
     return {
         httpOnly: true,
         secure:   isProd,
-        sameSite: (isProd ? 'strict' : 'lax') as 'strict' | 'lax',
+        sameSite: (isProd ? 'none' : 'lax') as 'none' | 'lax',
         path:     '/',
+        domain:   isProd ? '.mockscores.org' : undefined,
         maxAge:   Math.floor(REFRESH_TOKEN_TTL_MS / 1000),
     };
 }

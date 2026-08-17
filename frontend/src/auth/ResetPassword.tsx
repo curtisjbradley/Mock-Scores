@@ -46,7 +46,7 @@ const ResetPassword = () => {
             return
         }
 
-        const { ok, data } = await postJson<{ message: string }>('/api/auth/reset-password', { token, newPassword })
+        const { ok, data } = await postJson<{ message: string }>('/auth/reset-password', { token, newPassword })
         if (!ok) {
             setError(data?.message ?? 'Failed to reset password. The link may have expired.')
             return

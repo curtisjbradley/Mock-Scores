@@ -53,11 +53,11 @@ function SideSetupModal({
 
     useEffect(() => {
         Promise.all([
-            apiFetch(`/api/coach/tournaments/${tournamentId}/witnesses`).then(r => r.ok ? r.json() : []),
-            apiFetch(`/api/coach/tournaments/${tournamentId}/format`).then(r => r.ok ? r.json() : null),
-            apiFetch(`/api/coach/teams/${teamId}/default-witness-order`).then(r => r.ok ? r.json() : []),
-            apiFetch(`/api/coach/tournaments/${tournamentId}/scoring-categories`).then(r => r.ok ? r.json() : []),
-            apiFetch(`/api/coach/teams/${teamId}/default-assignments`).then(r => r.ok ? r.json() : []),
+            apiFetch(`/coach/tournaments/${tournamentId}/witnesses`).then(r => r.ok ? r.json() : []),
+            apiFetch(`/coach/tournaments/${tournamentId}/format`).then(r => r.ok ? r.json() : null),
+            apiFetch(`/coach/teams/${teamId}/default-witness-order`).then(r => r.ok ? r.json() : []),
+            apiFetch(`/coach/tournaments/${tournamentId}/scoring-categories`).then(r => r.ok ? r.json() : []),
+            apiFetch(`/coach/teams/${teamId}/default-assignments`).then(r => r.ok ? r.json() : []),
         ]).then(([wits, fmt, callOrder, cats, defaultAssigns]: [
             Witness[], Format | null, DefaultCallOrderRow[], IScoringCategory[], IStudentAssignment[]
         ]) => {
@@ -116,19 +116,19 @@ function SideSetupModal({
     const handleSave = async () => {
         setSaving(true)
         await Promise.all([
-            apiFetch(`/api/coach/teams/${teamId}/default-witness-order`, {
+            apiFetch(`/coach/teams/${teamId}/default-witness-order`, {
                 method: 'PUT',
                 body: JSON.stringify({ witness_ids: callOrderSlots.filter(Boolean) }),
             }),
             ...roleRows.map(r => {
                 const studentId = assignments.get(r.key)
                 if (studentId) {
-                    return apiFetch(`/api/coach/teams/${teamId}/default-assignments`, {
+                    return apiFetch(`/coach/teams/${teamId}/default-assignments`, {
                         method: 'PUT',
                         body: JSON.stringify({ field_id: r.fieldId, student_id: studentId, witness_id: r.witnessId }),
                     })
                 }
-                return apiFetch(`/api/coach/teams/${teamId}/default-assignments`, {
+                return apiFetch(`/coach/teams/${teamId}/default-assignments`, {
                     method: 'DELETE',
                     body: JSON.stringify({ field_id: r.fieldId, witness_id: r.witnessId }),
                 })
@@ -235,7 +235,7 @@ export default function RosterTab({ students, tournamentId, teamId, onAdd, onRem
 
     useEffect(() => {
         if (!tournamentId) return
-        apiFetch(`/api/coach/tournaments/${tournamentId}/format`)
+        apiFetch(`/coach/tournaments/${tournamentId}/format`)
             .then(r => r.ok ? r.json() : null)
             .then((fmt: Format | null) => { if (fmt?.criminal_case != null) setIsCriminal(fmt.criminal_case) })
             .catch(() => {})

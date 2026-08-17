@@ -23,7 +23,7 @@ export function useChangePasswordForm() {
             throw err
         }
         if (newPassword !== confirmPassword) { setPwError('Passwords do not match'); return }
-        apiFetch('/api/auth/change-password', { method: 'POST', body: JSON.stringify({ currentPassword, newPassword }) })
+        apiFetch('/auth/change-password', { method: 'POST', body: JSON.stringify({ currentPassword, newPassword }) })
             .then(r => r.json().then(d => ({ ok: r.ok, message: d.message })))
             .then(({ ok, message }) => {
                 if (!ok) { setPwError(message); return }

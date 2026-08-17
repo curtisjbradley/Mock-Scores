@@ -39,7 +39,7 @@ export function Account() {
 
     const handleDeleteAccount = async () => {
         setDeleting(true)
-        const res = await apiFetch('/api/auth/account', { method: 'DELETE' })
+        const res = await apiFetch('/auth/account', { method: 'DELETE' })
         if (res.ok || res.status === 204) {
             await logout()
             navigate('/', { replace: true })

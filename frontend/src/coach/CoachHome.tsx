@@ -11,7 +11,7 @@ const CoachHome = () => {
     const [tournaments, setTournaments] = useState<ICoachTournament[]>([])
 
     useEffect(() => {
-        apiFetch('/api/coach/tournaments')
+        apiFetch('/coach/tournaments')
             .then(r => r.ok ? r.json() : [])
             .then(setTournaments)
             .catch(() => {})

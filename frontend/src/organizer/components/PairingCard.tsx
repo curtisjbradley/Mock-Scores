@@ -67,13 +67,13 @@ export default function PairingCard({ pairing, teams, courtrooms, scorers, assig
 
     const addRegisteredScorer = () => {
         if (!scorerDraft) return
-        apiFetch(`/api/organizer/tournament/${tournamentId}/rounds/${roundId}/pairings/${pairing.pairing_id}/scorers`, {
+        apiFetch(`/organizer/tournament/${tournamentId}/rounds/${roundId}/pairings/${pairing.pairing_id}/scorers`, {
             method: 'POST', body: JSON.stringify({ scorer_id: scorerDraft }),
         }).then(r => r.json()).then((data: { assignment_id: string }) => {
             const scorer = scorers.find(s => s.scorer_id === scorerDraft)!
             const isFirst = assignedScorers.length === 0
             if (isFirst) {
-                apiFetch(`/api/organizer/tournament/${tournamentId}/rounds/${roundId}/pairings/${pairing.pairing_id}/presider`, {
+                apiFetch(`/organizer/tournament/${tournamentId}/rounds/${roundId}/pairings/${pairing.pairing_id}/presider`, {
                     method: 'PUT', body: JSON.stringify({ assignment_id: data.assignment_id }),
                 })
                 onPresiderChanged(data.assignment_id)
@@ -86,12 +86,12 @@ export default function PairingCard({ pairing, teams, courtrooms, scorers, assig
 
     const addPaperScorer = () => {
         if (!paperName.trim()) return
-        apiFetch(`/api/organizer/tournament/${tournamentId}/rounds/${roundId}/pairings/${pairing.pairing_id}/scorers`, {
+        apiFetch(`/organizer/tournament/${tournamentId}/rounds/${roundId}/pairings/${pairing.pairing_id}/scorers`, {
             method: 'POST', body: JSON.stringify({ paper_name: paperName.trim() }),
         }).then(r => r.json()).then((data: { assignment_id: string; scorer_id: string }) => {
             const isFirst = assignedScorers.length === 0
             if (isFirst) {
-                apiFetch(`/api/organizer/tournament/${tournamentId}/rounds/${roundId}/pairings/${pairing.pairing_id}/presider`, {
+                apiFetch(`/organizer/tournament/${tournamentId}/rounds/${roundId}/pairings/${pairing.pairing_id}/presider`, {
                     method: 'PUT', body: JSON.stringify({ assignment_id: data.assignment_id }),
                 })
                 onPresiderChanged(data.assignment_id)
@@ -104,7 +104,7 @@ export default function PairingCard({ pairing, teams, courtrooms, scorers, assig
 
     const removeScorer = (assignmentId: string) => {
         const wasPresider = assignedScorers.find(s => s.assignment_id === assignmentId)?.is_presider
-        apiFetch(`/api/organizer/tournament/${tournamentId}/rounds/${roundId}/pairings/${pairing.pairing_id}/scorers/${assignmentId}`, { method: 'DELETE' })
+        apiFetch(`/organizer/tournament/${tournamentId}/rounds/${roundId}/pairings/${pairing.pairing_id}/scorers/${assignmentId}`, { method: 'DELETE' })
         if (wasPresider) onPresiderChanged(null)
         onScorerRemoved(assignmentId)
     }
@@ -112,10 +112,10 @@ export default function PairingCard({ pairing, teams, courtrooms, scorers, assig
     const setPresider = (assignmentId: string) => {
         const current = assignedScorers.find(s => s.is_presider)
         if (current?.assignment_id === assignmentId) {
-            apiFetch(`/api/organizer/tournament/${tournamentId}/rounds/${roundId}/pairings/${pairing.pairing_id}/presider`, { method: 'DELETE' })
+            apiFetch(`/organizer/tournament/${tournamentId}/rounds/${roundId}/pairings/${pairing.pairing_id}/presider`, { method: 'DELETE' })
             onPresiderChanged(null)
         } else {
-            apiFetch(`/api/organizer/tournament/${tournamentId}/rounds/${roundId}/pairings/${pairing.pairing_id}/presider`, {
+            apiFetch(`/organizer/tournament/${tournamentId}/rounds/${roundId}/pairings/${pairing.pairing_id}/presider`, {
                 method: 'PUT', body: JSON.stringify({ assignment_id: assignmentId }),
             })
             onPresiderChanged(assignmentId)

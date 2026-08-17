@@ -46,7 +46,7 @@ const RoundView = () => {
         if (!id || !roundId || sending) return
         setSending(true)
         setSendMsg(null)
-        apiFetch(`/api/organizer/tournament/${id}/rounds/${roundId}/send-scoring-links`, { method: 'POST' })
+        apiFetch(`/organizer/tournament/${id}/rounds/${roundId}/send-scoring-links`, { method: 'POST' })
             .then(r => r.ok ? r.json() : null)
             .then((data: { sent: number } | null) => {
                 setSendMsg(data ? `Sent ${data.sent} link${data.sent !== 1 ? 's' : ''}` : 'Failed to send')
@@ -59,7 +59,7 @@ const RoundView = () => {
         if (!id || !roundId || generating) return
         setGenerating(true)
         setGenerateError(null)
-        apiFetch(`/api/organizer/tournament/${id}/rounds/${roundId}/generate-pairings`, {
+        apiFetch(`/organizer/tournament/${id}/rounds/${roundId}/generate-pairings`, {
             method: 'POST',
             body: JSON.stringify({ method: generateMethod }),
         })

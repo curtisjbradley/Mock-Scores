@@ -52,9 +52,9 @@ export function useTournamentSettings(
 
     useEffect(() => {
         Promise.all([
-            apiFetch(`/api/organizer/tournament/${tournamentId}`).then(r => r.ok ? r.json() as Promise<ITournament> : Promise.reject()),
+            apiFetch(`/organizer/tournament/${tournamentId}`).then(r => r.ok ? r.json() as Promise<ITournament> : Promise.reject()),
             fetchFormat(tournamentId),
-            apiFetch(`/api/organizer/tournament/${tournamentId}/organizers`).then(r => r.ok ? r.json() as Promise<IOrganizer[]> : Promise.resolve([])),
+            apiFetch(`/organizer/tournament/${tournamentId}/organizers`).then(r => r.ok ? r.json() as Promise<IOrganizer[]> : Promise.resolve([])),
             getSession(),
         ]).then(([t, cf, organizers, session]) => {
             setIsOwner(!!session && organizers.some(o => o.email === session.email && o.role === 'owner'))
