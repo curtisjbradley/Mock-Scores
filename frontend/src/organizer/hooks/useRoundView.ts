@@ -29,26 +29,26 @@ export function useRoundView(id: string | undefined, roundId: string | undefined
     useEffect(() => {
         if (!id || !roundId) { navigate('/'); return }
         Promise.all([
-            apiFetch(`/api/organizer/tournament/${id}/rounds/${roundId}`).then(r => {
+            apiFetch(`/organizer/tournament/${id}/rounds/${roundId}`).then(r => {
                 if (r.status === 404) { setNotFound(true); throw new Error('not found') }
                 if (!r.ok) throw new Error('Round not found')
                 return r.json()
             }),
-            apiFetch(`/api/organizer/tournament/${id}/teams`).then(r => r.json()),
-            apiFetch(`/api/organizer/tournament/${id}/courtrooms`).then(r => r.json()),
-            apiFetch(`/api/organizer/tournament/${id}/rounds/${roundId}/pairings`).then(r => r.json()),
-            apiFetch(`/api/organizer/tournament/${id}/scorers`).then(r => r.json()),
+            apiFetch(`/organizer/tournament/${id}/teams`).then(r => r.json()),
+            apiFetch(`/organizer/tournament/${id}/courtrooms`).then(r => r.json()),
+            apiFetch(`/organizer/tournament/${id}/rounds/${roundId}/pairings`).then(r => r.json()),
+            apiFetch(`/organizer/tournament/${id}/scorers`).then(r => r.json()),
         ]).then(([roundData, teamsData, courtroomsData, pairingsData, scorersData]) => {
             setRound(roundData); setTeams(teamsData); setCourtrooms(courtroomsData)
             setPairings(pairingsData); setScorers(Array.isArray(scorersData) ? scorersData : [])
             return Promise.all([
                 Promise.all((pairingsData as IPairing[]).map((p: IPairing) =>
-                    apiFetch(`/api/organizer/tournament/${id}/rounds/${roundId}/pairings/${p.pairing_id}/scorers`)
+                    apiFetch(`/organizer/tournament/${id}/rounds/${roundId}/pairings/${p.pairing_id}/scorers`)
                         .then(r => r.json())
                         .then((s: IPairingScorer[]) => [p.pairing_id, s] as [string, IPairingScorer[]])
                 )),
-                apiFetch(`/api/organizer/tournament/${id}/scorer-conflicts`).then(r => r.ok ? r.json() : []),
-                apiFetch(`/api/organizer/tournament/${id}/rounds/${roundId}/ballot-status`).then(r => r.ok ? r.json() : []),
+                apiFetch(`/organizer/tournament/${id}/scorer-conflicts`).then(r => r.ok ? r.json() : []),
+                apiFetch(`/organizer/tournament/${id}/rounds/${roundId}/ballot-status`).then(r => r.ok ? r.json() : []),
             ])
         }).then(([entries, conflicts, ballotStatuses]) => {
             setPairingScorers(Object.fromEntries(entries as [string, IPairingScorer[]][]))
@@ -66,13 +66,13 @@ export function useRoundView(id: string | undefined, roundId: string | undefined
         if (!round || name === round.name) return
         const updated = { ...round, name }
         setRound(updated)
-        apiFetch(`/api/organizer/tournament/${id}/rounds/${roundId}`, {
+        apiFetch(`/organizer/tournament/${id}/rounds/${roundId}`, {
             method: 'PATCH', body: JSON.stringify(updated),
         }).catch(() => setError('Failed to save name.'))
     }
 
     const addMatchup = (pros: string, def: string, courtroomId: string, onSuccess: () => void) => {
-        apiFetch(`/api/organizer/tournament/${id}/rounds/${roundId}/pairings`, {
+        apiFetch(`/organizer/tournament/${id}/rounds/${roundId}/pairings`, {
             method: 'POST',
             body: JSON.stringify({ prosectionID: pros, defenseID: def, courtroomID: courtroomId }),
         }).then(async r => {
@@ -89,7 +89,7 @@ export function useRoundView(id: string | undefined, roundId: string | undefined
         setPairings(prev => prev.map(p => p.pairing_id === updated.pairing_id ? updated : p))
 
     const removePairing = (pairing: IPairing) => {
-        apiFetch(`/api/organizer/tournament/${id}/rounds/${roundId}/pairings/${pairing.pairing_id}`, { method: 'DELETE' })
+        apiFetch(`/organizer/tournament/${id}/rounds/${roundId}/pairings/${pairing.pairing_id}`, { method: 'DELETE' })
             .catch(() => setError('Failed to remove matchup.'))
         setPairings(prev => prev.filter(p => p.pairing_id !== pairing.pairing_id))
     }

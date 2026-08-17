@@ -40,7 +40,7 @@ export function useCoachTournamentData(
     isOrganizerView: boolean,
     schoolId: string | undefined,
 ): CoachTournamentData {
-    const orgApiBase = isOrganizerView ? `/api/organizer/tournament/${id}` : null
+    const orgApiBase = isOrganizerView ? `/organizer/tournament/${id}` : null
 
     const [tournament, setTournament] = useState<ICoachTournament | null>(null)
     const [schedule, setSchedule] = useState<ICoachScheduleRound[]>([])
@@ -54,10 +54,10 @@ export function useCoachTournamentData(
         if (!id) return
         if (isOrganizerView) {
             Promise.all([
-                apiFetch(`/api/organizer/tournament/${id}`).then(r => r.ok ? r.json() : null),
-                apiFetch(`/api/coach/tournaments/${id}/schedule${schoolId ? `?teamId=${schoolId}` : ''}`).then(r => r.ok ? r.json() : []),
-                apiFetch(`/api/coach/tournaments/${id}/results`).then(r => r.ok ? r.json() : []),
-                apiFetch(`/api/organizer/tournament/${id}/teams`).then(r => r.ok ? r.json() : []),
+                apiFetch(`/organizer/tournament/${id}`).then(r => r.ok ? r.json() : null),
+                apiFetch(`/coach/tournaments/${id}/schedule${schoolId ? `?teamId=${schoolId}` : ''}`).then(r => r.ok ? r.json() : []),
+                apiFetch(`/coach/tournaments/${id}/results`).then(r => r.ok ? r.json() : []),
+                apiFetch(`/organizer/tournament/${id}/teams`).then(r => r.ok ? r.json() : []),
             ]).then(([t, s, r, teams]) => {
                 const team = (teams as { id: string; name: string; code: string }[]).find(tm => tm.id === schoolId)
                 if (t) setTournament({ ...t, team_id: schoolId ?? '', team_name: team?.name ?? '', team_code: team?.code ?? '' })
@@ -66,15 +66,15 @@ export function useCoachTournamentData(
             }).catch(() => {})
         } else {
             Promise.all([
-                apiFetch('/api/coach/tournaments').then(r => r.ok ? r.json() : []),
-                apiFetch(`/api/coach/tournaments/${id}/schedule`).then(r => r.ok ? r.json() : []),
-                apiFetch(`/api/coach/tournaments/${id}/results`).then(r => r.ok ? r.json() : []),
+                apiFetch('/coach/tournaments').then(r => r.ok ? r.json() : []),
+                apiFetch(`/coach/tournaments/${id}/schedule`).then(r => r.ok ? r.json() : []),
+                apiFetch(`/coach/tournaments/${id}/results`).then(r => r.ok ? r.json() : []),
             ]).then(([ts, s, r]) => {
                 const myTournament = (ts as ICoachTournament[]).find(t => t.id === id) ?? null
                 setTournament(myTournament)
                 // Re-fetch schedule with the resolved teamId so filtering is correct
                 if (myTournament?.team_id) {
-                    apiFetch(`/api/coach/tournaments/${id}/schedule?teamId=${myTournament.team_id}`)
+                    apiFetch(`/coach/tournaments/${id}/schedule?teamId=${myTournament.team_id}`)
                         .then(r => r.ok ? r.json() : s)
                         .then(setSchedule)
                         .catch(() => setSchedule(s))
@@ -90,7 +90,7 @@ export function useCoachTournamentData(
     useEffect(() => {
         if (!id || !tournament) return
         const teamId = isOrganizerView ? (schoolId ?? '') : tournament.team_id
-        const teamBase = orgApiBase ? `${orgApiBase}/teams/${teamId}` : `/api/coach/teams/${teamId}`
+        const teamBase = orgApiBase ? `${orgApiBase}/teams/${teamId}` : `/coach/teams/${teamId}`
 
         /** Fetches a list endpoint and sets state only if data is not already loaded. */
         const lazyLoad = <T,>(condition: boolean, url: string, setter: (data: T) => void) => {
@@ -100,17 +100,17 @@ export function useCoachTournamentData(
 
         lazyLoad(tab === 'coaches' && coaches.length === 0, `${teamBase}/coaches`, setCoaches)
         lazyLoad(tab === 'roster'  && students.length === 0, `${teamBase}/students`, setStudents)
-        lazyLoad(tab === 'field'   && field.length === 0,    `/api/coach/tournaments/${id}/field`, setField)
+        lazyLoad(tab === 'field'   && field.length === 0,    `/coach/tournaments/${id}/field`, setField)
     // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [tab, id, tournament])
 
     const teamId = tournament
         ? (isOrganizerView ? (schoolId ?? '') : tournament.team_id)
         : ''
-    const teamBase = orgApiBase ? `${orgApiBase}/teams/${teamId}` : `/api/coach/teams/${teamId}`
+    const teamBase = orgApiBase ? `${orgApiBase}/teams/${teamId}` : `/coach/teams/${teamId}`
 
     const addCoach = (email: string) =>
-        apiFetch(`/api/coach/teams/${teamId}/coaches`, { method: 'POST', body: JSON.stringify({ email }) })
+        apiFetch(`/coach/teams/${teamId}/coaches`, { method: 'POST', body: JSON.stringify({ email }) })
             .then(r => r.ok ? r.json() : null)
             .then(c => { if (c) setCoaches(p => [...p, c]) })
             .catch(() => {})
@@ -121,7 +121,7 @@ export function useCoachTournamentData(
             .catch(() => {})
 
     const makeOwner = (coachId: string) =>
-        apiFetch(`/api/organizer/tournament/${id}/teams/${teamId}/owner`, { method: 'PUT', body: JSON.stringify({ coachId }) })
+        apiFetch(`/organizer/tournament/${id}/teams/${teamId}/owner`, { method: 'PUT', body: JSON.stringify({ coachId }) })
             .then(r => { if (r.ok) setCoaches(p => p.map(c => ({ ...c, is_owner: c.coach_id === coachId }))) })
             .catch(() => {})
 

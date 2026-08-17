@@ -47,7 +47,7 @@ export default function TournamentSettingsTab({ tournamentId }: { tournamentId: 
 
     // Fetch current status
     useEffect(() => {
-        apiFetch(`/api/organizer/tournament/${tournamentId}`)
+        apiFetch(`/organizer/tournament/${tournamentId}`)
             .then(r => r.ok ? r.json() : null)
             .then(t => { if (t?.status) setCurrentStatus(t.status) })
             .catch(() => {})
@@ -55,7 +55,7 @@ export default function TournamentSettingsTab({ tournamentId }: { tournamentId: 
 
     const handleStatusChange = async (newStatus: 'active' | 'completed' | 'archived') => {
         setStatusSaving(true)
-        const res = await apiFetch(`/api/organizer/tournament/${tournamentId}/status`, {
+        const res = await apiFetch(`/organizer/tournament/${tournamentId}/status`, {
             method: 'PATCH',
             body: JSON.stringify({ status: newStatus }),
         })
@@ -65,7 +65,7 @@ export default function TournamentSettingsTab({ tournamentId }: { tournamentId: 
     }
 
     const handleDelete = async () => {
-        const res = await apiFetch(`/api/organizer/tournament/${tournamentId}`, { method: 'DELETE' })
+        const res = await apiFetch(`/organizer/tournament/${tournamentId}`, { method: 'DELETE' })
         if (res.ok) navigate('/organizer', { replace: true })
         else { setSaveError('Failed to delete tournament.'); setShowDeleteModal(false) }
     }

@@ -22,18 +22,18 @@ export default function TeamsTab({ tournamentId }: { tournamentId: string }) {
     const [showImport, setShowImport] = useState(false)
 
     useEffect(() => {
-        apiFetch(`/api/organizer/tournament/${tournamentId}/teams`)
+        apiFetch(`/organizer/tournament/${tournamentId}/teams`)
             .then(r => r.json())
             .then(setTeams)
             .catch(console.error)
-        apiFetch(`/api/organizer/tournament/${tournamentId}/bounced-emails`)
+        apiFetch(`/organizer/tournament/${tournamentId}/bounced-emails`)
             .then(r => r.ok ? r.json() : [])
             .then((emails: string[]) => setBouncedEmails(new Set(emails.map(e => e.toLowerCase()))))
             .catch(() => {})
     }, [tournamentId])
 
     const putTeam = async (team: ITeam, patch: Partial<ITeam>): Promise<boolean> => {
-        const res = await apiFetch(`/api/organizer/tournament/${tournamentId}/teams`, {
+        const res = await apiFetch(`/organizer/tournament/${tournamentId}/teams`, {
             method: 'PUT',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ team: { ...team, ...patch } }),
@@ -45,7 +45,7 @@ export default function TeamsTab({ tournamentId }: { tournamentId: string }) {
     }
 
     const handleAdd = async (name: string, email: string, code: string) => {
-        const res = await apiFetch(`/api/organizer/tournament/${tournamentId}/teams`, {
+        const res = await apiFetch(`/organizer/tournament/${tournamentId}/teams`, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ team: { name, coach_email: email, code } }),
@@ -57,7 +57,7 @@ export default function TeamsTab({ tournamentId }: { tournamentId: string }) {
     }
 
     const handleRemove = async (team: ITeam) => {
-        const res = await apiFetch(`/api/organizer/tournament/${tournamentId}/teams`, {
+        const res = await apiFetch(`/organizer/tournament/${tournamentId}/teams`, {
             method: 'DELETE',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ id: team.id }),
@@ -151,13 +151,13 @@ export default function TeamsTab({ tournamentId }: { tournamentId: string }) {
                     onClose={() => {
                         setShowImport(false)
                         // Refresh teams list after import
-                        apiFetch(`/api/organizer/tournament/${tournamentId}/teams`)
+                        apiFetch(`/organizer/tournament/${tournamentId}/teams`)
                             .then(r => r.json())
                             .then(setTeams)
                             .catch(console.error)
                     }}
                     onImport={async (csv) => {
-                        const res = await apiFetch(`/api/organizer/tournament/${tournamentId}/import/teams`, {
+                        const res = await apiFetch(`/organizer/tournament/${tournamentId}/import/teams`, {
                             method: 'POST',
                             body: JSON.stringify({ csv }),
                         })

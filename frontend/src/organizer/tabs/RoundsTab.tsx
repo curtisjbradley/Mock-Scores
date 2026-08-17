@@ -94,7 +94,7 @@ export default function RoundsTab({ tournamentId }: { tournamentId: string }) {
     const confirmRemove = useConfirmRemove<string>()
 
     useEffect(() => {
-        apiFetch(`/api/organizer/tournament/${tournamentId}/rounds`)
+        apiFetch(`/organizer/tournament/${tournamentId}/rounds`)
             .then(res => {
                 if (!res.ok) throw new Error()
                 return res.json()
@@ -103,7 +103,7 @@ export default function RoundsTab({ tournamentId }: { tournamentId: string }) {
                 setRounds(data)
                 // Fetch ballot status for each round
                 Promise.all(data.map(r =>
-                    apiFetch(`/api/organizer/tournament/${tournamentId}/rounds/${r.round_id}/ballot-status`)
+                    apiFetch(`/organizer/tournament/${tournamentId}/rounds/${r.round_id}/ballot-status`)
                         .then(res => res.ok ? res.json() : [])
                         .then((statuses: IBallotStatus[]) => ({
                             roundId: r.round_id,
@@ -121,7 +121,7 @@ export default function RoundsTab({ tournamentId }: { tournamentId: string }) {
 
     const handleAdd = () => {
 
-        apiFetch(`/api/organizer/tournament/${tournamentId}/rounds`, {
+        apiFetch(`/organizer/tournament/${tournamentId}/rounds`, {
             method: 'POST'
         }).then(res => {
             if (!res.ok) throw new Error()
@@ -132,7 +132,7 @@ export default function RoundsTab({ tournamentId }: { tournamentId: string }) {
     }
 
     const handleSave = (updated: IRound) => {
-        apiFetch(`/api/organizer/tournament/${tournamentId}/rounds/${updated.round_id}`, {
+        apiFetch(`/organizer/tournament/${tournamentId}/rounds/${updated.round_id}`, {
             method: 'PATCH',
             body: JSON.stringify(updated),
         }).then(res => {
@@ -142,7 +142,7 @@ export default function RoundsTab({ tournamentId }: { tournamentId: string }) {
     }
 
     const handleRemove = (id: string) => {
-        apiFetch(`/api/organizer/tournament/${tournamentId}/rounds/${id}`, { method: 'DELETE' })
+        apiFetch(`/organizer/tournament/${tournamentId}/rounds/${id}`, { method: 'DELETE' })
             .then(res => { if (!res.ok) throw new Error() })
             .catch(() => setError('Failed to remove round.'))
         setRounds(prev => prev.filter(r => r.round_id !== id))

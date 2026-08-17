@@ -72,7 +72,7 @@ export default function TournamentNew() {
         const payload = buildPayload(info, caseFormat, categories, standingsConfigId)
 
         setSubmitting(true)
-        apiFetch('/api/organizer/tournament', { method: 'POST', body: JSON.stringify(payload) })
+        apiFetch('/organizer/tournament', { method: 'POST', body: JSON.stringify(payload) })
             .then(res => {
                 if(!res.ok) {
                     setSubmitting(false)

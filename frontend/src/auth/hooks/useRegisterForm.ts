@@ -25,7 +25,7 @@ export function useRegisterForm() {
             throw err
         }
         try {
-            const { ok, data } = await postJson<{ message?: string }>('/api/auth/register', {
+            const { ok, data } = await postJson<{ message?: string }>('/auth/register', {
                 firstName: firstName.trim(), lastName: lastName.trim(), email, password,
             })
             if (!ok) { setError(data.message ?? 'Registration failed.'); return }

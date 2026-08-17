@@ -10,11 +10,12 @@
  *   delivered to the browser as an HttpOnly, Secure, SameSite=Strict cookie.
  *   JS cannot read HttpOnly cookies, so XSS cannot steal it either.
  *
- * Silent refresh: `apiFetch` automatically calls `/api/auth/refresh` on a 401
+ * Silent refresh: `apiFetch` automatically calls `/auth/refresh` on a 401
  * response, updates the in-memory access token, and retries the original request
  * exactly once. No user interaction is required for token renewal.
  */
 
+import { API_BASE } from '../config';
 export { GOOGLE_CLIENT_ID } from '@mock-scores/shared';
 
 export interface Session {
@@ -55,7 +56,7 @@ function getCsrfToken(): string | null {
 // ── Token refresh ─────────────────────────────────────────────────────────────
 
 /**
- * Calls `/api/auth/refresh` using the HttpOnly cookie (sent automatically by
+ * Calls `/auth/refresh` using the HttpOnly cookie (sent automatically by
  * the browser). On success, stores the new access token in memory.
  *
  * Returns true if a fresh token was obtained, false otherwise.
@@ -66,9 +67,9 @@ function getCsrfToken(): string | null {
 export function refreshAccessToken(): Promise<boolean> {
     if (_refreshing) return _refreshing;
 
-    _refreshing = fetch('/api/auth/refresh', {
+    _refreshing = fetch(`${API_BASE}/auth/refresh`, {
         method: 'POST',
-        credentials: 'same-origin',
+        credentials: 'include',
         headers: {
             ...(getCsrfToken() ? { 'X-CSRF-Token': getCsrfToken()! } : {}),
         },
@@ -88,7 +89,7 @@ export function refreshAccessToken(): Promise<boolean> {
 // ── Session ───────────────────────────────────────────────────────────────────
 
 /**
- * Returns the current session by calling `/api/auth/session` with the
+ * Returns the current session by calling `/auth/session` with the
  * in-memory access token. If the token is missing or expired, attempts a
  * silent refresh first. Returns null when the user is not authenticated.
  */
@@ -100,7 +101,7 @@ export async function getSession(): Promise<Session | null> {
     }
 
     try {
-        const res = await fetch('/api/auth/session', {
+        const res = await fetch(`${API_BASE}/auth/session`, {
             headers: { Authorization: `Bearer ${_accessToken}` },
         });
         if (res.ok) return res.json();
@@ -109,7 +110,7 @@ export async function getSession(): Promise<Session | null> {
         if (res.status === 401) {
             const refreshed = await refreshAccessToken();
             if (!refreshed) return null;
-            const retry = await fetch('/api/auth/session', {
+            const retry = await fetch(`${API_BASE}/auth/session`, {
                 headers: { Authorization: `Bearer ${_accessToken}` },
             });
             return retry.ok ? retry.json() : null;
@@ -134,13 +135,13 @@ export function saveToken(token: string): void {
 }
 
 /**
- * Clears the in-memory access token and calls `/api/auth/logout` to revoke
+ * Clears the in-memory access token and calls `/auth/logout` to revoke
  * the HttpOnly refresh cookie on the server.
  */
 export async function logout(): Promise<void> {
     setAccessToken(null);
     try {
-        await fetch('/api/auth/logout', { method: 'POST', credentials: 'same-origin' });
+        await fetch(`${API_BASE}/auth/logout`, { method: 'POST', credentials: 'include' });
     } catch {
         // Best-effort — local state is already cleared
     }
@@ -159,19 +160,20 @@ export async function logout(): Promise<void> {
  * @param init - Optional standard `RequestInit` options
  */
 export async function apiFetch(url: string, init: RequestInit = {}): Promise<Response> {
+    const fullUrl = `${API_BASE}${url}`;
     const makeHeaders = (): HeadersInit => ({
         ...(init.body ? { 'Content-Type': 'application/json' } : {}),
         ...(init.headers ?? {}),
         ...(_accessToken ? { Authorization: `Bearer ${_accessToken}` } : {}),
     });
 
-    const res = await fetch(url, { ...init, headers: makeHeaders() });
+    const res = await fetch(fullUrl, { ...init, credentials: 'include', headers: makeHeaders() });
 
     // Silent refresh on 401 — retry once
     if (res.status === 401) {
         const refreshed = await refreshAccessToken();
         if (!refreshed) return res; // Return the 401 — caller handles it
-        return fetch(url, { ...init, headers: makeHeaders() });
+        return fetch(fullUrl, { ...init, credentials: 'include', headers: makeHeaders() });
     }
 
     return res;
@@ -187,9 +189,10 @@ export async function postJson<T = Record<string, unknown>>(
     url: string,
     body: unknown,
 ): Promise<{ ok: boolean; data: T }> {
-    const res = await fetch(url, {
+    const res = await fetch(`${API_BASE}${url}`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
+        credentials: 'include',
         body: JSON.stringify(body),
     });
     const data = await res.json().catch(() => ({})) as T;

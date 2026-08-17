@@ -20,7 +20,7 @@ export default function ResultsTab({ results, tournamentId }: { results: ICoachR
         if (ballots[pairingId]) return // already loaded
         setLoadingId(pairingId)
         try {
-            const res = await apiFetch(`/api/coach/tournaments/${tournamentId}/pairings/${pairingId}/ballots`)
+            const res = await apiFetch(`/coach/tournaments/${tournamentId}/pairings/${pairingId}/ballots`)
             if (res.ok) {
                 const data: BallotDetail[] = await res.json()
                 setBallots(prev => ({ ...prev, [pairingId]: data }))

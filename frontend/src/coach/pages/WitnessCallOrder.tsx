@@ -22,9 +22,9 @@ export default function WitnessCallOrder() {
         const urlSide = (new URLSearchParams(window.location.search).get('side') ?? 'p') as 'p' | 'd'
 
         Promise.all([
-            apiFetch(`/api/coach/tournaments/${tournamentId}/witnesses`).then(r => r.ok ? r.json() : []),
-            apiFetch(`/api/coach/tournaments/${tournamentId}/format`).then(r => r.ok ? r.json() : null),
-            apiFetch(`/api/coach/teams/${teamId}/pairings/${pairingId}/witness-order`).then(r => r.ok ? r.json() : []),
+            apiFetch(`/coach/tournaments/${tournamentId}/witnesses`).then(r => r.ok ? r.json() : []),
+            apiFetch(`/coach/tournaments/${tournamentId}/format`).then(r => r.ok ? r.json() : null),
+            apiFetch(`/coach/teams/${teamId}/pairings/${pairingId}/witness-order`).then(r => r.ok ? r.json() : []),
         ]).then(([wits, fmt, saved]: [Witness[], { p_witnesses_called: number; d_witnesses_called: number } | null, IWitnessCallOrder[]]) => {
             const relevant = wits.filter(w => w.side === (urlSide === 'p' ? 'P' : 'D') || w.side === 'S')
             setWitnesses(relevant)
@@ -51,7 +51,7 @@ export default function WitnessCallOrder() {
     async function handleSave() {
         if (!teamId || !pairingId) return
         setSaving(true)
-        await apiFetch(`/api/coach/teams/${teamId}/pairings/${pairingId}/witness-order`, {
+        await apiFetch(`/coach/teams/${teamId}/pairings/${pairingId}/witness-order`, {
             method: 'PUT',
             body: JSON.stringify({ witness_ids: slots.filter(Boolean) }),
         })

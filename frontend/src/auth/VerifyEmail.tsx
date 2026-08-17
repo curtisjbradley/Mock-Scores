@@ -13,7 +13,7 @@ const VerifyEmail = () => {
     useEffect(() => {
         if (!token) return
 
-        postJson<{ message: string }>('/api/auth/verify-email', { token })
+        postJson<{ message: string }>('/auth/verify-email', { token })
             .then(({ ok, data }) => {
                 if (ok) {
                     setStatus('success')

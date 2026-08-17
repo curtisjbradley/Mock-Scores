@@ -23,7 +23,7 @@ export function useLoginForm() {
         if (!isValidEmail(email)) { setError('Please enter a valid email address.'); return }
         try {
             const { ok, data } = await postJson<{ accessToken?: string; message?: string }>(
-                '/api/auth/login',
+                '/auth/login',
                 { email, password },
             )
             if (!ok) { setError(data.message ?? 'Invalid email or password.'); return }

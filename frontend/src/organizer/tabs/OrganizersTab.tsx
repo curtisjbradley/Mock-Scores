@@ -18,10 +18,10 @@ export default function OrganizersTab({ tournamentId }: { tournamentId: string }
     const [bouncedEmails, setBouncedEmails] = useState<Set<string>>(new Set())
 
     useEffect(() => {
-        apiFetch(`/api/organizer/tournament/${tournamentId}/organizers`)
+        apiFetch(`/organizer/tournament/${tournamentId}/organizers`)
             .then(r => r.ok ? r.json() : Promise.reject())
             .then(setOrganizers).catch(console.error)
-        apiFetch(`/api/organizer/tournament/${tournamentId}/bounced-emails`)
+        apiFetch(`/organizer/tournament/${tournamentId}/bounced-emails`)
             .then(r => r.ok ? r.json() : [])
             .then((emails: string[]) => setBouncedEmails(new Set(emails.map(e => e.toLowerCase()))))
             .catch(() => {})
@@ -29,7 +29,7 @@ export default function OrganizersTab({ tournamentId }: { tournamentId: string }
 
     const saveEmail = (org: IOrganizer) => {
         const updated = { ...org, email: editEmail }
-        apiFetch(`/api/organizer/tournament/${tournamentId}/organizers`, {
+        apiFetch(`/organizer/tournament/${tournamentId}/organizers`, {
             method: 'PUT', body: JSON.stringify({ organizer: updated }),
         }).catch(console.error)
         setOrganizers(prev => prev.map(o => o.id === org.id ? updated : o))
@@ -37,7 +37,7 @@ export default function OrganizersTab({ tournamentId }: { tournamentId: string }
     }
 
     const removeOrganizer = (org: IOrganizer) => {
-        apiFetch(`/api/organizer/tournament/${tournamentId}/organizers`, {
+        apiFetch(`/organizer/tournament/${tournamentId}/organizers`, {
             method: 'DELETE', body: JSON.stringify({ organizer: org }),
         }).catch(console.error)
         setOrganizers(prev => prev.filter(o => o.id !== org.id))
@@ -95,7 +95,7 @@ export default function OrganizersTab({ tournamentId }: { tournamentId: string }
                 <AddOrganizerModal
                     onClose={() => setShowModal(false)}
                     onAdd={(name, email) => {
-                        apiFetch(`/api/organizer/tournament/${tournamentId}/organizers`, {
+                        apiFetch(`/organizer/tournament/${tournamentId}/organizers`, {
                             method: 'POST', body: JSON.stringify({ organizer: { name, email, role: 'delegate' } }),
                         }).then(r => r.ok ? r.json() : Promise.reject())
                         .then((created: IOrganizer) => setOrganizers(prev => [...prev, created]))

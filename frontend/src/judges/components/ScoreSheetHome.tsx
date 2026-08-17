@@ -1,3 +1,4 @@
+import { API_BASE } from '../../config';
 import { Suspense, useEffect, useState } from "react";
 import ScoreSheet from "./ScoreSheet.tsx";
 import ConflictCheck from "./ConflictCheck.tsx";
@@ -19,7 +20,7 @@ const ScoreSheetHome = () => {
 
     useEffect(() => {
         if (!scorerID) return;
-        fetch(`/api/score/${scorerID}`)
+        fetch(`${API_BASE}/score/${scorerID}`)
             .then(async r => {
                 if (r.status === 410) { setAlreadySubmitted(true); return; }
                 if (r.status === 409) { setConflictReported(true); return; }

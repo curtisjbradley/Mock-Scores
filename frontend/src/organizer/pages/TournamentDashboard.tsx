@@ -52,7 +52,7 @@ export default function TournamentDashboard() {
 
     useEffect(() => {
         if (!id) { navigate('/organizer', { replace: true }); return }
-        apiFetch(`/api/organizer/tournament/${id}`)
+        apiFetch(`/organizer/tournament/${id}`)
             .then(r => {
                 if (r.status === 403) { navigate('/403', { replace: true }); return null }
                 return r.ok ? r.json() : null

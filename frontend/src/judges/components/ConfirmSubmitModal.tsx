@@ -1,3 +1,4 @@
+import { API_BASE } from '../../config';
 import "../styles/modal.css";
 import { type Dispatch, type SetStateAction, useEffect, useMemo, useRef, useState } from "react";
 import type { ScorecardPayload, IScoreSheetFormat } from '@mock-scores/shared';
@@ -125,7 +126,7 @@ const ConfirmSubmitModal = ({
         setSubmitting(true);
         setSubmitError(null);
         try {
-            const res = await fetch(`/api/score/${details.scorer.scorerID}/ballot`, {
+            const res = await fetch(`${API_BASE}/score/${details.scorer.scorerID}/ballot`, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify(payload),

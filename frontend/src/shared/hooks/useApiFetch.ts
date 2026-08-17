@@ -31,7 +31,7 @@ function reducer<T>(state: State<T>, action: Action<T>): State<T> {
  * @param fallback - Value used as `data` before the first successful response
  *
  * @example
- * const { data, loading, error, refetch } = useApiFetch('/api/tournaments', []);
+ * const { data, loading, error, refetch } = useApiFetch('/tournaments', []);
  */
 export function useApiFetch<T>(url: string, fallback: T) {
     const [state, dispatch] = useReducer(reducer<T>, { data: null, loading: true, error: null })
