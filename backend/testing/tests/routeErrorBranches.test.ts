@@ -48,7 +48,7 @@ function mockAccessAndRound() {
 describe('POST /api/auth/register — DbError', () => {
     it('returns 500 when db throws on register', async () => {
         mockDbQuery.mockResolvedValueOnce(null); // email check fails → DbError
-        const res = await request(app).post('/api/auth/register')
+        const res = await request(app).post('/auth/register')
             .send({ email: 'a@b.com', password: 'Password1', firstName: 'A', lastName: 'B' });
         expect(res.status).toBe(500);
     });
@@ -57,7 +57,7 @@ describe('POST /api/auth/register — DbError', () => {
 describe('POST /api/auth/login — DbError', () => {
     it('returns 500 when db throws on login', async () => {
         mockDbQuery.mockResolvedValueOnce(null); // user lookup fails
-        const res = await request(app).post('/api/auth/login')
+        const res = await request(app).post('/auth/login')
             .send({ email: 'a@b.com', password: 'Password1' });
         expect(res.status).toBe(500);
     });
@@ -66,7 +66,7 @@ describe('POST /api/auth/login — DbError', () => {
 describe('POST /api/auth/change-password — DbError', () => {
     it('returns 500 when db throws on change-password', async () => {
         mockDbQuery.mockResolvedValueOnce(null); // user lookup fails
-        const res = await request(app).post('/api/auth/change-password')
+        const res = await request(app).post('/auth/change-password')
             .set(auth())
             .send({ currentPassword: 'old', newPassword: 'Newpass123' });
         expect(res.status).toBe(500);
@@ -78,7 +78,7 @@ describe('POST /api/auth/change-password — DbError', () => {
 describe('GET /api/organizer/tournament/standings-templates — DbError', () => {
     it('returns 500 on db failure', async () => {
         mockDbQuery.mockResolvedValueOnce(null);
-        const res = await request(app).get('/api/organizer/tournament/standings-templates').set(auth());
+        const res = await request(app).get('/organizer/tournament/standings-templates').set(auth());
         expect(res.status).toBe(500);
     });
 });
@@ -88,7 +88,7 @@ describe('POST /api/organizer/tournament/duplicate/:id — errors', () => {
         mockAccess();
         mockDbQuery.mockResolvedValueOnce(null); // duplicate fails → NotFoundError via null
         const res = await request(app)
-            .post(`/api/organizer/tournament/duplicate/${TOURNAMENT_ID}`)
+            .post(`/organizer/tournament/duplicate/${TOURNAMENT_ID}`)
             .set(auth()).send({});
         // NotFoundError or DbError — both are error responses
         expect([404, 500]).toContain(res.status);
@@ -100,7 +100,7 @@ describe('DELETE /api/organizer/tournament/:id — NotFoundError', () => {
         mockOwnerAccess();
         mockDbQuery.mockResolvedValueOnce({ rows: [], rowCount: 0 } as any); // deleteTournament finds nothing
         const res = await request(app)
-            .delete(`/api/organizer/tournament/${TOURNAMENT_ID}`)
+            .delete(`/organizer/tournament/${TOURNAMENT_ID}`)
             .set(auth());
         expect([404, 204]).toContain(res.status);
     });
@@ -113,7 +113,7 @@ describe('PATCH /rounds/:round — NotFoundError', () => {
         mockAccessAndRound();
         mockDbQuery.mockResolvedValueOnce({ rows: [], rowCount: 0 } as any); // UPDATE returns nothing
         const res = await request(app)
-            .patch(`/api/organizer/tournament/${TOURNAMENT_ID}/rounds/${ROUND_ID}`)
+            .patch(`/organizer/tournament/${TOURNAMENT_ID}/rounds/${ROUND_ID}`)
             .set(auth())
             .send({ name: 'R1', results_public: true, teams_public: false });
         expect([404, 200]).toContain(res.status);
@@ -122,7 +122,7 @@ describe('PATCH /rounds/:round — NotFoundError', () => {
     it('returns 400 when fields missing', async () => {
         mockAccessAndRound();
         const res = await request(app)
-            .patch(`/api/organizer/tournament/${TOURNAMENT_ID}/rounds/${ROUND_ID}`)
+            .patch(`/organizer/tournament/${TOURNAMENT_ID}/rounds/${ROUND_ID}`)
             .set(auth())
             .send({});
         expect(res.status).toBe(400);
@@ -134,7 +134,7 @@ describe('DELETE /rounds/:round', () => {
         mockAccessAndRound();
         mockDbQuery.mockResolvedValueOnce({ rows: [], rowCount: 0 } as any);
         const res = await request(app)
-            .delete(`/api/organizer/tournament/${TOURNAMENT_ID}/rounds/${ROUND_ID}`)
+            .delete(`/organizer/tournament/${TOURNAMENT_ID}/rounds/${ROUND_ID}`)
             .set(auth());
         expect([404, 204]).toContain(res.status);
     });
@@ -145,7 +145,7 @@ describe('GET /rounds/:round/pairings — DbError', () => {
         mockAccessAndRound();
         mockDbQuery.mockResolvedValueOnce(null);
         const res = await request(app)
-            .get(`/api/organizer/tournament/${TOURNAMENT_ID}/rounds/${ROUND_ID}/pairings`)
+            .get(`/organizer/tournament/${TOURNAMENT_ID}/rounds/${ROUND_ID}/pairings`)
             .set(auth());
         expect(res.status).toBe(500);
     });
@@ -155,7 +155,7 @@ describe('POST /rounds/:round/pairings — validation', () => {
     it('returns 400 when fields missing', async () => {
         mockAccessAndRound();
         const res = await request(app)
-            .post(`/api/organizer/tournament/${TOURNAMENT_ID}/rounds/${ROUND_ID}/pairings`)
+            .post(`/organizer/tournament/${TOURNAMENT_ID}/rounds/${ROUND_ID}/pairings`)
             .set(auth()).send({});
         expect(res.status).toBe(400);
     });
@@ -163,7 +163,7 @@ describe('POST /rounds/:round/pairings — validation', () => {
     it('returns 400 when prosecution === defense', async () => {
         mockAccessAndRound();
         const res = await request(app)
-            .post(`/api/organizer/tournament/${TOURNAMENT_ID}/rounds/${ROUND_ID}/pairings`)
+            .post(`/organizer/tournament/${TOURNAMENT_ID}/rounds/${ROUND_ID}/pairings`)
             .set(auth())
             .send({ prosectionID: TEAM_ID, defenseID: TEAM_ID, courtroomID: PAIRING_ID });
         expect(res.status).toBe(400);
@@ -173,7 +173,7 @@ describe('POST /rounds/:round/pairings — validation', () => {
         mockAccessAndRound();
         mockDbQuery.mockResolvedValueOnce(null);
         const res = await request(app)
-            .post(`/api/organizer/tournament/${TOURNAMENT_ID}/rounds/${ROUND_ID}/pairings`)
+            .post(`/organizer/tournament/${TOURNAMENT_ID}/rounds/${ROUND_ID}/pairings`)
             .set(auth())
             .send({ prosectionID: TEAM_ID, defenseID: PAIRING_ID, courtroomID: SCORER_ID });
         expect(res.status).toBe(500);
@@ -184,7 +184,7 @@ describe('DELETE /rounds/:round/pairings/:pairing', () => {
     it('returns 400 for invalid pairing UUID', async () => {
         mockAccessAndRound();
         const res = await request(app)
-            .delete(`/api/organizer/tournament/${TOURNAMENT_ID}/rounds/${ROUND_ID}/pairings/not-a-uuid`)
+            .delete(`/organizer/tournament/${TOURNAMENT_ID}/rounds/${ROUND_ID}/pairings/not-a-uuid`)
             .set(auth());
         expect(res.status).toBe(400);
     });
@@ -193,7 +193,7 @@ describe('DELETE /rounds/:round/pairings/:pairing', () => {
         mockAccessAndRound();
         mockDbQuery.mockResolvedValueOnce({ rows: [], rowCount: 0 } as any);
         const res = await request(app)
-            .delete(`/api/organizer/tournament/${TOURNAMENT_ID}/rounds/${ROUND_ID}/pairings/${PAIRING_ID}`)
+            .delete(`/organizer/tournament/${TOURNAMENT_ID}/rounds/${ROUND_ID}/pairings/${PAIRING_ID}`)
             .set(auth());
         expect([404, 204]).toContain(res.status);
     });
@@ -203,7 +203,7 @@ describe('GET /rounds/:round/pairings/:pairing/scorers', () => {
     it('returns 400 for invalid pairing UUID', async () => {
         mockAccessAndRound();
         const res = await request(app)
-            .get(`/api/organizer/tournament/${TOURNAMENT_ID}/rounds/${ROUND_ID}/pairings/bad-id/scorers`)
+            .get(`/organizer/tournament/${TOURNAMENT_ID}/rounds/${ROUND_ID}/pairings/bad-id/scorers`)
             .set(auth());
         expect(res.status).toBe(400);
     });
@@ -212,7 +212,7 @@ describe('GET /rounds/:round/pairings/:pairing/scorers', () => {
         mockAccessAndRound();
         mockDbQuery.mockResolvedValueOnce({ rows: [], rowCount: 0 } as any);
         const res = await request(app)
-            .get(`/api/organizer/tournament/${TOURNAMENT_ID}/rounds/${ROUND_ID}/pairings/${PAIRING_ID}/scorers`)
+            .get(`/organizer/tournament/${TOURNAMENT_ID}/rounds/${ROUND_ID}/pairings/${PAIRING_ID}/scorers`)
             .set(auth());
         expect(res.status).toBe(200);
     });
@@ -222,7 +222,7 @@ describe('POST /rounds/:round/pairings/:pairing/scorers', () => {
     it('returns 400 for invalid pairing UUID', async () => {
         mockAccessAndRound();
         const res = await request(app)
-            .post(`/api/organizer/tournament/${TOURNAMENT_ID}/rounds/${ROUND_ID}/pairings/bad-id/scorers`)
+            .post(`/organizer/tournament/${TOURNAMENT_ID}/rounds/${ROUND_ID}/pairings/bad-id/scorers`)
             .set(auth()).send({ scorer_id: SCORER_ID });
         expect(res.status).toBe(400);
     });
@@ -230,7 +230,7 @@ describe('POST /rounds/:round/pairings/:pairing/scorers', () => {
     it('returns 400 when invalid scorer_id UUID', async () => {
         mockAccessAndRound();
         const res = await request(app)
-            .post(`/api/organizer/tournament/${TOURNAMENT_ID}/rounds/${ROUND_ID}/pairings/${PAIRING_ID}/scorers`)
+            .post(`/organizer/tournament/${TOURNAMENT_ID}/rounds/${ROUND_ID}/pairings/${PAIRING_ID}/scorers`)
             .set(auth()).send({ scorer_id: 'not-a-uuid' });
         expect(res.status).toBe(400);
     });
@@ -238,7 +238,7 @@ describe('POST /rounds/:round/pairings/:pairing/scorers', () => {
     it('returns 400 when neither scorer_id nor paper_name provided', async () => {
         mockAccessAndRound();
         const res = await request(app)
-            .post(`/api/organizer/tournament/${TOURNAMENT_ID}/rounds/${ROUND_ID}/pairings/${PAIRING_ID}/scorers`)
+            .post(`/organizer/tournament/${TOURNAMENT_ID}/rounds/${ROUND_ID}/pairings/${PAIRING_ID}/scorers`)
             .set(auth()).send({});
         expect(res.status).toBe(400);
     });
@@ -249,7 +249,7 @@ describe('POST /rounds/:round/pairings/:pairing/scorers', () => {
         mockDbQuery.mockResolvedValueOnce({ rows: [{ scorer_id: SCORER_ID }], rowCount: 1 } as any);
         mockDbQuery.mockResolvedValueOnce({ rows: [{ assignment_id: ASSIGNMENT_ID }], rowCount: 1 } as any);
         const res = await request(app)
-            .post(`/api/organizer/tournament/${TOURNAMENT_ID}/rounds/${ROUND_ID}/pairings/${PAIRING_ID}/scorers`)
+            .post(`/organizer/tournament/${TOURNAMENT_ID}/rounds/${ROUND_ID}/pairings/${PAIRING_ID}/scorers`)
             .set(auth()).send({ paper_name: 'Paper Judge' });
         expect([201, 500]).toContain(res.status);
     });
@@ -258,7 +258,7 @@ describe('POST /rounds/:round/pairings/:pairing/scorers', () => {
         mockAccessAndRound();
         mockDbQuery.mockResolvedValueOnce(null);
         const res = await request(app)
-            .post(`/api/organizer/tournament/${TOURNAMENT_ID}/rounds/${ROUND_ID}/pairings/${PAIRING_ID}/scorers`)
+            .post(`/organizer/tournament/${TOURNAMENT_ID}/rounds/${ROUND_ID}/pairings/${PAIRING_ID}/scorers`)
             .set(auth()).send({ scorer_id: SCORER_ID });
         expect(res.status).toBe(500);
     });
@@ -268,7 +268,7 @@ describe('DELETE /rounds/:round/pairings/:pairing/scorers/:assignment', () => {
     it('returns 400 for invalid assignment UUID', async () => {
         mockAccessAndRound();
         const res = await request(app)
-            .delete(`/api/organizer/tournament/${TOURNAMENT_ID}/rounds/${ROUND_ID}/pairings/${PAIRING_ID}/scorers/bad-id`)
+            .delete(`/organizer/tournament/${TOURNAMENT_ID}/rounds/${ROUND_ID}/pairings/${PAIRING_ID}/scorers/bad-id`)
             .set(auth());
         expect(res.status).toBe(400);
     });
@@ -277,7 +277,7 @@ describe('DELETE /rounds/:round/pairings/:pairing/scorers/:assignment', () => {
         mockAccessAndRound();
         mockDbQuery.mockResolvedValueOnce({ rows: [], rowCount: 0 } as any);
         const res = await request(app)
-            .delete(`/api/organizer/tournament/${TOURNAMENT_ID}/rounds/${ROUND_ID}/pairings/${PAIRING_ID}/scorers/${ASSIGNMENT_ID}`)
+            .delete(`/organizer/tournament/${TOURNAMENT_ID}/rounds/${ROUND_ID}/pairings/${PAIRING_ID}/scorers/${ASSIGNMENT_ID}`)
             .set(auth());
         expect([404, 204]).toContain(res.status);
     });
@@ -287,7 +287,7 @@ describe('PUT /rounds/:round/pairings/:pairing/presider', () => {
     it('returns 400 for invalid pairing UUID', async () => {
         mockAccessAndRound();
         const res = await request(app)
-            .put(`/api/organizer/tournament/${TOURNAMENT_ID}/rounds/${ROUND_ID}/pairings/bad-id/presider`)
+            .put(`/organizer/tournament/${TOURNAMENT_ID}/rounds/${ROUND_ID}/pairings/bad-id/presider`)
             .set(auth()).send({ assignment_id: ASSIGNMENT_ID });
         expect(res.status).toBe(400);
     });
@@ -295,7 +295,7 @@ describe('PUT /rounds/:round/pairings/:pairing/presider', () => {
     it('returns 400 when assignment_id missing', async () => {
         mockAccessAndRound();
         const res = await request(app)
-            .put(`/api/organizer/tournament/${TOURNAMENT_ID}/rounds/${ROUND_ID}/pairings/${PAIRING_ID}/presider`)
+            .put(`/organizer/tournament/${TOURNAMENT_ID}/rounds/${ROUND_ID}/pairings/${PAIRING_ID}/presider`)
             .set(auth()).send({});
         expect(res.status).toBe(400);
     });
@@ -304,7 +304,7 @@ describe('PUT /rounds/:round/pairings/:pairing/presider', () => {
         mockAccessAndRound();
         mockDbQuery.mockResolvedValueOnce({ rows: [], rowCount: 1 } as any);
         const res = await request(app)
-            .put(`/api/organizer/tournament/${TOURNAMENT_ID}/rounds/${ROUND_ID}/pairings/${PAIRING_ID}/presider`)
+            .put(`/organizer/tournament/${TOURNAMENT_ID}/rounds/${ROUND_ID}/pairings/${PAIRING_ID}/presider`)
             .set(auth()).send({ assignment_id: ASSIGNMENT_ID });
         expect(res.status).toBe(200);
     });
@@ -313,7 +313,7 @@ describe('PUT /rounds/:round/pairings/:pairing/presider', () => {
         mockAccessAndRound();
         mockDbQuery.mockResolvedValueOnce(null);
         const res = await request(app)
-            .put(`/api/organizer/tournament/${TOURNAMENT_ID}/rounds/${ROUND_ID}/pairings/${PAIRING_ID}/presider`)
+            .put(`/organizer/tournament/${TOURNAMENT_ID}/rounds/${ROUND_ID}/pairings/${PAIRING_ID}/presider`)
             .set(auth()).send({ assignment_id: ASSIGNMENT_ID });
         expect(res.status).toBe(500);
     });
@@ -323,7 +323,7 @@ describe('DELETE /rounds/:round/pairings/:pairing/presider', () => {
     it('returns 400 for invalid pairing UUID', async () => {
         mockAccessAndRound();
         const res = await request(app)
-            .delete(`/api/organizer/tournament/${TOURNAMENT_ID}/rounds/${ROUND_ID}/pairings/bad-id/presider`)
+            .delete(`/organizer/tournament/${TOURNAMENT_ID}/rounds/${ROUND_ID}/pairings/bad-id/presider`)
             .set(auth());
         expect(res.status).toBe(400);
     });
@@ -332,7 +332,7 @@ describe('DELETE /rounds/:round/pairings/:pairing/presider', () => {
         mockAccessAndRound();
         mockDbQuery.mockResolvedValueOnce({ rows: [], rowCount: 1 } as any);
         const res = await request(app)
-            .delete(`/api/organizer/tournament/${TOURNAMENT_ID}/rounds/${ROUND_ID}/pairings/${PAIRING_ID}/presider`)
+            .delete(`/organizer/tournament/${TOURNAMENT_ID}/rounds/${ROUND_ID}/pairings/${PAIRING_ID}/presider`)
             .set(auth());
         expect(res.status).toBe(204);
     });
@@ -343,7 +343,7 @@ describe('DELETE /rounds/:round/pairings/:pairing/presider', () => {
 describe('coachTeamRoutes — team access + uncovered paths', () => {
     it('returns 400 for invalid teamId', async () => {
         const res = await request(app)
-            .get('/api/coach/teams/not-a-uuid/coaches')
+            .get('/coach/teams/not-a-uuid/coaches')
             .set(auth());
         expect(res.status).toBe(400);
     });
@@ -351,7 +351,7 @@ describe('coachTeamRoutes — team access + uncovered paths', () => {
     it('returns 403 when user not on team', async () => {
         mockDbQuery.mockResolvedValueOnce({ rows: [], rowCount: 0 } as any);
         const res = await request(app)
-            .get(`/api/coach/teams/${TEAM_ID}/coaches`)
+            .get(`/coach/teams/${TEAM_ID}/coaches`)
             .set(auth());
         expect(res.status).toBe(403);
     });
@@ -360,7 +360,7 @@ describe('coachTeamRoutes — team access + uncovered paths', () => {
         // verifyTeamAccess passes
         mockDbQuery.mockResolvedValueOnce({ rows: [{ coach_id: 'user-1' }], rowCount: 1 } as any);
         const res = await request(app)
-            .delete(`/api/coach/teams/${TEAM_ID}/students/not-a-uuid`)
+            .delete(`/coach/teams/${TEAM_ID}/students/not-a-uuid`)
             .set(auth());
         expect(res.status).toBe(400);
     });
@@ -369,7 +369,7 @@ describe('coachTeamRoutes — team access + uncovered paths', () => {
         mockDbQuery.mockResolvedValueOnce({ rows: [{ coach_id: 'user-1' }], rowCount: 1 } as any); // team access
         mockDbQuery.mockResolvedValueOnce(null); // upsert fails
         const res = await request(app)
-            .put(`/api/coach/teams/${TEAM_ID}/pairings/${PAIRING_ID}/assignments`)
+            .put(`/coach/teams/${TEAM_ID}/pairings/${PAIRING_ID}/assignments`)
             .set(auth())
             .send({ field_id: SCORER_ID, student_id: STUDENT_ID });
         expect(res.status).toBe(500);

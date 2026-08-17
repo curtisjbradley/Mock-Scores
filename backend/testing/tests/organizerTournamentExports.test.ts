@@ -27,7 +27,7 @@ const mockAccess = () => makeMockAccess(mockDbQuery as jest.MockedFunction<(...a
 // POST /import/scorers
 // ═══════════════════════════════════════════════════════════════════════════════
 describe('POST /api/organizer/tournament/:id/import/scorers', () => {
-    const url = `/api/organizer/tournament/${T}/import/scorers`;
+    const url = `/organizer/tournament/${T}/import/scorers`;
 
     it('returns 400 when csv is missing', async () => {
         mockAccess();
@@ -122,7 +122,7 @@ describe('POST /api/organizer/tournament/:id/import/scorers', () => {
 // POST /import/teams
 // ═══════════════════════════════════════════════════════════════════════════════
 describe('POST /api/organizer/tournament/:id/import/teams', () => {
-    const url = `/api/organizer/tournament/${T}/import/teams`;
+    const url = `/organizer/tournament/${T}/import/teams`;
 
     it('returns 400 when csv is missing', async () => {
         mockAccess();
@@ -212,7 +212,7 @@ describe('POST /api/organizer/tournament/:id/import/teams', () => {
 // GET /export/standings
 // ═══════════════════════════════════════════════════════════════════════════════
 describe('GET /api/organizer/tournament/:id/export/standings', () => {
-    const url = `/api/organizer/tournament/${T}/export/standings`;
+    const url = `/organizer/tournament/${T}/export/standings`;
 
     it('returns CSV with standings data', async () => {
         mockAccess();
@@ -264,7 +264,7 @@ describe('GET /api/organizer/tournament/:id/export/standings', () => {
 // GET /export/results
 // ═══════════════════════════════════════════════════════════════════════════════
 describe('GET /api/organizer/tournament/:id/export/results', () => {
-    const url = `/api/organizer/tournament/${T}/export/results`;
+    const url = `/organizer/tournament/${T}/export/results`;
 
     it('returns CSV with results data', async () => {
         mockAccess();
@@ -316,7 +316,7 @@ describe('GET /api/organizer/tournament/:id/export/results', () => {
 // GET /awards
 // ═══════════════════════════════════════════════════════════════════════════════
 describe('GET /api/organizer/tournament/:id/awards', () => {
-    const url = `/api/organizer/tournament/${T}/awards`;
+    const url = `/organizer/tournament/${T}/awards`;
 
     it('returns empty array when no ballots exist', async () => {
         mockAccess();
@@ -401,7 +401,7 @@ describe('GET /api/organizer/tournament/:id/awards', () => {
 // GET /bounced-emails
 // ═══════════════════════════════════════════════════════════════════════════════
 describe('GET /api/organizer/tournament/:id/bounced-emails', () => {
-    const url = `/api/organizer/tournament/${T}/bounced-emails`;
+    const url = `/organizer/tournament/${T}/bounced-emails`;
 
     it('returns array of bounced email addresses', async () => {
         mockAccess();
@@ -435,7 +435,7 @@ describe('GET /api/organizer/tournament/:id/bounced-emails', () => {
 // GET /standings
 // ═══════════════════════════════════════════════════════════════════════════════
 describe('GET /api/organizer/tournament/:id/standings', () => {
-    const url = `/api/organizer/tournament/${T}/standings`;
+    const url = `/organizer/tournament/${T}/standings`;
 
     it('returns 200 with standings data', async () => {
         mockAccess();
@@ -466,7 +466,7 @@ describe('GET /api/organizer/tournament/:id/standings', () => {
 // PATCH /status
 // ═══════════════════════════════════════════════════════════════════════════════
 describe('PATCH /api/organizer/tournament/:id/status', () => {
-    const url = `/api/organizer/tournament/${T}/status`;
+    const url = `/organizer/tournament/${T}/status`;
 
     it('returns 400 when status is missing', async () => {
         mockAccess();
@@ -525,7 +525,7 @@ describe('PATCH /api/organizer/tournament/:id/status', () => {
 describe('PUT /api/organizer/tournament/:id/pairings/:pid/scoresheets/:aid — DbError', () => {
     const PID = 'b1b2c3d4-e5f6-7890-abcd-ef1234567890';
     const AID = 'c1b2c3d4-e5f6-7890-abcd-ef1234567890';
-    const url = `/api/organizer/tournament/${T}/pairings/${PID}/scoresheets/${AID}`;
+    const url = `/organizer/tournament/${T}/pairings/${PID}/scoresheets/${AID}`;
 
     it('returns 500 on db failure', async () => {
         mockAccess();
@@ -543,7 +543,7 @@ describe('PUT /api/organizer/tournament/:id/pairings/:pid/scoresheets/:aid — D
 describe('DELETE /api/organizer/tournament/:id/pairings/:pid/scoresheets/:aid — DbError', () => {
     const PID = 'b1b2c3d4-e5f6-7890-abcd-ef1234567890';
     const AID = 'c1b2c3d4-e5f6-7890-abcd-ef1234567890';
-    const url = `/api/organizer/tournament/${T}/pairings/${PID}/scoresheets/${AID}`;
+    const url = `/organizer/tournament/${T}/pairings/${PID}/scoresheets/${AID}`;
 
     it('returns 500 on db failure', async () => {
         mockAccess();

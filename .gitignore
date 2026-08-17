@@ -35,3 +35,6 @@ backend/coverage
 # Cypress artifacts
 frontend/cypress/videos
 frontend/cypress/screenshots
+
+# SSM parameter upload script (contains secrets)
+scripts/create-ssm-params.sh
