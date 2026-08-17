@@ -23,7 +23,7 @@ const auth = () => makeAuth(getToken());
 const mockAccess = () => makeMockAccess(mockDbQuery as jest.MockedFunction<(...args: unknown[]) => unknown>);
 
 const ROUND_BASE = { round_id: ROUND_ID, name: 'Round 1', round_time: null, results_public: false, teams_public: false };
-const ROUND_URL = `/api/organizer/tournament/${T}/rounds/${ROUND_ID}`;
+const ROUND_URL = `/organizer/tournament/${T}/rounds/${ROUND_ID}`;
 
 function mockRoundAccess(round: object = ROUND_BASE) {
     mockAccess();

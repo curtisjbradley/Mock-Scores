@@ -40,30 +40,30 @@ const validToken = () => sharedToken;
 // ─── POST /api/auth/register ──────────────────────────────────────────────────
 describe('POST /api/auth/register', () => {
     it('returns 400 when email is missing', async () => {
-        const res = await request(testApp).post('/api/auth/register').send({ password: 'pass', firstName: 'A', lastName: 'B' });
+        const res = await request(testApp).post('/auth/register').send({ password: 'pass', firstName: 'A', lastName: 'B' });
         expect(res.status).toBe(400);
         expect(res.body.message).toMatch(/email and password/i);
     });
 
     it('returns 400 when password is missing', async () => {
-        const res = await request(testApp).post('/api/auth/register').send({ email: 'a@b.com', firstName: 'A', lastName: 'B' });
+        const res = await request(testApp).post('/auth/register').send({ email: 'a@b.com', firstName: 'A', lastName: 'B' });
         expect(res.status).toBe(400);
     });
 
     it('returns 400 when firstName is missing', async () => {
-        const res = await request(testApp).post('/api/auth/register').send({ email: 'a@b.com', password: 'pass', lastName: 'B' });
+        const res = await request(testApp).post('/auth/register').send({ email: 'a@b.com', password: 'pass', lastName: 'B' });
         expect(res.status).toBe(400);
         expect(res.body.message).toMatch(/first and last name/i);
     });
 
     it('returns 400 when lastName is blank', async () => {
-        const res = await request(testApp).post('/api/auth/register').send({ email: 'a@b.com', password: 'pass', firstName: 'A', lastName: '   ' });
+        const res = await request(testApp).post('/auth/register').send({ email: 'a@b.com', password: 'pass', firstName: 'A', lastName: '   ' });
         expect(res.status).toBe(400);
     });
 
     it('returns 409 when email already in use', async () => {
         mockDbQuery.mockResolvedValueOnce({ rows: [{ user_id: 'existing' }], rowCount: 1 } as any);
-        const res = await request(testApp).post('/api/auth/register').send({ email: 'a@b.com', password: 'Password1', firstName: 'A', lastName: 'B' });
+        const res = await request(testApp).post('/auth/register').send({ email: 'a@b.com', password: 'Password1', firstName: 'A', lastName: 'B' });
         expect(res.status).toBe(409);
     });
 
@@ -75,7 +75,7 @@ describe('POST /api/auth/register', () => {
             .mockResolvedValueOnce({ rows: [], rowCount: 0 } as any);
         (mockBcryptHash as jest.Mock).mockResolvedValueOnce('hashed');
 
-        const res = await request(testApp).post('/api/auth/register').send({ email: 'new@b.com', password: 'Password1', firstName: 'New', lastName: 'User' });
+        const res = await request(testApp).post('/auth/register').send({ email: 'new@b.com', password: 'Password1', firstName: 'New', lastName: 'User' });
         expect(res.status).toBe(201);
     });
 });
@@ -83,18 +83,18 @@ describe('POST /api/auth/register', () => {
 // ─── POST /api/auth/login ─────────────────────────────────────────────────────
 describe('POST /api/auth/login', () => {
     it('returns 400 when email is missing', async () => {
-        const res = await request(testApp).post('/api/auth/login').send({ password: 'pass' });
+        const res = await request(testApp).post('/auth/login').send({ password: 'pass' });
         expect(res.status).toBe(400);
     });
 
     it('returns 400 when password is missing', async () => {
-        const res = await request(testApp).post('/api/auth/login').send({ email: 'a@b.com' });
+        const res = await request(testApp).post('/auth/login').send({ email: 'a@b.com' });
         expect(res.status).toBe(400);
     });
 
     it('returns 401 for invalid credentials', async () => {
         mockDbQuery.mockResolvedValueOnce({ rows: [], rowCount: 0 } as any);
-        const res = await request(testApp).post('/api/auth/login').send({ email: 'a@b.com', password: 'wrong' });
+        const res = await request(testApp).post('/auth/login').send({ email: 'a@b.com', password: 'wrong' });
         expect(res.status).toBe(401);
     });
 
@@ -104,7 +104,7 @@ describe('POST /api/auth/login', () => {
             .mockResolvedValueOnce({ rows: [], rowCount: 1 } as any); // INSERT refresh_token
         (mockBcryptCompare as jest.Mock).mockResolvedValueOnce(true);
 
-        const res = await request(testApp).post('/api/auth/login').send({ email: 'a@b.com', password: 'Password1' });
+        const res = await request(testApp).post('/auth/login').send({ email: 'a@b.com', password: 'Password1' });
         expect(res.status).toBe(200);
         expect(typeof res.body.accessToken).toBe('string');
         const cookies = res.headers['set-cookie'] as string[] | undefined;
@@ -116,14 +116,14 @@ describe('POST /api/auth/login', () => {
 // ─── POST /api/auth/refresh ───────────────────────────────────────────────────
 describe('POST /api/auth/refresh', () => {
     it('returns 401 when no refresh cookie is present', async () => {
-        const res = await request(testApp).post('/api/auth/refresh');
+        const res = await request(testApp).post('/auth/refresh');
         expect(res.status).toBe(401);
     });
 
     it('returns 401 when verifyRefreshToken rejects the JWT', async () => {
         // Simulate a forged or expired token — crypto verification fails
         mockVerifyRefreshToken.mockResolvedValueOnce(null);
-        const res = await request(testApp).post('/api/auth/refresh')
+        const res = await request(testApp).post('/auth/refresh')
             .set('Cookie', 'rt=forged-or-expired-token');
         expect(res.status).toBe(401);
     });
@@ -131,7 +131,7 @@ describe('POST /api/auth/refresh', () => {
     it('returns 401 when jti hash is not found in DB (rotated/revoked)', async () => {
         // JWT is valid but the jti was already rotated out of the DB
         mockDbQuery.mockResolvedValueOnce({ rows: [], rowCount: 0 } as any);
-        const res = await request(testApp).post('/api/auth/refresh')
+        const res = await request(testApp).post('/auth/refresh')
             .set('Cookie', 'rt=valid-but-revoked-token');
         expect(res.status).toBe(401);
     });
@@ -143,7 +143,7 @@ describe('POST /api/auth/refresh', () => {
             .mockResolvedValueOnce({ rows: [], rowCount: 1 } as any)  // DELETE old token
             .mockResolvedValueOnce({ rows: [], rowCount: 1 } as any); // INSERT new token
 
-        const res = await request(testApp).post('/api/auth/refresh')
+        const res = await request(testApp).post('/auth/refresh')
             .set('Cookie', 'rt=valid-refresh-token');
         expect(res.status).toBe(200);
         expect(typeof res.body.accessToken).toBe('string');
@@ -157,7 +157,7 @@ describe('POST /api/auth/logout', () => {
     it('returns 204 and clears the rt cookie', async () => {
         // verifyRefreshToken succeeds → revokeRefreshToken deletes by jti hash
         mockDbQuery.mockResolvedValueOnce({ rows: [], rowCount: 1 } as any);
-        const res = await request(testApp).post('/api/auth/logout')
+        const res = await request(testApp).post('/auth/logout')
             .set('Cookie', 'rt=sometoken');
         expect(res.status).toBe(204);
         const cookies = res.headers['set-cookie'] as string[] | undefined;
@@ -165,13 +165,13 @@ describe('POST /api/auth/logout', () => {
     });
 
     it('returns 204 even when no cookie is present', async () => {
-        const res = await request(testApp).post('/api/auth/logout');
+        const res = await request(testApp).post('/auth/logout');
         expect(res.status).toBe(204);
     });
 
     it('returns 204 when verifyRefreshToken rejects (expired cookie)', async () => {
         mockVerifyRefreshToken.mockResolvedValueOnce(null);
-        const res = await request(testApp).post('/api/auth/logout')
+        const res = await request(testApp).post('/auth/logout')
             .set('Cookie', 'rt=expired-token');
         expect(res.status).toBe(204);
     });
@@ -180,18 +180,18 @@ describe('POST /api/auth/logout', () => {
 // ─── GET /api/auth/session ────────────────────────────────────────────────────
 describe('GET /api/auth/session', () => {
     it('returns 401 with no token', async () => {
-        const res = await request(testApp).get('/api/auth/session');
+        const res = await request(testApp).get('/auth/session');
         expect(res.status).toBe(401);
     });
 
     it('returns 401 with invalid token', async () => {
-        const res = await request(testApp).get('/api/auth/session').set('Authorization', 'Bearer bad.token.here');
+        const res = await request(testApp).get('/auth/session').set('Authorization', 'Bearer bad.token.here');
         expect(res.status).toBe(401);
     });
 
     it('returns 200 with session data for valid token', async () => {
         const token = validToken();
-        const res = await request(testApp).get('/api/auth/session').set('Authorization', `Bearer ${token}`);
+        const res = await request(testApp).get('/auth/session').set('Authorization', `Bearer ${token}`);
         expect(res.status).toBe(200);
         expect(res.body).toMatchObject({ userId: 'user-1', email: 'test@test.com', firstName: 'Test', lastName: 'User' });
     });
@@ -200,20 +200,20 @@ describe('GET /api/auth/session', () => {
 // ─── POST /api/auth/change-password ──────────────────────────────────────────
 describe('POST /api/auth/change-password', () => {
     it('returns 401 with no token', async () => {
-        const res = await request(testApp).post('/api/auth/change-password').send({ currentPassword: 'old', newPassword: 'newpass123' });
+        const res = await request(testApp).post('/auth/change-password').send({ currentPassword: 'old', newPassword: 'newpass123' });
         expect(res.status).toBe(401);
     });
 
     it('returns 400 when fields are missing', async () => {
         const token = validToken();
-        const res = await request(testApp).post('/api/auth/change-password').set('Authorization', `Bearer ${token}`).send({});
+        const res = await request(testApp).post('/auth/change-password').set('Authorization', `Bearer ${token}`).send({});
         expect(res.status).toBe(400);
         expect(res.body.message).toMatch(/missing required fields/i);
     });
 
     it('returns 400 when new password is too short', async () => {
         const token = validToken();
-        const res = await request(testApp).post('/api/auth/change-password').set('Authorization', `Bearer ${token}`).send({ currentPassword: 'old', newPassword: 'short' });
+        const res = await request(testApp).post('/auth/change-password').set('Authorization', `Bearer ${token}`).send({ currentPassword: 'old', newPassword: 'short' });
         expect(res.status).toBe(400);
         expect(res.body.message).toMatch(/at least 8 characters/i);
     });
@@ -223,7 +223,7 @@ describe('POST /api/auth/change-password', () => {
         mockDbQuery.mockResolvedValueOnce({ rows: [{ password_hash: 'hash' }], rowCount: 1 } as any);
         (mockBcryptCompare as jest.Mock).mockResolvedValueOnce(false);
 
-        const res = await request(testApp).post('/api/auth/change-password').set('Authorization', `Bearer ${token}`).send({ currentPassword: 'wrong', newPassword: 'Newpass123' });
+        const res = await request(testApp).post('/auth/change-password').set('Authorization', `Bearer ${token}`).send({ currentPassword: 'wrong', newPassword: 'Newpass123' });
         expect(res.status).toBe(401);
     });
 
@@ -236,7 +236,7 @@ describe('POST /api/auth/change-password', () => {
         (mockBcryptCompare as jest.Mock).mockResolvedValueOnce(true);
         (mockBcryptHash as jest.Mock).mockResolvedValueOnce('newhash');
 
-        const res = await request(testApp).post('/api/auth/change-password').set('Authorization', `Bearer ${token}`).send({ currentPassword: 'oldpass', newPassword: 'Newpass123' });
+        const res = await request(testApp).post('/auth/change-password').set('Authorization', `Bearer ${token}`).send({ currentPassword: 'oldpass', newPassword: 'Newpass123' });
         expect(res.status).toBe(200);
         expect(res.body.message).toMatch(/password updated/i);
     });
@@ -245,7 +245,7 @@ describe('POST /api/auth/change-password', () => {
 // ─── DELETE /api/auth/account ─────────────────────────────────────────────────
 describe('DELETE /api/auth/account', () => {
     it('returns 401 with no token', async () => {
-        const res = await request(testApp).delete('/api/auth/account');
+        const res = await request(testApp).delete('/auth/account');
         expect(res.status).toBe(401);
     });
 
@@ -254,7 +254,7 @@ describe('DELETE /api/auth/account', () => {
         // deleteAccount: DELETE FROM auth
         mockDbQuery.mockResolvedValueOnce({ rows: [], rowCount: 1 } as any);
 
-        const res = await request(testApp).delete('/api/auth/account').set('Authorization', `Bearer ${token}`);
+        const res = await request(testApp).delete('/auth/account').set('Authorization', `Bearer ${token}`);
         expect(res.status).toBe(204);
     });
 
@@ -263,7 +263,7 @@ describe('DELETE /api/auth/account', () => {
         // deleteAccount: no rows deleted
         mockDbQuery.mockResolvedValueOnce({ rows: [], rowCount: 0 } as any);
 
-        const res = await request(testApp).delete('/api/auth/account').set('Authorization', `Bearer ${token}`);
+        const res = await request(testApp).delete('/auth/account').set('Authorization', `Bearer ${token}`);
         expect(res.status).toBe(404);
     });
 
@@ -272,7 +272,7 @@ describe('DELETE /api/auth/account', () => {
         // deleteAccount: null result
         mockDbQuery.mockResolvedValueOnce(null as any);
 
-        const res = await request(testApp).delete('/api/auth/account').set('Authorization', `Bearer ${token}`);
+        const res = await request(testApp).delete('/auth/account').set('Authorization', `Bearer ${token}`);
         expect(res.status).toBe(500);
     });
 });
@@ -280,12 +280,12 @@ describe('DELETE /api/auth/account', () => {
 // ─── POST /api/auth/forgot-password ───────────────────────────────────────────
 describe('POST /api/auth/forgot-password', () => {
     it('returns 400 when email is missing', async () => {
-        const res = await request(testApp).post('/api/auth/forgot-password').send({});
+        const res = await request(testApp).post('/auth/forgot-password').send({});
         expect(res.status).toBe(400);
     });
 
     it('returns 400 for invalid email format', async () => {
-        const res = await request(testApp).post('/api/auth/forgot-password').send({ email: 'not-an-email' });
+        const res = await request(testApp).post('/auth/forgot-password').send({ email: 'not-an-email' });
         expect(res.status).toBe(400);
         expect(res.body.message).toMatch(/invalid email/i);
     });
@@ -296,7 +296,7 @@ describe('POST /api/auth/forgot-password', () => {
         // createPasswordResetToken: INSERT token
         mockDbQuery.mockResolvedValueOnce({ rows: [], rowCount: 1 } as any);
 
-        const res = await request(testApp).post('/api/auth/forgot-password').send({ email: 'test@test.com' });
+        const res = await request(testApp).post('/auth/forgot-password').send({ email: 'test@test.com' });
         expect(res.status).toBe(200);
         expect(res.body.message).toMatch(/reset link/i);
     });
@@ -305,7 +305,7 @@ describe('POST /api/auth/forgot-password', () => {
         // createPasswordResetToken: SELECT user returns empty
         mockDbQuery.mockResolvedValueOnce({ rows: [], rowCount: 0 } as any);
 
-        const res = await request(testApp).post('/api/auth/forgot-password').send({ email: 'unknown@test.com' });
+        const res = await request(testApp).post('/auth/forgot-password').send({ email: 'unknown@test.com' });
         expect(res.status).toBe(200);
         expect(res.body.message).toMatch(/reset link/i);
     });
@@ -314,18 +314,18 @@ describe('POST /api/auth/forgot-password', () => {
 // ─── POST /api/auth/reset-password ────────────────────────────────────────────
 describe('POST /api/auth/reset-password', () => {
     it('returns 400 when token is missing', async () => {
-        const res = await request(testApp).post('/api/auth/reset-password').send({ newPassword: 'Newpass123' });
+        const res = await request(testApp).post('/auth/reset-password').send({ newPassword: 'Newpass123' });
         expect(res.status).toBe(400);
         expect(res.body.message).toMatch(/token.*password/i);
     });
 
     it('returns 400 when newPassword is missing', async () => {
-        const res = await request(testApp).post('/api/auth/reset-password').send({ token: 'abc123' });
+        const res = await request(testApp).post('/auth/reset-password').send({ token: 'abc123' });
         expect(res.status).toBe(400);
     });
 
     it('returns 400 when new password fails validation', async () => {
-        const res = await request(testApp).post('/api/auth/reset-password').send({ token: 'abc123', newPassword: 'short' });
+        const res = await request(testApp).post('/auth/reset-password').send({ token: 'abc123', newPassword: 'short' });
         expect(res.status).toBe(400);
     });
 
@@ -333,7 +333,7 @@ describe('POST /api/auth/reset-password', () => {
         // resetPassword: SELECT token_hash returns empty
         mockDbQuery.mockResolvedValueOnce({ rows: [], rowCount: 0 } as any);
 
-        const res = await request(testApp).post('/api/auth/reset-password').send({ token: 'abc123def456', newPassword: 'ValidPass123!' });
+        const res = await request(testApp).post('/auth/reset-password').send({ token: 'abc123def456', newPassword: 'ValidPass123!' });
         expect(res.status).toBe(400);
         expect(res.body.message).toMatch(/invalid|expired/i);
     });
@@ -352,7 +352,7 @@ describe('POST /api/auth/reset-password', () => {
         mockDbQuery.mockResolvedValueOnce({ rows: [], rowCount: 0 } as any);
         (mockBcryptHash as jest.Mock).mockResolvedValueOnce('newhash');
 
-        const res = await request(testApp).post('/api/auth/reset-password').send({ token: 'validtoken123', newPassword: 'ValidPass123!' });
+        const res = await request(testApp).post('/auth/reset-password').send({ token: 'validtoken123', newPassword: 'ValidPass123!' });
         expect(res.status).toBe(200);
         expect(res.body.message).toMatch(/password.*reset/i);
     });
@@ -361,7 +361,7 @@ describe('POST /api/auth/reset-password', () => {
 // ─── POST /api/auth/verify-email ──────────────────────────────────────────────
 describe('POST /api/auth/verify-email', () => {
     it('returns 400 when token is missing', async () => {
-        const res = await request(testApp).post('/api/auth/verify-email').send({});
+        const res = await request(testApp).post('/auth/verify-email').send({});
         expect(res.status).toBe(400);
         expect(res.body.message).toMatch(/token/i);
     });
@@ -370,7 +370,7 @@ describe('POST /api/auth/verify-email', () => {
         // verifyEmail: SELECT token_hash returns empty
         mockDbQuery.mockResolvedValueOnce({ rows: [], rowCount: 0 } as any);
 
-        const res = await request(testApp).post('/api/auth/verify-email').send({ token: 'badtoken' });
+        const res = await request(testApp).post('/auth/verify-email').send({ token: 'badtoken' });
         expect(res.status).toBe(400);
         expect(res.body.message).toMatch(/invalid|expired/i);
     });
@@ -384,7 +384,7 @@ describe('POST /api/auth/verify-email', () => {
         // DELETE expired token
         mockDbQuery.mockResolvedValueOnce({ rows: [], rowCount: 1 } as any);
 
-        const res = await request(testApp).post('/api/auth/verify-email').send({ token: 'expiredtoken' });
+        const res = await request(testApp).post('/auth/verify-email').send({ token: 'expiredtoken' });
         expect(res.status).toBe(400);
         expect(res.body.message).toMatch(/expired/i);
     });
@@ -400,7 +400,7 @@ describe('POST /api/auth/verify-email', () => {
         // DELETE FROM email_verification_tokens
         mockDbQuery.mockResolvedValueOnce({ rows: [], rowCount: 1 } as any);
 
-        const res = await request(testApp).post('/api/auth/verify-email').send({ token: 'validtoken' });
+        const res = await request(testApp).post('/auth/verify-email').send({ token: 'validtoken' });
         expect(res.status).toBe(200);
         expect(res.body.message).toMatch(/verified/i);
     });
@@ -409,7 +409,7 @@ describe('POST /api/auth/verify-email', () => {
 // ─── POST /api/auth/resend-verification ───────────────────────────────────────
 describe('POST /api/auth/resend-verification', () => {
     it('returns 401 with no token', async () => {
-        const res = await request(testApp).post('/api/auth/resend-verification');
+        const res = await request(testApp).post('/auth/resend-verification');
         expect(res.status).toBe(401);
     });
 
@@ -421,7 +421,7 @@ describe('POST /api/auth/resend-verification', () => {
             rowCount: 1,
         } as any);
 
-        const res = await request(testApp).post('/api/auth/resend-verification').set('Authorization', `Bearer ${token}`);
+        const res = await request(testApp).post('/auth/resend-verification').set('Authorization', `Bearer ${token}`);
         expect(res.status).toBe(200);
         expect(res.body.message).toMatch(/already verified/i);
     });
@@ -438,7 +438,7 @@ describe('POST /api/auth/resend-verification', () => {
         // createEmailVerificationToken: INSERT new token
         mockDbQuery.mockResolvedValueOnce({ rows: [], rowCount: 1 } as any);
 
-        const res = await request(testApp).post('/api/auth/resend-verification').set('Authorization', `Bearer ${token}`);
+        const res = await request(testApp).post('/auth/resend-verification').set('Authorization', `Bearer ${token}`);
         expect(res.status).toBe(200);
         expect(res.body.message).toMatch(/verification email sent/i);
     });

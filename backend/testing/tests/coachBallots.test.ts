@@ -33,15 +33,15 @@ const mockTeamAccess = () =>
 // GET /tournaments/:id/pairings/:pairingId/ballots
 // ═══════════════════════════════════════════════════════════════════════════════
 describe('GET /api/coach/tournaments/:id/pairings/:pairingId/ballots', () => {
-    const url = `/api/coach/tournaments/${TID}/pairings/${PID}/ballots`;
+    const url = `/coach/tournaments/${TID}/pairings/${PID}/ballots`;
 
     it('returns 400 for invalid tournament ID', async () => {
-        const res = await request(app).get('/api/coach/tournaments/bad/pairings/' + PID + '/ballots').set(auth());
+        const res = await request(app).get('/coach/tournaments/bad/pairings/' + PID + '/ballots').set(auth());
         expect(res.status).toBe(400);
     });
 
     it('returns 400 for invalid pairing ID', async () => {
-        const res = await request(app).get(`/api/coach/tournaments/${TID}/pairings/bad/ballots`).set(auth());
+        const res = await request(app).get(`/coach/tournaments/${TID}/pairings/bad/ballots`).set(auth());
         expect(res.status).toBe(400);
     });
 
@@ -73,20 +73,20 @@ describe('GET /api/coach/tournaments/:id/pairings/:pairingId/ballots', () => {
 // GET /tournaments/:id/pairings/:pairingId/ballots/:assignmentId
 // ═══════════════════════════════════════════════════════════════════════════════
 describe('GET /api/coach/tournaments/:id/pairings/:pairingId/ballots/:assignmentId', () => {
-    const url = `/api/coach/tournaments/${TID}/pairings/${PID}/ballots/${AID}`;
+    const url = `/coach/tournaments/${TID}/pairings/${PID}/ballots/${AID}`;
 
     it('returns 400 for invalid tournament ID', async () => {
-        const res = await request(app).get(`/api/coach/tournaments/bad/pairings/${PID}/ballots/${AID}`).set(auth());
+        const res = await request(app).get(`/coach/tournaments/bad/pairings/${PID}/ballots/${AID}`).set(auth());
         expect(res.status).toBe(400);
     });
 
     it('returns 400 for invalid pairing ID', async () => {
-        const res = await request(app).get(`/api/coach/tournaments/${TID}/pairings/bad/ballots/${AID}`).set(auth());
+        const res = await request(app).get(`/coach/tournaments/${TID}/pairings/bad/ballots/${AID}`).set(auth());
         expect(res.status).toBe(400);
     });
 
     it('returns 400 for invalid assignment ID', async () => {
-        const res = await request(app).get(`/api/coach/tournaments/${TID}/pairings/${PID}/ballots/bad`).set(auth());
+        const res = await request(app).get(`/coach/tournaments/${TID}/pairings/${PID}/ballots/bad`).set(auth());
         expect(res.status).toBe(400);
     });
 
@@ -173,7 +173,7 @@ describe('GET /api/coach/teams/:teamId/default-witness-order', () => {
             rows: [{ witness_id: 'w1', witness_name: 'Alice', position: 1 }],
             rowCount: 1,
         } as any);
-        const res = await request(app).get(`/api/coach/teams/${TEAM}/default-witness-order`).set(auth());
+        const res = await request(app).get(`/coach/teams/${TEAM}/default-witness-order`).set(auth());
         expect(res.status).toBe(200);
         expect(res.body).toHaveLength(1);
         expect(res.body[0].witness_name).toBe('Alice');
@@ -182,7 +182,7 @@ describe('GET /api/coach/teams/:teamId/default-witness-order', () => {
     it('returns 200 empty array when no defaults set', async () => {
         mockTeamAccess();
         mockDbQuery.mockResolvedValueOnce({ rows: [], rowCount: 0 } as any);
-        const res = await request(app).get(`/api/coach/teams/${TEAM}/default-witness-order`).set(auth());
+        const res = await request(app).get(`/coach/teams/${TEAM}/default-witness-order`).set(auth());
         expect(res.status).toBe(200);
         expect(res.body).toEqual([]);
     });
@@ -191,7 +191,7 @@ describe('GET /api/coach/teams/:teamId/default-witness-order', () => {
 describe('PUT /api/coach/teams/:teamId/default-witness-order', () => {
     it('returns 400 when witness_ids is not an array', async () => {
         mockTeamAccess();
-        const res = await request(app).put(`/api/coach/teams/${TEAM}/default-witness-order`).set(auth())
+        const res = await request(app).put(`/coach/teams/${TEAM}/default-witness-order`).set(auth())
             .send({ witness_ids: 'not-array' });
         expect(res.status).toBe(400);
     });
@@ -199,7 +199,7 @@ describe('PUT /api/coach/teams/:teamId/default-witness-order', () => {
     it('returns 200 on success with empty array', async () => {
         mockTeamAccess();
         mockDbQuery.mockResolvedValueOnce({ rows: [], rowCount: 0 } as any); // DELETE
-        const res = await request(app).put(`/api/coach/teams/${TEAM}/default-witness-order`).set(auth())
+        const res = await request(app).put(`/coach/teams/${TEAM}/default-witness-order`).set(auth())
             .send({ witness_ids: [] });
         expect(res.status).toBe(200);
         expect(res.body.success).toBe(true);
@@ -210,7 +210,7 @@ describe('PUT /api/coach/teams/:teamId/default-witness-order', () => {
         mockDbQuery.mockResolvedValueOnce({ rows: [], rowCount: 0 } as any); // DELETE
         mockDbQuery.mockResolvedValueOnce({ rows: [], rowCount: 1 } as any); // INSERT w1
         mockDbQuery.mockResolvedValueOnce({ rows: [], rowCount: 1 } as any); // INSERT w2
-        const res = await request(app).put(`/api/coach/teams/${TEAM}/default-witness-order`).set(auth())
+        const res = await request(app).put(`/coach/teams/${TEAM}/default-witness-order`).set(auth())
             .send({ witness_ids: ['w1', 'w2'] });
         expect(res.status).toBe(200);
     });
@@ -226,7 +226,7 @@ describe('GET /api/coach/teams/:teamId/default-assignments', () => {
             rows: [{ id: 'da1', team_id: TEAM, field_id: FID, student_id: SID, witness_id: null, field_label: 'Opening', student_name: 'Bob' }],
             rowCount: 1,
         } as any);
-        const res = await request(app).get(`/api/coach/teams/${TEAM}/default-assignments`).set(auth());
+        const res = await request(app).get(`/coach/teams/${TEAM}/default-assignments`).set(auth());
         expect(res.status).toBe(200);
         expect(res.body).toHaveLength(1);
     });
@@ -234,7 +234,7 @@ describe('GET /api/coach/teams/:teamId/default-assignments', () => {
     it('returns 200 empty when no defaults', async () => {
         mockTeamAccess();
         mockDbQuery.mockResolvedValueOnce({ rows: [], rowCount: 0 } as any);
-        const res = await request(app).get(`/api/coach/teams/${TEAM}/default-assignments`).set(auth());
+        const res = await request(app).get(`/coach/teams/${TEAM}/default-assignments`).set(auth());
         expect(res.status).toBe(200);
         expect(res.body).toEqual([]);
     });
@@ -243,14 +243,14 @@ describe('GET /api/coach/teams/:teamId/default-assignments', () => {
 describe('PUT /api/coach/teams/:teamId/default-assignments', () => {
     it('returns 400 when field_id is missing', async () => {
         mockTeamAccess();
-        const res = await request(app).put(`/api/coach/teams/${TEAM}/default-assignments`).set(auth())
+        const res = await request(app).put(`/coach/teams/${TEAM}/default-assignments`).set(auth())
             .send({ student_id: SID });
         expect(res.status).toBe(400);
     });
 
     it('returns 400 when student_id is missing', async () => {
         mockTeamAccess();
-        const res = await request(app).put(`/api/coach/teams/${TEAM}/default-assignments`).set(auth())
+        const res = await request(app).put(`/coach/teams/${TEAM}/default-assignments`).set(auth())
             .send({ field_id: FID });
         expect(res.status).toBe(400);
     });
@@ -258,7 +258,7 @@ describe('PUT /api/coach/teams/:teamId/default-assignments', () => {
     it('returns 200 on success', async () => {
         mockTeamAccess();
         mockDbQuery.mockResolvedValueOnce({ rows: [], rowCount: 1 } as any); // UPSERT
-        const res = await request(app).put(`/api/coach/teams/${TEAM}/default-assignments`).set(auth())
+        const res = await request(app).put(`/coach/teams/${TEAM}/default-assignments`).set(auth())
             .send({ field_id: FID, student_id: SID });
         expect(res.status).toBe(200);
         expect(res.body.success).toBe(true);
@@ -267,7 +267,7 @@ describe('PUT /api/coach/teams/:teamId/default-assignments', () => {
     it('returns 200 with witness_id', async () => {
         mockTeamAccess();
         mockDbQuery.mockResolvedValueOnce({ rows: [], rowCount: 1 } as any);
-        const res = await request(app).put(`/api/coach/teams/${TEAM}/default-assignments`).set(auth())
+        const res = await request(app).put(`/coach/teams/${TEAM}/default-assignments`).set(auth())
             .send({ field_id: FID, student_id: SID, witness_id: 'w1' });
         expect(res.status).toBe(200);
     });
@@ -276,7 +276,7 @@ describe('PUT /api/coach/teams/:teamId/default-assignments', () => {
 describe('DELETE /api/coach/teams/:teamId/default-assignments', () => {
     it('returns 400 when field_id is missing', async () => {
         mockTeamAccess();
-        const res = await request(app).delete(`/api/coach/teams/${TEAM}/default-assignments`).set(auth())
+        const res = await request(app).delete(`/coach/teams/${TEAM}/default-assignments`).set(auth())
             .send({});
         expect(res.status).toBe(400);
     });
@@ -284,7 +284,7 @@ describe('DELETE /api/coach/teams/:teamId/default-assignments', () => {
     it('returns 200 on success', async () => {
         mockTeamAccess();
         mockDbQuery.mockResolvedValueOnce({ rows: [], rowCount: 1 } as any); // DELETE
-        const res = await request(app).delete(`/api/coach/teams/${TEAM}/default-assignments`).set(auth())
+        const res = await request(app).delete(`/coach/teams/${TEAM}/default-assignments`).set(auth())
             .send({ field_id: FID });
         expect(res.status).toBe(200);
         expect(res.body.success).toBe(true);
@@ -293,7 +293,7 @@ describe('DELETE /api/coach/teams/:teamId/default-assignments', () => {
     it('returns 200 with witness_id', async () => {
         mockTeamAccess();
         mockDbQuery.mockResolvedValueOnce({ rows: [], rowCount: 1 } as any);
-        const res = await request(app).delete(`/api/coach/teams/${TEAM}/default-assignments`).set(auth())
+        const res = await request(app).delete(`/coach/teams/${TEAM}/default-assignments`).set(auth())
             .send({ field_id: FID, witness_id: 'w1' });
         expect(res.status).toBe(200);
     });
@@ -303,11 +303,11 @@ describe('DELETE /api/coach/teams/:teamId/default-assignments', () => {
 // POST /teams/:teamId/pairings/:pairingId/assignments/bulk
 // ═══════════════════════════════════════════════════════════════════════════════
 describe('POST /api/coach/teams/:teamId/pairings/:pairingId/assignments/bulk', () => {
-    const url = `/api/coach/teams/${TEAM}/pairings/${PID}/assignments/bulk`;
+    const url = `/coach/teams/${TEAM}/pairings/${PID}/assignments/bulk`;
 
     it('returns 400 for invalid pairing ID', async () => {
         mockTeamAccess();
-        const res = await request(app).post(`/api/coach/teams/${TEAM}/pairings/bad/assignments/bulk`).set(auth())
+        const res = await request(app).post(`/coach/teams/${TEAM}/pairings/bad/assignments/bulk`).set(auth())
             .send({ assignments: [] });
         expect(res.status).toBe(400);
     });
@@ -346,7 +346,7 @@ describe('POST /api/coach/teams/:teamId/pairings/:pairingId/assignments/bulk', (
 describe('GET /api/coach/tournaments/:id/schedule — teamId query param', () => {
     it('returns 400 for invalid teamId query param', async () => {
         const res = await request(app)
-            .get(`/api/coach/tournaments/${TID}/schedule?teamId=bad`)
+            .get(`/coach/tournaments/${TID}/schedule?teamId=bad`)
             .set(auth());
         expect(res.status).toBe(400);
     });
@@ -355,7 +355,7 @@ describe('GET /api/coach/tournaments/:id/schedule — teamId query param', () =>
         // getTeamIdForCoach returns null
         mockDbQuery.mockResolvedValueOnce({ rows: [], rowCount: 0 } as any);
         const res = await request(app)
-            .get(`/api/coach/tournaments/${TID}/schedule`)
+            .get(`/coach/tournaments/${TID}/schedule`)
             .set(auth());
         expect(res.status).toBe(200);
         expect(res.body).toEqual([]);
@@ -365,7 +365,7 @@ describe('GET /api/coach/tournaments/:id/schedule — teamId query param', () =>
         // getSchedule: rounds query
         mockDbQuery.mockResolvedValueOnce({ rows: [], rowCount: 0 } as any);
         const res = await request(app)
-            .get(`/api/coach/tournaments/${TID}/schedule?teamId=${TEAM}`)
+            .get(`/coach/tournaments/${TID}/schedule?teamId=${TEAM}`)
             .set(auth());
         expect(res.status).toBe(200);
         expect(res.body).toEqual([]);
@@ -381,7 +381,7 @@ describe('POST /api/coach/teams/:teamId/students — pronouns', () => {
     it('returns 400 when student_name is missing', async () => {
         mockDbQuery.mockResolvedValueOnce({ rows: [{ coach_id: 'user-1' }], rowCount: 1 } as any);
         const res = await request(app)
-            .post(`/api/coach/teams/${TEAM_ID}/students`)
+            .post(`/coach/teams/${TEAM_ID}/students`)
             .set(auth()).send({ pronouns: 'he/him' });
         expect(res.status).toBe(400);
     });
@@ -393,7 +393,7 @@ describe('POST /api/coach/teams/:teamId/students — pronouns', () => {
             rowCount: 1,
         } as any);
         const res = await request(app)
-            .post(`/api/coach/teams/${TEAM_ID}/students`)
+            .post(`/coach/teams/${TEAM_ID}/students`)
             .set(auth()).send({ student_name: 'Bob', pronouns: 'he/him' });
         expect(res.status).toBe(201);
         expect(res.body.pronouns).toBe('he/him');
@@ -406,7 +406,7 @@ describe('POST /api/coach/teams/:teamId/students — pronouns', () => {
             rowCount: 1,
         } as any);
         const res = await request(app)
-            .post(`/api/coach/teams/${TEAM_ID}/students`)
+            .post(`/coach/teams/${TEAM_ID}/students`)
             .set(auth()).send({ student_name: 'Sam' });
         expect(res.status).toBe(201);
         expect(res.body.pronouns).toBeNull();
