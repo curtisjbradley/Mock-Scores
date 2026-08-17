@@ -45,6 +45,7 @@ function buildPayload(info: TournamentInfo, caseFormat: CaseFormatState, categor
                 multiplier: f.multiplier,
                 assignable: f.assignable,
                 eligibleForAward: f.eligibleForAward,
+                awardCategoryId: f.awardCategoryId ?? null,
                 visibleToScorers: f.visibleToScorers,
                 prosecution: f.prosecution,
                 defense: f.defense,
