@@ -10,7 +10,7 @@ const router = Router();
 
 /**
  * @swagger
- * /api/coach/tournaments:
+ * /coach/tournaments:
  *   get:
  *     summary: List all tournaments the coach is associated with
  *     tags: [Coach]
@@ -23,7 +23,7 @@ router.get("/tournaments", authedHandler(async (req, res) => {
 
 /**
  * @swagger
- * /api/coach/tournaments/{tournamentId}/schedule:
+ * /coach/tournaments/{tournamentId}/schedule:
  *   get:
  *     summary: Get tournament schedule
  *     tags: [Coach]
@@ -52,7 +52,7 @@ router.get("/tournaments/:tournamentId/schedule", authedHandler(async (req, res)
 
 /**
  * @swagger
- * /api/coach/tournaments/{tournamentId}/results:
+ * /coach/tournaments/{tournamentId}/results:
  *   get:
  *     summary: Get tournament results
  *     tags: [Coach]
@@ -73,7 +73,7 @@ router.get("/tournaments/:tournamentId/results", authedHandler(async (req, res) 
 
 /**
  * @swagger
- * /api/coach/tournaments/{tournamentId}/field:
+ * /coach/tournaments/{tournamentId}/field:
  *   get:
  *     summary: Get competition field (all teams in the tournament)
  *     tags: [Coach]
@@ -94,7 +94,7 @@ router.get("/tournaments/:tournamentId/field", authedHandler(async (req, res) =>
 
 /**
  * @swagger
- * /api/coach/tournaments/{tournamentId}/standings:
+ * /coach/tournaments/{tournamentId}/standings:
  *   get:
  *     summary: Get standings data for a tournament
  *     tags: [Coach]
@@ -115,7 +115,7 @@ router.get("/tournaments/:tournamentId/standings", authedHandler(async (req, res
 
 /**
  * @swagger
- * /api/coach/tournaments/{tournamentId}/scoring-categories:
+ * /coach/tournaments/{tournamentId}/scoring-categories:
  *   get:
  *     summary: Get scoring categories for a tournament
  *     tags: [Coach]
@@ -136,7 +136,7 @@ router.get("/tournaments/:tournamentId/scoring-categories", authedHandler(async 
 
 /**
  * @swagger
- * /api/coach/tournaments/{tournamentId}/witnesses:
+ * /coach/tournaments/{tournamentId}/witnesses:
  *   get:
  *     summary: Get witnesses for a tournament
  *     tags: [Coach]
@@ -157,7 +157,7 @@ router.get("/tournaments/:tournamentId/witnesses", authedHandler(async (req, res
 
 /**
  * @swagger
- * /api/coach/tournaments/{tournamentId}/format:
+ * /coach/tournaments/{tournamentId}/format:
  *   get:
  *     summary: Get case format for a tournament
  *     tags: [Coach]
@@ -180,7 +180,7 @@ router.use("/teams/:teamId", teamRoutes);
 
 /**
  * @swagger
- * /api/coach/tournaments/{tournamentId}/pairings/{pairingId}/ballots:
+ * /coach/tournaments/{tournamentId}/pairings/{pairingId}/ballots:
  *   get:
  *     summary: Get individual ballot breakdowns for a pairing (only if results are published)
  *     tags: [Coach]
@@ -210,7 +210,7 @@ router.get("/tournaments/:tournamentId/pairings/:pairingId/ballots", authedHandl
 
 /**
  * @swagger
- * /api/coach/tournaments/{tournamentId}/pairings/{pairingId}/ballots/{assignmentId}:
+ * /coach/tournaments/{tournamentId}/pairings/{pairingId}/ballots/{assignmentId}:
  *   get:
  *     summary: Get full ballot detail (scoresheet format + scores) for a specific ballot
  *     tags: [Coach]

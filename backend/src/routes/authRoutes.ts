@@ -50,7 +50,7 @@ function sendAuthResponse(
 
 /**
  * @swagger
- * /api/auth/register:
+ * /auth/register:
  *   post:
  *     summary: Register a new user
  *     tags: [Auth]
@@ -110,7 +110,7 @@ router.post('/register', async (req: Request, res: Response) => {
 
 /**
  * @swagger
- * /api/auth/login:
+ * /auth/login:
  *   post:
  *     summary: Log in with email + password
  *     tags: [Auth]
@@ -158,7 +158,7 @@ router.post('/login', async (req: Request, res: Response) => {
 
 /**
  * @swagger
- * /api/auth/refresh:
+ * /auth/refresh:
  *   post:
  *     summary: Silently refresh the access token using the HttpOnly refresh cookie
  *     tags: [Auth]
@@ -209,7 +209,7 @@ router.post('/refresh', async (req: Request, res: Response) => {
 
 /**
  * @swagger
- * /api/auth/logout:
+ * /auth/logout:
  *   post:
  *     summary: Revoke the refresh token and clear the cookie
  *     tags: [Auth]
@@ -232,7 +232,7 @@ router.post('/logout', async (req: Request, res: Response) => {
 
 /**
  * @swagger
- * /api/auth/session:
+ * /auth/session:
  *   get:
  *     summary: Get current session info (requires valid access token)
  *     tags: [Auth]
@@ -247,7 +247,7 @@ router.get('/session', verifyUser, (req: Request, res: Response) => {
 
 /**
  * @swagger
- * /api/auth/change-password:
+ * /auth/change-password:
  *   post:
  *     summary: Change the authenticated user's password
  *     tags: [Auth]
@@ -294,7 +294,7 @@ router.post('/change-password', verifyUser, async (req: Request, res: Response) 
 
 /**
  * @swagger
- * /api/auth/account:
+ * /auth/account:
  *   delete:
  *     summary: Permanently delete the authenticated user's account
  *     tags: [Auth]
@@ -325,7 +325,7 @@ router.delete('/account', verifyUser, async (req: Request, res: Response) => {
 
 /**
  * @swagger
- * /api/auth/forgot-password:
+ * /auth/forgot-password:
  *   post:
  *     summary: Request a password reset email
  *     tags: [Auth]
@@ -370,7 +370,7 @@ router.post('/forgot-password', async (req: Request, res: Response) => {
 
 /**
  * @swagger
- * /api/auth/reset-password:
+ * /auth/reset-password:
  *   post:
  *     summary: Reset password using a token from the reset email
  *     tags: [Auth]
@@ -406,7 +406,7 @@ router.post('/reset-password', async (req: Request, res: Response) => {
 
 /**
  * @swagger
- * /api/auth/verify-email:
+ * /auth/verify-email:
  *   post:
  *     summary: Verify a user's email address using a token from the verification email
  *     tags: [Auth]
@@ -439,7 +439,7 @@ router.post('/verify-email', async (req: Request, res: Response) => {
 
 /**
  * @swagger
- * /api/auth/resend-verification:
+ * /auth/resend-verification:
  *   post:
  *     summary: Resend the email verification link (requires authentication)
  *     tags: [Auth]
@@ -469,7 +469,7 @@ router.post('/resend-verification', verifyUser, async (req: Request, res: Respon
 
 /**
  * @swagger
- * /api/auth/google/login:
+ * /auth/google/login:
  *   post:
  *     summary: Log in or register via Google OAuth
  *     tags: [Auth]

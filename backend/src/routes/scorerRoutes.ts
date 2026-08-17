@@ -9,7 +9,7 @@ import { conflictReportEmail, sendEmail } from '../email';
 const router = express.Router();
 
 /**
- * GET /api/score/:assignmentId
+ * GET /score/:assignmentId
  * Returns the IScoreSheetFormat for the given scorer assignment.
  * Public — no JWT required.
  */
@@ -29,7 +29,7 @@ router.get('/:assignmentId', async (req: Request, res: Response) => {
 });
 
 /**
- * POST /api/score/:assignmentId/ballot
+ * POST /score/:assignmentId/ballot
  * Accepts a ScorecardPayload and persists it to the ballots table.
  * Returns 409 if a ballot has already been submitted for this assignment.
  * Public — no JWT required.
@@ -59,7 +59,7 @@ router.post('/:assignmentId/ballot', async (req: Request, res: Response) => {
 });
 
 /**
- * POST /api/score/:assignmentId/conflict
+ * POST /score/:assignmentId/conflict
  * Sends a conflict-of-interest notification email to the tournament owner.
  * Public — no JWT required (scorer is not logged in).
  * Fire-and-forget: always returns 200 so the scorer can't probe whether the

@@ -31,7 +31,7 @@ const router = Router();
 
 /**
  * @swagger
- * /api/organizer/tournament/{tournamentId}:
+ * /organizer/tournament/{tournamentId}:
  *   get:
  *     summary: Get tournament details
  *     tags: [Organizer - Tournament]
@@ -55,7 +55,7 @@ router.get("/", tournamentHandler(async (req, res) => {
 
 /**
  * @swagger
- * /api/organizer/tournament/{tournamentId}:
+ * /organizer/tournament/{tournamentId}:
  *   patch:
  *     summary: Update tournament details
  *     tags: [Organizer - Tournament]
@@ -94,7 +94,7 @@ router.patch("/", tournamentHandler(async (req, res) => {
 
 /**
  * @swagger
- * /api/organizer/tournament/{tournamentId}/status:
+ * /organizer/tournament/{tournamentId}/status:
  *   patch:
  *     summary: Update tournament status (active, completed, or archived)
  *     tags: [Organizer - Tournament]
@@ -136,7 +136,7 @@ router.patch("/status", tournamentHandler(async (req, res) => {
 
 /**
  * @swagger
- * /api/organizer/tournament/{tournamentId}/format:
+ * /organizer/tournament/{tournamentId}/format:
  *   get:
  *     summary: Get case format
  *     tags: [Organizer - Tournament]
@@ -160,7 +160,7 @@ router.get("/format", tournamentHandler(async (req, res) => {
 
 /**
  * @swagger
- * /api/organizer/tournament/{tournamentId}/format:
+ * /organizer/tournament/{tournamentId}/format:
  *   patch:
  *     summary: Update case format
  *     tags: [Organizer - Tournament]
@@ -210,7 +210,7 @@ router.patch("/format", tournamentHandler(async (req, res) => {
 
 /**
  * @swagger
- * /api/organizer/tournament/{tournamentId}/witnesses:
+ * /organizer/tournament/{tournamentId}/witnesses:
  *   get:
  *     summary: Get witnesses
  *     tags: [Organizer - Tournament]
@@ -234,7 +234,7 @@ router.get("/witnesses", tournamentHandler(async (req, res) => {
 
 /**
  * @swagger
- * /api/organizer/tournament/{tournamentId}/witnesses:
+ * /organizer/tournament/{tournamentId}/witnesses:
  *   patch:
  *     summary: Update witnesses
  *     tags: [Organizer - Tournament]
@@ -277,7 +277,7 @@ router.patch("/witnesses", tournamentHandler(async (req, res) => {
 
 /**
  * @swagger
- * /api/organizer/tournament/{tournamentId}/standings-config:
+ * /organizer/tournament/{tournamentId}/standings-config:
  *   get:
  *     summary: Get standings configuration
  *     tags: [Organizer - Tournament]
@@ -301,7 +301,7 @@ router.get("/standings-config", tournamentHandler(async (req, res) => {
 
 /**
  * @swagger
- * /api/organizer/tournament/{tournamentId}/standings:
+ * /organizer/tournament/{tournamentId}/standings:
  *   get:
  *     summary: Get standings data (ballot totals + config) for the organizer view
  *     tags: [Organizer - Tournament]
@@ -330,7 +330,7 @@ router.get("/standings", tournamentHandler(async (req, res) => {
 
 /**
  * @swagger
- * /api/organizer/tournament/{tournamentId}/standings-config:
+ * /organizer/tournament/{tournamentId}/standings-config:
  *   patch:
  *     summary: Upsert standings configuration
  *     tags: [Organizer - Tournament]
@@ -370,7 +370,7 @@ router.patch("/standings-config", tournamentHandler(async (req, res) => {
 
 /**
  * @swagger
- * /api/organizer/tournament/{tournamentId}/scoring-categories:
+ * /organizer/tournament/{tournamentId}/scoring-categories:
  *   get:
  *     summary: Get scoring categories
  *     tags: [Organizer - Tournament]
@@ -388,7 +388,7 @@ router.get("/scoring-categories", tournamentHandler(async (req, res) => {
 
 /**
  * @swagger
- * /api/organizer/tournament/{tournamentId}/scoring-categories:
+ * /organizer/tournament/{tournamentId}/scoring-categories:
  *   patch:
  *     summary: Update scoring categories
  *     tags: [Organizer - Tournament]
@@ -422,7 +422,7 @@ router.patch("/scoring-categories", tournamentHandler(async (req, res) => {
 
 /**
  * @swagger
- * /api/organizer/tournament/{tournamentId}/scorers:
+ * /organizer/tournament/{tournamentId}/scorers:
  *   get:
  *     summary: List scorers for a tournament
  *     tags: [Organizer - Scorers]
@@ -455,7 +455,7 @@ function verifyScorer(req: Request, res: Response, next: NextFunction) {
 
 /**
  * @swagger
- * /api/organizer/tournament/{tournamentId}/scorers:
+ * /organizer/tournament/{tournamentId}/scorers:
  *   post:
  *     summary: Add a scorer to the tournament
  *     tags: [Organizer - Scorers]
@@ -493,7 +493,7 @@ router.post("/scorers", verifyScorer, scorerHandler(async (req, res) => {
 
 /**
  * @swagger
- * /api/organizer/tournament/{tournamentId}/scorers:
+ * /organizer/tournament/{tournamentId}/scorers:
  *   put:
  *     summary: Update a scorer
  *     tags: [Organizer - Scorers]
@@ -532,7 +532,7 @@ router.put("/scorers", verifyScorer, scorerHandler(async (req, res) => {
 
 /**
  * @swagger
- * /api/organizer/tournament/{tournamentId}/scorers:
+ * /organizer/tournament/{tournamentId}/scorers:
  *   delete:
  *     summary: Remove a scorer from the tournament
  *     tags: [Organizer - Scorers]
@@ -571,7 +571,7 @@ router.delete("/scorers", tournamentHandler(async (req, res) => {
 
 /**
  * @swagger
- * /api/organizer/tournament/{tournamentId}/scorer-conflicts:
+ * /organizer/tournament/{tournamentId}/scorer-conflicts:
  *   get:
  *     summary: Get all scorer conflicts for the tournament
  *     tags: [Organizer - Scorers]
@@ -595,7 +595,7 @@ router.get('/scorer-conflicts', tournamentHandler(async (req, res) => {
 
 /**
  * @swagger
- * /api/organizer/tournament/{tournamentId}/scorers/{scorerId}/conflicts:
+ * /organizer/tournament/{tournamentId}/scorers/{scorerId}/conflicts:
  *   get:
  *     summary: Get conflicts for a specific scorer
  *     tags: [Organizer - Scorers]
@@ -626,7 +626,7 @@ router.get('/scorers/:scorerId/conflicts', async (req: Request, res: Response) =
 
 /**
  * @swagger
- * /api/organizer/tournament/{tournamentId}/scorers/{scorerId}/conflicts:
+ * /organizer/tournament/{tournamentId}/scorers/{scorerId}/conflicts:
  *   post:
  *     summary: Add a conflict between a scorer and a team
  *     tags: [Organizer - Scorers]
@@ -667,7 +667,7 @@ router.post('/scorers/:scorerId/conflicts', async (req: Request, res: Response) 
 
 /**
  * @swagger
- * /api/organizer/tournament/{tournamentId}/scorers/{scorerId}/conflicts:
+ * /organizer/tournament/{tournamentId}/scorers/{scorerId}/conflicts:
  *   delete:
  *     summary: Remove a conflict between a scorer and a team
  *     tags: [Organizer - Scorers]
@@ -711,7 +711,7 @@ router.delete('/scorers/:scorerId/conflicts', async (req: Request, res: Response
 
 /**
  * @swagger
- * /api/organizer/tournament/{tournamentId}/organizers:
+ * /organizer/tournament/{tournamentId}/organizers:
  *   get:
  *     summary: List organizers/delegates for a tournament
  *     tags: [Organizer - Delegates]
@@ -745,7 +745,7 @@ async function verifyOrganizerPayload(req: Request, res: Response, next: NextFun
 
 /**
  * @swagger
- * /api/organizer/tournament/{tournamentId}/organizers:
+ * /organizer/tournament/{tournamentId}/organizers:
  *   post:
  *     summary: Add a delegate to the tournament
  *     tags: [Organizer - Delegates]
@@ -797,7 +797,7 @@ router.post("/organizers", verifyOrganizerPayload, organizerHandler(async (req, 
 
 /**
  * @swagger
- * /api/organizer/tournament/{tournamentId}/organizers:
+ * /organizer/tournament/{tournamentId}/organizers:
  *   put:
  *     summary: Update a delegate
  *     tags: [Organizer - Delegates]
@@ -842,7 +842,7 @@ router.put("/organizers", verifyOrganizerPayload, organizerHandler(async (req, r
 
 /**
  * @swagger
- * /api/organizer/tournament/{tournamentId}/organizers:
+ * /organizer/tournament/{tournamentId}/organizers:
  *   delete:
  *     summary: Remove a delegate from the tournament
  *     tags: [Organizer - Delegates]
@@ -885,7 +885,7 @@ router.delete("/organizers", verifyOrganizerPayload, organizerHandler(async (req
 
 /**
  * @swagger
- * /api/organizer/tournament/{tournamentId}/courtrooms:
+ * /organizer/tournament/{tournamentId}/courtrooms:
  *   get:
  *     summary: List courtrooms
  *     tags: [Organizer - Courtrooms]
@@ -909,7 +909,7 @@ router.get('/courtrooms', tournamentHandler(async (req, res) => {
 
 /**
  * @swagger
- * /api/organizer/tournament/{tournamentId}/courtrooms:
+ * /organizer/tournament/{tournamentId}/courtrooms:
  *   post:
  *     summary: Add a courtroom
  *     tags: [Organizer - Courtrooms]
@@ -944,7 +944,7 @@ router.post('/courtrooms', tournamentHandler(async (req, res) => {
 
 /**
  * @swagger
- * /api/organizer/tournament/{tournamentId}/courtrooms:
+ * /organizer/tournament/{tournamentId}/courtrooms:
  *   put:
  *     summary: Update a courtroom
  *     tags: [Organizer - Courtrooms]
@@ -980,7 +980,7 @@ router.put('/courtrooms', async (req: Request, res: Response) => {
 
 /**
  * @swagger
- * /api/organizer/tournament/{tournamentId}/courtrooms:
+ * /organizer/tournament/{tournamentId}/courtrooms:
  *   delete:
  *     summary: Delete a courtroom
  *     tags: [Organizer - Courtrooms]
@@ -1019,7 +1019,7 @@ router.delete('/courtrooms', async (req: Request, res: Response) => {
 
 /**
  * @swagger
- * /api/organizer/tournament/{tournamentId}/teams:
+ * /organizer/tournament/{tournamentId}/teams:
  *   get:
  *     summary: List teams in the tournament
  *     tags: [Organizer - Teams]
@@ -1047,7 +1047,7 @@ function verifyTeamPayload(req: Request, res: Response, next: NextFunction) {
 
 /**
  * @swagger
- * /api/organizer/tournament/{tournamentId}/teams:
+ * /organizer/tournament/{tournamentId}/teams:
  *   post:
  *     summary: Add a team to the tournament
  *     tags: [Organizer - Teams]
@@ -1097,7 +1097,7 @@ router.post('/teams', verifyTeamPayload, teamHandler(async (req, res) => {
 
 /**
  * @swagger
- * /api/organizer/tournament/{tournamentId}/teams:
+ * /organizer/tournament/{tournamentId}/teams:
  *   put:
  *     summary: Update a team
  *     tags: [Organizer - Teams]
@@ -1146,7 +1146,7 @@ router.put('/teams', verifyTeamPayload, teamHandler(async (req, res) => {
 
 /**
  * @swagger
- * /api/organizer/tournament/{tournamentId}/teams:
+ * /organizer/tournament/{tournamentId}/teams:
  *   delete:
  *     summary: Delete a team
  *     tags: [Organizer - Teams]
@@ -1184,7 +1184,7 @@ router.delete('/teams', async (req: Request, res: Response) => {
 
 /**
  * @swagger
- * /api/organizer/tournament/{tournamentId}/teams/{teamId}/owner:
+ * /organizer/tournament/{tournamentId}/teams/{teamId}/owner:
  *   put:
  *     summary: Transfer team ownership to another coach
  *     tags: [Organizer - Teams]
@@ -1229,7 +1229,7 @@ router.put('/teams/:teamId/owner', async (req: Request, res: Response) => {
 
 /**
  * @swagger
- * /api/organizer/tournament/{tournamentId}/teams/{teamId}/coaches:
+ * /organizer/tournament/{tournamentId}/teams/{teamId}/coaches:
  *   get:
  *     summary: List coaches on a team
  *     tags: [Organizer - Teams]
@@ -1251,7 +1251,7 @@ router.get('/teams/:teamId/coaches', async (req: Request, res: Response) => {
 
 /**
  * @swagger
- * /api/organizer/tournament/{tournamentId}/teams/{teamId}/coaches:
+ * /organizer/tournament/{tournamentId}/teams/{teamId}/coaches:
  *   post:
  *     summary: Add a coach to a team by email
  *     tags: [Organizer - Teams]
@@ -1286,7 +1286,7 @@ router.post('/teams/:teamId/coaches', async (req: Request, res: Response) => {
 
 /**
  * @swagger
- * /api/organizer/tournament/{tournamentId}/teams/{teamId}/coaches/{coachId}:
+ * /organizer/tournament/{tournamentId}/teams/{teamId}/coaches/{coachId}:
  *   delete:
  *     summary: Remove a coach from a team
  *     tags: [Organizer - Teams]
@@ -1311,7 +1311,7 @@ router.delete('/teams/:teamId/coaches/:coachId', removeCoachHandler);
 
 /**
  * @swagger
- * /api/organizer/tournament/{tournamentId}/teams/{teamId}/students:
+ * /organizer/tournament/{tournamentId}/teams/{teamId}/students:
  *   get:
  *     summary: List students on a team
  *     tags: [Organizer - Teams]
@@ -1333,7 +1333,7 @@ router.get('/teams/:teamId/students', async (req: Request, res: Response) => {
 
 /**
  * @swagger
- * /api/organizer/tournament/{tournamentId}/teams/{teamId}/students:
+ * /organizer/tournament/{tournamentId}/teams/{teamId}/students:
  *   post:
  *     summary: Add a student to a team roster
  *     tags: [Organizer - Teams]
@@ -1365,7 +1365,7 @@ router.post('/teams/:teamId/students', addStudentHandler);
 
 /**
  * @swagger
- * /api/organizer/tournament/{tournamentId}/teams/{teamId}/students/{studentId}:
+ * /organizer/tournament/{tournamentId}/teams/{teamId}/students/{studentId}:
  *   delete:
  *     summary: Remove a student from a team roster
  *     tags: [Organizer - Teams]
@@ -1398,7 +1398,7 @@ router.delete('/teams/:teamId/students/:studentId', async (req: Request, res: Re
 
 /**
  * @swagger
- * /api/organizer/tournament/{tournamentId}/teams/{teamId}/pairings/{pairingId}/witness-order:
+ * /organizer/tournament/{tournamentId}/teams/{teamId}/pairings/{pairingId}/witness-order:
  *   get:
  *     summary: Get witness call order for a team in a pairing
  *     tags: [Organizer - Teams]
@@ -1424,7 +1424,7 @@ router.get('/teams/:teamId/pairings/:pairingId/witness-order', async (req: Reque
 
 /**
  * @swagger
- * /api/organizer/tournament/{tournamentId}/teams/{teamId}/pairings/{pairingId}/witness-order:
+ * /organizer/tournament/{tournamentId}/teams/{teamId}/pairings/{pairingId}/witness-order:
  *   put:
  *     summary: Set witness call order for a team in a pairing
  *     tags: [Organizer - Teams]
@@ -1465,7 +1465,7 @@ router.put('/teams/:teamId/pairings/:pairingId/witness-order', async (req: Reque
 
 /**
  * @swagger
- * /api/organizer/tournament/{tournamentId}/teams/{teamId}/pairings/{pairingId}/assignments:
+ * /organizer/tournament/{tournamentId}/teams/{teamId}/pairings/{pairingId}/assignments:
  *   get:
  *     summary: Get student assignments for a team in a pairing
  *     tags: [Organizer - Teams]
@@ -1491,7 +1491,7 @@ router.get('/teams/:teamId/pairings/:pairingId/assignments', async (req: Request
 
 /**
  * @swagger
- * /api/organizer/tournament/{tournamentId}/teams/{teamId}/pairings/{pairingId}/assignments:
+ * /organizer/tournament/{tournamentId}/teams/{teamId}/pairings/{pairingId}/assignments:
  *   put:
  *     summary: Upsert a student assignment for a scoring field
  *     tags: [Organizer - Teams]
@@ -1538,7 +1538,7 @@ router.put('/teams/:teamId/pairings/:pairingId/assignments', async (req: Request
 
 /**
  * @swagger
- * /api/organizer/tournament/{tournamentId}/rounds:
+ * /organizer/tournament/{tournamentId}/rounds:
  *   get:
  *     summary: List rounds for a tournament
  *     tags: [Organizer - Rounds]
@@ -1562,7 +1562,7 @@ router.get("/rounds", tournamentHandler(async (req, res) => {
 
 /**
  * @swagger
- * /api/organizer/tournament/{tournamentId}/rounds:
+ * /organizer/tournament/{tournamentId}/rounds:
  *   post:
  *     summary: Create a new round
  *     tags: [Organizer - Rounds]
@@ -1635,7 +1635,7 @@ function parseCsv(text: string): string[][] {
 
 /**
  * @swagger
- * /api/organizer/tournament/{tournamentId}/import/scorers:
+ * /organizer/tournament/{tournamentId}/import/scorers:
  *   post:
  *     summary: Bulk import scorers from CSV
  *     tags: [Organizer - Import]
@@ -1700,7 +1700,7 @@ router.post('/import/scorers', tournamentHandler(async (req, res) => {
 
 /**
  * @swagger
- * /api/organizer/tournament/{tournamentId}/import/teams:
+ * /organizer/tournament/{tournamentId}/import/teams:
  *   post:
  *     summary: Bulk import teams from CSV
  *     tags: [Organizer - Import]
@@ -1779,7 +1779,7 @@ function escapeCsvField(value: string): string {
 
 /**
  * @swagger
- * /api/organizer/tournament/{tournamentId}/export/standings:
+ * /organizer/tournament/{tournamentId}/export/standings:
  *   get:
  *     summary: Download standings as CSV
  *     tags: [Organizer - Export]
@@ -1837,7 +1837,7 @@ router.get('/export/standings', tournamentHandler(async (req, res) => {
 
 /**
  * @swagger
- * /api/organizer/tournament/{tournamentId}/export/results:
+ * /organizer/tournament/{tournamentId}/export/results:
  *   get:
  *     summary: Download round results as CSV
  *     tags: [Organizer - Export]
@@ -1880,7 +1880,7 @@ router.get('/export/results', tournamentHandler(async (req, res) => {
 
 /**
  * @swagger
- * /api/organizer/tournament/{tournamentId}/awards:
+ * /organizer/tournament/{tournamentId}/awards:
  *   get:
  *     summary: Get aggregated nomination awards for the tournament
  *     tags: [Organizer - Tournament]
@@ -1983,7 +1983,7 @@ router.get('/awards', tournamentHandler(async (req, res) => {
 
 /**
  * @swagger
- * /api/organizer/tournament/{tournamentId}/bounced-emails:
+ * /organizer/tournament/{tournamentId}/bounced-emails:
  *   get:
  *     summary: Get list of emails that have bounced (delivery failures)
  *     tags: [Organizer - Tournament]
@@ -2022,7 +2022,7 @@ router.get('/bounced-emails', tournamentHandler(async (req, res) => {
 
 
 /**
- * GET /api/organizer/tournament/:tournamentId/pairings/:pairingId/scoresheets/:assignmentId
+ * GET /organizer/tournament/:tournamentId/pairings/:pairingId/scoresheets/:assignmentId
  * Returns the stored ballot for a scorer assignment, or null if not yet submitted.
  * Used by the organizer's ScorecardViewer page.
  */
@@ -2038,7 +2038,7 @@ router.get('/pairings/:pairingId/scoresheets/:assignmentId', tournamentHandler(a
 }));
 /**
  * @swagger
- * /api/organizer/tournament/{tournamentId}/pairings/{pairingId}/scoresheets/{assignmentId}:
+ * /organizer/tournament/{tournamentId}/pairings/{pairingId}/scoresheets/{assignmentId}:
  *   put:
  *     summary: Edit a submitted ballot's scores
  *     tags: [Organizer - Scorecards]
@@ -2087,7 +2087,7 @@ router.put('/pairings/:pairingId/scoresheets/:assignmentId', tournamentHandler(a
 }));
 /**
  * @swagger
- * /api/organizer/tournament/{tournamentId}/pairings/{pairingId}/scoresheets/{assignmentId}:
+ * /organizer/tournament/{tournamentId}/pairings/{pairingId}/scoresheets/{assignmentId}:
  *   delete:
  *     summary: Delete a submitted ballot
  *     tags: [Organizer - Scorecards]
