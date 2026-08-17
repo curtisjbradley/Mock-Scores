@@ -26,7 +26,7 @@ function mockRoundAccess(round: object = ROUND_BASE) {
     mockDbQuery.mockResolvedValueOnce({ rows: [round], rowCount: 1 } as never);
 }
 
-const ROUND_URL = `/api/organizer/tournament/${TOURNAMENT_ID}/rounds/${ROUND_ID}`;
+const ROUND_URL = `/organizer/tournament/${TOURNAMENT_ID}/rounds/${ROUND_ID}`;
 
 // ─── GET .../rounds/:round/ballot-status ──────────────────────────────────────
 describe('GET .../rounds/:round/ballot-status', () => {
@@ -195,12 +195,12 @@ describe('PATCH .../rounds/:round — one-way flags', () => {
 // and only use verifyTournamentAccess (one mockAccess call).
 
 describe('GET .../pairings/:pairingId/scoresheets/:assignmentId', () => {
-    const SCORESHEET_URL = `/api/organizer/tournament/${TOURNAMENT_ID}/pairings/${PAIRING_ID}/scoresheets/${ASSIGNMENT_ID}`;
+    const SCORESHEET_URL = `/organizer/tournament/${TOURNAMENT_ID}/pairings/${PAIRING_ID}/scoresheets/${ASSIGNMENT_ID}`;
 
     it('returns 400 for invalid assignment ID', async () => {
         mockAccess();
         const res = await request(app)
-            .get(`/api/organizer/tournament/${TOURNAMENT_ID}/pairings/${PAIRING_ID}/scoresheets/bad-uuid`)
+            .get(`/organizer/tournament/${TOURNAMENT_ID}/pairings/${PAIRING_ID}/scoresheets/bad-uuid`)
             .set(auth());
         expect(res.status).toBe(400);
     });
@@ -223,12 +223,12 @@ describe('GET .../pairings/:pairingId/scoresheets/:assignmentId', () => {
 });
 
 describe('PUT .../pairings/:pairingId/scoresheets/:assignmentId', () => {
-    const SCORESHEET_URL = `/api/organizer/tournament/${TOURNAMENT_ID}/pairings/${PAIRING_ID}/scoresheets/${ASSIGNMENT_ID}`;
+    const SCORESHEET_URL = `/organizer/tournament/${TOURNAMENT_ID}/pairings/${PAIRING_ID}/scoresheets/${ASSIGNMENT_ID}`;
 
     it('returns 400 for invalid assignment ID', async () => {
         mockAccess();
         const res = await request(app)
-            .put(`/api/organizer/tournament/${TOURNAMENT_ID}/pairings/${PAIRING_ID}/scoresheets/bad-uuid`)
+            .put(`/organizer/tournament/${TOURNAMENT_ID}/pairings/${PAIRING_ID}/scoresheets/bad-uuid`)
             .set(auth())
             .send({ scores: [], reason: 'fix' });
         expect(res.status).toBe(400);
@@ -298,12 +298,12 @@ describe('PUT .../pairings/:pairingId/scoresheets/:assignmentId', () => {
 });
 
 describe('DELETE .../pairings/:pairingId/scoresheets/:assignmentId', () => {
-    const SCORESHEET_URL = `/api/organizer/tournament/${TOURNAMENT_ID}/pairings/${PAIRING_ID}/scoresheets/${ASSIGNMENT_ID}`;
+    const SCORESHEET_URL = `/organizer/tournament/${TOURNAMENT_ID}/pairings/${PAIRING_ID}/scoresheets/${ASSIGNMENT_ID}`;
 
     it('returns 400 for invalid assignment ID', async () => {
         mockAccess();
         const res = await request(app)
-            .delete(`/api/organizer/tournament/${TOURNAMENT_ID}/pairings/${PAIRING_ID}/scoresheets/bad-uuid`)
+            .delete(`/organizer/tournament/${TOURNAMENT_ID}/pairings/${PAIRING_ID}/scoresheets/bad-uuid`)
             .set(auth());
         expect(res.status).toBe(400);
     });

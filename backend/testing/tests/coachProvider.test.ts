@@ -220,54 +220,54 @@ describe('getStandingsData', () => {
 // ─── GET /api/coach/tournaments ───────────────────────────────────────────────
 describe('GET /api/coach/tournaments', () => {
     it('returns 401 without token', async () => {
-        expect((await request(app).get('/api/coach/tournaments')).status).toBe(401);
+        expect((await request(app).get('/coach/tournaments')).status).toBe(401);
     });
     it('returns 200 with tournaments', async () => {
         mockDbQuery.mockResolvedValueOnce({ rows: [{ id: TID }], rowCount: 1 } as any);
-        const res = await request(app).get('/api/coach/tournaments').set(auth());
+        const res = await request(app).get('/coach/tournaments').set(auth());
         expect(res.status).toBe(200);
     });
 });
 
 describe('GET /api/coach/tournaments/:id/schedule', () => {
     it('returns 400 for invalid id', async () => {
-        const res = await request(app).get('/api/coach/tournaments/bad/schedule').set(auth());
+        const res = await request(app).get('/coach/tournaments/bad/schedule').set(auth());
         expect(res.status).toBe(400);
     });
     it('returns 200', async () => {
         mockDbQuery.mockResolvedValueOnce({ rows: [], rowCount: 0 } as any);
-        const res = await request(app).get(`/api/coach/tournaments/${TID}/schedule`).set(auth());
+        const res = await request(app).get(`/coach/tournaments/${TID}/schedule`).set(auth());
         expect(res.status).toBe(200);
     });
 });
 
 describe('GET /api/coach/tournaments/:id/results', () => {
     it('returns 400 for invalid id', async () => {
-        const res = await request(app).get('/api/coach/tournaments/bad/results').set(auth());
+        const res = await request(app).get('/coach/tournaments/bad/results').set(auth());
         expect(res.status).toBe(400);
     });
     it('returns 200', async () => {
         mockDbQuery.mockResolvedValueOnce({ rows: [], rowCount: 0 } as any);
-        const res = await request(app).get(`/api/coach/tournaments/${TID}/results`).set(auth());
+        const res = await request(app).get(`/coach/tournaments/${TID}/results`).set(auth());
         expect(res.status).toBe(200);
     });
 });
 
 describe('GET /api/coach/tournaments/:id/field', () => {
     it('returns 400 for invalid id', async () => {
-        const res = await request(app).get('/api/coach/tournaments/bad/field').set(auth());
+        const res = await request(app).get('/coach/tournaments/bad/field').set(auth());
         expect(res.status).toBe(400);
     });
     it('returns 200', async () => {
         mockDbQuery.mockResolvedValueOnce({ rows: [], rowCount: 0 } as any);
-        const res = await request(app).get(`/api/coach/tournaments/${TID}/field`).set(auth());
+        const res = await request(app).get(`/coach/tournaments/${TID}/field`).set(auth());
         expect(res.status).toBe(200);
     });
 });
 
 describe('GET /api/coach/tournaments/:id/standings', () => {
     it('returns 400 for invalid id', async () => {
-        const res = await request(app).get('/api/coach/tournaments/bad/standings').set(auth());
+        const res = await request(app).get('/coach/tournaments/bad/standings').set(auth());
         expect(res.status).toBe(400);
     });
     it('returns 200', async () => {
@@ -275,7 +275,7 @@ describe('GET /api/coach/tournaments/:id/standings', () => {
             .mockResolvedValueOnce({ rows: [], rowCount: 0 } as any)
             .mockResolvedValueOnce({ rows: [], rowCount: 0 } as any)
             .mockResolvedValueOnce({ rows: [], rowCount: 0 } as any);
-        const res = await request(app).get(`/api/coach/tournaments/${TID}/standings`).set(auth());
+        const res = await request(app).get(`/coach/tournaments/${TID}/standings`).set(auth());
         expect(res.status).toBe(200);
     });
 });
@@ -283,12 +283,12 @@ describe('GET /api/coach/tournaments/:id/standings', () => {
 // ─── Team routes ──────────────────────────────────────────────────────────────
 describe('verifyTeamAccess', () => {
     it('returns 400 for invalid teamId', async () => {
-        const res = await request(app).get('/api/coach/teams/bad-id/coaches').set(auth());
+        const res = await request(app).get('/coach/teams/bad-id/coaches').set(auth());
         expect(res.status).toBe(400);
     });
     it('returns 403 when not a team member', async () => {
         mockDbQuery.mockResolvedValueOnce({ rows: [], rowCount: 0 } as any);
-        const res = await request(app).get(`/api/coach/teams/${TEAM}/coaches`).set(auth());
+        const res = await request(app).get(`/coach/teams/${TEAM}/coaches`).set(auth());
         expect(res.status).toBe(403);
     });
 });
@@ -299,7 +299,7 @@ describe('GET /api/coach/teams/:teamId/coaches', () => {
         mockDbQuery
             .mockResolvedValueOnce({ rows: [], rowCount: 0 } as any)
             .mockResolvedValueOnce({ rows: [], rowCount: 0 } as any);
-        const res = await request(app).get(`/api/coach/teams/${TEAM}/coaches`).set(auth());
+        const res = await request(app).get(`/coach/teams/${TEAM}/coaches`).set(auth());
         expect(res.status).toBe(200);
     });
 });
@@ -307,7 +307,7 @@ describe('GET /api/coach/teams/:teamId/coaches', () => {
 describe('POST /api/coach/teams/:teamId/coaches', () => {
     it('returns 400 when email missing', async () => {
         mockTeamAccess();
-        const res = await request(app).post(`/api/coach/teams/${TEAM}/coaches`).set(auth()).send({});
+        const res = await request(app).post(`/coach/teams/${TEAM}/coaches`).set(auth()).send({});
         expect(res.status).toBe(400);
     });
     it('returns 201 on success', async () => {
@@ -317,7 +317,7 @@ describe('POST /api/coach/teams/:teamId/coaches', () => {
             .mockResolvedValueOnce({ rows: [], rowCount: 1 } as any)
             .mockResolvedValueOnce({ rows: [{ id: TEAM, name: 'Team A', tournament_id: 't1' }], rowCount: 1 } as any)
             .mockResolvedValueOnce({ rows: [{ tournament_id: 't1', name: 'Tournament A' }], rowCount: 1 } as any);
-        const res = await request(app).post(`/api/coach/teams/${TEAM}/coaches`).set(auth()).send({ email: 'a@b.com' });
+        const res = await request(app).post(`/coach/teams/${TEAM}/coaches`).set(auth()).send({ email: 'a@b.com' });
         await new Promise(setImmediate);
         expect(res.status).toBe(201);
     });
@@ -329,13 +329,13 @@ describe('DELETE /api/coach/teams/:teamId/coaches/:coachId', () => {
         mockDbQuery
             .mockResolvedValueOnce({ rows: [], rowCount: 0 } as any)
             .mockResolvedValueOnce({ rows: [], rowCount: 0 } as any);
-        const res = await request(app).delete(`/api/coach/teams/${TEAM}/coaches/${UID}`).set(auth());
+        const res = await request(app).delete(`/coach/teams/${TEAM}/coaches/${UID}`).set(auth());
         expect(res.status).toBe(404);
     });
     it('returns 204 on success', async () => {
         mockTeamAccess();
         mockDbQuery.mockResolvedValueOnce({ rows: [], rowCount: 1 } as any);
-        const res = await request(app).delete(`/api/coach/teams/${TEAM}/coaches/${UID}`).set(auth());
+        const res = await request(app).delete(`/coach/teams/${TEAM}/coaches/${UID}`).set(auth());
         expect(res.status).toBe(204);
     });
 });
@@ -344,7 +344,7 @@ describe('GET /api/coach/teams/:teamId/students', () => {
     it('returns 200', async () => {
         mockTeamAccess();
         mockDbQuery.mockResolvedValueOnce({ rows: [], rowCount: 0 } as any);
-        const res = await request(app).get(`/api/coach/teams/${TEAM}/students`).set(auth());
+        const res = await request(app).get(`/coach/teams/${TEAM}/students`).set(auth());
         expect(res.status).toBe(200);
     });
 });
@@ -352,25 +352,25 @@ describe('GET /api/coach/teams/:teamId/students', () => {
 describe('DELETE /api/coach/teams/:teamId/students/:studentId', () => {
     it('returns 400 for invalid studentId', async () => {
         mockTeamAccess();
-        const res = await request(app).delete(`/api/coach/teams/${TEAM}/students/bad`).set(auth());
+        const res = await request(app).delete(`/coach/teams/${TEAM}/students/bad`).set(auth());
         expect(res.status).toBe(400);
     });
     it('returns 500 when query throws DbError', async () => {
         mockTeamAccess();
         mockDbQuery.mockResolvedValueOnce(null);
-        const res = await request(app).delete(`/api/coach/teams/${TEAM}/students/${SID}`).set(auth());
+        const res = await request(app).delete(`/coach/teams/${TEAM}/students/${SID}`).set(auth());
         expect(res.status).toBe(500);
     });
     it('returns 404 when student not found', async () => {
         mockTeamAccess();
         mockDbQuery.mockResolvedValueOnce({ rows: [], rowCount: 0 } as any);
-        const res = await request(app).delete(`/api/coach/teams/${TEAM}/students/${SID}`).set(auth());
+        const res = await request(app).delete(`/coach/teams/${TEAM}/students/${SID}`).set(auth());
         expect(res.status).toBe(404);
     });
     it('returns 204 on success', async () => {
         mockTeamAccess();
         mockDbQuery.mockResolvedValueOnce({ rows: [{ student_id: SID }], rowCount: 1 } as any);
-        const res = await request(app).delete(`/api/coach/teams/${TEAM}/students/${SID}`).set(auth());
+        const res = await request(app).delete(`/coach/teams/${TEAM}/students/${SID}`).set(auth());
         expect(res.status).toBe(204);
     });
 });
@@ -378,13 +378,13 @@ describe('DELETE /api/coach/teams/:teamId/students/:studentId', () => {
 describe('GET /api/coach/teams/:teamId/pairings/:pairingId/witness-order', () => {
     it('returns 400 for invalid pairingId', async () => {
         mockTeamAccess();
-        const res = await request(app).get(`/api/coach/teams/${TEAM}/pairings/bad/witness-order`).set(auth());
+        const res = await request(app).get(`/coach/teams/${TEAM}/pairings/bad/witness-order`).set(auth());
         expect(res.status).toBe(400);
     });
     it('returns 200', async () => {
         mockTeamAccess();
         mockDbQuery.mockResolvedValueOnce({ rows: [], rowCount: 0 } as any);
-        const res = await request(app).get(`/api/coach/teams/${TEAM}/pairings/${PID}/witness-order`).set(auth());
+        const res = await request(app).get(`/coach/teams/${TEAM}/pairings/${PID}/witness-order`).set(auth());
         expect(res.status).toBe(200);
     });
 });
@@ -392,18 +392,18 @@ describe('GET /api/coach/teams/:teamId/pairings/:pairingId/witness-order', () =>
 describe('PUT /api/coach/teams/:teamId/pairings/:pairingId/witness-order', () => {
     it('returns 400 for invalid pairingId', async () => {
         mockTeamAccess();
-        const res = await request(app).put(`/api/coach/teams/${TEAM}/pairings/bad/witness-order`).set(auth()).send({ witness_ids: [] });
+        const res = await request(app).put(`/coach/teams/${TEAM}/pairings/bad/witness-order`).set(auth()).send({ witness_ids: [] });
         expect(res.status).toBe(400);
     });
     it('returns 400 when witness_ids not array', async () => {
         mockTeamAccess();
-        const res = await request(app).put(`/api/coach/teams/${TEAM}/pairings/${PID}/witness-order`).set(auth()).send({ witness_ids: 'bad' });
+        const res = await request(app).put(`/coach/teams/${TEAM}/pairings/${PID}/witness-order`).set(auth()).send({ witness_ids: 'bad' });
         expect(res.status).toBe(400);
     });
     it('returns 200 on success', async () => {
         mockTeamAccess();
         mockDbQuery.mockResolvedValueOnce({ rows: [], rowCount: 0 } as any);
-        const res = await request(app).put(`/api/coach/teams/${TEAM}/pairings/${PID}/witness-order`).set(auth()).send({ witness_ids: [] });
+        const res = await request(app).put(`/coach/teams/${TEAM}/pairings/${PID}/witness-order`).set(auth()).send({ witness_ids: [] });
         expect(res.status).toBe(200);
     });
 });
@@ -411,13 +411,13 @@ describe('PUT /api/coach/teams/:teamId/pairings/:pairingId/witness-order', () =>
 describe('GET /api/coach/teams/:teamId/pairings/:pairingId/assignments', () => {
     it('returns 400 for invalid pairingId', async () => {
         mockTeamAccess();
-        const res = await request(app).get(`/api/coach/teams/${TEAM}/pairings/bad/assignments`).set(auth());
+        const res = await request(app).get(`/coach/teams/${TEAM}/pairings/bad/assignments`).set(auth());
         expect(res.status).toBe(400);
     });
     it('returns 200', async () => {
         mockTeamAccess();
         mockDbQuery.mockResolvedValueOnce({ rows: [], rowCount: 0 } as any);
-        const res = await request(app).get(`/api/coach/teams/${TEAM}/pairings/${PID}/assignments`).set(auth());
+        const res = await request(app).get(`/coach/teams/${TEAM}/pairings/${PID}/assignments`).set(auth());
         expect(res.status).toBe(200);
     });
 });
@@ -425,25 +425,25 @@ describe('GET /api/coach/teams/:teamId/pairings/:pairingId/assignments', () => {
 describe('PUT /api/coach/teams/:teamId/pairings/:pairingId/assignments', () => {
     it('returns 400 for invalid pairingId', async () => {
         mockTeamAccess();
-        const res = await request(app).put(`/api/coach/teams/${TEAM}/pairings/bad/assignments`).set(auth()).send({ field_id: FID, student_id: SID });
+        const res = await request(app).put(`/coach/teams/${TEAM}/pairings/bad/assignments`).set(auth()).send({ field_id: FID, student_id: SID });
         expect(res.status).toBe(400);
     });
     it('returns 400 when field_id missing', async () => {
         mockTeamAccess();
-        const res = await request(app).put(`/api/coach/teams/${TEAM}/pairings/${PID}/assignments`).set(auth()).send({ student_id: SID });
+        const res = await request(app).put(`/coach/teams/${TEAM}/pairings/${PID}/assignments`).set(auth()).send({ student_id: SID });
         expect(res.status).toBe(400);
     });
     it('returns 500 when upsert fails', async () => {
         mockTeamAccess();
         mockDbQuery.mockResolvedValueOnce({ rows: [], rowCount: 0 } as any);
-        const res = await request(app).put(`/api/coach/teams/${TEAM}/pairings/${PID}/assignments`).set(auth()).send({ field_id: FID, student_id: SID });
+        const res = await request(app).put(`/coach/teams/${TEAM}/pairings/${PID}/assignments`).set(auth()).send({ field_id: FID, student_id: SID });
         expect(res.status).toBe(500);
     });
     it('returns 200 on success', async () => {
         mockTeamAccess();
         const assignment = { id: 'a1', pairing_id: PID, team_id: TEAM, field_id: FID, student_id: SID };
         mockDbQuery.mockResolvedValueOnce({ rows: [assignment], rowCount: 1 } as any);
-        const res = await request(app).put(`/api/coach/teams/${TEAM}/pairings/${PID}/assignments`).set(auth()).send({ field_id: FID, student_id: SID });
+        const res = await request(app).put(`/coach/teams/${TEAM}/pairings/${PID}/assignments`).set(auth()).send({ field_id: FID, student_id: SID });
         expect(res.status).toBe(200);
     });
 });
@@ -452,12 +452,12 @@ describe('PUT /api/coach/teams/:teamId/pairings/:pairingId/assignments', () => {
 
 describe('GET /api/coach/tournaments/:id/scoring-categories', () => {
     it('returns 400 for invalid id', async () => {
-        const res = await request(app).get('/api/coach/tournaments/bad/scoring-categories').set(auth());
+        const res = await request(app).get('/coach/tournaments/bad/scoring-categories').set(auth());
         expect(res.status).toBe(400);
     });
     it('returns 200 with categories', async () => {
         mockDbQuery.mockResolvedValueOnce({ rows: [], rowCount: 0 } as any);
-        const res = await request(app).get(`/api/coach/tournaments/${TID}/scoring-categories`).set(auth());
+        const res = await request(app).get(`/coach/tournaments/${TID}/scoring-categories`).set(auth());
         expect(res.status).toBe(200);
         expect(res.body).toEqual([]);
     });
@@ -465,18 +465,18 @@ describe('GET /api/coach/tournaments/:id/scoring-categories', () => {
 
 describe('GET /api/coach/tournaments/:id/witnesses', () => {
     it('returns 400 for invalid id', async () => {
-        const res = await request(app).get('/api/coach/tournaments/bad/witnesses').set(auth());
+        const res = await request(app).get('/coach/tournaments/bad/witnesses').set(auth());
         expect(res.status).toBe(400);
     });
     it('returns 200 with witnesses', async () => {
         mockDbQuery.mockResolvedValueOnce({ rows: [{ id: 'w1', name: 'Alice', side: 'P' }], rowCount: 1 } as any);
-        const res = await request(app).get(`/api/coach/tournaments/${TID}/witnesses`).set(auth());
+        const res = await request(app).get(`/coach/tournaments/${TID}/witnesses`).set(auth());
         expect(res.status).toBe(200);
         expect(res.body[0].name).toBe('Alice');
     });
     it('returns 200 empty when no witnesses', async () => {
         mockDbQuery.mockResolvedValueOnce({ rows: [], rowCount: 0 } as any);
-        const res = await request(app).get(`/api/coach/tournaments/${TID}/witnesses`).set(auth());
+        const res = await request(app).get(`/coach/tournaments/${TID}/witnesses`).set(auth());
         expect(res.status).toBe(200);
         expect(res.body).toEqual([]);
     });
@@ -484,18 +484,18 @@ describe('GET /api/coach/tournaments/:id/witnesses', () => {
 
 describe('GET /api/coach/tournaments/:id/format', () => {
     it('returns 400 for invalid id', async () => {
-        const res = await request(app).get('/api/coach/tournaments/bad/format').set(auth());
+        const res = await request(app).get('/coach/tournaments/bad/format').set(auth());
         expect(res.status).toBe(400);
     });
     it('returns 200 with format', async () => {
         mockDbQuery.mockResolvedValueOnce({ rows: [{ p_witnesses_called: 2, d_witnesses_called: 2 }], rowCount: 1 } as any);
-        const res = await request(app).get(`/api/coach/tournaments/${TID}/format`).set(auth());
+        const res = await request(app).get(`/coach/tournaments/${TID}/format`).set(auth());
         expect(res.status).toBe(200);
         expect(res.body.p_witnesses_called).toBe(2);
     });
     it('returns 200 null when not found', async () => {
         mockDbQuery.mockResolvedValueOnce({ rows: [], rowCount: 0 } as any);
-        const res = await request(app).get(`/api/coach/tournaments/${TID}/format`).set(auth());
+        const res = await request(app).get(`/coach/tournaments/${TID}/format`).set(auth());
         expect(res.status).toBe(200);
         expect(res.body).toBeNull();
     });

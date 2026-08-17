@@ -17,7 +17,7 @@ const INVALID_UUID = 'not-a-uuid';
 // ─── GET /api/score/:assignmentId ─────────────────────────────────────────────
 describe('GET /api/score/:assignmentId', () => {
     it('returns 400 for an invalid assignment ID', async () => {
-        const res = await request(testApp).get(`/api/score/${INVALID_UUID}`);
+        const res = await request(testApp).get(`/score/${INVALID_UUID}`);
         expect(res.status).toBe(400);
         expect(res.body.message).toMatch(/invalid assignment/i);
     });
@@ -26,7 +26,7 @@ describe('GET /api/score/:assignmentId', () => {
         // getScoreSheet query 1: assignment lookup returns empty
         mockDbQuery.mockResolvedValueOnce({ rows: [], rowCount: 0 } as never);
 
-        const res = await request(testApp).get(`/api/score/${VALID_UUID}`);
+        const res = await request(testApp).get(`/score/${VALID_UUID}`);
         expect(res.status).toBe(404);
         expect(res.body.message).toMatch(/not found/i);
     });
@@ -51,7 +51,7 @@ describe('GET /api/score/:assignmentId', () => {
         // Query 2: existing ballot check — ballot exists
         mockDbQuery.mockResolvedValueOnce({ rows: [{ ballot_id: 'b1' }], rowCount: 1 } as never);
 
-        const res = await request(testApp).get(`/api/score/${VALID_UUID}`);
+        const res = await request(testApp).get(`/score/${VALID_UUID}`);
         expect(res.status).toBe(410);
         expect(res.body.message).toMatch(/already submitted/i);
     });
@@ -74,7 +74,7 @@ describe('GET /api/score/:assignmentId', () => {
             rowCount: 1,
         } as never);
 
-        const res = await request(testApp).get(`/api/score/${VALID_UUID}`);
+        const res = await request(testApp).get(`/score/${VALID_UUID}`);
         expect(res.status).toBe(409);
         expect(res.body.message).toMatch(/conflict/i);
     });
@@ -145,7 +145,7 @@ describe('GET /api/score/:assignmentId', () => {
         // Query 10: student assignments
         mockDbQuery.mockResolvedValueOnce({ rows: [], rowCount: 0 } as never);
 
-        const res = await request(testApp).get(`/api/score/${VALID_UUID}`);
+        const res = await request(testApp).get(`/score/${VALID_UUID}`);
         expect(res.status).toBe(200);
         expect(res.body).toHaveProperty('isCriminal', true);
         expect(res.body).toHaveProperty('caseName', 'State v. Doe');
@@ -172,7 +172,7 @@ describe('POST /api/score/:assignmentId/ballot', () => {
 
     it('returns 400 for an invalid assignment ID', async () => {
         const res = await request(testApp)
-            .post(`/api/score/${INVALID_UUID}/ballot`)
+            .post(`/score/${INVALID_UUID}/ballot`)
             .send(validPayload);
         expect(res.status).toBe(400);
         expect(res.body.message).toMatch(/invalid assignment/i);
@@ -180,7 +180,7 @@ describe('POST /api/score/:assignmentId/ballot', () => {
 
     it('returns 400 when payload is missing pairingID', async () => {
         const res = await request(testApp)
-            .post(`/api/score/${VALID_UUID}/ballot`)
+            .post(`/score/${VALID_UUID}/ballot`)
             .send({ scores: [] });
         expect(res.status).toBe(400);
         expect(res.body.message).toMatch(/invalid payload/i);
@@ -188,7 +188,7 @@ describe('POST /api/score/:assignmentId/ballot', () => {
 
     it('returns 400 when payload is missing scores array', async () => {
         const res = await request(testApp)
-            .post(`/api/score/${VALID_UUID}/ballot`)
+            .post(`/score/${VALID_UUID}/ballot`)
             .send({ pairingID: 'p1' });
         expect(res.status).toBe(400);
         expect(res.body.message).toMatch(/invalid payload/i);
@@ -199,7 +199,7 @@ describe('POST /api/score/:assignmentId/ballot', () => {
         mockDbQuery.mockResolvedValueOnce({ rows: [], rowCount: 0 } as never);
 
         const res = await request(testApp)
-            .post(`/api/score/${VALID_UUID}/ballot`)
+            .post(`/score/${VALID_UUID}/ballot`)
             .send(validPayload);
         expect(res.status).toBe(404);
         expect(res.body.message).toMatch(/not found/i);
@@ -218,7 +218,7 @@ describe('POST /api/score/:assignmentId/ballot', () => {
         mockDbQuery.mockRejectedValueOnce(pgError);
 
         const res = await request(testApp)
-            .post(`/api/score/${VALID_UUID}/ballot`)
+            .post(`/score/${VALID_UUID}/ballot`)
             .send(validPayload);
         expect(res.status).toBe(409);
         expect(res.body.message).toMatch(/already submitted/i);
@@ -234,7 +234,7 @@ describe('POST /api/score/:assignmentId/ballot', () => {
         mockDbQuery.mockResolvedValueOnce({ rows: [], rowCount: 1 } as never);
 
         const res = await request(testApp)
-            .post(`/api/score/${VALID_UUID}/ballot`)
+            .post(`/score/${VALID_UUID}/ballot`)
             .send(validPayload);
         expect(res.status).toBe(201);
         expect(res.body.message).toMatch(/ballot submitted/i);
@@ -264,7 +264,7 @@ describe('POST /api/score/:assignmentId/ballot', () => {
         mockDbQuery.mockResolvedValueOnce({ rows: [], rowCount: 1 } as never);
 
         const res = await request(testApp)
-            .post(`/api/score/${VALID_UUID}/ballot`)
+            .post(`/score/${VALID_UUID}/ballot`)
             .send(payload);
         expect(res.status).toBe(201);
 
@@ -279,7 +279,7 @@ describe('POST /api/score/:assignmentId/ballot', () => {
 describe('POST /api/score/:assignmentId/conflict', () => {
     it('returns 400 for an invalid assignment ID', async () => {
         const res = await request(testApp)
-            .post(`/api/score/${INVALID_UUID}/conflict`);
+            .post(`/score/${INVALID_UUID}/conflict`);
         expect(res.status).toBe(400);
         expect(res.body.message).toMatch(/invalid assignment/i);
     });
@@ -291,7 +291,7 @@ describe('POST /api/score/:assignmentId/conflict', () => {
         mockDbQuery.mockResolvedValueOnce({ rows: [], rowCount: 0 } as never);
 
         const res = await request(testApp)
-            .post(`/api/score/${VALID_UUID}/conflict`);
+            .post(`/score/${VALID_UUID}/conflict`);
         expect(res.status).toBe(200);
         expect(res.body.message).toMatch(/conflict reported/i);
     });
@@ -315,7 +315,7 @@ describe('POST /api/score/:assignmentId/conflict', () => {
         } as never);
 
         const res = await request(testApp)
-            .post(`/api/score/${VALID_UUID}/conflict`);
+            .post(`/score/${VALID_UUID}/conflict`);
         expect(res.status).toBe(200);
 
         // Wait a tick for the fire-and-forget promise to resolve
@@ -338,7 +338,7 @@ describe('POST /api/score/:assignmentId/conflict', () => {
         mockDbQuery.mockResolvedValueOnce({ rows: [{ assignment_id: VALID_UUID }], rowCount: 1 } as never);
 
         const res = await request(testApp)
-            .post(`/api/score/${VALID_UUID}/conflict`);
+            .post(`/score/${VALID_UUID}/conflict`);
         expect(res.status).toBe(200);
 
         await new Promise(resolve => setTimeout(resolve, 50));
@@ -352,7 +352,7 @@ describe('POST /api/score/:assignmentId/conflict', () => {
         mockDbQuery.mockResolvedValueOnce({ rows: [], rowCount: 0 } as never);
 
         const res = await request(testApp)
-            .post(`/api/score/${VALID_UUID}/conflict`);
+            .post(`/score/${VALID_UUID}/conflict`);
         expect(res.status).toBe(200);
 
         await new Promise(resolve => setTimeout(resolve, 50));
@@ -404,7 +404,7 @@ describe('GET /api/score/:assignmentId — paper scorer path', () => {
         // Query 10: student assignments
         mockDbQuery.mockResolvedValueOnce({ rows: [], rowCount: 0 } as never);
 
-        const res = await request(testApp).get(`/api/score/${VALID_UUID}`);
+        const res = await request(testApp).get(`/score/${VALID_UUID}`);
         expect(res.status).toBe(200);
         expect(res.body.scorer.firstName).toBe('Paper Pat');
         expect(res.body.scorer.lastName).toBe('');
@@ -439,7 +439,7 @@ describe('GET /api/score/:assignmentId — presider name resolution', () => {
         mockDbQuery.mockResolvedValueOnce({ rows: [], rowCount: 0 } as never);
         mockDbQuery.mockResolvedValueOnce({ rows: [], rowCount: 0 } as never);
 
-        const res = await request(testApp).get(`/api/score/${VALID_UUID}`);
+        const res = await request(testApp).get(`/score/${VALID_UUID}`);
         expect(res.status).toBe(200);
         expect(res.body.presiderName).toBe('Alex Presider');
         expect(res.body.ballotOptions.fillableScores).toBe(true);
@@ -471,7 +471,7 @@ describe('GET /api/score/:assignmentId — presider name resolution', () => {
         mockDbQuery.mockResolvedValueOnce({ rows: [], rowCount: 0 } as never);
         mockDbQuery.mockResolvedValueOnce({ rows: [], rowCount: 0 } as never);
 
-        const res = await request(testApp).get(`/api/score/${VALID_UUID}`);
+        const res = await request(testApp).get(`/score/${VALID_UUID}`);
         expect(res.status).toBe(200);
         expect(res.body.presiderName).toBe('Paper Presider');
     });
@@ -500,7 +500,7 @@ describe('GET /api/score/:assignmentId — presider name resolution', () => {
         mockDbQuery.mockResolvedValueOnce({ rows: [], rowCount: 0 } as never);
         mockDbQuery.mockResolvedValueOnce({ rows: [], rowCount: 0 } as never);
 
-        const res = await request(testApp).get(`/api/score/${VALID_UUID}`);
+        const res = await request(testApp).get(`/score/${VALID_UUID}`);
         expect(res.status).toBe(200);
         expect(res.body.ballotOptions.showTiebreaker).toBe(true);
         expect(res.body.ballotOptions.fillableScores).toBe(false);
@@ -559,7 +559,7 @@ describe('GET /api/score/:assignmentId — witness categories + student assignme
             rowCount: 2,
         } as never);
 
-        const res = await request(testApp).get(`/api/score/${VALID_UUID}`);
+        const res = await request(testApp).get(`/score/${VALID_UUID}`);
         expect(res.status).toBe(200);
         expect(res.body.witnesses).toBeTruthy();
         expect(res.body.witnesses.w2).toEqual({ characterName: 'Witness B' });
