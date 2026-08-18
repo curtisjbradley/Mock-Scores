@@ -12,8 +12,8 @@ const STANDINGS_PAYLOAD = {
 }
 
 function stubStandingsTab() {
-    cy.intercept('GET', '/api/organizer/tournament/tourney-1', { statusCode: 200, body: TOURNAMENT }).as('getTournament')
-    cy.intercept('GET', '/api/organizer/tournament/tourney-1/standings', { statusCode: 200, body: STANDINGS_PAYLOAD }).as('getStandings')
+    cy.intercept('GET', '/organizer/tournament/tourney-1', { statusCode: 200, body: TOURNAMENT }).as('getTournament')
+    cy.intercept('GET', '/organizer/tournament/tourney-1/standings', { statusCode: 200, body: STANDINGS_PAYLOAD }).as('getStandings')
 }
 
 describe('Organizer Standings Tab', () => {

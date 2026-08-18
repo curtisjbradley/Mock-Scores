@@ -6,8 +6,8 @@ const TEAMS = [
 ]
 
 function stubTeamsTab() {
-  cy.intercept('GET', '/api/organizer/tournament/tourney-1', { statusCode: 200, body: TOURNAMENT }).as('getTournament')
-  cy.intercept('GET', '/api/organizer/tournament/tourney-1/teams', { statusCode: 200, body: TEAMS }).as('getTeams')
+  cy.intercept('GET', '/organizer/tournament/tourney-1', { statusCode: 200, body: TOURNAMENT }).as('getTournament')
+  cy.intercept('GET', '/organizer/tournament/tourney-1/teams', { statusCode: 200, body: TEAMS }).as('getTeams')
 }
 
 describe('Teams Tab', () => {
@@ -50,7 +50,7 @@ describe('Teams Tab', () => {
   })
 
   it('removes a team on confirmation', () => {
-    cy.intercept('DELETE', '/api/organizer/tournament/tourney-1/teams', { statusCode: 200, body: {} }).as('deleteTeam')
+    cy.intercept('DELETE', '/organizer/tournament/tourney-1/teams', { statusCode: 200, body: {} }).as('deleteTeam')
     cy.contains('tr', 'Eagles').contains('button', 'Remove').click()
     cy.get('[role="dialog"]').within(() => cy.contains('button', /confirm|yes|remove/i).click())
     cy.contains('Eagles').should('not.exist')

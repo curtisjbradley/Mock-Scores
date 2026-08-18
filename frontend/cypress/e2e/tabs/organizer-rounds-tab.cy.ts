@@ -6,8 +6,8 @@ const ROUNDS = [
 ]
 
 function stubRoundsTab(rounds = ROUNDS) {
-  cy.intercept('GET', '/api/organizer/tournament/tourney-1', { statusCode: 200, body: TOURNAMENT }).as('getTournament')
-  cy.intercept('GET', '/api/organizer/tournament/tourney-1/rounds', { statusCode: 200, body: rounds }).as('getRounds')
+  cy.intercept('GET', '/organizer/tournament/tourney-1', { statusCode: 200, body: TOURNAMENT }).as('getTournament')
+  cy.intercept('GET', '/organizer/tournament/tourney-1/rounds', { statusCode: 200, body: rounds }).as('getRounds')
 }
 
 describe('Rounds Tab', () => {
@@ -32,7 +32,7 @@ describe('Rounds Tab', () => {
   })
 
   it('adds a round on click', () => {
-    cy.intercept('POST', '/api/organizer/tournament/tourney-1/rounds', {
+    cy.intercept('POST', '/organizer/tournament/tourney-1/rounds', {
       statusCode: 200,
       body: { round_id: 'r-3', tournament_id: 'tourney-1', name: 'Round 3', round_time: null, position: 3, teams_public: false, results_public: false },
     }).as('postRound')
@@ -42,11 +42,11 @@ describe('Rounds Tab', () => {
   })
 
   it('clicking Open → navigates to round view', () => {
-    cy.intercept('GET', '/api/organizer/tournament/tourney-1/rounds/r-1', { statusCode: 200, body: ROUNDS[0] }).as('getRound')
-    cy.intercept('GET', '/api/organizer/tournament/tourney-1/rounds/r-1/pairings', { statusCode: 200, body: [] }).as('getPairings')
-    cy.intercept('GET', '/api/organizer/tournament/tourney-1/scorers', { statusCode: 200, body: [] }).as('getScorers')
-    cy.intercept('GET', '/api/organizer/tournament/tourney-1/courtrooms', { statusCode: 200, body: [] }).as('getCourtrooms')
-    cy.intercept('GET', '/api/organizer/tournament/tourney-1/scorer-conflicts', { statusCode: 200, body: [] }).as('getConflicts')
+    cy.intercept('GET', '/organizer/tournament/tourney-1/rounds/r-1', { statusCode: 200, body: ROUNDS[0] }).as('getRound')
+    cy.intercept('GET', '/organizer/tournament/tourney-1/rounds/r-1/pairings', { statusCode: 200, body: [] }).as('getPairings')
+    cy.intercept('GET', '/organizer/tournament/tourney-1/scorers', { statusCode: 200, body: [] }).as('getScorers')
+    cy.intercept('GET', '/organizer/tournament/tourney-1/courtrooms', { statusCode: 200, body: [] }).as('getCourtrooms')
+    cy.intercept('GET', '/organizer/tournament/tourney-1/scorer-conflicts', { statusCode: 200, body: [] }).as('getConflicts')
     cy.get('.dash-round-summary').first().contains('button', 'Open →').click()
     cy.url().should('include', '/organizer/tourney-1/round/r-1')
   })
@@ -58,7 +58,7 @@ describe('Rounds Tab', () => {
   })
 
   it('removes round on confirmation', () => {
-    cy.intercept('DELETE', '/api/organizer/tournament/tourney-1/rounds/r-1', { statusCode: 200, body: {} }).as('deleteRound')
+    cy.intercept('DELETE', '/organizer/tournament/tourney-1/rounds/r-1', { statusCode: 200, body: {} }).as('deleteRound')
     cy.get('.dash-round-summary').first().contains('button', 'Remove').click()
     cy.get('[role="dialog"]').within(() => cy.contains('button', /confirm|yes|remove/i).click())
     cy.get('.dash-round-summary').should('have.length', 1)

@@ -186,7 +186,9 @@ export function csrfCookieOptions() {
         sameSite: (isProd ? 'none' : 'lax') as 'none' | 'lax',
         path:     '/',
         domain:   isProd ? '.mockscores.org' : undefined,
-        maxAge:   Math.floor(REFRESH_TOKEN_TTL_MS / 1000),
+        // Express's res.cookie expects maxAge in milliseconds and converts to
+        // the Max-Age (seconds) attribute itself — pass the raw ms value.
+        maxAge:   REFRESH_TOKEN_TTL_MS,
     };
 }
 
@@ -206,7 +208,9 @@ export function refreshCookieOptions() {
         sameSite: (isProd ? 'none' : 'lax') as 'none' | 'lax',
         path:     '/',
         domain:   isProd ? '.mockscores.org' : undefined,
-        maxAge:   Math.floor(REFRESH_TOKEN_TTL_MS / 1000),
+        // Express's res.cookie expects maxAge in milliseconds and converts to
+        // the Max-Age (seconds) attribute itself — pass the raw ms value.
+        maxAge:   REFRESH_TOKEN_TTL_MS,
     };
 }
 

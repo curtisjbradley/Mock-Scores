@@ -26,13 +26,13 @@ Cypress.Commands.add('loginAs', (user: {
   lastName: string
 }) => {
   // Stub the silent-refresh endpoint so auth.ts populates _accessToken
-  cy.intercept('POST', '/api/auth/refresh', {
+  cy.intercept('POST', '/auth/refresh', {
     statusCode: 200,
     body: { accessToken: 'fake-access-token' },
   }).as('refresh')
 
   // Stub the session verification endpoint
-  cy.intercept('GET', '/api/auth/session', {
+  cy.intercept('GET', '/auth/session', {
     statusCode: 200,
     body: user,
   }).as('session')
@@ -43,9 +43,9 @@ Cypress.Commands.add('loginAs', (user: {
  * call succeeds, and stubs subsequent session/refresh calls as unauthenticated.
  */
 Cypress.Commands.add('logout', () => {
-  cy.intercept('POST', '/api/auth/logout', { statusCode: 204 }).as('logout')
-  cy.intercept('POST', '/api/auth/refresh', { statusCode: 401 }).as('refreshUnauthed')
-  cy.intercept('GET', '/api/auth/session', { statusCode: 401, body: {} }).as('sessionUnauthed')
+  cy.intercept('POST', '/auth/logout', { statusCode: 204 }).as('logout')
+  cy.intercept('POST', '/auth/refresh', { statusCode: 401 }).as('refreshUnauthed')
+  cy.intercept('GET', '/auth/session', { statusCode: 401, body: {} }).as('sessionUnauthed')
 })
 
 declare module 'cypress' {

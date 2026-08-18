@@ -16,13 +16,13 @@ const PAIRINGS = [
 ]
 
 function stubRoundView(pairings = PAIRINGS) {
-  cy.intercept('GET', '/api/organizer/tournament/tourney-1/rounds/round-1', { statusCode: 200, body: ROUND }).as('getRound')
-  cy.intercept('GET', '/api/organizer/tournament/tourney-1/teams', { statusCode: 200, body: TEAMS }).as('getTeams')
-  cy.intercept('GET', '/api/organizer/tournament/tourney-1/courtrooms', { statusCode: 200, body: COURTROOMS }).as('getCourtrooms')
-  cy.intercept('GET', '/api/organizer/tournament/tourney-1/rounds/round-1/pairings', { statusCode: 200, body: pairings }).as('getPairings')
-  cy.intercept('GET', '/api/organizer/tournament/tourney-1/scorers', { statusCode: 200, body: [] }).as('getScorers')
-  cy.intercept('GET', '/api/organizer/tournament/tourney-1/rounds/round-1/pairings/pair-1/scorers', { statusCode: 200, body: [] }).as('getPairingScorers')
-  cy.intercept('GET', '/api/organizer/tournament/tourney-1/scorer-conflicts', { statusCode: 200, body: [] }).as('getConflicts')
+  cy.intercept('GET', '/organizer/tournament/tourney-1/rounds/round-1', { statusCode: 200, body: ROUND }).as('getRound')
+  cy.intercept('GET', '/organizer/tournament/tourney-1/teams', { statusCode: 200, body: TEAMS }).as('getTeams')
+  cy.intercept('GET', '/organizer/tournament/tourney-1/courtrooms', { statusCode: 200, body: COURTROOMS }).as('getCourtrooms')
+  cy.intercept('GET', '/organizer/tournament/tourney-1/rounds/round-1/pairings', { statusCode: 200, body: pairings }).as('getPairings')
+  cy.intercept('GET', '/organizer/tournament/tourney-1/scorers', { statusCode: 200, body: [] }).as('getScorers')
+  cy.intercept('GET', '/organizer/tournament/tourney-1/rounds/round-1/pairings/pair-1/scorers', { statusCode: 200, body: [] }).as('getPairingScorers')
+  cy.intercept('GET', '/organizer/tournament/tourney-1/scorer-conflicts', { statusCode: 200, body: [] }).as('getConflicts')
 }
 
 describe('Round View', () => {
@@ -40,7 +40,7 @@ describe('Round View', () => {
   })
 
   it('back button navigates to rounds tab', () => {
-    cy.intercept('GET', '/api/organizer/tournament/tourney-1', { statusCode: 200, body: { id: 'tourney-1', name: 'Spring Invitational', location: '', num_teams: 0, num_rounds: 0, case_format_id: 'cf-1' } }).as('getTournament')
+    cy.intercept('GET', '/organizer/tournament/tourney-1', { statusCode: 200, body: { id: 'tourney-1', name: 'Spring Invitational', location: '', num_teams: 0, num_rounds: 0, case_format_id: 'cf-1' } }).as('getTournament')
     cy.contains('button', '← Back to rounds').click()
     cy.url().should('include', '/organizer/tourney-1')
     cy.url().should('include', 'page=rounds')
@@ -83,7 +83,7 @@ describe('Round View', () => {
   })
 
   it('shows 404 page when round is not found', () => {
-    cy.intercept('GET', '/api/organizer/tournament/tourney-1/rounds/round-1', { statusCode: 404, body: {} }).as('notFound')
+    cy.intercept('GET', '/organizer/tournament/tourney-1/rounds/round-1', { statusCode: 404, body: {} }).as('notFound')
     cy.visit('/organizer/tourney-1/round/round-1')
     cy.wait('@session')
     cy.wait('@notFound')
@@ -91,7 +91,7 @@ describe('Round View', () => {
   })
 
   it('can inline-edit the round name', () => {
-    cy.intercept('PATCH', '/api/organizer/tournament/tourney-1/rounds/round-1', { statusCode: 200, body: {} }).as('patchRound')
+    cy.intercept('PATCH', '/organizer/tournament/tourney-1/rounds/round-1', { statusCode: 200, body: {} }).as('patchRound')
     cy.contains('Round 1').click()
     cy.get('input.rv-name-input').clear().type('Round One{enter}')
     cy.contains('Round One').should('be.visible')

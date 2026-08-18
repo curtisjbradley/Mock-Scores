@@ -124,17 +124,6 @@ export async function getSession(): Promise<Session | null> {
 // ── Login / logout ────────────────────────────────────────────────────────────
 
 /**
- * Stores the access token received from the login or refresh response.
- * Called by `useLoginForm` and `GoogleAuthButton` after a successful auth.
- *
- * @deprecated Use `setAccessToken` directly — this alias exists for clarity
- * at call sites coming from the login flow.
- */
-export function saveToken(token: string): void {
-    setAccessToken(token);
-}
-
-/**
  * Clears the in-memory access token and calls `/auth/logout` to revoke
  * the HttpOnly refresh cookie on the server.
  */

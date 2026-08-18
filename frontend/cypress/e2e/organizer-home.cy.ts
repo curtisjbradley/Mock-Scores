@@ -28,7 +28,7 @@ const TOURNAMENTS = [
 describe('Organizer Home', () => {
   beforeEach(() => {
     cy.loginAs(USER)
-    cy.intercept('GET', '/api/organizer/tournament', { statusCode: 200, body: TOURNAMENTS }).as('getTournaments')
+    cy.intercept('GET', '/organizer/tournament', { statusCode: 200, body: TOURNAMENTS }).as('getTournaments')
     cy.visit('/organizer')
     cy.wait('@session')
     cy.wait('@getTournaments')
@@ -60,7 +60,7 @@ describe('Organizer Home', () => {
   })
 
   it('navigates to the tournament dashboard when a card is clicked', () => {
-    cy.intercept('GET', '/api/organizer/tournament/tourney-1', { statusCode: 200, body: TOURNAMENTS[0] }).as('getTournament')
+    cy.intercept('GET', '/organizer/tournament/tourney-1', { statusCode: 200, body: TOURNAMENTS[0] }).as('getTournament')
     cy.contains('Spring Invitational').click()
     cy.url().should('include', '/organizer/tourney-1')
   })
@@ -80,7 +80,7 @@ describe('Organizer Home', () => {
   })
 
   it('handles empty tournament list gracefully', () => {
-    cy.intercept('GET', '/api/organizer/tournament', { statusCode: 200, body: [] }).as('empty')
+    cy.intercept('GET', '/organizer/tournament', { statusCode: 200, body: [] }).as('empty')
     cy.visit('/organizer')
     cy.wait('@session')
     cy.wait('@empty')

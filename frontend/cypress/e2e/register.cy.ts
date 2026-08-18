@@ -1,6 +1,6 @@
 describe('Register page', () => {
   beforeEach(() => {
-    cy.intercept('GET', '/api/auth/session', { statusCode: 401, body: {} }).as('session')
+    cy.intercept('GET', '/auth/session', { statusCode: 401, body: {} }).as('session')
     cy.visit('/register')
   })
 
@@ -39,7 +39,7 @@ describe('Register page', () => {
   })
 
   it('shows error on registration failure', () => {
-    cy.intercept('POST', '/api/auth/register', {
+    cy.intercept('POST', '/auth/register', {
       statusCode: 409,
       body: { message: 'Email already in use.' },
     }).as('registerFail')
@@ -54,7 +54,7 @@ describe('Register page', () => {
   })
 
   it('redirects to /login on successful registration', () => {
-    cy.intercept('POST', '/api/auth/register', { statusCode: 201, body: {} }).as('registerOk')
+    cy.intercept('POST', '/auth/register', { statusCode: 201, body: {} }).as('registerOk')
     cy.get('#firstName').type('Jane')
     cy.get('#lastName').type('Doe')
     cy.get('#email').type('newuser@example.com')
@@ -66,7 +66,7 @@ describe('Register page', () => {
   })
 
   it('shows generic error on network failure', () => {
-    cy.intercept('POST', '/api/auth/register', { forceNetworkError: true }).as('registerErr')
+    cy.intercept('POST', '/auth/register', { forceNetworkError: true }).as('registerErr')
     cy.get('#firstName').type('Jane')
     cy.get('#lastName').type('Doe')
     cy.get('#email').type('jane@example.com')

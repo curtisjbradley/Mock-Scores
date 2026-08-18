@@ -1,6 +1,6 @@
 describe('Home page', () => {
   beforeEach(() => {
-    cy.intercept('GET', '/api/auth/session', { statusCode: 401, body: {} }).as('session')
+    cy.intercept('GET', '/auth/session', { statusCode: 401, body: {} }).as('session')
     cy.visit('/')
   })
 
