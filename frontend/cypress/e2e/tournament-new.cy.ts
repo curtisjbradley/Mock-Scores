@@ -14,7 +14,7 @@ describe('New Tournament wizard', () => {
   })
 
   it('back button on step 1 navigates to /organizer', () => {
-    cy.intercept('GET', '/api/organizer/tournament', { statusCode: 200, body: [] }).as('orgList')
+    cy.intercept('GET', '/organizer/tournament', { statusCode: 200, body: [] }).as('orgList')
     cy.contains('button', /all tournaments/i).click()
     cy.url().should('include', '/organizer')
     cy.url().should('not.include', '/new')

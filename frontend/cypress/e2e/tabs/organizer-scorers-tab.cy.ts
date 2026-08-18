@@ -6,8 +6,8 @@ const SCORERS = [
 ]
 
 function stubScorersTab() {
-  cy.intercept('GET', '/api/organizer/tournament/tourney-1', { statusCode: 200, body: TOURNAMENT }).as('getTournament')
-  cy.intercept('GET', '/api/organizer/tournament/tourney-1/scorers', { statusCode: 200, body: SCORERS }).as('getScorers')
+  cy.intercept('GET', '/organizer/tournament/tourney-1', { statusCode: 200, body: TOURNAMENT }).as('getTournament')
+  cy.intercept('GET', '/organizer/tournament/tourney-1/scorers', { statusCode: 200, body: SCORERS }).as('getScorers')
 }
 
 describe('Scorers Tab', () => {
@@ -63,14 +63,14 @@ describe('Scorers Tab', () => {
   })
 
   it('opens Manage Conflicts modal', () => {
-    cy.intercept('GET', '/api/organizer/tournament/tourney-1/scorers/s-1/conflicts', { statusCode: 200, body: [] }).as('getConflicts')
-    cy.intercept('GET', '/api/organizer/tournament/tourney-1/teams', { statusCode: 200, body: [] }).as('getTeams')
+    cy.intercept('GET', '/organizer/tournament/tourney-1/scorers/s-1/conflicts', { statusCode: 200, body: [] }).as('getConflicts')
+    cy.intercept('GET', '/organizer/tournament/tourney-1/teams', { statusCode: 200, body: [] }).as('getTeams')
     cy.contains('tr', 'Jane Doe').contains('button', 'Manage Conflicts').click()
     cy.get('[role="dialog"]').contains(/conflicts/i).should('be.visible')
   })
 
   it('opens remove confirmation and removes scorer', () => {
-    cy.intercept('DELETE', '/api/organizer/tournament/tourney-1/scorers', { statusCode: 200, body: {} }).as('deleteScorer')
+    cy.intercept('DELETE', '/organizer/tournament/tourney-1/scorers', { statusCode: 200, body: {} }).as('deleteScorer')
     cy.contains('tr', 'Jane Doe').contains('button', 'Remove').click()
     cy.get('[role="dialog"]').should('be.visible')
     cy.get('[role="dialog"]').within(() => cy.contains('button', /confirm|yes|remove/i).click())

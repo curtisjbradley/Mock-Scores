@@ -18,7 +18,7 @@ describe.skip('Scorecard Viewer', () => {
   })
 
   it('back button navigates back', () => {
-    cy.intercept('GET', '/api/organizer/tournament/tourney-1', { statusCode: 200, body: { id: 'tourney-1', name: 'Spring Invitational', location: '', num_teams: 0, num_rounds: 0, case_format_id: 'cf-1' } }).as('getTournament')
+    cy.intercept('GET', '/organizer/tournament/tourney-1', { statusCode: 200, body: { id: 'tourney-1', name: 'Spring Invitational', location: '', num_teams: 0, num_rounds: 0, case_format_id: 'cf-1' } }).as('getTournament')
     cy.contains('button', '← Back to tournament').click()
     cy.url().should('not.include', '/scoresheet/')
   })

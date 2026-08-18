@@ -6,8 +6,8 @@ const COURTROOMS = [
 ]
 
 function stubCourtroomsTab() {
-  cy.intercept('GET', '/api/organizer/tournament/tourney-1', { statusCode: 200, body: TOURNAMENT }).as('getTournament')
-  cy.intercept('GET', '/api/organizer/tournament/tourney-1/courtrooms', { statusCode: 200, body: COURTROOMS }).as('getCourtrooms')
+  cy.intercept('GET', '/organizer/tournament/tourney-1', { statusCode: 200, body: TOURNAMENT }).as('getTournament')
+  cy.intercept('GET', '/organizer/tournament/tourney-1/courtrooms', { statusCode: 200, body: COURTROOMS }).as('getCourtrooms')
 }
 
 describe('Courtrooms Tab', () => {
@@ -56,7 +56,7 @@ describe('Courtrooms Tab', () => {
   })
 
   it('adds a courtroom optimistically', () => {
-    cy.intercept('POST', '/api/organizer/tournament/tourney-1/courtrooms', { statusCode: 200, body: {} }).as('postCourtroom')
+    cy.intercept('POST', '/organizer/tournament/tourney-1/courtrooms', { statusCode: 200, body: {} }).as('postCourtroom')
     cy.contains('button', '+ Add courtroom').click()
     cy.get('#cr-name').type('Courtroom C')
     cy.get('[role="dialog"]').within(() => cy.contains('button', 'Add courtroom').click())
@@ -64,7 +64,7 @@ describe('Courtrooms Tab', () => {
   })
 
   it('removes a courtroom after confirmation', () => {
-    cy.intercept('DELETE', '/api/organizer/tournament/tourney-1/courtrooms', { statusCode: 200, body: {} }).as('deleteCourtroom')
+    cy.intercept('DELETE', '/organizer/tournament/tourney-1/courtrooms', { statusCode: 200, body: {} }).as('deleteCourtroom')
     cy.contains('tr', 'Courtroom A').contains('button', 'Remove').click()
     cy.get('[role="dialog"]').within(() => cy.contains('button', /confirm|yes|remove/i).click())
     cy.contains('Courtroom A').should('not.exist')

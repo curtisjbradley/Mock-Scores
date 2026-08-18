@@ -5,10 +5,10 @@ const ORGANIZERS_DELEGATE = [{ id: 'o-1', name: 'Alice Smith', email: 'org@examp
 const FORMAT = { case_name: 'People v. Test', criminal_case: true, p_witnesses_called: null, d_witnesses_called: null, has_swing: false }
 
 function stubSettingsTab(organizers = ORGANIZERS_OWNER) {
-  cy.intercept('GET', '/api/organizer/tournament/tourney-1', { statusCode: 200, body: TOURNAMENT }).as('getTournament')
-  cy.intercept('GET', '/api/organizer/tournament/tourney-1/format', { statusCode: 200, body: FORMAT }).as('getFormat')
-  cy.intercept('GET', '/api/organizer/tournament/tourney-1/organizers', { statusCode: 200, body: organizers }).as('getOrganizers')
-  cy.intercept('GET', '/api/auth/session', { statusCode: 200, body: USER }).as('session')
+  cy.intercept('GET', '/organizer/tournament/tourney-1', { statusCode: 200, body: TOURNAMENT }).as('getTournament')
+  cy.intercept('GET', '/organizer/tournament/tourney-1/format', { statusCode: 200, body: FORMAT }).as('getFormat')
+  cy.intercept('GET', '/organizer/tournament/tourney-1/organizers', { statusCode: 200, body: organizers }).as('getOrganizers')
+  cy.intercept('GET', '/auth/session', { statusCode: 200, body: USER }).as('session')
 }
 
 describe('Tournament Settings Tab', () => {
@@ -33,8 +33,8 @@ describe('Tournament Settings Tab', () => {
   })
 
   it('saves settings successfully', () => {
-    cy.intercept('PATCH', '/api/organizer/tournament/tourney-1', { statusCode: 200, body: {} }).as('saveTournament')
-    cy.intercept('PATCH', '/api/organizer/tournament/tourney-1/format', { statusCode: 200, body: {} }).as('saveFormat')
+    cy.intercept('PATCH', '/organizer/tournament/tourney-1', { statusCode: 200, body: {} }).as('saveTournament')
+    cy.intercept('PATCH', '/organizer/tournament/tourney-1/format', { statusCode: 200, body: {} }).as('saveFormat')
     cy.contains('button', 'Save').click()
     cy.contains('Saved successfully').should('be.visible')
   })

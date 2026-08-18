@@ -13,17 +13,17 @@ const TOURNAMENT = {
 }
 
 function stubDashboard() {
-  cy.intercept('GET', '/api/organizer/tournament/tourney-1', { statusCode: 200, body: TOURNAMENT }).as('getTournament')
+  cy.intercept('GET', '/organizer/tournament/tourney-1', { statusCode: 200, body: TOURNAMENT }).as('getTournament')
   // stub all tab-level APIs to prevent unhandled requests
-  cy.intercept('GET', '/api/organizer/tournament/tourney-1/teams*', { statusCode: 200, body: [] }).as('getTeams')
-  cy.intercept('GET', '/api/organizer/tournament/tourney-1/scorers*', { statusCode: 200, body: [] }).as('getScorers')
-  cy.intercept('GET', '/api/organizer/tournament/tourney-1/courtrooms*', { statusCode: 200, body: [] }).as('getCourtrooms')
-  cy.intercept('GET', '/api/organizer/tournament/tourney-1/organizers*', { statusCode: 200, body: [] }).as('getOrganizers')
-  cy.intercept('GET', '/api/organizer/tournament/tourney-1/witnesses*', { statusCode: 200, body: [] }).as('getWitnesses')
-  cy.intercept('GET', '/api/organizer/tournament/tourney-1/scoring*', { statusCode: 200, body: [] }).as('getScoring')
-  cy.intercept('GET', '/api/organizer/tournament/tourney-1/rounds*', { statusCode: 200, body: [] }).as('getRounds')
-  cy.intercept('GET', '/api/organizer/tournament/tourney-1/settings*', { statusCode: 200, body: TOURNAMENT }).as('getSettings')
-  cy.intercept('GET', '/api/organizer/tournament/tourney-1/tiebreakers*', { statusCode: 200, body: null }).as('getTiebreakers')
+  cy.intercept('GET', '/organizer/tournament/tourney-1/teams*', { statusCode: 200, body: [] }).as('getTeams')
+  cy.intercept('GET', '/organizer/tournament/tourney-1/scorers*', { statusCode: 200, body: [] }).as('getScorers')
+  cy.intercept('GET', '/organizer/tournament/tourney-1/courtrooms*', { statusCode: 200, body: [] }).as('getCourtrooms')
+  cy.intercept('GET', '/organizer/tournament/tourney-1/organizers*', { statusCode: 200, body: [] }).as('getOrganizers')
+  cy.intercept('GET', '/organizer/tournament/tourney-1/witnesses*', { statusCode: 200, body: [] }).as('getWitnesses')
+  cy.intercept('GET', '/organizer/tournament/tourney-1/scoring*', { statusCode: 200, body: [] }).as('getScoring')
+  cy.intercept('GET', '/organizer/tournament/tourney-1/rounds*', { statusCode: 200, body: [] }).as('getRounds')
+  cy.intercept('GET', '/organizer/tournament/tourney-1/settings*', { statusCode: 200, body: TOURNAMENT }).as('getSettings')
+  cy.intercept('GET', '/organizer/tournament/tourney-1/tiebreakers*', { statusCode: 200, body: null }).as('getTiebreakers')
 }
 
 describe('Tournament Dashboard', () => {
@@ -54,7 +54,7 @@ describe('Tournament Dashboard', () => {
   })
 
   it('back button navigates to /organizer from home screen', () => {
-    cy.intercept('GET', '/api/organizer/tournament', { statusCode: 200, body: [] }).as('orgList')
+    cy.intercept('GET', '/organizer/tournament', { statusCode: 200, body: [] }).as('orgList')
     cy.contains('button', '← All tournaments').click()
     cy.url().should('include', '/organizer')
     cy.url().should('not.include', 'tourney-1')
@@ -98,7 +98,7 @@ describe('Tournament Dashboard', () => {
   })
 
   it('redirects to /403 when the API returns 403', () => {
-    cy.intercept('GET', '/api/organizer/tournament/tourney-1', { statusCode: 403, body: {} }).as('forbidden')
+    cy.intercept('GET', '/organizer/tournament/tourney-1', { statusCode: 403, body: {} }).as('forbidden')
     cy.visit('/organizer/tourney-1')
     cy.wait('@session')
     cy.wait('@forbidden')

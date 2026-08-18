@@ -18,7 +18,7 @@ const TOURNAMENTS = [
 describe('Coach Home', () => {
   beforeEach(() => {
     cy.loginAs(USER)
-    cy.intercept('GET', '/api/coach/tournaments', { statusCode: 200, body: TOURNAMENTS }).as('getTournaments')
+    cy.intercept('GET', '/coach/tournaments', { statusCode: 200, body: TOURNAMENTS }).as('getTournaments')
     cy.visit('/coach')
     cy.wait('@session')
     cy.wait('@getTournaments')
@@ -35,15 +35,15 @@ describe('Coach Home', () => {
   })
 
   it('navigates to the coach dashboard on card click', () => {
-    cy.intercept('GET', '/api/coach/tournaments', { statusCode: 200, body: TOURNAMENTS }).as('ts2')
-    cy.intercept('GET', '/api/coach/tournaments/t-1/schedule', { statusCode: 200, body: [] }).as('schedule')
-    cy.intercept('GET', '/api/coach/tournaments/t-1/results', { statusCode: 200, body: [] }).as('results')
+    cy.intercept('GET', '/coach/tournaments', { statusCode: 200, body: TOURNAMENTS }).as('ts2')
+    cy.intercept('GET', '/coach/tournaments/t-1/schedule', { statusCode: 200, body: [] }).as('schedule')
+    cy.intercept('GET', '/coach/tournaments/t-1/results', { statusCode: 200, body: [] }).as('results')
     cy.contains('Lincoln High - Spring Invitational').click()
     cy.url().should('include', '/coach/t-1')
   })
 
   it('shows empty state when no tournaments', () => {
-    cy.intercept('GET', '/api/coach/tournaments', { statusCode: 200, body: [] }).as('empty')
+    cy.intercept('GET', '/coach/tournaments', { statusCode: 200, body: [] }).as('empty')
     cy.visit('/coach')
     cy.wait('@session')
     cy.wait('@empty')

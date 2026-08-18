@@ -14,9 +14,9 @@ const CATEGORIES = [
 ]
 
 function stubScoringTab() {
-  cy.intercept('GET', '/api/organizer/tournament/tourney-1', { statusCode: 200, body: TOURNAMENT }).as('getTournament')
-  cy.intercept('GET', '/api/organizer/tournament/tourney-1/scoring-categories', { statusCode: 200, body: CATEGORIES }).as('getCategories')
-  cy.intercept('GET', '/api/organizer/tournament/tourney-1/format', { statusCode: 200, body: FORMAT }).as('getFormat')
+  cy.intercept('GET', '/organizer/tournament/tourney-1', { statusCode: 200, body: TOURNAMENT }).as('getTournament')
+  cy.intercept('GET', '/organizer/tournament/tourney-1/scoring-categories', { statusCode: 200, body: CATEGORIES }).as('getCategories')
+  cy.intercept('GET', '/organizer/tournament/tourney-1/format', { statusCode: 200, body: FORMAT }).as('getFormat')
 }
 
 describe('Scoring Tab', () => {
@@ -41,7 +41,7 @@ describe('Scoring Tab', () => {
   })
 
   it('saves scoring categories', () => {
-    cy.intercept('PATCH', '/api/organizer/tournament/tourney-1/scoring-categories', { statusCode: 200, body: {} }).as('saveCategories')
+    cy.intercept('PATCH', '/organizer/tournament/tourney-1/scoring-categories', { statusCode: 200, body: {} }).as('saveCategories')
     cy.contains('button', /save/i).click()
     cy.wait('@saveCategories')
   })

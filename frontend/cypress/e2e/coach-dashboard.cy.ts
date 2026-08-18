@@ -45,13 +45,13 @@ const COACHES = [
 ]
 
 function stubCoachDashboard() {
-  cy.intercept('GET', '/api/coach/tournaments', { statusCode: 200, body: [TOURNAMENT] }).as('getTournaments')
-  cy.intercept('GET', '/api/coach/tournaments/t-1/schedule*', { statusCode: 200, body: SCHEDULE }).as('getSchedule')
-  cy.intercept('GET', '/api/coach/tournaments/t-1/results', { statusCode: 200, body: [] }).as('getResults')
-  cy.intercept('GET', '/api/coach/teams/team-1/students', { statusCode: 200, body: STUDENTS }).as('getStudents')
-  cy.intercept('GET', '/api/coach/teams/team-1/coaches', { statusCode: 200, body: COACHES }).as('getCoaches')
-  cy.intercept('GET', '/api/coach/tournaments/t-1/field', { statusCode: 200, body: [] }).as('getField')
-  cy.intercept('GET', '/api/coach/tournaments/t-1/standings', { statusCode: 200, body: null }).as('getStandings')
+  cy.intercept('GET', '/coach/tournaments', { statusCode: 200, body: [TOURNAMENT] }).as('getTournaments')
+  cy.intercept('GET', '/coach/tournaments/t-1/schedule*', { statusCode: 200, body: SCHEDULE }).as('getSchedule')
+  cy.intercept('GET', '/coach/tournaments/t-1/results', { statusCode: 200, body: [] }).as('getResults')
+  cy.intercept('GET', '/coach/teams/team-1/students', { statusCode: 200, body: STUDENTS }).as('getStudents')
+  cy.intercept('GET', '/coach/teams/team-1/coaches', { statusCode: 200, body: COACHES }).as('getCoaches')
+  cy.intercept('GET', '/coach/tournaments/t-1/field', { statusCode: 200, body: [] }).as('getField')
+  cy.intercept('GET', '/coach/tournaments/t-1/standings', { statusCode: 200, body: null }).as('getStandings')
 }
 
 describe('Coach Dashboard', () => {
@@ -103,7 +103,7 @@ describe('Coach Dashboard', () => {
   })
 
   it('adds a student from the Roster tab', () => {
-    cy.intercept('POST', '/api/coach/teams/team-1/students', {
+    cy.intercept('POST', '/coach/teams/team-1/students', {
       statusCode: 200,
       body: { student_id: 's-3', team_id: 'team-1', student_name: 'Charlie Student', pronouns: 'they/them' },
     }).as('addStudent')
@@ -133,7 +133,7 @@ describe('Coach Dashboard', () => {
   })
 
   it('removes a student from the Roster tab', () => {
-    cy.intercept('DELETE', '/api/coach/teams/team-1/students/s-1', { statusCode: 200, body: {} }).as('removeStudent')
+    cy.intercept('DELETE', '/coach/teams/team-1/students/s-1', { statusCode: 200, body: {} }).as('removeStudent')
     cy.contains('button', 'Roster').click()
     cy.wait('@getStudents')
     cy.contains('li', 'Alice Student').find('button').click()
@@ -149,7 +149,7 @@ describe('Coach Dashboard', () => {
   })
 
   it('back button navigates to /coach', () => {
-    cy.intercept('GET', '/api/coach/tournaments', { statusCode: 200, body: [] }).as('homeList')
+    cy.intercept('GET', '/coach/tournaments', { statusCode: 200, body: [] }).as('homeList')
     cy.contains('button', '← All tournaments').click()
     cy.url().should('include', '/coach')
     cy.url().should('not.include', '/t-1')

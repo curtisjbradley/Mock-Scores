@@ -68,7 +68,7 @@ describe('Accessibility', () => {
     describe('Organizer pages', () => {
         beforeEach(() => {
             // Stub tournament list
-            cy.intercept('GET', '/api/organizer/tournament', {
+            cy.intercept('GET', '/organizer/tournament', {
                 statusCode: 200,
                 body: [{
                     id: 'test-id-000',
@@ -95,7 +95,7 @@ describe('Accessibility', () => {
         })
 
         it('Scorecard viewer has no critical a11y violations', () => {
-            cy.intercept('GET', '/api/organizer/tournament/t1/pairings/p1/scoresheets/j1', {
+            cy.intercept('GET', '/organizer/tournament/t1/pairings/p1/scoresheets/j1', {
                 statusCode: 200,
                 body: {
                     sheet: {
@@ -129,6 +129,7 @@ describe('Accessibility', () => {
                             },
                         },
                         categoryOrder: ['cat1'],
+                        awardCategories: {},
                     },
                     ballot: {
                         pairingID: 'p1',

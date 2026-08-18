@@ -11,9 +11,9 @@ describe('Witness Call Order page', () => {
   const URL = '/coach/t-1/witness-order/team-1/p-1?side=p'
 
   function stubPage(witnesses = WITNESSES, format = FORMAT, saved = []) {
-    cy.intercept('GET', '/api/coach/tournaments/t-1/witnesses', { statusCode: 200, body: witnesses }).as('getWitnesses')
-    cy.intercept('GET', '/api/coach/tournaments/t-1/format', { statusCode: 200, body: format }).as('getFormat')
-    cy.intercept('GET', '/api/coach/teams/team-1/pairings/p-1/witness-order', { statusCode: 200, body: saved }).as('getSaved')
+    cy.intercept('GET', '/coach/tournaments/t-1/witnesses', { statusCode: 200, body: witnesses }).as('getWitnesses')
+    cy.intercept('GET', '/coach/tournaments/t-1/format', { statusCode: 200, body: format }).as('getFormat')
+    cy.intercept('GET', '/coach/teams/team-1/pairings/p-1/witness-order', { statusCode: 200, body: saved }).as('getSaved')
   }
 
   beforeEach(() => {
@@ -46,7 +46,7 @@ describe('Witness Call Order page', () => {
   })
 
   it('can select a witness and save', () => {
-    cy.intercept('PUT', '/api/coach/teams/team-1/pairings/p-1/witness-order', { statusCode: 200, body: {} }).as('saveOrder')
+    cy.intercept('PUT', '/coach/teams/team-1/pairings/p-1/witness-order', { statusCode: 200, body: {} }).as('saveOrder')
     cy.get('select.rv-select').first().select('w-1')
     cy.contains('button', 'Save').click()
     cy.wait('@saveOrder')

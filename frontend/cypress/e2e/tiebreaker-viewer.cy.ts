@@ -24,10 +24,10 @@ const STANDINGS_RESPONSE = {
 }
 
 function stubForStandings() {
-  cy.intercept('GET', '/api/coach/tournaments', { statusCode: 200, body: [TOURNAMENT] }).as('getTournaments')
-  cy.intercept('GET', '/api/coach/tournaments/t-1/schedule', { statusCode: 200, body: [] }).as('getSchedule')
-  cy.intercept('GET', '/api/coach/tournaments/t-1/results', { statusCode: 200, body: [] }).as('getResults')
-  cy.intercept('GET', '/api/coach/tournaments/t-1/standings', { statusCode: 200, body: STANDINGS_RESPONSE }).as('getStandings')
+  cy.intercept('GET', '/coach/tournaments', { statusCode: 200, body: [TOURNAMENT] }).as('getTournaments')
+  cy.intercept('GET', '/coach/tournaments/t-1/schedule', { statusCode: 200, body: [] }).as('getSchedule')
+  cy.intercept('GET', '/coach/tournaments/t-1/results', { statusCode: 200, body: [] }).as('getResults')
+  cy.intercept('GET', '/coach/tournaments/t-1/standings', { statusCode: 200, body: STANDINGS_RESPONSE }).as('getStandings')
 }
 
 describe('TiebreakerViewer — via Coach Standings tab', () => {
@@ -65,10 +65,10 @@ describe('TiebreakerViewer — no tiebreakers configured', () => {
   it('shows "No tiebreakers configured" when standingsXml has no rules', () => {
     const emptyStandingsXml = '<xml xmlns="https://developers.google.com/blockly/xml"><block type="tiebreaker_order" deletable="false" movable="false" x="20" y="20"></block></xml>'
     cy.loginAs(USER)
-    cy.intercept('GET', '/api/coach/tournaments', { statusCode: 200, body: [TOURNAMENT] }).as('getTournaments')
-    cy.intercept('GET', '/api/coach/tournaments/t-1/schedule', { statusCode: 200, body: [] }).as('getSchedule')
-    cy.intercept('GET', '/api/coach/tournaments/t-1/results', { statusCode: 200, body: [] }).as('getResults')
-    cy.intercept('GET', '/api/coach/tournaments/t-1/standings', {
+    cy.intercept('GET', '/coach/tournaments', { statusCode: 200, body: [TOURNAMENT] }).as('getTournaments')
+    cy.intercept('GET', '/coach/tournaments/t-1/schedule', { statusCode: 200, body: [] }).as('getSchedule')
+    cy.intercept('GET', '/coach/tournaments/t-1/results', { statusCode: 200, body: [] }).as('getResults')
+    cy.intercept('GET', '/coach/tournaments/t-1/standings', {
       statusCode: 200,
       body: { ...STANDINGS_RESPONSE, config: { ...STANDINGS_RESPONSE.config, standingsXml: emptyStandingsXml } },
     }).as('getStandings')

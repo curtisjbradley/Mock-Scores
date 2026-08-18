@@ -4,9 +4,9 @@ const WITNESSES = { pWitnessNames: ['Alice', 'Bob'], dWitnessNames: ['Carol'], s
 const FORMAT = { case_name: 'People v. Test', criminal_case: true, p_witnesses_called: 2, d_witnesses_called: 1, has_swing: false }
 
 function stubWitnessesTab() {
-  cy.intercept('GET', '/api/organizer/tournament/tourney-1', { statusCode: 200, body: TOURNAMENT }).as('getTournament')
-  cy.intercept('GET', '/api/organizer/tournament/tourney-1/witnesses', { statusCode: 200, body: WITNESSES }).as('getWitnesses')
-  cy.intercept('GET', '/api/organizer/tournament/tourney-1/format', { statusCode: 200, body: FORMAT }).as('getFormat')
+  cy.intercept('GET', '/organizer/tournament/tourney-1', { statusCode: 200, body: TOURNAMENT }).as('getTournament')
+  cy.intercept('GET', '/organizer/tournament/tourney-1/witnesses', { statusCode: 200, body: WITNESSES }).as('getWitnesses')
+  cy.intercept('GET', '/organizer/tournament/tourney-1/format', { statusCode: 200, body: FORMAT }).as('getFormat')
 }
 
 describe('Witnesses Tab', () => {
@@ -53,8 +53,8 @@ describe('Witnesses Tab', () => {
   })
 
   it('saves witnesses', () => {
-    cy.intercept('PATCH', '/api/organizer/tournament/tourney-1/witnesses', { statusCode: 200, body: {} }).as('saveWitnesses')
-    cy.intercept('PATCH', '/api/organizer/tournament/tourney-1/format', { statusCode: 200, body: {} }).as('saveFormat')
+    cy.intercept('PATCH', '/organizer/tournament/tourney-1/witnesses', { statusCode: 200, body: {} }).as('saveWitnesses')
+    cy.intercept('PATCH', '/organizer/tournament/tourney-1/format', { statusCode: 200, body: {} }).as('saveFormat')
     cy.contains('button', 'Save').click()
     cy.contains('Saved successfully').should('be.visible')
   })

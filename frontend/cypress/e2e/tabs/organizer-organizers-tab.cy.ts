@@ -6,9 +6,9 @@ const ORGANIZERS = [
 ]
 
 function stubOrganizersTab() {
-  cy.intercept('GET', '/api/organizer/tournament/tourney-1', { statusCode: 200, body: TOURNAMENT }).as('getTournament')
-  cy.intercept('GET', '/api/organizer/tournament/tourney-1/organizers', { statusCode: 200, body: ORGANIZERS }).as('getOrganizers')
-  cy.intercept('GET', '/api/auth/session', { statusCode: 200, body: USER }).as('session')
+  cy.intercept('GET', '/organizer/tournament/tourney-1', { statusCode: 200, body: TOURNAMENT }).as('getTournament')
+  cy.intercept('GET', '/organizer/tournament/tourney-1/organizers', { statusCode: 200, body: ORGANIZERS }).as('getOrganizers')
+  cy.intercept('GET', '/auth/session', { statusCode: 200, body: USER }).as('session')
 }
 
 describe('Organizers Tab', () => {
@@ -58,7 +58,7 @@ describe('Organizers Tab', () => {
   })
 
   it('removes delegate on confirmation', () => {
-    cy.intercept('DELETE', '/api/organizer/tournament/tourney-1/organizers', { statusCode: 200, body: {} }).as('deleteOrganizer')
+    cy.intercept('DELETE', '/organizer/tournament/tourney-1/organizers', { statusCode: 200, body: {} }).as('deleteOrganizer')
     cy.contains('tr', 'Bob Jones').contains('button', 'Remove').click()
     cy.get('[role="dialog"]').within(() => cy.contains('button', /confirm|yes|remove/i).click())
     cy.contains('Bob Jones').should('not.exist')
