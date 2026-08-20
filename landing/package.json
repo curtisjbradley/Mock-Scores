@@ -1,0 +1,21 @@
+{
+  "name": "landing",
+  "version": "0.0.0",
+  "type": "module",
+  "scripts": {
+    "dev": "astro dev",
+    "build": "astro build",
+    "preview": "astro preview",
+    "lint": "astro check",
+    "prepare": "node -e \"if(process.env.NODE_ENV !== 'production') { require('child_process').execSync('cd .. && husky', {stdio:'inherit'}) }\""
+  },
+  "dependencies": {
+    "@astrojs/sitemap": "^3.7.3",
+    "astro": "^7.2.3",
+    "overlayscrollbars": "^2.16.0"
+  },
+  "devDependencies": {
+    "@astrojs/check": "^0.9.10",
+    "typescript": "~6.0.3"
+  }
+}

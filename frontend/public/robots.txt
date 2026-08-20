@@ -1,8 +1,2 @@
 User-agent: *
-Disallow: /score/
-Disallow: /organizer/
-Disallow: /coach/
-Disallow: /login
-Disallow: /register
-
-Sitemap: https://www.mockscores.org/sitemap.xml
+Disallow: /*
