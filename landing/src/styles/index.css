@@ -1,0 +1,310 @@
+/* ─────────────────────────────────────────────────────────────────────────
+ * Landing page styles. Design tokens come from global.css (copied from the
+ * app frontend) so colors + dark mode stay consistent with the product.
+ * ───────────────────────────────────────────────────────────────────────── */
+
+/* ── Shared section heading ────────────────────────────────────────────── */
+.section-head {
+    text-align: center;
+    max-width: 44rem;
+    margin: 0 auto var(--space-lg);
+}
+
+.section-head h2,
+.by-a-coach h2 {
+    font-size: clamp(1.6rem, 3vw + 0.5rem, 2.25rem);
+    color: var(--text);
+    font-weight: 700;
+    letter-spacing: -0.02em;
+}
+
+.section-sub {
+    margin-top: var(--space-sm);
+    color: var(--text-muted);
+    font-size: 1.05rem;
+}
+
+/* Small uppercase label used above headings */
+.eyebrow {
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    font-size: 0.8rem;
+    font-weight: 700;
+    color: var(--primary);
+    margin: 0;
+}
+
+/* ── Hero ──────────────────────────────────────────────────────────────── */
+/*
+ * Full-bleed banner: image is a background layer, text overlays on top.
+ * The negative margins cancel `main`'s max-width + padding so it spans the
+ * whole viewport.
+ */
+.hero {
+    position: relative;
+    width: 100vw;
+    max-width: 100vw;
+    margin-left: calc(50% - 50vw);
+    margin-right: calc(50% - 50vw);
+    min-height: 78vh;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    text-align: center;
+    padding: 6rem 1.5rem;
+    overflow: hidden;
+}
+
+.hero-media {
+    position: absolute;
+    inset: 0;
+    z-index: 0;
+    margin: 0;
+    display: block;
+}
+
+.hero-media .home-hero-img {
+    position: absolute;
+    inset: 0;
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    object-position: center;
+}
+
+/* Gradient scrim: darker at the bottom where text sits, lighter at top —
+ * more depth than a flat overlay while keeping text readable. */
+.hero-media::after {
+    content: "";
+    position: absolute;
+    inset: 0;
+    z-index: 1;
+    background: linear-gradient(
+        180deg,
+        rgba(15, 23, 42, 0.35) 0%,
+        rgba(15, 23, 42, 0.55) 60%,
+        rgba(15, 23, 42, 0.7) 100%
+    );
+}
+
+.hero-content {
+    position: relative;
+    z-index: 2;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: var(--space-md);
+    max-width: 48rem;
+    color: var(--white);
+}
+
+.hero-content .eyebrow {
+    color: #cdd9ff;
+}
+
+.hero h1 {
+    font-size: clamp(2.25rem, 5vw + 1rem, 3.75rem);
+    line-height: 1.1;
+    color: var(--white);
+    margin: 0;
+}
+
+.hero-lede {
+    max-width: 40rem;
+    font-size: clamp(1.05rem, 1vw + 0.9rem, 1.3rem);
+    color: rgba(255, 255, 255, 0.92);
+    margin: 0;
+}
+
+.hero-actions {
+    display: flex;
+    flex-wrap: wrap;
+    gap: var(--space-sm);
+    justify-content: center;
+    margin-top: var(--space-sm);
+}
+
+/* Ghost button for the secondary hero action (on the dark image) */
+.btn-ghost {
+    display: inline-block;
+    height: 2.5rem;
+    line-height: 2.5rem;
+    padding: 0 1.25rem;
+    border-radius: var(--radius);
+    border: 1px solid rgba(255, 255, 255, 0.6);
+    color: var(--white);
+    background: rgba(255, 255, 255, 0.08);
+    font-size: 0.95rem;
+    font-weight: 600;
+    backdrop-filter: blur(4px);
+    transition: background 140ms ease, border-color 140ms ease;
+}
+
+.btn-ghost:hover {
+    background: rgba(255, 255, 255, 0.18);
+    border-color: var(--white);
+    text-decoration: none;
+}
+
+/* ── Features ──────────────────────────────────────────────────────────── */
+.features {
+    padding-block: var(--space-2xl);
+}
+
+.features ul {
+    list-style: none;
+    padding: 0;
+    margin: 0;
+    display: grid;
+    gap: var(--space-lg);
+    grid-template-columns: 1fr;
+}
+
+.features li {
+    background-color: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    box-shadow: var(--shadow);
+    padding: var(--space-lg);
+    transition: transform 160ms ease, box-shadow 160ms ease, border-color 160ms ease;
+}
+
+.features li:hover {
+    transform: translateY(-4px);
+    border-color: var(--border-strong);
+}
+
+.feature-icon {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 3rem;
+    height: 3rem;
+    border-radius: 0.75rem;
+    background: var(--primary-subtle);
+    font-size: 1.5rem;
+    margin-bottom: var(--space-md);
+}
+
+.features li h3 {
+    font-size: 1.2rem;
+    font-weight: 700;
+    color: var(--text);
+    margin: 0 0 var(--space-xs);
+}
+
+.features li p {
+    margin: 0;
+    color: var(--text-muted);
+    font-size: 1rem;
+    line-height: 1.6;
+}
+
+/* ── Built by a coach ──────────────────────────────────────────────────── */
+.by-a-coach {
+    background: var(--surface-muted);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    overflow: hidden;
+    margin-bottom: var(--space-2xl);
+}
+
+.coach-two-col {
+    display: grid;
+    grid-template-columns: 1fr;
+    align-items: stretch;
+}
+
+.coach-media {
+    display: none;
+    margin: 0;
+}
+
+.coach-media .coach-hero-img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    object-position: center;
+}
+
+.coach-text {
+    padding: var(--space-xl);
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-md);
+}
+
+.coach-text .eyebrow {
+    margin-bottom: calc(-1 * var(--space-xs));
+}
+
+.coach-text h2 {
+    margin: 0;
+}
+
+.coach-text p {
+    margin: 0;
+    color: var(--text);
+    line-height: 1.7;
+}
+
+/* ── Closing CTA band ──────────────────────────────────────────────────── */
+.cta-band {
+    text-align: center;
+    background: var(--primary);
+    color: var(--white);
+    border-radius: var(--radius);
+    padding: var(--space-2xl) var(--space-lg);
+    margin-bottom: var(--space-2xl);
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: var(--space-sm);
+    box-shadow: var(--shadow-primary-lg);
+}
+
+.cta-band h2 {
+    color: var(--white);
+    font-size: clamp(1.6rem, 3vw + 0.5rem, 2.25rem);
+    font-weight: 700;
+    margin: 0;
+}
+
+.cta-band p {
+    color: rgba(255, 255, 255, 0.9);
+    font-size: 1.1rem;
+    margin: 0 0 var(--space-sm);
+}
+
+/* The confirm button is blue by default; invert it on the blue band. */
+.cta-band .btn-confirm {
+    background: var(--white);
+    color: var(--primary);
+}
+
+.cta-band .btn-confirm:hover:not(:disabled) {
+    background: var(--primary-subtle);
+    color: var(--primary-dark);
+}
+
+/* ── Responsive ────────────────────────────────────────────────────────── */
+@media (min-width: 40rem) {
+    .features ul {
+        grid-template-columns: repeat(2, 1fr);
+    }
+
+    .coach-media {
+        display: block;
+    }
+
+    .coach-two-col {
+        grid-template-columns: 5fr 7fr;
+    }
+}
+
+@media (min-width: 64rem) {
+    .features ul {
+        grid-template-columns: repeat(3, 1fr);
+    }
+}

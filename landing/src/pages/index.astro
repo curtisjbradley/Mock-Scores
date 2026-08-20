@@ -1,0 +1,98 @@
+---
+import BaseLayout from '../layouts/BaseLayout.astro';
+import '../styles/index.css';
+
+const title = 'MockScores - Scoring & Tabulation for Mock Trial Tournaments';
+const description =
+  'Open-source scoring and tabulation software for high school and collegiate mock trial tournaments. Easy for judges, customizable for organizers, transparent for coaches.';
+
+// SoftwareApplication structured data helps Google render a rich result for
+// a product/app landing page. Adjust fields as the product evolves.
+const jsonLd = {
+  '@context': 'https://schema.org',
+  '@type': 'SoftwareApplication',
+  name: 'MockScores',
+  applicationCategory: 'BusinessApplication',
+  operatingSystem: 'Web',
+  description,
+  url: 'https://www.mockscores.org',
+  offers: {
+    '@type': 'Offer',
+    price: '0',
+    priceCurrency: 'USD',
+  },
+};
+---
+
+<BaseLayout title={title} description={description} jsonLd={jsonLd}>
+  <main>
+
+    <section class="hero">
+      <picture class="hero-media"><source srcset="/hero.webp" type="image/webp"><img alt="" class="home-hero-img" fetchpriority="high" aria-hidden="true" src="/hero.JPG"></picture>
+      <div class="hero-content">
+        <p class="eyebrow">Free &amp; open-source tournament software</p>
+        <h1>Scoring and tabulation, built for mock trial</h1>
+        <p class="hero-lede">
+          MockScores makes running a mock trial tournament simple. Create tournaments,
+          publish pairings, and tabulate ballots - all in a few clicks.
+        </p>
+        <div class="hero-actions">
+          <a class="btn-confirm" href="https://app.mockscores.org">Get started</a>
+          <a class="btn-ghost" href="#features">See how it works</a>
+        </div>
+      </div>
+    </section>
+
+    <section class="features" id="features" aria-labelledby="features-head">
+      <div class="section-head">
+        <h2 id="features-head">Why MockScores?</h2>
+        <p class="section-sub">Everything you need to run a tournament, from the first pairing to the final award.</p>
+      </div>
+      <ul>
+        <li>
+          <h3>Ease of use</h3>
+          <p>Judges score from an emailed link. No accounts. No fuss.</p>
+        </li>
+        <li>
+          <h3>Customizable</h3>
+          <p>Configure case formats, witnesses, scoring fields and multipliers, and custom tiebreakers.</p>
+        </li>
+        <li>
+          <h3>Transparent</h3>
+          <p>Coaches see rosters, pairings, and results as they publish.</p>
+        </li>
+        <li>
+          <h3>Open source</h3>
+          <p>All code is open source on <a href="https://github.com/curtisjbradley/Mock-Scores">GitHub</a> and can be audited at any time.</p>
+        </li>
+        <li>
+          <h3>Free to use</h3>
+          <p>Hosted by the <a href="https://www.slocoe.org/about/programs/mock-trial/">San Luis Obispo Mock Trial Committee</a>, making it free to use.</p>
+        </li>
+        <li>
+          <h3>Instant tabulation</h3>
+          <p>Scores and awards are tabulated in real time. No more manual calculations on competition day.</p>
+        </li>
+      </ul>
+    </section>
+
+    <section class="by-a-coach" aria-labelledby="by-a-coach-head">
+      <div class="coach-two-col">
+        <picture class="coach-media"><source srcset="/coaching.webp" type="image/webp"><img alt="" class="coach-hero-img" fetchpriority="high" aria-hidden="true" src="/coaching.jpeg"></picture>
+        <div class="coach-text">
+          <p class="eyebrow">About the developer</p>
+          <h2 id="by-a-coach-head">Built by a coach, for coaches</h2>
+          <p>Let's face it - competition day is stressful. Months of practice and preparation come down to just a few hours, and for many participants that experience can make or break their season.</p>
+          <p>With 11 years of mock trial competition and coaching experience, I've been no stranger to competition-day issues: delays, incorrectly tabulated ballots, and matchup mistakes all add to the stress.</p>
+          <p>MockScores is designed with the competitor and coach in mind. By making the tournament process easier, organizers can focus on making competitions the valuable experience they deserve to be.</p>
+        </div>
+      </div>
+    </section>
+
+    <section class="cta-band">
+      <h2>Ready to run a better tournament?</h2>
+      <p>Set up your first tournament in minutes - it's free.</p>
+      <a class="btn-confirm" href="https://app.mockscores.org">Get started</a>
+    </section>
+  </main>
+</BaseLayout>

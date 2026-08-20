@@ -21,10 +21,44 @@ export function isValidEmail(email: string): boolean {
     return EMAIL_RE.test(email);
 }
 
+/** Strips HTML tags to produce a plaintext fallback when none is supplied. */
+const htmlToText = (html: string): string =>
+    html
+        .replace(/<style[\s\S]*?<\/style>/gi, '')
+        .replace(/<[^>]+>/g, ' ')
+        .replace(/&nbsp;/g, ' ')
+        .replace(/&amp;/g, '&')
+        .replace(/&lt;/g, '<')
+        .replace(/&gt;/g, '>')
+        .replace(/&quot;/g, '"')
+        .replace(/&#39;/g, "'")
+        .replace(/[ \t]+/g, ' ')
+        .replace(/\n\s*\n\s*\n/g, '\n\n')
+        .trim()
+
+// Address subscribers can use to unsubscribe. Gmail/Yahoo strongly favor a
+// List-Unsubscribe header on automated mail; its absence pushes mail to spam.
+// We only advertise a mailto: target — a URL/one-click variant would require a
+// working frontend route + POST endpoint, which does not exist yet.
+const UNSUBSCRIBE_EMAIL = process.env.UNSUBSCRIBE_EMAIL ?? 'unsubscribe@mockscores.org'
+
 export async function sendEmail(to: string, subject: string, html: string, text: string): Promise<void> {
     if (!EMAIL_RE.test(to)) throw new Error(`Invalid email address: ${to}`)
 
-    await transporter.sendMail({ from: process.env.MAIL_FROM, to, subject, html, text }).then( info =>
+    // Guarantee a non-empty plaintext part so the message is never a
+    // multipart/alternative that contains only HTML (a spam signal).
+    const plainText = text && text.trim().length > 0 ? text : htmlToText(html)
+
+    await transporter.sendMail({
+        from: process.env.MAIL_FROM,
+        to,
+        subject,
+        html,
+        text: plainText,
+        headers: {
+            'List-Unsubscribe': `<mailto:${UNSUBSCRIBE_EMAIL}?subject=unsubscribe>`,
+        },
+    }).then( info =>
         console.log(`Email sent to ${to} — MessageId: ${info.messageId}`)
     ).catch((e) => {
         console.log("error sending email");

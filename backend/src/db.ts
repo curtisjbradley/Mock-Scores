@@ -23,7 +23,7 @@ db.connect()
 
 export default db;
 
-import type { QueryResultRow } from 'pg';
+import type { PoolClient, QueryResultRow } from 'pg';
 
 /** Runs a parameterized query and returns the result, or null on error. */
 export async function dbQuery<T extends QueryResultRow = QueryResultRow>(
@@ -35,5 +35,35 @@ export async function dbQuery<T extends QueryResultRow = QueryResultRow>(
     } catch (err) {
         console.error('DB query error:', (err as Error).message, { sql });
         return null;
+    }
+}
+
+/**
+ * Runs `work` inside a single database transaction on one dedicated pooled
+ * client. Commits if `work` resolves, rolls back if it throws.
+ *
+ * Unlike {@link dbQuery}, this does NOT swallow errors: any error thrown by
+ * `work` (including raw `pg` errors such as unique-constraint violations,
+ * `code === '23505'`) is re-thrown after rollback so callers can inspect it.
+ * The client is always released back to the pool.
+ */
+export async function withTransaction<T>(
+    work: (client: PoolClient) => Promise<T>,
+): Promise<T> {
+    const client = await db.connect();
+    try {
+        await client.query('BEGIN');
+        const result = await work(client);
+        await client.query('COMMIT');
+        return result;
+    } catch (err) {
+        try {
+            await client.query('ROLLBACK');
+        } catch (rollbackErr) {
+            console.error('DB rollback error:', (rollbackErr as Error).message);
+        }
+        throw err;
+    } finally {
+        client.release();
     }
 }

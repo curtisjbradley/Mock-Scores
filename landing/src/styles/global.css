@@ -1,0 +1,308 @@
+/*
+ * Global styles for the MockScores landing site.
+ * Imported once from BaseLayout.astro so every page inherits the design
+ * tokens, reset, base typography, and shared header/nav/footer styling.
+ *
+ * The :root tokens, dark-mode overrides, and .btn-* classes are copied from
+ * the app's frontend (frontend/src/styles/globals.css) so the marketing site
+ * stays visually consistent with the product. Keep them in sync when the app
+ * palette changes.
+ */
+
+/* ── Design tokens (copied from frontend/src/styles/globals.css) ────────── */
+:root {
+    --bg: #ece9ff;
+    --surface: #ffffff;
+    --surface-muted: #f5f3ff;
+
+    --border: #d9dcf3;
+    --border-strong: #a8b2d1;
+
+    --text: #111827;
+    --text-muted: #5b6b88;
+
+    --primary: #2f5bff;
+    --primary-dark: #1d3ecf;
+    --primary-subtle: #eaf0ff;
+
+    --danger: #e61c1c;
+    --danger-bg: rgb(159 19 19 / 0.27);
+
+    --success: #d4edda;
+    --success-text: #155724;
+    --success-border: #c3e6cb;
+
+    --green-bg: #d1fae5;
+    --green-text: #065f46;
+    --green-text-alt: #059669;
+    --red-bg: #fee2e2;
+    --red-text: #991b1b;
+
+    --focus: #9bb8ff;
+
+    --radius: 0.9rem;
+    --shadow: 0 16px 40px rgba(17, 24, 39, 0.08);
+    --shadow-primary: 0 8px 18px rgba(47, 91, 255, 0.2);
+    --shadow-primary-lg: 0 10px 22px rgba(31, 94, 255, 0.22);
+    --overlay-bg: rgba(15, 23, 42, 0.5);
+    --white: #fff;
+
+    --nav-bg: rgba(245, 247, 251, 0.92);
+    --nav-btn-bg: #eaf0ff;
+    --nav-btn-text: #1d3ecf;
+
+    /* Landing-only spacing scale + layout width */
+    --space-xs: 0.5rem;
+    --space-sm: 0.75rem;
+    --space-md: 1.25rem;
+    --space-lg: 2rem;
+    --space-xl: 4rem;
+    --space-2xl: 6rem;
+    --max-width: 64rem;
+}
+
+@media (prefers-color-scheme: dark) {
+    :root {
+        --bg: #0f1117;
+        --surface: #1a1d27;
+        --surface-muted: #22263a;
+
+        --border: #2e3350;
+        --border-strong: #4a5280;
+
+        --text: #e8eaf6;
+        --text-muted: #c7c8dc;
+
+        --primary: #5b7fff;
+        --primary-dark: #93b4ff;
+        --primary-subtle: #1e2d5a;
+
+        --danger: #ff8080;
+        --danger-bg: #4a2020;
+
+        --success: #1e3a2a;
+        --success-text: #6fcf97;
+        --success-border: #2d6a4f;
+
+        --green-bg: #064e3b;
+        --green-text: #6ee7b7;
+        --green-text-alt: #6ee7b7;
+        --red-bg: #450a0a;
+        --red-text: #fca5a5;
+
+        --focus: #3d5aff;
+
+        --shadow: 0 16px 40px rgba(0, 0, 0, 0.4);
+        --shadow-primary: 0 8px 18px rgba(47, 91, 255, 0.15);
+        --shadow-primary-lg: 0 10px 22px rgba(31, 94, 255, 0.18);
+        --overlay-bg: rgba(0, 0, 0, 0.6);
+        --white: #fff;
+
+        --nav-bg: rgba(22, 28, 45, 0.95);
+        --nav-btn-bg: #1e2d5a;
+        --nav-btn-text: #93b4ff;
+    }
+
+    ::-webkit-calendar-picker-indicator {
+        filter: invert(1);
+    }
+}
+
+/* ── Reset / base (copied + extended from frontend) ────────────────────── */
+* {
+    box-sizing: border-box;
+}
+
+*,
+*::before,
+*::after {
+    margin: 0;
+}
+
+html {
+    scroll-behavior: smooth;
+}
+
+body {
+    margin: 0;
+    overflow-x: hidden;
+    background: var(--bg);
+    color: var(--text);
+    font-family: "Open Sans", sans-serif;
+    font-weight: 400;
+    font-size: 1.125rem;
+    line-height: 1.65;
+    -webkit-font-smoothing: antialiased;
+    text-rendering: optimizeLegibility;
+}
+
+/* ── Scrollbar ─────────────────────────────────────────────────────────── */
+/*
+ * The page scrollbar is provided by OverlayScrollbars (initialized in
+ * BaseLayout.astro), which renders a scrollbar that overlays the content on
+ * every platform. Theme/behavior is configured there; no native
+ * ::-webkit-scrollbar / scrollbar-* styling is used here so the two don't
+ * conflict.
+ */
+
+h1,
+h2,
+h3 {
+    font-weight: 500;
+    color: var(--text);
+    margin: 0;
+    line-height: 1.2;
+    letter-spacing: -0.02em;
+}
+
+p {
+    margin: 0;
+}
+
+a {
+    color: var(--primary);
+    text-decoration: none;
+}
+
+a:hover {
+    text-decoration: underline;
+}
+
+img {
+    max-width: 100%;
+    height: auto;
+    display: block;
+}
+
+@media (prefers-reduced-motion: reduce) {
+    *,
+    *::before,
+    *::after {
+        scroll-behavior: auto !important;
+        transition-duration: 0.01ms !important;
+        animation-duration: 0.01ms !important;
+        animation-iteration-count: 1 !important;
+    }
+}
+
+/* ── Shared layout primitives (landing-specific) ───────────────────────── */
+main {
+    max-width: var(--max-width);
+    margin-inline: auto;
+    padding-inline: var(--space-md);
+}
+
+header {
+    border-bottom: 1px solid var(--border);
+    background: var(--surface);
+    flex-shrink: 0;
+}
+
+header nav {
+    max-width: var(--max-width);
+    margin-inline: auto;
+    height: 3.75rem;
+    padding: 0 2rem;
+    display: flex;
+    align-items: center;
+    gap: var(--space-md);
+}
+
+/* Logo — mirrors the app's .site-logo */
+header nav a:first-child {
+    font-size: 1.25rem;
+    font-weight: 500;
+    color: var(--primary);
+    letter-spacing: -0.03rem;
+}
+
+header nav a:first-child:hover {
+    text-decoration: none;
+}
+
+/* Right-aligned CTA — mirrors the app's pill-shaped .account-button */
+header nav a:last-child {
+    margin-left: auto;
+    display: inline-flex;
+    align-items: center;
+    padding: 0.25rem 0.875rem;
+    background: var(--primary);
+    color: var(--primary-subtle);
+    font-size: 0.875rem;
+    font-weight: bold;
+    line-height: 1.6;
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    transition: background 140ms ease, border-color 140ms ease, box-shadow 140ms ease;
+
+}
+
+header nav a:last-child:hover {
+    background: var(--primary-subtle);
+    border-color: var(--primary);
+    color: var(--primary);
+    box-shadow: 0 0.125rem 0.5rem rgba(47, 91, 255, 0.12);
+    text-decoration: none;
+}
+
+header nav a:last-child:focus-visible {
+    outline: none;
+    box-shadow: 0 0 0 0.1875rem var(--focus);
+}
+
+footer {
+    border-top: 1px solid var(--border);
+    margin-top: var(--space-2xl);
+    padding: var(--space-lg) var(--space-md);
+    text-align: center;
+    color: var(--text-muted);
+    font-size: 0.95rem;
+}
+
+/* ── Button classes (copied from frontend/src/styles/globals.css) ──────── */
+.btn-confirm {
+    display: inline-block;
+    height: 2.5rem;
+    padding: 0 1.25rem;
+    line-height: 2.5rem;
+    border: 0;
+    border-radius: var(--radius);
+    background: var(--primary);
+    color: var(--white);
+    font-size: 0.95rem;
+    font-weight: 600;
+    font-family: inherit;
+    cursor: pointer;
+    transition: background 140ms ease;
+}
+
+.btn-confirm:hover:not(:disabled) {
+    background: var(--primary-subtle);
+    border-color: var(--primary);
+    color: var(--primary);
+    text-decoration: none;
+}
+.btn-confirm:disabled { opacity: 0.55; cursor: not-allowed; }
+
+.btn-secondary {
+    display: inline-block;
+    height: 2.5rem;
+    padding: 0 1.25rem;
+    line-height: 2.5rem;
+    border: 1px solid var(--primary);
+    border-radius: var(--radius);
+    background: transparent;
+    color: var(--primary);
+    font-size: 0.95rem;
+    font-weight: 600;
+    font-family: inherit;
+    cursor: pointer;
+    transition: background 140ms ease, color 140ms ease;
+}
+
+.btn-secondary:hover:not(:disabled) {
+    background: var(--primary);
+    color: var(--white);
+    text-decoration: none;
+}
+.btn-secondary:disabled { opacity: 0.55; cursor: not-allowed; }

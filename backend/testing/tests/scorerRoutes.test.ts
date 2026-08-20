@@ -230,8 +230,8 @@ describe('POST /api/score/:assignmentId/ballot', () => {
             rows: [{ pairing_id: 'p1', tournament_id: 'tour1', p_team: 't1', d_team: 't2' }],
             rowCount: 1,
         } as never);
-        // submitBallot query 2: insert succeeds
-        mockDbQuery.mockResolvedValueOnce({ rows: [], rowCount: 1 } as never);
+        // submitBallot query 2: insert succeeds (RETURNING ballot_id)
+        mockDbQuery.mockResolvedValueOnce({ rows: [{ ballot_id: 'b1' }], rowCount: 1 } as never);
 
         const res = await request(testApp)
             .post(`/score/${VALID_UUID}/ballot`)
@@ -261,7 +261,7 @@ describe('POST /api/score/:assignmentId/ballot', () => {
             rows: [{ pairing_id: 'p1', tournament_id: 'tour1', p_team: 't1', d_team: 't2' }],
             rowCount: 1,
         } as never);
-        mockDbQuery.mockResolvedValueOnce({ rows: [], rowCount: 1 } as never);
+        mockDbQuery.mockResolvedValueOnce({ rows: [{ ballot_id: 'b1' }], rowCount: 1 } as never);
 
         const res = await request(testApp)
             .post(`/score/${VALID_UUID}/ballot`)
@@ -272,6 +272,64 @@ describe('POST /api/score/:assignmentId/ballot', () => {
         const insertArgs = mockDbQuery.mock.calls[1][1] as unknown[];
         expect(insertArgs[6]).toBe(8);  // p_points
         expect(insertArgs[7]).toBe(15); // d_points
+    });
+
+    it('inserts nominations in the same transaction after the ballot', async () => {
+        const payload = {
+            pairingID: 'p1',
+            scores: [{ categoryId: 'c1', assignmentKey: 'k1', side: 'P', studentId: null, score: 5 }],
+            nominations: [
+                { awardCategoryId: 'award1', studentId: 'stu1', rank: 1 },
+                { awardCategoryId: 'award1', studentId: 'stu2', rank: 2 },
+            ],
+        };
+
+        // Query 1: assignment lookup
+        mockDbQuery.mockResolvedValueOnce({
+            rows: [{ pairing_id: 'p1', tournament_id: 'tour1', p_team: 't1', d_team: 't2' }],
+            rowCount: 1,
+        } as never);
+        // Query 2: ballot insert (RETURNING ballot_id)
+        mockDbQuery.mockResolvedValueOnce({ rows: [{ ballot_id: 'b1' }], rowCount: 1 } as never);
+        // Query 3 & 4: nomination inserts
+        mockDbQuery.mockResolvedValueOnce({ rows: [], rowCount: 1 } as never);
+        mockDbQuery.mockResolvedValueOnce({ rows: [], rowCount: 1 } as never);
+
+        const res = await request(testApp)
+            .post(`/score/${VALID_UUID}/ballot`)
+            .send(payload);
+        expect(res.status).toBe(201);
+
+        // Ballot insert, then one insert per nomination — all on the tx client.
+        expect(mockDbQuery.mock.calls[1][0]).toMatch(/INSERT INTO ballots/i);
+        expect(mockDbQuery.mock.calls[2][0]).toMatch(/INSERT INTO nominations/i);
+        expect(mockDbQuery.mock.calls[2][1]).toEqual(['b1', 'award1', 'stu1', 1]);
+        expect(mockDbQuery.mock.calls[3][1]).toEqual(['b1', 'award1', 'stu2', 2]);
+    });
+
+    it('rolls back (rejects) when a nomination insert fails, so no partial write is committed', async () => {
+        const payload = {
+            pairingID: 'p1',
+            scores: [{ categoryId: 'c1', assignmentKey: 'k1', side: 'P', studentId: null, score: 5 }],
+            nominations: [{ awardCategoryId: 'award1', studentId: 'stu1', rank: 1 }],
+        };
+
+        // Query 1: assignment lookup
+        mockDbQuery.mockResolvedValueOnce({
+            rows: [{ pairing_id: 'p1', tournament_id: 'tour1', p_team: 't1', d_team: 't2' }],
+            rowCount: 1,
+        } as never);
+        // Query 2: ballot insert succeeds
+        mockDbQuery.mockResolvedValueOnce({ rows: [{ ballot_id: 'b1' }], rowCount: 1 } as never);
+        // Query 3: nomination insert fails — must abort the transaction
+        mockDbQuery.mockRejectedValueOnce(new Error('nomination FK violation'));
+
+        const res = await request(testApp)
+            .post(`/score/${VALID_UUID}/ballot`)
+            .send(payload);
+        // Non-409/404 provider error surfaces as a 500 — the point is the request
+        // did NOT succeed, so the ballot would have been rolled back in real PG.
+        expect(res.status).toBe(500);
     });
 });
 

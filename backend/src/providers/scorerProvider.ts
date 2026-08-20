@@ -1,4 +1,4 @@
-import { dbQuery } from '../db';
+import { dbQuery, withTransaction } from '../db';
 import type { IScoreSheetFormat, ScorecardPayload } from '@mock-scores/shared';
 import { DbError, NotFoundError, AlreadySubmittedError, ConflictReportedError } from '../errors';
 
@@ -422,29 +422,32 @@ export async function submitBallot(assignmentId: string, payload: ScorecardPaylo
     const pPoints = payload.scores.filter(s => s.side === 'P').reduce((sum, s) => sum + s.score, 0);
     const dPoints = payload.scores.filter(s => s.side === 'D').reduce((sum, s) => sum + s.score, 0);
 
-    const result = await dbQuery(
-        `INSERT INTO ballots
-            (scorer_assignment_id, tournament_id, pairing_id, ballot_json, p_team_id, d_team_id, p_points, d_points)
-         VALUES ($1, $2, $3, $4, $5, $6, $7, $8)`,
-        [assignmentId, asg.tournament_id, asg.pairing_id, JSON.stringify(payload), asg.p_team, asg.d_team, pPoints, dPoints],
-    );
-    if (!result) throw new DbError('Failed to insert ballot');
+    // Insert the ballot and its nominations atomically: if any nomination insert
+    // fails, the ballot insert is rolled back too, so we never persist a ballot
+    // with a partial set of nominations. Errors (including the 23505
+    // unique-constraint violation on scorer_assignment_id, used by the route to
+    // return 409) propagate to the caller.
+    await withTransaction(async (client) => {
+        const ballotResult = await client.query<{ ballot_id: string }>(
+            `INSERT INTO ballots
+                (scorer_assignment_id, tournament_id, pairing_id, ballot_json, p_team_id, d_team_id, p_points, d_points)
+             VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
+             RETURNING ballot_id`,
+            [assignmentId, asg.tournament_id, asg.pairing_id, JSON.stringify(payload), asg.p_team, asg.d_team, pPoints, dPoints],
+        );
+        const ballotId = ballotResult.rows[0]?.ballot_id;
+        if (!ballotId) throw new DbError('Failed to insert ballot');
 
-    // Insert nominations into the structured table if present
-    if (payload.nominations && payload.nominations.length > 0) {
-        const ballot = (await dbQuery<{ ballot_id: string }>(
-            'SELECT ballot_id FROM ballots WHERE scorer_assignment_id = $1',
-            [assignmentId],
-        ))?.rows[0];
-        if (ballot) {
-            await Promise.all(payload.nominations.map(nom =>
-                dbQuery(
+        // Insert nominations into the structured table if present
+        if (payload.nominations && payload.nominations.length > 0) {
+            for (const nom of payload.nominations) {
+                await client.query(
                     'INSERT INTO nominations (ballot_id, award_category_id, student_id, rank) VALUES ($1, $2, $3, $4)',
-                    [ballot.ballot_id, nom.awardCategoryId, nom.studentId, nom.rank],
-                )
-            ));
+                    [ballotId, nom.awardCategoryId, nom.studentId, nom.rank],
+                );
+            }
         }
-    }
+    });
 }
 
 // ─── reportConflict ───────────────────────────────────────────────────────────
