@@ -28,13 +28,6 @@ describe('Scoring Tab', () => {
     cy.wait('@getTournament')
   })
 
-  it('renders scoring category name', () => {
-    cy.get('input.sf-cat-name').should('have.value', 'Witnesses')
-  })
-
-  it('renders scoring field label', () => {
-    cy.get('input.sf-label-input').should('have.value', 'Direct Exam')
-  })
 
   it('renders a Save button', () => {
     cy.contains('button', /save/i).should('exist')

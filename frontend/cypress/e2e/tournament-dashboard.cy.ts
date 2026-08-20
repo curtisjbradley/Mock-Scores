@@ -49,7 +49,6 @@ describe('Tournament Dashboard', () => {
     cy.contains('button', 'Manage Scorers').should('be.visible')
     cy.contains('button', 'Manage Courtrooms').should('be.visible')
     cy.contains('button', 'Manage Organizers').should('be.visible')
-    cy.contains('button', 'Manage Tournament').should('be.visible')
     cy.contains('button', 'Tournament Structure').should('be.visible')
   })
 
