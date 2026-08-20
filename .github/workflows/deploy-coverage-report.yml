@@ -3,7 +3,9 @@ name: Deploy coverage report
 on:
   push:
     branches: [main, dev]
-  workflow_dispatch:
+    paths:
+      - "backend/**"
+      - "shared/**"
 
 permissions:
   contents: read
