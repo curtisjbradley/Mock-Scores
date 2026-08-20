@@ -21,7 +21,7 @@ import '../styles/global.css';
 import 'overlayscrollbars/overlayscrollbars.css';
 
 // Astro.site comes from `site` in astro.config.mjs; fall back defensively.
-const siteUrl = Astro.site ?? new URL('https://www.mockscores.org');
+const siteUrl = Astro.site ?? new URL('https://mockscores.org');
 const canonicalURL = new URL(Astro.url.pathname, siteUrl);
 ---
 
@@ -45,6 +45,7 @@ const canonicalURL = new URL(Astro.url.pathname, siteUrl);
     <meta property="og:url" content={canonicalURL} />
     <meta property="og:image" content="favicon.sv" />
     <link rel="icon" type="image/sv" href="/favicon.svg">
+
 
 
     <!-- Structured data for rich results -->
