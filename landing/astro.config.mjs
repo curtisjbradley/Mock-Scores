@@ -6,7 +6,7 @@ import sitemap from '@astrojs/sitemap';
 // generated sitemap and for canonical/Open Graph URLs in the layout.
 // Point this at the marketing subdomain you want search engines to rank.
 export default defineConfig({
-  site: 'https://www.mockscores.org',
+  site: 'https://mockscores.org',
   // Static HTML output — fully pre-rendered pages, ideal for crawlability
   // and Core Web Vitals. No client JS is shipped unless a component opts in.
   output: 'static',
