@@ -1,4 +1,4 @@
 User-agent: *
 Allow: /
 
-Sitemap: https://www.mockscores.org/sitemap-index.xml
+Sitemap: https://mockscores.org/sitemap.xml
