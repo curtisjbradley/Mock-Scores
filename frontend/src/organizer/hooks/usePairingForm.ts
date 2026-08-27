@@ -17,7 +17,6 @@ interface PairingFormState {
 interface PairingFormErrors {
     prosError: string
     defError: string
-    courtroomError: string
 }
 
 /**
@@ -32,9 +31,9 @@ function computePairingErrors(
     state: Pick<PairingFormState, 'addSubmitted' | 'addPros' | 'addDef' | 'addCourtroom'>,
     pairings: IPairing[],
 ): PairingFormErrors {
-    const { addSubmitted, addPros, addDef, addCourtroom } = state
+    const { addSubmitted, addPros, addDef } = state
 
-    if (!addSubmitted) return { prosError: '', defError: '', courtroomError: '' }
+    if (!addSubmitted) return { prosError: '', defError: ''}
 
     const prosAlreadyPros = !!addPros && pairings.some(p => p.p_team === addPros)
     const defAlreadyDef   = !!addDef   && pairings.some(p => p.d_team === addDef)
@@ -47,10 +46,7 @@ function computePairingErrors(
         !addDef            ? 'Select defense team' :
         addDef === addPros  ? 'Must differ from prosecution' :
         defAlreadyDef      ? 'Team already defending this round' : ''
-
-    const courtroomError = !addCourtroom ? 'Select a courtroom' : ''
-
-    return { prosError, defError, courtroomError }
+    return { prosError, defError }
 }
 
 /**

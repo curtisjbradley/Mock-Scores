@@ -9,7 +9,6 @@ interface AddMatchupFormProps {
     addCourtroom: string
     prosError: string
     defError: string
-    courtroomError: string
     onProsChange: (v: string) => void
     onDefChange: (v: string) => void
     onCourtroomChange: (v: string) => void
@@ -23,7 +22,7 @@ interface AddMatchupFormProps {
 export default function AddMatchupForm({
     teams, courtrooms,
     addPros, addDef, addCourtroom,
-    prosError, defError, courtroomError,
+    prosError, defError,
     onProsChange, onDefChange, onCourtroomChange,
     onSubmit,
 }: AddMatchupFormProps) {
@@ -56,11 +55,11 @@ export default function AddMatchupForm({
                     <label className="rv-field-label">
                         Courtroom
                         <select
-                            className={`rv-select${courtroomError ? ' rv-select-invalid' : ''}`}
+                            className={`rv-select`}
                             value={addCourtroom}
                             onChange={e => onCourtroomChange(e.target.value)}
                         >
-                            <option value="">Select courtroom…</option>
+                            <option value="">TBD</option>
                             {courtrooms.map(c => (
                                 <option key={c.id} value={c.id}>
                                     {c.name}{c.location ? ` (${c.location})` : ''}
@@ -68,7 +67,6 @@ export default function AddMatchupForm({
                             ))}
                         </select>
                     </label>
-                    {courtroomError && <span className="rv-field-error">{courtroomError}</span>}
                 </div>
             </div>
             <div className="rv-add-form-actions">

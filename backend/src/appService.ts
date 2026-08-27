@@ -25,10 +25,10 @@ app.set('trust proxy', 1);
 
 // Rate limit applied to API routes only — never to static assets.
 // Static files are served below all API routes so they are never affected.
-const globalLimiter = RateLimit({ windowMs: 500, max: 20, skip: () => process.env.NODE_ENV === 'test' });
+const globalLimiter = RateLimit({ windowMs: 500, limit: 20, skip: () => process.env.NODE_ENV === 'test' });
 
 // Stricter limit for auth endpoints to mitigate brute-force attacks
-const authLimiter = RateLimit({ windowMs: 30 * 1000, max: 20, skip: () => process.env.NODE_ENV === 'test' });
+const authLimiter = RateLimit({ windowMs: 30 * 1000, limit: 20, skip: () => process.env.NODE_ENV === 'test' });
 
 app.use(express.urlencoded({ extended: true }));
 app.use(express.json());

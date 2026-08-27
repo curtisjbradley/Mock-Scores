@@ -92,5 +92,5 @@ export interface IStandingsTemplate {
 export interface IPairingCreationPayload {
     prosectionID: string
     defenseID: string
-    courtroomID: string
+    courtroomID: string | null
 }

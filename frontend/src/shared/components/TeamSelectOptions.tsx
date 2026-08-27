@@ -21,7 +21,7 @@ export default function TeamSelectOptions({ teams, placeholder = 'Select team…
         <>
             <option value="">{placeholder}</option>
             {teams.map(t => (
-                <option key={t.id} value={t.id}>{t.code} — {t.name}</option>
+                <option key={t.id} value={t.id}>{t.name} ({t.code})</option>
             ))}
         </>
     )

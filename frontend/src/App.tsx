@@ -8,7 +8,6 @@ import ProtectedRoute from "./layout/ProtectedRoute.tsx";
 const Home = lazy(() => import('./Home.tsx'));
 const NotFound = lazy(() => import('./error/NotFound.tsx'));
 const Forbidden = lazy(() => import('./error/Forbidden.tsx'));
-const About = lazy(() => import('./About.tsx'));
 const OrganizerHome = lazy(() => import('./organizer/pages/OrganizerHome.tsx'));
 const TournamentDashboard = lazy(() => import('./organizer/pages/TournamentDashboard.tsx'));
 const TournamentNew = lazy(() => import('./organizer/pages/TournamentNew.tsx'));
@@ -65,7 +64,6 @@ function App() {
                   <Route path=":id/*" element={<NotFound />} />
               </Route>
 
-              <Route path="about" element={<About />} />
               <Route path="403" element={<Forbidden />} />
               <Route path="*" element={<NotFound />} />
             </Route>
