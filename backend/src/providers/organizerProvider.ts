@@ -1,15 +1,33 @@
-import { dbQuery } from '../db';
+import {dbQuery} from '../db';
 import type {
-    IScorer, TournamentPayload, ITournament, IOrganizer, IWitnesses, IScoringCategory, ICourtroom, ITeam,
-    IRound, IDuplicateOptions, IBallotStatus, IIndividualAwardCategory
+    IBallotStatus,
+    ICourtroom,
+    IDuplicateOptions,
+    IIndividualAwardCategory,
+    IOrganizer,
+    IRound,
+    IScorer,
+    IScoringCategory,
+    ITeam,
+    ITournament,
+    IWitnesses,
+    TournamentPayload
 } from '@mock-scores/shared';
 import type {
-    ICaseWitnessRow, IScoringCategoryRow, IScoringFieldRow, IRoundRow,
-    ITournamentOwnerRow, ITournamentDelegateInviteRow, IAuthRow, ICourtroomRow,
-    ITournamentFormatRow, ITeamRow, IPairingRow
+    IAuthRow,
+    ICaseWitnessRow,
+    ICourtroomRow,
+    IPairingRow,
+    IRoundRow,
+    IScoringCategoryRow,
+    IScoringFieldRow,
+    ITeamRow,
+    ITournamentDelegateInviteRow,
+    ITournamentFormatRow,
+    ITournamentOwnerRow
 } from '../types/dbtypes';
-import { randomUUID } from 'node:crypto';
-import { AlreadyExistsError, DbError, NotFoundError, OrganizerAlreadyJoinedError } from '../errors';
+import {randomUUID} from 'node:crypto';
+import {AlreadyExistsError, DbError, NotFoundError, OrganizerAlreadyJoinedError} from '../errors';
 
 async function insertWitnesses(formatID: string, cf: TournamentPayload['caseFormat']): Promise<void> {
     const witnesses: [string, string][] = [
@@ -182,7 +200,7 @@ export async function getOrganizerStandingsData(tournamentID: string): Promise<{
             [tournamentID],
         ),
         dbQuery<{ round_id: string; name: string }>(
-            'SELECT round_id, name FROM rounds WHERE tournament_id = $1 ORDER BY round_time ASC NULLS LAST',
+            'SELECT round_id, name FROM rounds WHERE tournament_id = $1 ORDER BY round_time  NULLS LAST',
             [tournamentID],
         ),
         dbQuery<{ p_team_id: string; d_team_id: string; p_points: number; d_points: number; pairing_id: string; round_id: string }>(
@@ -519,7 +537,7 @@ export async function deleteTeam(teamId: string): Promise<void> {
     if (!row) throw new NotFoundError('team');
 }
 
-export async function createRoundPairing(roundID: string, prosecution: string, defense: string, courtroomID: string): Promise<IPairingRow> {
+export async function createRoundPairing(roundID: string, prosecution: string, defense: string, courtroomID: string | null): Promise<IPairingRow> {
     const row = (await dbQuery<IPairingRow>(
         'INSERT INTO pairings (round_id, p_team, d_team, courtroom) VALUES ($1,$2,$3,$4) RETURNING *',
         [roundID, prosecution, defense, courtroomID]
@@ -582,44 +600,7 @@ export async function getPairingScorers(pairingID: string): Promise<{ assignment
     ];
 }
 
-/** Returns the data needed to send a scorer invite email after assignment. */
-export async function getScorerInviteContext(pairingID: string, scorerID: string): Promise<{
-    email: string; firstName: string; lastName: string; tournamentName: string;
-} | null> {
-    const row = (await dbQuery<{
-        email: string; first_name: string; last_name: string; tournament_name: string;
-    }>(`
-        SELECT s.email, s.first_name, s.last_name, t.name AS tournament_name
-        FROM scorers s
-        JOIN pairings p  ON p.pairing_id = $1
-        JOIN rounds r    ON r.round_id   = p.round_id
-        JOIN tournaments t ON t.id       = r.tournament_id
-        WHERE s.scorer_id = $2
-    `, [pairingID, scorerID]))?.rows[0];
-    if (!row) return null;
-    return { email: row.email, firstName: row.first_name, lastName: row.last_name, tournamentName: row.tournament_name };
-}
 
-export async function getScorerInviteContextForAssignment(pairingID: string, assignmentID: string): Promise<{
-    email: string; firstName: string; lastName: string; tournamentName: string;
-} | null> {
-    const row = (await dbQuery<{
-        email: string; first_name: string; last_name: string; tournament_name: string;
-    }>(`
-        SELECT s.email, s.first_name, s.last_name, t.name AS tournament_name
-        FROM scorer_pairing_assignments spa
-        JOIN scorers s ON s.scorer_id = spa.registered_scorer_id
-        JOIN pairings p ON p.pairing_id = spa.pairing_id
-        JOIN rounds r ON r.round_id = p.round_id
-        JOIN tournaments t ON t.id = r.tournament_id
-        WHERE spa.assignment_id = $1
-          AND spa.pairing_id = $2
-          AND spa.registered_scorer_id IS NOT NULL
-        LIMIT 1
-    `, [assignmentID, pairingID]))?.rows[0];
-    if (!row) return null;
-    return { email: row.email, firstName: row.first_name, lastName: row.last_name, tournamentName: row.tournament_name };
-}
 
 /** Returns coach emails + tournament name for notifying results going public. */
 export async function getRoundResultsPublicContext(roundID: string): Promise<{
@@ -683,6 +664,42 @@ export async function getScorerInviteContextsForRound(roundId: string): Promise<
         tournamentName: r.tournament_name,
         assignmentId: r.assignment_id,
     }));
+}
+
+
+/** Returns the data needed to send scorer invite email for a single assignment. */
+export async function getScorerInviteContextForAssignment(assignmentId: string): Promise<{
+    email: string;
+    firstName: string;
+    lastName: string;
+    tournamentName: string;
+    assignmentId: string;
+} | null> {
+    const rows = (await dbQuery<{
+        email: string;
+        first_name: string;
+        last_name: string;
+        tournament_name: string;
+        assignment_id: string;
+    }>(`
+        SELECT s.email, s.first_name, s.last_name, t.name AS tournament_name,
+               spa.assignment_id
+        FROM scorer_pairing_assignments spa
+        JOIN scorers s      ON s.scorer_id    = spa.registered_scorer_id
+        JOIN pairings p     ON p.pairing_id   = spa.pairing_id
+        JOIN rounds r       ON r.round_id     = p.round_id
+        JOIN tournaments t  ON t.id           = r.tournament_id
+        WHERE spa.assignment_id = $1
+          AND spa.registered_scorer_id IS NOT NULL
+    `, [assignmentId]))?.rows ?? [];
+
+    return rows.map(r => ({
+        email: r.email,
+        firstName: r.first_name,
+        lastName: r.last_name,
+        tournamentName: r.tournament_name,
+        assignmentId: r.assignment_id,
+    }))[0] ?? null;
 }
 
 export async function assignScorerToPairing(pairingID: string, scorerID: string): Promise<{ assignment_id: string }> {
@@ -841,7 +858,15 @@ export async function editBallot(
 }
 
 export async function getBallotEditLog(assignmentId: string): Promise<{ editor_email: string; edited_at: string; reason: string; p_points_before: number; p_points_after: number; d_points_before: number; d_points_after: number }[]> {
-    const rows = (await dbQuery<{ editor_email: string; edited_at: string; reason: string; p_points_before: number; p_points_after: number; d_points_before: number; d_points_after: number }>(
+    return (await dbQuery<{
+        editor_email: string;
+        edited_at: string;
+        reason: string;
+        p_points_before: number;
+        p_points_after: number;
+        d_points_before: number;
+        d_points_after: number
+    }>(
         `SELECT bel.editor_email, bel.edited_at, bel.reason, bel.p_points_before, bel.p_points_after, bel.d_points_before, bel.d_points_after
          FROM ballot_edit_log bel
          JOIN ballots b ON b.ballot_id = bel.ballot_id
@@ -849,7 +874,6 @@ export async function getBallotEditLog(assignmentId: string): Promise<{ editor_e
          ORDER BY bel.edited_at DESC`,
         [assignmentId],
     ))?.rows ?? [];
-    return rows;
 }
 
 export async function duplicateTournament(sourceTournamentID: string, options: IDuplicateOptions): Promise<ITournament> {

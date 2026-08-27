@@ -74,7 +74,7 @@ export function useRoundView(id: string | undefined, roundId: string | undefined
     const addMatchup = (pros: string, def: string, courtroomId: string, onSuccess: () => void) => {
         apiFetch(`/organizer/tournament/${id}/rounds/${roundId}/pairings`, {
             method: 'POST',
-            body: JSON.stringify({ prosectionID: pros, defenseID: def, courtroomID: courtroomId }),
+            body: JSON.stringify({ prosectionID: pros, defenseID: def, courtroomID: courtroomId  === "" ? null : courtroomId }),
         }).then(async r => {
             const data = await r.json()
             if (!r.ok) throw new Error(data.message ?? 'Failed to add matchup.')

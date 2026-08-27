@@ -31,16 +31,13 @@ const RoundView = () => {
     const {
         round, teams, courtrooms, pairings, scorers, pairingScorers, ballotStatus, conflictSet,
         error, notFound,
-        saveName, addMatchup, updatePairing, removePairing, setPairings,
+        saveName, addMatchup, updatePairing, removePairing,
         onScorerAssigned, onScorerRemoved, onPresiderChanged,
     } = useRoundView(id, roundId)
 
     const confirmRemove = useConfirmRemove<IPairing>()
     const [sending, setSending] = useState(false)
     const [sendMsg, setSendMsg] = useState<string | null>(null)
-    const [generating, setGenerating] = useState(false)
-    const [generateMethod, setGenerateMethod] = useState<'power' | 'random'>('power')
-    const [generateError, setGenerateError] = useState<string | null>(null)
 
     const handleSendScoringLinks = () => {
         if (!id || !roundId || sending) return
@@ -55,25 +52,6 @@ const RoundView = () => {
             .finally(() => setSending(false))
     }
 
-    const handleGeneratePairings = () => {
-        if (!id || !roundId || generating) return
-        setGenerating(true)
-        setGenerateError(null)
-        apiFetch(`/organizer/tournament/${id}/rounds/${roundId}/generate-pairings`, {
-            method: 'POST',
-            body: JSON.stringify({ method: generateMethod }),
-        })
-            .then(async r => {
-                const data = await r.json()
-                if (!r.ok) throw new Error(data.message ?? 'Failed to generate pairings')
-                return data as IPairing[]
-            })
-            .then((created) => {
-                setPairings(created)
-            })
-            .catch((e: Error) => setGenerateError(e.message))
-            .finally(() => setGenerating(false))
-    }
 
     const {
         showAddForm, addPros, addDef, addCourtroom,
@@ -83,7 +61,7 @@ const RoundView = () => {
 
     const handleAddMatchup = () => {
         submit()
-        if (!addPros || !addDef || addPros === addDef || !addCourtroom) return
+        if (!addPros || !addDef || addPros === addDef) return
         if (pairings.some(p => p.p_team === addPros) || pairings.some(p => p.d_team === addDef)) return
         addMatchup(addPros, addDef, addCourtroom, reset)
     }
@@ -128,7 +106,6 @@ const RoundView = () => {
                         addCourtroom={addCourtroom}
                         prosError={formErrors.prosError}
                         defError={formErrors.defError}
-                        courtroomError={formErrors.courtroomError}
                         onProsChange={setAddPros}
                         onDefChange={setAddDef}
                         onCourtroomChange={setAddCourtroom}
@@ -139,22 +116,7 @@ const RoundView = () => {
                 <div className="dash-pairings">
                     {pairings.length === 0 && !showAddForm && (
                         <div className="rv-generate-section">
-                            <p className="rv-empty">No matchups yet. Add them manually or generate automatically.</p>
-                            <div style={{ display: 'flex', gap: '0.5rem', alignItems: 'center', flexWrap: 'wrap', marginTop: '0.75rem' }}>
-                                <select
-                                    value={generateMethod}
-                                    onChange={e => setGenerateMethod(e.target.value as 'power' | 'random')}
-                                    aria-label="Pairing method"
-                                    style={{ padding: '0.4rem 0.6rem', borderRadius: '4px', border: '1px solid var(--border-color, #ccc)' }}
-                                >
-                                    <option value="power">Power Match</option>
-                                    <option value="random">Random</option>
-                                </select>
-                                <button className="org-new-btn" onClick={handleGeneratePairings} disabled={generating}>
-                                    {generating ? 'Generating…' : '⚡ Generate Pairings'}
-                                </button>
-                            </div>
-                            {generateError && <p className="org-error" style={{ marginTop: '0.5rem' }}>{generateError}</p>}
+                            <p className="rv-empty">No matchups yet. Add them manually.</p>
                         </div>
                     )}
                     {pairings.map(pairing => (
