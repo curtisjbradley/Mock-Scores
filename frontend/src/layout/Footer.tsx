@@ -13,6 +13,13 @@ const Footer = () => (
                 <use href="/icons.svg#github-icon" />
             </svg>
         </a>
+
+        <a href="/help"
+           target="_blank"
+           className={"footer-link"}
+           rel="noopener noreferrer">
+            Help
+        </a>
     </footer>
 )
 

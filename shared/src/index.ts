@@ -7,3 +7,4 @@ export * from './scorer.js'
 export * from './organizer.js'
 export * from './coach.js'
 export * from './standings.js'
+export * from "./help.js"

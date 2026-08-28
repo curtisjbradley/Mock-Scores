@@ -18,3 +18,14 @@
 .footer-github:hover {
     color: var(--text);
 }
+
+.footer-link {
+    text-decoration: none;
+    color: var(--text-muted);
+    padding: 0 1rem;
+}
+
+.footer-link:hover {
+    text-decoration: underline;
+    color: var(--primary);
+}
