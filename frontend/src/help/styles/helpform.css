@@ -1,0 +1,121 @@
+.help-form {
+    display: flex;
+    flex-direction: column;
+    gap: 0.75rem;
+
+    width: 100%;
+    max-width: 600px;
+    margin: 2rem auto;
+    padding: 2rem;
+
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    box-shadow: var(--shadow);
+}
+
+.help-form label {
+    margin-top: 0.5rem;
+
+    color: var(--text);
+    font-size: 0.9rem;
+    font-weight: 600;
+}
+
+.help-form select,
+.help-form textarea {
+    width: 100%;
+    padding: 0.75rem;
+
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+
+    background: var(--surface);
+    color: var(--text);
+
+    font: inherit;
+
+    transition:
+            border-color 140ms ease,
+            box-shadow 140ms ease,
+            background 140ms ease;
+}
+
+.help-form select:hover,
+.help-form textarea:hover {
+    border-color: var(--border-strong);
+}
+
+.help-form select:focus,
+.help-form textarea:focus {
+    outline: none;
+    border-color: var(--primary);
+    box-shadow: 0 0 0 3px var(--focus);
+}
+
+.help-form textarea {
+    min-height: 160px;
+    resize: vertical;
+    line-height: 1.5;
+}
+
+.help-form textarea::placeholder {
+    color: var(--text-muted);
+}
+
+.help-form button[type="submit"] {
+    height: 2.75rem;
+    margin-top: 0.75rem;
+    padding: 0 1.25rem;
+
+    border: 0;
+    border-radius: var(--radius);
+
+    background: var(--primary);
+    color: var(--white);
+
+    font: inherit;
+    font-size: 0.95rem;
+    font-weight: 600;
+
+    cursor: pointer;
+
+    box-shadow: var(--shadow-primary);
+
+    transition:
+            background 140ms ease,
+            box-shadow 140ms ease,
+            transform 100ms ease;
+}
+
+.help-form button[type="submit"]:hover:not(:disabled) {
+    background: var(--primary-dark);
+    box-shadow: var(--shadow-primary-lg);
+}
+
+.help-form button[type="submit"]:active:not(:disabled) {
+    transform: translateY(1px);
+    box-shadow: none;
+}
+
+.help-form button[type="submit"]:focus-visible {
+    outline: 3px solid var(--focus);
+    outline-offset: 2px;
+}
+
+.help-form button[type="submit"]:disabled {
+    opacity: 0.55;
+    cursor: not-allowed;
+    box-shadow: none;
+}
+
+.help-form .error-message {
+    margin: 0.25rem 0 0;
+    padding: 0.75rem 1rem;
+
+    border: 1px solid var(--danger);
+    border-radius: var(--radius);
+
+    background: var(--danger-bg);
+    color: var(--danger);
+}

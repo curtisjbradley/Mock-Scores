@@ -16,6 +16,8 @@ import webhookRouter from "./routes/webhookRouter";
 import organizerTournamentRouter from './routes/organizer/organizerRoutes';
 import coachRouter from "./routes/coach/coachRoutes";
 import scorerRouter from "./routes/scorerRoutes";
+import helpRouter from './routes/requestHelpRoutes';
+
 import { verifyUser } from "./authUtils";
 import { DbError } from "./errors";
 import RateLimit from 'express-rate-limit';
@@ -53,6 +55,8 @@ app.get('/docs-json', (_req: Request, res: Response) => res.json(swaggerSpec));
 // Health check for load balancer / monitoring
 app.get('/health', (_req: Request, res: Response) => res.json({ status: 'ok' }));
 
+
+app.use('/help', globalLimiter, verifyUser, helpRouter)
 app.use('/auth', authLimiter, authRouter);
 app.use('/organizer/tournament', globalLimiter, verifyUser, organizerTournamentRouter);
 app.use('/coach', globalLimiter, verifyUser, coachRouter);

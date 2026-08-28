@@ -24,6 +24,7 @@ const ForgotPassword = lazy(() => import('./auth/ForgotPassword.tsx'));
 const ResetPassword = lazy(() => import('./auth/ResetPassword.tsx'));
 const VerifyEmail = lazy(() => import('./auth/VerifyEmail.tsx'));
 const ScoreSheetHome = lazy(() => import('./judges/components/ScoreSheetHome.tsx'));
+const Help = lazy(() => import('./help/Help.tsx'));
 
 
 function App() {
@@ -63,6 +64,11 @@ function App() {
                 <Route path=":id/:tab" element={<CoachDashboard />} />
                   <Route path=":id/*" element={<NotFound />} />
               </Route>
+
+                <Route path={"help"} element={<ProtectedRoute/>} >
+                    <Route index element={<Help />}/>
+                </Route>
+
 
               <Route path="403" element={<Forbidden />} />
               <Route path="*" element={<NotFound />} />

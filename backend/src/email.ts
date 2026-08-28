@@ -72,7 +72,7 @@ export interface EmailTemplate { subject: string; html: string; text: string }
 
 const BASE_URL = process.env.FRONTEND_URL ?? 'http://localhost:5173'
 
-const escapeHtml = (value: string): string =>
+export const escapeHtml = (value: string): string =>
     value
         .replace(/&/g, '&amp;')
         .replace(/</g, '&lt;')
