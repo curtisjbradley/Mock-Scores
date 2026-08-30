@@ -329,7 +329,6 @@ export async function getScoreSheet(assignmentId: string, options?: { skipGuards
     // ── 11. Ballot options ────────────────────────────────────────────────────
     // Presiders with show_scores=false get tiebreaker-only mode.
     // show_scores=null means no presider row exists at all (this scorer is a regular judge).
-    const showTiebreaker = isPresider && asg.show_scores === false;
     const fillableScores = !isPresider || asg.show_scores === true;
 
     // ── 12. Award categories ──────────────────────────────────────────────────
@@ -375,7 +374,7 @@ export async function getScoreSheet(assignmentId: string, options?: { skipGuards
 
     return {
         isCriminal: tourney.criminal_case,
-        ballotOptions: { showTiebreaker, fillableScores },
+        ballotOptions: { fillableScores },
         pairingID: pairing_id,
         scorer: {
             firstName: scorerFirstName,

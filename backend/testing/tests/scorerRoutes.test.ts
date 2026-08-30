@@ -167,6 +167,7 @@ describe('POST /api/score/:assignmentId/ballot', () => {
             { categoryId: 'cat1', assignmentKey: 'open1', side: 'P', studentId: 's1', score: 8 },
             { categoryId: 'cat1', assignmentKey: 'open1', side: 'D', studentId: 's2', score: 7 },
         ],
+        tiebreaker : VALID_UUID,
         nominations: [],
     };
 
@@ -254,6 +255,7 @@ describe('POST /api/score/:assignmentId/ballot', () => {
                 { categoryId: 'c1', assignmentKey: 'k3', side: 'D', studentId: null, score: 9 },
                 { categoryId: 'c1', assignmentKey: 'k4', side: 'D', studentId: null, score: 6 },
             ],
+            tiebreaker: VALID_UUID,
             nominations: [],
         };
 
@@ -282,6 +284,7 @@ describe('POST /api/score/:assignmentId/ballot', () => {
                 { awardCategoryId: 'award1', studentId: 'stu1', rank: 1 },
                 { awardCategoryId: 'award1', studentId: 'stu2', rank: 2 },
             ],
+            tiebreaker: VALID_UUID,
         };
 
         // Query 1: assignment lookup
@@ -310,6 +313,7 @@ describe('POST /api/score/:assignmentId/ballot', () => {
     it('rolls back (rejects) when a nomination insert fails, so no partial write is committed', async () => {
         const payload = {
             pairingID: 'p1',
+            tiebreaker: VALID_UUID,
             scores: [{ categoryId: 'c1', assignmentKey: 'k1', side: 'P', studentId: null, score: 5 }],
             nominations: [{ awardCategoryId: 'award1', studentId: 'stu1', rank: 1 }],
         };
@@ -501,7 +505,6 @@ describe('GET /api/score/:assignmentId — presider name resolution', () => {
         expect(res.status).toBe(200);
         expect(res.body.presiderName).toBe('Alex Presider');
         expect(res.body.ballotOptions.fillableScores).toBe(true);
-        expect(res.body.ballotOptions.showTiebreaker).toBe(false);
     });
 
     it('resolves presider name from paper scorer', async () => {
@@ -560,7 +563,6 @@ describe('GET /api/score/:assignmentId — presider name resolution', () => {
 
         const res = await request(testApp).get(`/score/${VALID_UUID}`);
         expect(res.status).toBe(200);
-        expect(res.body.ballotOptions.showTiebreaker).toBe(true);
         expect(res.body.ballotOptions.fillableScores).toBe(false);
     });
 });

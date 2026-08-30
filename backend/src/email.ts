@@ -61,7 +61,7 @@ export async function sendEmail(to: string, subject: string, html: string, text:
     }).then( info =>
         console.log(`Email sent to ${to} — MessageId: ${info.messageId}`)
     ).catch((e) => {
-        console.log("error sending email");
+        console.error("error sending email");
         console.error(e)
     })
 }
