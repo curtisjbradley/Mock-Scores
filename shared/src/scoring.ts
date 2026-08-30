@@ -39,7 +39,7 @@ export interface ScorecardPayload {
         studentId: string
         rank: number
     }[]
-    tiebreaker?: string
+    tiebreaker: string
 }
 
 /** Individual award category as configured by the organizer */

@@ -36,7 +36,6 @@ export interface IAwardCategoryInfo {
 export interface IScoreSheetFormat {
     isCriminal: boolean;
     ballotOptions: {
-        showTiebreaker: boolean;
         fillableScores : boolean;
     }
     pairingID: string;

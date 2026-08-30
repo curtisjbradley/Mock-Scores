@@ -12,8 +12,6 @@ interface IConfirmSubmitModalProps {
     setPendingScores: (scores: ScoreResults | null) => void;
     /** localStorage key used to clear saved progress on successful submission. */
     storageKey: string;
-    /** Whether the current user is a presiding judge (shows tiebreaker UI). */
-    showTiebreaker: boolean;
     /** Prosecution team code. */
     prosecution: string;
     /** Defense team code. */
@@ -41,8 +39,7 @@ type NominationSelections = Record<string, string[]>;
  * focus trapping, and Escape-to-close.
  */
 const ConfirmSubmitModal = ({
-    setShowConfirm, pendingScores, setPendingScores, storageKey,
-    showTiebreaker, prosecution, defense, prosecutionLabel, details, onSubmitSuccess,
+    setShowConfirm, pendingScores, setPendingScores, storageKey, prosecution, defense, prosecutionLabel, details, onSubmitSuccess,
 }: IConfirmSubmitModalProps) => {
     const dialogRef = useRef<HTMLDivElement>(null);
     const [submitting, setSubmitting] = useState(false);
@@ -117,7 +114,7 @@ const ConfirmSubmitModal = ({
         return true;
     }, [awardCategories, nominations]);
 
-    const isTiebreakerValid = !showTiebreaker || tiebreaker !== "";
+    const isTiebreakerValid = tiebreaker !== "";
 
     /**
      * Transforms the flat `ScoreResults` form map into a structured array of score entries,
@@ -154,7 +151,7 @@ const ConfirmSubmitModal = ({
             pairingID: details.pairingID,
             scores,
             nominations: nominationPayload,
-            ...(showTiebreaker && { tiebreaker }),
+            tiebreaker: tiebreaker,
         };
 
         setSubmitting(true);
@@ -227,7 +224,7 @@ const ConfirmSubmitModal = ({
                     <p className="ranking-error" role="alert">Please select the minimum number of nominees for each category.</p>
                 )}
 
-                {showTiebreaker && (
+                {
                     <div className="tiebreaker-section">
                         <h3>Tiebreaker</h3>
                         <p>If the scores are tied, which team wins?</p>
@@ -247,7 +244,7 @@ const ConfirmSubmitModal = ({
                             <p className="ranking-error" role="alert">Please select a tiebreaker team.</p>
                         )}
                     </div>
-                )}
+                }
 
                 <div className="confirm-actions">
                     <button type="button" onClick={reset} disabled={submitting}>Cancel</button>

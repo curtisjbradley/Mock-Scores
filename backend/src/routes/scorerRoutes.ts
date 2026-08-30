@@ -40,7 +40,7 @@ router.post('/:assignmentId/ballot', async (req: Request, res: Response) => {
     if (!uuidRegex.test(assignmentId)) return res.status(400).json({ message: 'Invalid assignment ID' });
 
     const payload = req.body as ScorecardPayload;
-    if (!payload?.pairingID || !Array.isArray(payload?.scores)) {
+    if (!payload?.pairingID || !Array.isArray(payload?.scores) || !payload?.tiebreaker ||  !uuidRegex.test(payload?.tiebreaker)) {
         return res.status(400).json({ message: 'Invalid payload' });
     }
 
