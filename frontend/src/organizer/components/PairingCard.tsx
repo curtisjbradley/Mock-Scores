@@ -41,6 +41,8 @@ export default function PairingCard({ pairing, teams, courtrooms, scorers, assig
     const [manualEntryScorer, setManualEntryScorer] = useState<{ name: string; assignmentId: string } | null>(null)
     const [removeScorerTarget, setRemoveScorerTarget] = useState<{ name: string; assignmentId: string } | null>(null)
 
+    const [sentLinks, setSentLinks] = useState<Set<string>>(new Set<string>);
+
     const teamName = (tid: string) => {
         const t = teams.find(t => t.id === tid)
         return t ? `${t.code} — ${t.name}` : '—'
@@ -122,6 +124,11 @@ export default function PairingCard({ pairing, teams, courtrooms, scorers, assig
         }
     }
 
+    const sendLink = (assignmentId : string)=> {
+        apiFetch(`/organizer/tournament/${tournamentId}/rounds/${roundId}/send-scoring-links/${assignmentId}`, {method: 'POST'})
+        setSentLinks(new Set<string>(...sentLinks, [assignmentId]))
+    }
+
     return (
         <>
         <div className="dash-pairing-card">
@@ -139,11 +146,12 @@ export default function PairingCard({ pairing, teams, courtrooms, scorers, assig
                         <button className="pc-save-btn" onClick={saveCourtroomEdit}>Save</button>
                         <button className="pc-cancel-btn" onClick={() => setEditingCourtroom(false)}>Cancel</button>
                     </div>
-                ) : (
-                    <button className="dash-courtroom-badge" onClick={() => { setCourtroomDraft(pairing.courtroom ?? ''); setEditingCourtroom(true) }}>
-                        🏛 {courtroomName(pairing.courtroom)} ✎
-                    </button>
-                )}
+                ) :
+                   <span className={'pc-courtroom'}>  <button className="dash-courtroom-badge" onClick={() => { setCourtroomDraft(pairing.courtroom ?? ''); setEditingCourtroom(true) }}>
+                       {courtroomName(pairing.courtroom)} ✎
+                   </button>
+                   </span>}
+
                 <button className="dash-remove-btn" onClick={onRemove}>Remove</button>
             </div>
 
@@ -205,6 +213,7 @@ export default function PairingCard({ pairing, teams, courtrooms, scorers, assig
                         conflictSet.has(`${s.scorer_id}:${pairing.p_team}`) ||
                         conflictSet.has(`${s.scorer_id}:${pairing.d_team}`)
                     )
+                    const isOnlineScorer = s.type === 'registered';
                     const hasSubmitted = s.p_points != null && s.d_points != null
                     const diff = hasSubmitted ? s.p_points! - s.d_points! : 0
                     const diffLabel = hasSubmitted
@@ -233,7 +242,11 @@ export default function PairingCard({ pairing, teams, courtrooms, scorers, assig
                             {s.conflict_reported && (
                                 <span style={{ marginLeft: 6, background: '#c05000', color: '#fff', fontSize: '0.7rem', fontWeight: 700, padding: '1px 5px', borderRadius: 3 }}>CONFLICT REPORTED</span>
                             )}
+                            {isOnlineScorer && !hasSubmitted && (sentLinks.has(s.assignment_id) ?<span className={"pc-link-sent"}> Link Sent </span> :  <button className={'pc-send-link'} onClick={() => sendLink(s.assignment_id)}>
+                                Send Scoring Link
+                            </button>) }
                         </span>
+
                         {diffLabel && <span className={`pc-diff ${diffClass}`}>{diffLabel}</span>}
                         {hasSubmitted && <Link to={`/organizer/${tournamentId}/scoresheet/${pairing.pairing_id}/${s.assignment_id}`} className="pc-view-btn">View</Link>}
                         {s.type === 'paper' && !hasSubmitted && (
@@ -242,9 +255,7 @@ export default function PairingCard({ pairing, teams, courtrooms, scorers, assig
                         {s.type === 'registered' && !hasSubmitted && (
                             <button className="pc-cancel-btn" onClick={() => setManualEntryScorer({ name: s.name, assignmentId: s.assignment_id })}>Manually enter</button>
                         )}
-                        {hasSubmitted ? (
-                            <span style={{ fontSize: '0.75rem', color: 'var(--text-muted)', fontStyle: 'italic' }}>Delete ballot to remove</span>
-                        ) : (
+                        {hasSubmitted ? (<></>) : (
                             <button className="dash-remove-btn" onClick={() => setRemoveScorerTarget({ name: s.name, assignmentId: s.assignment_id })}>Remove</button>
                         )}
                     </div>
@@ -300,6 +311,7 @@ export default function PairingCard({ pairing, teams, courtrooms, scorers, assig
                 </div>
             </div>
         )}
+
 
         {removeScorerTarget && (
             <div className="modal-backdrop" onClick={() => setRemoveScorerTarget(null)}>

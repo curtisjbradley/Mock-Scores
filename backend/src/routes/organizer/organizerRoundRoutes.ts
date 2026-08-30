@@ -511,7 +511,7 @@ router.post('/send-scoring-links/:assignment', roundHandler(async (req, res) => 
     const template = scorerInviteEmail(context.tournamentName, scorecardUrl);
     return await sendEmail(context.email, template.subject, template.html, template.text)
         .then(() => res.status(200).json({sent: true}) )
-        .catch(() => res.status(501).json({message: "Error when attempting to send email"}))
+        .catch((err) => res.status(500).json({message: `Error when attempting to send email: ${err}`}))
 }));
 
 export default router;
