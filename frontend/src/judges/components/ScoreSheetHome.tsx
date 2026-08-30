@@ -99,7 +99,7 @@ const ScoreSheetHome = () => {
         return <ConflictCheck details={data} onProceed={() => setProceeded(true)} />;
     }
 
-    if (data.ballotOptions.showTiebreaker && !data.ballotOptions.fillableScores) {
+    if (!data.ballotOptions.fillableScores) {
         return <TiebreakerOnly details={data} storageKey={storageKey} onSubmitSuccess={() => setSubmitted(true)} />;
     }
 
