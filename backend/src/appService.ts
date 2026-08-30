@@ -49,7 +49,6 @@ app.use((req: Request, res: Response, next: NextFunction) => {
     next();
 });
 
-app.use('/docs', swaggerUi.serve, swaggerUi.setup(swaggerSpec));
 app.get('/docs-json', (_req: Request, res: Response) => res.json(swaggerSpec));
 
 // Health check for load balancer / monitoring
@@ -62,6 +61,11 @@ app.use('/organizer/tournament', globalLimiter, verifyUser, organizerTournamentR
 app.use('/coach', globalLimiter, verifyUser, coachRouter);
 app.use('/score', globalLimiter, scorerRouter);
 app.use('/webhooks', globalLimiter, express.text({ type: '*/*' }), webhookRouter);
+
+app.use(express.static('public'));
+
+app.use('/', swaggerUi.serve, swaggerUi.setup(swaggerSpec));
+
 
 // Global error handler — catches anything thrown from route handlers
 // eslint-disable-next-line @typescript-eslint/no-unused-vars
