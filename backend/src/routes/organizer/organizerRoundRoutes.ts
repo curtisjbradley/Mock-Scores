@@ -474,11 +474,35 @@ router.get('/ballot-status', roundHandler(async (req, res) => {
     }
 }));
 
+
+
 /**
- * POST /organizer/tournament/:tournamentId/rounds/:round/send-scoring-links
- * Sends scorecard invite emails to all registered scorers assigned to pairings
- * in this round. Fire-and-forget per email so one bad address doesn't block others.
- * Returns the count of emails dispatched.
+ * @swagger
+ * /organizer/tournament/{tournamentId}/rounds/{round}/send-scoring-links:
+ *   post:
+ *     summary: Sends scorecard invite emails to all registered scorers assigned to pairing in this round.
+ *     tags: [Organizer - Rounds]
+ *     parameters:
+ *       - in: path
+ *         name: tournamentId
+ *         required: true
+ *         schema: { type: string, format: uuid }
+ *       - in: path
+ *         name: round
+ *         required: true
+ *         schema: { type: string, format: uuid }
+ *     responses:
+ *       200:
+ *         description: Number of emails sent
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: array
+ *               items:
+ *                 type: object
+ *                 properties:
+ *                   sent: { type: boolean }
+ *       500: { description: Database error }
  */
 router.post('/send-scoring-links', roundHandler(async (req, res) => {
     const contexts = await organizer.getScorerInviteContextsForRound(req.round.round_id);
@@ -495,10 +519,28 @@ router.post('/send-scoring-links', roundHandler(async (req, res) => {
 }));
 
 /**
- * POST /organizer/tournament/:tournamentId/rounds/:round/send-scoring-links/:assignment
- * Sends scorecard invite emails to a selected assignment
- * in this round.
- * Returns 200 with { sent: true } on success, 404 with {message "Cannot resolve scoring assignment"} if assignment not found.
+ * @swagger
+ * /organizer/tournament/{tournamentId}/rounds/{round}/send-scoring-links/{assignment}:
+ *   post:
+ *     summary: Sends scorecard invite to the registered scorer's assignment id.
+ *     tags: [Organizer - Scorers]
+ *     parameters:
+ *       - in: path
+ *         name: tournamentId
+ *         required: true
+ *         schema: { type: string, format: uuid }
+ *       - in: path
+ *         name: round
+ *         required: true
+ *         schema: { type: string, format: uuid }
+ *       - in: path
+ *         name: assignment
+ *         required: true
+ *         schema: { type: string, format: uuid }
+ *     responses:
+ *       200: {description: Success message}
+ *       404: {description: Cannot find the assignment}
+ *       500: { description: Database error }
  */
 router.post('/send-scoring-links/:assignment', roundHandler(async (req, res) => {
     const assignment = req.params.assignment as string;
