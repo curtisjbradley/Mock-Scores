@@ -88,7 +88,7 @@ const RoundView = () => {
                     </div>
                     <div style={{ display: 'flex', gap: '0.5rem', alignItems: 'center', flexWrap: 'wrap' }}>
                         <button className="org-new-btn" onClick={handleSendScoringLinks} disabled={sending}>
-                            {sending ? 'Sending…' : '✉ Send scoring links'}
+                            {sending ? 'Sending…' : 'Send scoring links'}
                         </button>
                         {sendMsg && <span style={{ fontSize: '0.82rem', color: 'var(--text-muted)' }}>{sendMsg}</span>}
                         <button className="org-new-btn" onClick={toggleForm}>

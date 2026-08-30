@@ -308,7 +308,6 @@ function ScoreSheet(details: IScoreSheetFormat & { onSubmitSuccess: () => void }
                     storageKey={storageKey}
                     setPendingScores={setPendingScores}
                     pendingScores={pendingScores}
-                    showTiebreaker={details.ballotOptions.showTiebreaker}
                     prosecution={details.prosecutionCode}
                     defense={details.defenseCode}
                     prosecutionLabel={prosecutionLabel}

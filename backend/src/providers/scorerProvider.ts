@@ -329,7 +329,6 @@ export async function getScoreSheet(assignmentId: string, options?: { skipGuards
     // ── 11. Ballot options ────────────────────────────────────────────────────
     // Presiders with show_scores=false get tiebreaker-only mode.
     // show_scores=null means no presider row exists at all (this scorer is a regular judge).
-    const showTiebreaker = isPresider && asg.show_scores === false;
     const fillableScores = !isPresider || asg.show_scores === true;
 
     // ── 12. Award categories ──────────────────────────────────────────────────
@@ -375,7 +374,7 @@ export async function getScoreSheet(assignmentId: string, options?: { skipGuards
 
     return {
         isCriminal: tourney.criminal_case,
-        ballotOptions: { showTiebreaker, fillableScores },
+        ballotOptions: { fillableScores },
         pairingID: pairing_id,
         scorer: {
             firstName: scorerFirstName,
@@ -409,11 +408,13 @@ export async function submitBallot(assignmentId: string, payload: ScorecardPaylo
         tournament_id: string;
         p_team: string;
         d_team: string;
+        is_presider: boolean;
     }>(`
-        SELECT spa.pairing_id, r.tournament_id, p.p_team, p.d_team
+        SELECT spa.pairing_id, r.tournament_id, p.p_team, p.d_team, pres.presider_assignment_id = $1 as is_presider
         FROM scorer_pairing_assignments spa
         JOIN pairings p ON p.pairing_id = spa.pairing_id
         JOIN rounds r   ON r.round_id   = p.round_id
+        join scorer_presider_assignment pres on pres.pairing_id = p.pairing_id
         WHERE spa.assignment_id = $1
     `, [assignmentId]))?.rows[0];
 
@@ -430,10 +431,10 @@ export async function submitBallot(assignmentId: string, payload: ScorecardPaylo
     await withTransaction(async (client) => {
         const ballotResult = await client.query<{ ballot_id: string }>(
             `INSERT INTO ballots
-                (scorer_assignment_id, tournament_id, pairing_id, ballot_json, p_team_id, d_team_id, p_points, d_points)
-             VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
+                (scorer_assignment_id, tournament_id, pairing_id, ballot_json, p_team_id, d_team_id, p_points, d_points,  tiebreaker, presider_ballot)
+             VALUES ($1, $2, $3, $4, $5, $6, $7, $8,$9,$10)
              RETURNING ballot_id`,
-            [assignmentId, asg.tournament_id, asg.pairing_id, JSON.stringify(payload), asg.p_team, asg.d_team, pPoints, dPoints],
+            [assignmentId, asg.tournament_id, asg.pairing_id, JSON.stringify(payload), asg.p_team, asg.d_team, pPoints, dPoints, payload.tiebreaker, asg.is_presider],
         );
         const ballotId = ballotResult.rows[0]?.ballot_id;
         if (!ballotId) throw new DbError('Failed to insert ballot');

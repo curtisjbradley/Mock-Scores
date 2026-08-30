@@ -558,6 +558,32 @@
     cursor: pointer;
 }
 
+.pc-send-link {
+    border: 0;
+    border-radius: var(--radius);
+    background: var(--primary);
+    color: var(--white);
+    font-size: 0.82rem;
+    font-weight: 600;
+    cursor: pointer;
+    transition: background 120ms ease;
+    margin-inline: 0.5rem;
+}
+.pc-send-link:hover {
+    background: var(--primary-dark)
+}
+
+.pc-link-sent {
+    padding: 0.15rem 0.5rem;
+    border-radius: 0.25rem;
+    font-size: 0.75rem;
+    font-weight: 700;
+    white-space: nowrap;
+    font-variant-numeric: tabular-nums;
+    color: var(--text-muted);
+
+}
+
 .pc-paper-add:disabled { opacity: 0.45; cursor: default; }
 
 .pc-paper-cancel {
