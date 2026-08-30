@@ -2,7 +2,7 @@
 import BaseLayout from '../layouts/BaseLayout.astro';
 import '../styles/index.css';
 
-const title = 'MockScores - Scoring & Tabulation for Mock Trial Tournaments';
+const title = 'MockScores | Free Mock Trial Tournament Scoring & Tabulation';
 const description =
   'Open-source scoring and tabulation software for high school and collegiate mock trial tournaments. Easy for judges, customizable for organizers, transparent for coaches.';
 
@@ -10,17 +10,28 @@ const description =
 // a product/app landing page. Adjust fields as the product evolves.
 const jsonLd = {
   '@context': 'https://schema.org',
-  '@type': 'SoftwareApplication',
-  name: 'MockScores',
-  applicationCategory: 'BusinessApplication',
-  operatingSystem: 'Web',
-  description,
-  url: 'https://mockscores.org',
-  offers: {
-    '@type': 'Offer',
-    price: '0',
-    priceCurrency: 'USD',
-  },
+  '@graph': [
+    {
+      '@type': 'WebSite',
+      '@id': 'https://mockscores.org/#website',
+      url: 'https://mockscores.org/',
+      name: 'MockScores',
+    },
+    {
+      '@type': 'SoftwareApplication',
+      '@id': 'https://mockscores.org/#software',
+      name: 'MockScores',
+      applicationCategory: 'Tournament Management Software',
+      operatingSystem: 'Web',
+      description,
+      url: 'https://mockscores.org/',
+      offers: {
+        '@type': 'Offer',
+        price: '0',
+        priceCurrency: 'USD',
+      },
+    },
+  ],
 };
 ---
 
@@ -30,7 +41,7 @@ const jsonLd = {
     <section class="hero">
       <picture class="hero-media"><source srcset="/hero.webp" type="image/webp"><img alt="" class="home-hero-img" fetchpriority="high" aria-hidden="true" src="/hero.JPG"></picture>
       <div class="hero-content">
-        <p class="eyebrow">Free &amp; open-source tournament software</p>
+        <p class="eyebrow">Free &amp; open-source mock trial tournament software</p>
         <h1>Scoring and tabulation, built for mock trial</h1>
         <p class="hero-lede">
           MockScores makes running a mock trial tournament simple. Create tournaments,

@@ -1,96 +1,127 @@
 ---
 /**
- * BaseLayout — centralizes all SEO-critical <head> tags so every page gets
- * a proper title, description, canonical URL, and social-share cards.
- *
- * Canonical and Open Graph URLs are built from `Astro.site` (configured in
- * astro.config.mjs) + the current path, so they are always absolute.
- */
+    * BaseLayout — centralizes SEO-critical <head> tags so every page gets
+    * a proper title, description, canonical URL, social-share metadata,
+    * favicon declarations, and optional JSON-LD structured data.
+    */
+
 interface Props {
   title: string;
   description: string;
   /** Optional absolute or site-relative path to the social share image. */
   image?: string;
-  /** JSON-LD structured data object rendered into the page for rich results. */
+  /** JSON-LD structured data object rendered into the page. */
   jsonLd?: Record<string, unknown>;
 }
 
-const { title, description, image = '/og-default.png', jsonLd } = Astro.props;
+const {
+  title,
+  description,
+  image = '/og-default.png',
+  jsonLd,
+} = Astro.props;
 
 import '../styles/global.css';
 import 'overlayscrollbars/overlayscrollbars.css';
 
-// Astro.site comes from `site` in astro.config.mjs; fall back defensively.
-const siteUrl = Astro.site ?? new URL('https://mockscores.org');
+// Astro.site comes from `site` in astro.config.mjs.
+// Fall back defensively if it is not configured.
+const siteUrl = Astro.site ?? new URL('https://mockscores.org/');
+
 const canonicalURL = new URL(Astro.url.pathname, siteUrl);
+const imageURL = new URL(image, siteUrl);
 ---
 
 <!doctype html>
 <html lang="en">
-  <head>
-    <meta charset="UTF-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1" />
-    <meta name="generator" content={Astro.generator} />
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <meta name="generator" content={Astro.generator} />
 
-    <!-- Primary meta -->
-    <title>{title}</title>
-    <meta name="description" content={description} />
-    <link rel="canonical" href={canonicalURL} />
+  <!-- Primary SEO -->
+  <title>{title}</title>
+  <meta name="description" content={description} />
+  <link rel="canonical" href={canonicalURL} />
 
-    <!-- Open Graph (Facebook, LinkedIn, etc.) -->
-    <meta property="og:type" content="website" />
-    <meta property="og:site_name" content="MockScores" />
-    <meta property="og:title" content={title} />
-    <meta property="og:description" content={description} />
-    <meta property="og:url" content={canonicalURL} />
-    <meta property="og:image" content="favicon.sv" />
-    <link rel="icon" type="image/sv" href="/favicon.svg">
+  <!-- Favicons -->
+  <link rel="icon" href="/favicon.ico" sizes="any" />
+  <link
+      rel="icon"
+      type="image/png"
+      href="/favicon-48x48.png"
+      sizes="48x48"
+  />
+  <link
+      rel="icon"
+      type="image/svg+xml"
+      href="/favicon.svg"
+  />
 
-
-
-    <!-- Structured data for rich results -->
-    {
+  <!-- Open Graph -->
+  <meta property="og:type" content="website" />
+  <meta property="og:site_name" content="MockScores" />
+  <meta property="og:title" content={title} />
+  <meta property="og:description" content={description} />
+  <meta property="og:url" content={canonicalURL} />
+  <meta property="og:image" content={imageURL} />
+  <meta property="og:image:alt" content={`${title} — MockScores`} />
+  <meta property="og:image:width" content="1200" />
+  <meta property="og:image:height" content="630" />
+  <meta
+      property="og:image:alt"
+      content="MockScores — scoring and tabulation software for mock trial tournaments"
+  />
+  <!-- Structured data -->
+  {
       jsonLd && (
-        <script
-          type="application/ld+json"
-          is:inline
-          set:html={JSON.stringify(jsonLd)}
-        />
+          <script
+              type="application/ld+json"
+              is:inline
+              set:html={JSON.stringify(jsonLd)}
+              />
       )
-    }
-  </head>
-  <body>
-  <header>
-    <nav aria-label="Primary">
-      <a href="/">MockScores</a>
-      <a href="https://app.mockscores.org">Log In</a>
-    </nav>
-  </header>
-    <slot />
-  <footer>
-    <p>Open source on <a href="https://github.com/curtisjbradley/Mock-Scores">GitHub</a>.</p>
-  </footer>
+  }
+</head>
 
-    <script>
-      import { OverlayScrollbars } from 'overlayscrollbars';
+<body>
+<header>
+  <nav aria-label="Primary">
+    <a href="/">MockScores</a>
+    <a href="https://app.mockscores.org">Log In</a>
+  </nav>
+</header>
 
-      // Initialize on the <body> so OverlayScrollbars takes over the page
-      // scroll and renders a scrollbar that overlays the content.
-      OverlayScrollbars(
-        {
-          target: document.body,
-          // cancel lets the native scrollbar stay when the OS already uses
-          // overlay scrollbars (macOS/iOS/Android), avoiding double bars.
-          cancel: { nativeScrollbarsOverlaid: true },
+<slot />
+
+<footer>
+  <p>
+    Open source on
+    {' '}
+    <a href="https://github.com/curtisjbradley/Mock-Scores">
+      GitHub
+    </a>.
+  </p>
+</footer>
+
+<script>
+  import { OverlayScrollbars } from 'overlayscrollbars';
+
+  OverlayScrollbars(
+      {
+        target: document.body,
+        cancel: {
+          nativeScrollbarsOverlaid: true,
         },
-        {
-          scrollbars: {
-            theme: 'os-theme-dark',
-            autoHide: 'leave',
-            autoHideDelay: 600,
-          },
+      },
+      {
+        scrollbars: {
+          theme: 'os-theme-dark',
+          autoHide: 'leave',
+          autoHideDelay: 600,
         },
-      );
-    </script>
-  </body>
+      },
+  );
+</script>
+</body>
 </html>
