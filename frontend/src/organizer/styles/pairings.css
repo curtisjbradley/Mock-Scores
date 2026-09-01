@@ -79,13 +79,19 @@
     color: var(--text-muted);
 }
 
-.dash-team-name {
+.dash-team-name,
+.pc-no-courtroom{
     font-size: 0.9rem;
     font-weight: 600;
     color: var(--text);
     overflow: hidden;
     text-overflow: ellipsis;
     white-space: nowrap;
+}
+
+.pc-no-courtroom {
+    color: var(--danger);
+    font-weight: bold;
 }
 
 .dash-vs {
@@ -693,4 +699,112 @@
         width: 100%;
         justify-content: flex-start;
     }
+}
+
+.pc-topbar-actions {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.4rem;
+}
+
+.pc-download-ballot-btn {
+    background: none;
+    border: 1px solid var(--border);
+    color: var(--text);
+    font-size: 0.8rem;
+    font-weight: 600;
+    font-family: inherit;
+    cursor: pointer;
+    padding: 0.2rem 0.6rem;
+    border-radius: 0.4rem;
+    transition: background 120ms ease, border-color 120ms ease;
+}
+
+.pc-download-ballot-btn:hover:not(:disabled) {
+    background: var(--surface-muted);
+    border-color: var(--primary);
+}
+
+.pc-download-ballot-btn:disabled {
+    opacity: 0.6;
+    cursor: default;
+}
+
+.pc-ballot-error {
+    margin: 0.25rem 0 0;
+    font-size: 0.78rem;
+    color: var(--danger);
+}
+
+.pc-presider-badge {
+    display: inline-flex;
+    align-items: center;
+    padding: 0.1rem 0.5rem;
+    border-radius: 2rem;
+    background: var(--primary);
+    color: var(--white);
+    font-size: 0.7rem;
+    font-weight: 700;
+    white-space: nowrap;
+}
+
+.pc-presider-checkbox {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    font-size: 0.9rem;
+    margin-bottom: 1rem;
+    cursor: pointer;
+}
+
+.pc-presider-checkbox input {
+    cursor: pointer;
+}
+
+.pc-matchup-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr 1fr;
+    gap: 0.75rem;
+    padding: 0.75rem 0;
+    border-top: 1px solid var(--border);
+    border-bottom: 1px solid var(--border);
+    min-width: 0;
+}
+
+.pc-matchup-col {
+    position: relative;
+    display: flex;
+    flex-direction: column;
+    gap: 0.2rem;
+    min-width: 0;
+    text-align: left;
+    background: none;
+    border: none;
+    font-family: inherit;
+    cursor: pointer;
+    padding: 0.2rem 0.3rem;
+    border-radius: 0.4rem;
+    transition: background 120ms ease;
+}
+
+button.pc-matchup-col:hover {
+    background: var(--surface-muted);
+}
+
+.pc-matchup-col.pc-inline-edit {
+    cursor: default;
+}
+
+.pc-col-edit-hint {
+    position: absolute;
+    top: 0.2rem;
+    right: 0.3rem;
+    font-size: 0.7rem;
+    color: var(--text-muted);
+    opacity: 0;
+    transition: opacity 120ms ease;
+}
+
+button.pc-matchup-col:hover .pc-col-edit-hint {
+    opacity: 1;
 }

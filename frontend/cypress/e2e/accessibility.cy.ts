@@ -106,6 +106,7 @@ describe('Accessibility', () => {
                         presiderName: 'Hon. Smith',
                         courtroomNumber: '101',
                         caseName: 'State v. Doe',
+                        tournamentName: 'State Championship',
                         prosecutionCode: 'P1',
                         defenseCode: 'D1',
                         students: {
