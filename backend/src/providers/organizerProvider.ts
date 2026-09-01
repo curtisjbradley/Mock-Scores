@@ -573,9 +573,10 @@ export async function deletePairing(pairingID: string): Promise<void> {
     if (!row) throw new NotFoundError('pairing');
 }
 
-export async function getPairingScorers(pairingID: string): Promise<{ assignment_id: string; type: 'registered' | 'paper'; scorer_id: string; name: string; is_presider: boolean; conflict_reported: boolean; p_points: number | null; d_points: number | null }[]> {
-    const presiderRow = (await dbQuery<{ scorer_assignment_id: string }>('SELECT scorer_assignment_id FROM scorer_presider_assignment WHERE pairing_id=$1', [pairingID]))?.rows[0];
+export async function getPairingScorers(pairingID: string): Promise<{ assignment_id: string; type: 'registered' | 'paper'; scorer_id: string; name: string; is_presider: boolean; presider_only_tiebreaker: boolean; conflict_reported: boolean; p_points: number | null; d_points: number | null }[]> {
+    const presiderRow = (await dbQuery<{ scorer_assignment_id: string; show_scores: boolean }>('SELECT scorer_assignment_id, show_scores FROM scorer_presider_assignment WHERE pairing_id=$1', [pairingID]))?.rows[0];
     const presiderAssignmentId = presiderRow?.scorer_assignment_id ?? null;
+    const presiderOnlyTiebreaker = presiderRow ? presiderRow.show_scores === false : false;
     const registered = (await dbQuery<{ assignment_id: string; scorer_id: string; first_name: string; last_name: string; conflict_reported: boolean; p_points: number | null; d_points: number | null }>(
         `SELECT spa.assignment_id, s.scorer_id, s.first_name, s.last_name, spa.conflict_reported,
                 b.p_points, b.d_points
@@ -595,8 +596,8 @@ export async function getPairingScorers(pairingID: string): Promise<{ assignment
         [pairingID]
     ))?.rows ?? [];
     return [
-        ...registered.map(r => ({ assignment_id: r.assignment_id, type: 'registered' as const, scorer_id: r.scorer_id, name: `${r.first_name} ${r.last_name}`, is_presider: r.assignment_id === presiderAssignmentId, conflict_reported: r.conflict_reported, p_points: r.p_points, d_points: r.d_points })),
-        ...paper.map(p => ({ assignment_id: p.assignment_id, type: 'paper' as const, scorer_id: p.scorer_id, name: p.name, is_presider: p.assignment_id === presiderAssignmentId, conflict_reported: p.conflict_reported, p_points: p.p_points, d_points: p.d_points })),
+        ...registered.map(r => ({ assignment_id: r.assignment_id, type: 'registered' as const, scorer_id: r.scorer_id, name: `${r.first_name} ${r.last_name}`, is_presider: r.assignment_id === presiderAssignmentId, presider_only_tiebreaker: r.assignment_id === presiderAssignmentId && presiderOnlyTiebreaker, conflict_reported: r.conflict_reported, p_points: r.p_points, d_points: r.d_points })),
+        ...paper.map(p => ({ assignment_id: p.assignment_id, type: 'paper' as const, scorer_id: p.scorer_id, name: p.name, is_presider: p.assignment_id === presiderAssignmentId, presider_only_tiebreaker: p.assignment_id === presiderAssignmentId && presiderOnlyTiebreaker, conflict_reported: p.conflict_reported, p_points: p.p_points, d_points: p.d_points })),
     ];
 }
 
@@ -732,11 +733,11 @@ export async function removeScorerAssignment(assignmentID: string): Promise<void
     if (row.paper_scorer_id) await dbQuery('DELETE FROM paper_scorers WHERE scorer_id=$1', [row.paper_scorer_id]);
 }
 
-export async function setPresider(pairingID: string, assignmentID: string): Promise<void> {
+export async function setPresider(pairingID: string, assignmentID: string, showScores = true): Promise<void> {
     const result = await dbQuery(
-        `INSERT INTO scorer_presider_assignment (scorer_assignment_id, pairing_id) VALUES ($1,$2)
-         ON CONFLICT (pairing_id) DO UPDATE SET scorer_assignment_id = EXCLUDED.scorer_assignment_id`,
-        [assignmentID, pairingID]
+        `INSERT INTO scorer_presider_assignment (scorer_assignment_id, pairing_id, show_scores) VALUES ($1,$2,$3)
+         ON CONFLICT (pairing_id) DO UPDATE SET scorer_assignment_id = EXCLUDED.scorer_assignment_id, show_scores = EXCLUDED.show_scores`,
+        [assignmentID, pairingID, showScores]
     );
     if (!result) throw new DbError('setPresider');
 }

@@ -91,27 +91,11 @@ const RoundView = () => {
                             {sending ? 'Sending…' : 'Send scoring links'}
                         </button>
                         {sendMsg && <span style={{ fontSize: '0.82rem', color: 'var(--text-muted)' }}>{sendMsg}</span>}
-                        <button className="org-new-btn" onClick={toggleForm}>
-                            {showAddForm ? 'Cancel' : '+ Add matchup'}
-                        </button>
+
                     </div>
                 </div>
 
-                {showAddForm && (
-                    <AddMatchupForm
-                        teams={teams}
-                        courtrooms={courtrooms}
-                        addPros={addPros}
-                        addDef={addDef}
-                        addCourtroom={addCourtroom}
-                        prosError={formErrors.prosError}
-                        defError={formErrors.defError}
-                        onProsChange={setAddPros}
-                        onDefChange={setAddDef}
-                        onCourtroomChange={setAddCourtroom}
-                        onSubmit={handleAddMatchup}
-                    />
-                )}
+
 
                 <div className="dash-pairings">
                     {pairings.length === 0 && !showAddForm && (
@@ -130,24 +114,46 @@ const RoundView = () => {
                             ballotStatus={ballotStatus[pairing.pairing_id]}
                             tournamentId={id!}
                             roundId={roundId!}
+                            round={round}
                             conflictSet={conflictSet}
                             onRemove={() => confirmRemove.open(pairing)}
                             onUpdate={updatePairing}
                             onScorerAssigned={s => onScorerAssigned(pairing.pairing_id, s)}
                             onScorerRemoved={assignmentId => onScorerRemoved(pairing.pairing_id, assignmentId)}
-                            onPresiderChanged={assignmentId => onPresiderChanged(pairing.pairing_id, assignmentId)}
+                            onPresiderChanged={(assignmentId, onlyTiebreaker) => onPresiderChanged(pairing.pairing_id, assignmentId, onlyTiebreaker)}
                         />
                     ))}
                 </div>
+                {showAddForm && (
+                    <AddMatchupForm
+                        teams={teams}
+                        courtrooms={courtrooms}
+                        addPros={addPros}
+                        addDef={addDef}
+                        addCourtroom={addCourtroom}
+                        prosError={formErrors.prosError}
+                        defError={formErrors.defError}
+                        onProsChange={setAddPros}
+                        onDefChange={setAddDef}
+                        onCourtroomChange={setAddCourtroom}
+                        onSubmit={handleAddMatchup}
+                    />
+                )}
+                <button className="org-new-btn" onClick={toggleForm}>
+                    {showAddForm ? 'Cancel' : '+ Add Pairing'}
+                </button>
+
             </div>
 
             {confirmRemove.pending && (
                 <ConfirmRemoveModal
-                    message="Remove this matchup?"
+                    message="Remove this pairing?"
                     onCancel={confirmRemove.clear}
                     onConfirm={() => { removePairing(confirmRemove.pending!); confirmRemove.clear() }}
                 />
             )}
+
+
         </main>
     )
 }
