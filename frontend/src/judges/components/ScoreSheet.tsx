@@ -209,7 +209,8 @@ function ScoreSheet(details: IScoreSheetFormat & { onSubmitSuccess: () => void }
                         <span className="trial-info-courtroom">Courtroom {details.courtroomNumber}</span>
                         <span className="trial-info-presider">{details.presiderName}</span>
                     </div>
-                    <h1 className="case-name">{details.caseName}</h1>
+                    <h1 className="tournament-name">{details.tournamentName}</h1>
+                    <h2 className="case-name">{details.caseName}</h2>
                     <div className="team-labels">
                         <div className="team-label team-label--prosecution">
                             <span className="team-code">{details.prosecutionCode}</span>

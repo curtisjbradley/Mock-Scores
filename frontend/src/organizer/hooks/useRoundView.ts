@@ -100,10 +100,14 @@ export function useRoundView(id: string | undefined, roundId: string | undefined
     const onScorerRemoved = (pairingId: string, assignmentId: string) =>
         setPairingScorers(prev => ({ ...prev, [pairingId]: (prev[pairingId] ?? []).filter(s => s.assignment_id !== assignmentId) }))
 
-    const onPresiderChanged = (pairingId: string, assignmentId: string | null) =>
+    const onPresiderChanged = (pairingId: string, assignmentId: string | null, onlyTiebreaker = false) =>
         setPairingScorers(prev => ({
             ...prev,
-            [pairingId]: (prev[pairingId] ?? []).map(s => ({ ...s, is_presider: s.assignment_id === assignmentId })),
+            [pairingId]: (prev[pairingId] ?? []).map(s => ({
+                ...s,
+                is_presider: s.assignment_id === assignmentId,
+                presider_only_tiebreaker: s.assignment_id === assignmentId && onlyTiebreaker,
+            })),
         }))
 
     return {

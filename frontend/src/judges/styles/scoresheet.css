@@ -49,11 +49,19 @@ html {
     font-style: italic;
 }
 
+.tournament-name {
+    margin: 0 0 0.2rem;
+    font-size: 1.35rem;
+    font-weight: 700;
+    color: var(--text);
+}
+
 .case-name {
     margin: 0 0 0.75rem;
-    font-size: 1.35rem;
-    font-weight: 600;
-    color: var(--text);
+    font-size: 1.05rem;
+    font-weight: 500;
+    font-style: italic;
+    color: var(--text-muted);
 }
 
 .team-labels {

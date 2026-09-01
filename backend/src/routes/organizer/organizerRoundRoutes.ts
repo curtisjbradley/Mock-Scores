@@ -1,5 +1,6 @@
 import { Request, Response, Router } from "express";
 import * as organizer from "../../providers/organizerProvider";
+import { getPairingBallotFormat } from "../../providers/scorerProvider";
 import { IPairingCreationPayload, IRound } from "@mock-scores/shared";
 import { DbError, NotFoundError } from "../../errors";
 import { uuidRegex } from "../../authUtils";
@@ -268,6 +269,47 @@ router.get('/pairings/:pairing/scorers', async (req: Request, res: Response) => 
 
 /**
  * @swagger
+ * /organizer/tournament/{tournamentId}/rounds/{round}/pairings/{pairing}/ballot-format:
+ *   get:
+ *     summary: Get the blank printable ballot format for a pairing
+ *     description: >
+ *       Returns the full scoresheet format (categories, students, witnesses,
+ *       award categories, team codes, courtroom, presider) for a pairing without
+ *       requiring a scorer assignment. Used to generate a blank downloadable ballot.
+ *     tags: [Organizer - Rounds]
+ *     parameters:
+ *       - in: path
+ *         name: tournamentId
+ *         required: true
+ *         schema: { type: string, format: uuid }
+ *       - in: path
+ *         name: round
+ *         required: true
+ *         schema: { type: string, format: uuid }
+ *       - in: path
+ *         name: pairing
+ *         required: true
+ *         schema: { type: string, format: uuid }
+ *     responses:
+ *       200: { description: Blank ballot format (IScoreSheetFormat) }
+ *       400: { description: Invalid pairing ID }
+ *       404: { description: Pairing not found }
+ *       500: { description: Unable to build ballot }
+ */
+router.get('/pairings/:pairing/ballot-format', async (req: Request, res: Response) => {
+    const pairing = req.params.pairing as string;
+    if (!uuidRegex.test(pairing)) return res.status(400).json({ message: 'Invalid pairing ID' });
+    try {
+        return res.status(200).json(await getPairingBallotFormat(pairing));
+    } catch (e) {
+        if (e instanceof NotFoundError) return res.status(404).json({ message: 'Pairing not found' });
+        if (e instanceof DbError) return res.status(500).json({ message: 'Unable to build ballot' });
+        throw e;
+    }
+});
+
+/**
+ * @swagger
  * /organizer/tournament/{tournamentId}/rounds/{round}/pairings/{pairing}/scorers:
  *   post:
  *     summary: Assign a scorer to a pairing
@@ -394,10 +436,10 @@ router.delete('/pairings/:pairing/scorers/:assignment', async (req: Request, res
 router.put('/pairings/:pairing/presider', async (req: Request, res: Response) => {
     const pairing = req.params.pairing as string;
     if (!uuidRegex.test(pairing)) return res.status(400).json({ message: 'Invalid pairing ID' });
-    const { assignment_id } = req.body as { assignment_id: string };
+    const { assignment_id, only_tiebreaker } = req.body as { assignment_id: string; only_tiebreaker?: boolean };
     if (!assignment_id || !uuidRegex.test(assignment_id)) return res.status(400).json({ message: 'Invalid assignment_id' });
     try {
-        await organizer.setPresider(pairing, assignment_id);
+        await organizer.setPresider(pairing, assignment_id, only_tiebreaker !== true);
         return res.status(200).json({ success: true });
     } catch (e) {
         if (e instanceof DbError) return res.status(500).json({ message: 'Unable to set presider' });
@@ -474,11 +516,31 @@ router.get('/ballot-status', roundHandler(async (req, res) => {
     }
 }));
 
+
+
 /**
- * POST /organizer/tournament/:tournamentId/rounds/:round/send-scoring-links
- * Sends scorecard invite emails to all registered scorers assigned to pairings
- * in this round. Fire-and-forget per email so one bad address doesn't block others.
- * Returns the count of emails dispatched.
+ * @swagger
+ * /organizer/tournament/{tournamentId}/rounds/{round}/send-scoring-links:
+ *   post:
+ *     summary: Sends scorecard invite emails to all registered scorers assigned to pairing in this round.
+ *     tags: [Organizer - Rounds]
+ *     parameters:
+ *       - in: path
+ *         name: tournamentId
+ *         required: true
+ *         schema: { type: string, format: uuid }
+ *       - in: path
+ *         name: round
+ *         required: true
+ *         schema: { type: string, format: uuid }
+ *     responses:
+ *       200:
+ *         description: Number of emails sent
+ *         content:
+ *           application/json:
+ *              schema:
+ *                  sent: { type: boolean }
+ *       500: { description: Database error }
  */
 router.post('/send-scoring-links', roundHandler(async (req, res) => {
     const contexts = await organizer.getScorerInviteContextsForRound(req.round.round_id);
@@ -495,10 +557,28 @@ router.post('/send-scoring-links', roundHandler(async (req, res) => {
 }));
 
 /**
- * POST /organizer/tournament/:tournamentId/rounds/:round/send-scoring-links/:assignment
- * Sends scorecard invite emails to a selected assignment
- * in this round.
- * Returns 200 with { sent: true } on success, 404 with {message "Cannot resolve scoring assignment"} if assignment not found.
+ * @swagger
+ * /organizer/tournament/{tournamentId}/rounds/{round}/send-scoring-links/{assignment}:
+ *   post:
+ *     summary: Sends scorecard invite to the registered scorer's assignment id.
+ *     tags: [Organizer - Scorers]
+ *     parameters:
+ *       - in: path
+ *         name: tournamentId
+ *         required: true
+ *         schema: { type: string, format: uuid }
+ *       - in: path
+ *         name: round
+ *         required: true
+ *         schema: { type: string, format: uuid }
+ *       - in: path
+ *         name: assignment
+ *         required: true
+ *         schema: { type: string, format: uuid }
+ *     responses:
+ *       200: {description: Success message}
+ *       404: {description: Cannot find the assignment}
+ *       500: { description: Database error }
  */
 router.post('/send-scoring-links/:assignment', roundHandler(async (req, res) => {
     const assignment = req.params.assignment as string;

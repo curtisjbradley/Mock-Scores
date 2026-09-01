@@ -44,6 +44,8 @@ export interface IScoreSheetFormat {
     presiderName: string;
     courtroomNumber: string;
     caseName: string;
+    /** Tournament display name, shown on the scoresheet and printable ballot. */
+    tournamentName: string;
     prosecutionCode: string;
     defenseCode: string;
     students: Record<string, IStudentInfo>;
