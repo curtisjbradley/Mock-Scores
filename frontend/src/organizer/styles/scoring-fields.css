@@ -51,6 +51,11 @@
 .sf-table-wrap {
     width: 100%;
     overflow-x: auto;
+    /* overflow-x: auto makes overflow-y compute as auto, which clips the header
+       tooltips (they open downward). Reserve room inside the scroll box so the
+       bubble stays within the non-clipped padding area even for short tables. */
+    padding-bottom: 4rem;
+    margin-bottom: -4rem;
 }
 
 .sf-table {
@@ -77,6 +82,13 @@
 
 .sf-table thead th:not(:first-child) {
     text-align: center;
+}
+
+/* Header label that carries an explanatory tooltip. */
+.sf-th-info {
+    text-decoration: underline dotted;
+    text-underline-offset: 2px;
+    cursor: help;
 }
 
 .sf-row td {

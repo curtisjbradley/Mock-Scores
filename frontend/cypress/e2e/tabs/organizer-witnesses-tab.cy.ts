@@ -38,7 +38,7 @@ describe('Witnesses Tab', () => {
   })
 
   it('can remove a witness', () => {
-    cy.contains('.tc-section', 'P witnesses').find('button.tc-remove-btn').first().click()
+    cy.contains('.tc-section', 'P witnesses').find('button.ds-danger-btn--icon').first().click()
     cy.get('.tc-section').first().find('input[type="text"]').should('have.length', 1)
     cy.get('.tc-section').first().find('input[type="text"]').first().should('have.value', 'Bob')
   })

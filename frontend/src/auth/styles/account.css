@@ -143,25 +143,3 @@
     margin: 0;
 }
 
-.account-delete {
-    height: 2.75rem;
-    border: none;
-    border-radius: var(--radius);
-    background: var(--danger);
-    color: var(--white);
-    font-size: 1rem;
-    font-weight: 600;
-    font-family: inherit;
-    cursor: pointer;
-    transition: background 140ms ease, opacity 140ms ease;
-    margin-top: 0.5rem;
-}
-
-.account-delete:hover {
-    opacity: 0.9;
-}
-
-.account-delete:focus-visible {
-    outline: none;
-    box-shadow: 0 0 0 0.25rem var(--focus);
-}

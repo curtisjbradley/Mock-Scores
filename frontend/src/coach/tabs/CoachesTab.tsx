@@ -3,6 +3,8 @@ import type { ICoach } from '@mock-scores/shared'
 import { ConfirmRemoveModal, AddOrganizerModal } from '../../organizer/components/modals'
 import { useConfirmRemove } from '../../shared/hooks/useConfirmRemove.ts'
 import StatusChip from '../../shared/components/StatusChip'
+import DangerButton from '../../shared/components/DangerButton'
+import AddButton from '../../shared/components/AddButton'
 
 interface Props {
     coaches: ICoach[]
@@ -20,7 +22,7 @@ export default function CoachesTab({ coaches, isOrganizerView, onAdd, onRemove, 
     return (
         <>
             <div className="tab-actions">
-                <button className="org-new-btn" onClick={() => setShowAdd(true)}>+ Add coach</button>
+                <AddButton onClick={() => setShowAdd(true)}>+ Add coach</AddButton>
             </div>
             <div className="dash-table-scroll">
                 <table className="dash-standings-table">
@@ -37,7 +39,7 @@ export default function CoachesTab({ coaches, isOrganizerView, onAdd, onRemove, 
                                     {isOrganizerView && c.has_joined && (
                                         <button className="dash-remove-btn" onClick={() => confirmOwner.open(c)}>Make Owner</button>
                                     )}
-                                    <button className="dash-remove-btn" onClick={() => confirmRemove.open(c)}>Remove</button>
+                                    <DangerButton onClick={() => confirmRemove.open(c)}>Remove</DangerButton>
                                 </div>
                             )}</td>
                         </tr>

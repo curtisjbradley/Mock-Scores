@@ -139,6 +139,7 @@ create table tournaments
     status              text      default 'active'          not null
         constraint tournaments_status_check
             check (status in ('active', 'completed', 'archived')),
+    share_individual_rankings boolean default true          not null,
     constraint tournaments_check
         check ((start_date IS NULL) OR (end_date IS NULL) OR (start_date <= end_date))
 );

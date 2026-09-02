@@ -1,3 +1,6 @@
+import DangerButton from './DangerButton'
+import AddButton from './AddButton'
+
 interface WitnessNameListProps {
     /** Label shown above the list (e.g. "Prosecution witnesses") */
     label: string
@@ -55,11 +58,11 @@ export default function WitnessNameList({
                             value={name}
                             onChange={e => onChangeName(i, e.target.value)}
                         />
-                        <button type="button" className="tc-remove-btn" onClick={() => onRemove(i)}>×</button>
+                        <DangerButton variant="subtle" aria-label={`Remove ${label} ${i + 1}`} onClick={() => onRemove(i)}>Remove</DangerButton>
                     </div>
                 ))}
             </div>
-            <button type="button" className="tc-add-btn" onClick={onAdd}>+ {addLabel}</button>
+            <AddButton variant="dashed" onClick={onAdd}>+ {addLabel}</AddButton>
         </div>
     )
 }

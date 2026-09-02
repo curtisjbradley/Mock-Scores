@@ -4,6 +4,8 @@ import type { IBallotStatus, IRound } from '@mock-scores/shared'
 import Section from './Section'
 import { ConfirmRemoveModal } from '../components/modals'
 import { useConfirmRemove } from '../../shared/hooks/useConfirmRemove'
+import DangerButton from '../../shared/components/DangerButton'
+import AddButton from '../../shared/components/AddButton'
 import { apiFetch } from '../../auth/auth'
 import '../styles/rounds.css'
 
@@ -80,9 +82,9 @@ function RoundRow({ round, tournamentId, ballotSummary, onRemove, onSave }: {
                     {ballotSummary.submitted}/{ballotSummary.total} ballots
                 </span>
             )}
-            <button className="dash-remove-btn" onClick={() => onRemove(round.round_id)}>
+            <DangerButton onClick={() => onRemove(round.round_id)}>
                 Remove
-            </button>
+            </DangerButton>
         </div>
     )
 }
@@ -156,7 +158,7 @@ export default function RoundsTab({ tournamentId }: { tournamentId: string }) {
         <>
             <Section title="Rounds">
                 {error && <p className="org-error">{error}</p>}
-                <button className="org-new-btn" onClick={handleAdd}>+ Add round</button>
+                <AddButton onClick={handleAdd}>+ Add round</AddButton>
                 {sorted.map(round => (
                     <RoundRow key={round.round_id} round={round} tournamentId={tournamentId}
                         ballotSummary={ballotStatusByRound[round.round_id] ?? null}

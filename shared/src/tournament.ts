@@ -6,6 +6,11 @@ export interface TournamentPayload {
         endDate: string | null
         startTbd: boolean
         endTbd: boolean
+        /**
+         * When false, coaches cannot see individual award nominations on
+         * ballots. Defaults to true. Tournament-level setting.
+         */
+        shareIndividualRankings: boolean
     }
     caseFormat: {
         caseName: string
@@ -74,6 +79,8 @@ export interface ITournament {
     num_teams: number;
     num_rounds: number;
     status: 'active' | 'completed' | 'archived';
+    /** When false, coaches cannot see individual award nominations on ballots. */
+    share_individual_rankings: boolean;
 }
 
 export interface ITournamentDetails {

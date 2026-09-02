@@ -7,6 +7,8 @@ import { useConfirmRemove } from '../../shared/hooks/useConfirmRemove'
 import { useSession } from '../../shared/hooks/useSession'
 import InlineEmailEdit from '../../shared/components/InlineEmailEdit'
 import StatusChip from '../../shared/components/StatusChip'
+import DangerButton from '../../shared/components/DangerButton'
+import AddButton from '../../shared/components/AddButton'
 
 export default function OrganizersTab({ tournamentId }: { tournamentId: string }) {
     const [organizers, setOrganizers] = useState<IOrganizer[]>([])
@@ -49,7 +51,7 @@ export default function OrganizersTab({ tournamentId }: { tournamentId: string }
     return (
         <Section title="Organizers" description="Manage your organizers">
             <div className="tab-actions">
-                <button className="org-new-btn" onClick={() => setShowModal(true)}>+ Add Organizer</button>
+                <AddButton onClick={() => setShowModal(true)}>+ Add Organizer</AddButton>
             </div>
             <div className="dash-table-scroll">
                 <table className="dash-standings-table">
@@ -81,7 +83,7 @@ export default function OrganizersTab({ tournamentId }: { tournamentId: string }
                                             {!org.has_joined && editingId !== org.id && (
                                                 <button className="dash-remove-btn" onClick={() => { setEditingId(org.id); setEditEmail(org.email) }}>Edit email</button>
                                             )}
-                                            <button className="dash-remove-btn" onClick={() => confirmRemove.open(org)}>Remove</button>
+                                            <DangerButton onClick={() => confirmRemove.open(org)}>Remove</DangerButton>
                                         </div>
                                     )}
                                 </td>

@@ -8,6 +8,8 @@ import CsvImportModal from '../../shared/components/CsvImportModal'
 import { apiFetch } from '../../auth/auth'
 import { useConfirmRemove } from '../../shared/hooks/useConfirmRemove'
 import InlineEmailEdit from '../../shared/components/InlineEmailEdit'
+import DangerButton from '../../shared/components/DangerButton'
+import AddButton from '../../shared/components/AddButton'
 import StatusChip from '../../shared/components/StatusChip'
 
 
@@ -70,7 +72,7 @@ export default function TeamsTab({ tournamentId }: { tournamentId: string }) {
     return (
         <Section title="Teams" description="Manage invited teams">
             <div className="tab-actions">
-                <button className="org-new-btn" onClick={() => setShowModal(true)}>+ Add team</button>
+                <AddButton onClick={() => setShowModal(true)}>+ Add team</AddButton>
                 <button className="org-new-btn" onClick={() => setShowImport(true)} style={{ marginLeft: 8 }}>Import CSV</button>
             </div>
 
@@ -108,7 +110,7 @@ export default function TeamsTab({ tournamentId }: { tournamentId: string }) {
                                         {!team.has_joined && editingEmailId !== team.id && (
                                             <button className="dash-remove-btn" onClick={() => { setEditingEmailId(team.id); setEditEmail(team.coach_email) }}>Edit email</button>
                                         )}
-                                        <button className="dash-remove-btn" onClick={() => confirmRemove.open(team)}>Remove</button>
+                                        <DangerButton onClick={() => confirmRemove.open(team)}>Remove</DangerButton>
                                     </div>
                                 </td>
                             </tr>

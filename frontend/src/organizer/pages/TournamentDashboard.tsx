@@ -6,7 +6,6 @@ import '../styles/rounds.css'
 import '../styles/pairings.css'
 import '../styles/standings.css'
 import '../../shared/styles/dashboard.css'
-import { dateRange } from '../data/utils'
 import { apiFetch } from '../../auth/auth'
 import type { ITournament } from '@mock-scores/shared'
 import { useSearchParamTab } from '../../shared/hooks/useSearchParamTab'
@@ -98,7 +97,6 @@ export default function TournamentDashboard() {
 
     if (!id) return null
 
-    const dates = [tournament?.start_date, tournament?.end_date].filter(Boolean).map(String)
     const activeTab = (screen !== 'overview' && screen !== 'structure') ? screen as OrganizerTab : null
     // Highlight "Structure" in the sidebar while viewing any structure sub-tab.
     const activeNav: OrganizerScreen = STRUCTURE_TABS.has(screen as OrganizerTab) ? 'structure' : screen
@@ -118,19 +116,6 @@ export default function TournamentDashboard() {
                 />
 
                 <div className="dash-content">
-                    <button className="org-back-btn" onClick={() => navigate('/organizer')}>
-                        ← All tournaments
-                    </button>
-
-                    <div className="org-header">
-                        <h1>{tournament?.name ?? ''}</h1>
-                    </div>
-
-                    <div className="org-meta-row">
-                        <span>{dates.length ? dateRange(dates) : ''}</span>
-                        <span>{tournament?.location ?? ''}</span>
-                        {tournament && <span>{tournament.num_teams} teams · {tournament.num_rounds} rounds</span>}
-                    </div>
 
                     {screen === 'overview' && (
                         <OverviewTab tournamentId={id} tournament={tournament} onNavigate={setScreen} />

@@ -30,6 +30,7 @@ export interface ITournamentRow {
     num_rounds: number;
     num_teams: number;
     status: 'active' | 'completed' | 'archived';
+    share_individual_rankings: boolean;
 }
 
 export interface ICaseWitnessRow {

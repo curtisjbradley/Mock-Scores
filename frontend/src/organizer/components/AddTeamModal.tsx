@@ -1,6 +1,7 @@
 import { useState } from 'react'
 import '../../judges/styles/modal.css'
 import { isValidEmail } from '../../utils/validation'
+import { useAutoFocus } from '../../shared/hooks/useAutoFocus'
 
 interface Props {
     onClose: () => void
@@ -12,6 +13,7 @@ const AddTeamModal = ({ onClose, onAdd, existingNames }: Props) => {
     const [name, setName] = useState('')
     const [email, setEmail] = useState('')
     const [code, setCode] = useState('')
+    const nameRef = useAutoFocus<HTMLInputElement>()
 
     const isDuplicate = existingNames.some(n => n.toLowerCase() === name.trim().toLowerCase())
 
@@ -36,7 +38,7 @@ const AddTeamModal = ({ onClose, onAdd, existingNames }: Props) => {
                         id="team-name"
                         type="text"
                         required
-                        autoFocus
+                        ref={nameRef}
                         className={`modal-input${isDuplicate ? ' modal-input--invalid' : ''}`}
                         value={name}
                         onChange={e => setName(e.target.value)}

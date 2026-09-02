@@ -142,6 +142,8 @@ describe('GET /api/coach/tournaments/:id/pairings/:pairingId/ballots/:assignment
             rows: [{ ballot_json: { scores: [], nominations: [] } }],
             rowCount: 1,
         } as any);
+        // sharesIndividualRankings
+        mockDbQuery.mockResolvedValueOnce({ rows: [{ share_individual_rankings: true }], rowCount: 1 } as any);
 
         const res = await request(app).get(url).set(auth());
         expect(res.status).toBe(200);
@@ -150,6 +152,61 @@ describe('GET /api/coach/tournaments/:id/pairings/:pairingId/ballots/:assignment
         expect(res.body.sheet.scorer.firstName).toBe('');
         expect(res.body.sheet.scorer.lastName).toBe('');
         expect(res.body.ballot).toBeTruthy();
+    });
+
+    it('strips award nominations from the ballot when share_individual_rankings is false', async () => {
+        // isAssignmentInPairingWithPublicResults returns true
+        mockDbQuery.mockResolvedValueOnce({ rows: [{ assignment_id: AID }], rowCount: 1 } as any);
+        // getScoreSheet (skipGuards): assignment lookup
+        mockDbQuery.mockResolvedValueOnce({
+            rows: [{
+                pairing_id: PID,
+                registered_scorer_id: 's1',
+                paper_scorer_id: null,
+                p_team: 't1',
+                d_team: 't2',
+                courtroom_name: 'Room 1',
+                tournament_id: TID,
+                presider_scorer_assignment_id: null,
+                show_scores: null,
+                conflict_reported: false,
+            }],
+            rowCount: 1,
+        } as any);
+        // scorer name
+        mockDbQuery.mockResolvedValueOnce({ rows: [{ first_name: 'Jane', last_name: 'Judge' }], rowCount: 1 } as any);
+        // tournament/format
+        mockDbQuery.mockResolvedValueOnce({
+            rows: [{ case_name: 'Case', criminal_case: false, p_witnesses_called: 2, d_witnesses_called: 2, has_swing: false, format_id: 'f1' }],
+            rowCount: 1,
+        } as any);
+        // teams
+        mockDbQuery.mockResolvedValueOnce({ rows: [{ id: 't1', code: '101', name: 'A' }, { id: 't2', code: '202', name: 'B' }], rowCount: 2 } as any);
+        // scoring categories
+        mockDbQuery.mockResolvedValueOnce({ rows: [], rowCount: 0 } as any);
+        // scoring fields
+        mockDbQuery.mockResolvedValueOnce({ rows: [], rowCount: 0 } as any);
+        // witnesses
+        mockDbQuery.mockResolvedValueOnce({ rows: [], rowCount: 0 } as any);
+        // witness call order
+        mockDbQuery.mockResolvedValueOnce({ rows: [], rowCount: 0 } as any);
+        // student assignments
+        mockDbQuery.mockResolvedValueOnce({ rows: [], rowCount: 0 } as any);
+        // award categories
+        mockDbQuery.mockResolvedValueOnce({ rows: [], rowCount: 0 } as any);
+        // getBallot — includes a nomination
+        mockDbQuery.mockResolvedValueOnce({
+            rows: [{ ballot_json: { scores: [], nominations: [{ awardCategoryId: 'ac1', studentId: 'stu1', rank: 1 }] } }],
+            rowCount: 1,
+        } as any);
+        // sharesIndividualRankings → false
+        mockDbQuery.mockResolvedValueOnce({ rows: [{ share_individual_rankings: false }], rowCount: 1 } as any);
+
+        const res = await request(app).get(url).set(auth());
+        expect(res.status).toBe(200);
+        expect(res.body.ballot).toBeTruthy();
+        // Nominations must be hidden from the coach.
+        expect(res.body.ballot.nominations).toEqual([]);
     });
 
     it('returns 404 when both sheet and ballot are null', async () => {

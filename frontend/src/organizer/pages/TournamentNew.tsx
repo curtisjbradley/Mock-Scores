@@ -36,6 +36,7 @@ function buildPayload(
             endDate: info.endTbd ? null : info.endDate,
             startTbd: info.startTbd,
             endTbd: info.endTbd,
+            shareIndividualRankings: info.shareIndividualRankings,
         },
         caseFormat: {
             caseName: caseFormat.caseName,

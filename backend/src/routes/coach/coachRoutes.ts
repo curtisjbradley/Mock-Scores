@@ -254,6 +254,12 @@ router.get("/tournaments/:tournamentId/pairings/:pairingId/ballots/:assignmentId
         sheet.presiderName = '';
     }
 
+    // When the tournament does not share individual rankings, coaches must not
+    // see award nominations on the ballot.
+    if (ballot && !await coach.sharesIndividualRankings(tournamentId)) {
+        ballot.nominations = [];
+    }
+
     return res.status(200).json({ sheet, ballot });
 }));
 

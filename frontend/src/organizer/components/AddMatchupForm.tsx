@@ -1,5 +1,6 @@
 import type { ICourtroom, ITeam } from '@mock-scores/shared'
 import TeamSelectOptions from '../../shared/components/TeamSelectOptions'
+import AddButton from '../../shared/components/AddButton'
 
 interface AddMatchupFormProps {
     teams: ITeam[]
@@ -70,7 +71,7 @@ export default function AddMatchupForm({
                 </div>
             </div>
             <div className="rv-add-form-actions">
-                <button className="org-new-btn" onClick={onSubmit}>Add matchup</button>
+                <AddButton onClick={onSubmit}>Add matchup</AddButton>
             </div>
         </div>
     )

@@ -165,10 +165,10 @@ export async function updateScoringCategories(tournamentID: string, categories: 
     await insertCategories(tournamentID, categories);
 }
 
-export async function updateTournamentDetails(tournamentID: string, t: { name: string; location: string; startDate?: string | null; endDate?: string | null }): Promise<void> {
+export async function updateTournamentDetails(tournamentID: string, t: { name: string; location: string; startDate?: string | null; endDate?: string | null; shareIndividualRankings?: boolean }): Promise<void> {
     const result = await dbQuery(
-        'UPDATE tournaments SET name=$1, location=$2, start_date=$3, end_date=$4 WHERE id=$5',
-        [t.name, t.location, t.startDate ?? null, t.endDate ?? null, tournamentID]
+        'UPDATE tournaments SET name=$1, location=$2, start_date=$3, end_date=$4, share_individual_rankings=COALESCE($5, share_individual_rankings) WHERE id=$6',
+        [t.name, t.location, t.startDate ?? null, t.endDate ?? null, t.shareIndividualRankings ?? null, tournamentID]
     );
     if (!result) throw new DbError('updateTournamentDetails');
     if (result.rowCount === 0) throw new NotFoundError('tournament');
@@ -360,8 +360,8 @@ export async function createTournament(tournament: TournamentPayload): Promise<I
     );
     if (!formatInsert || formatInsert.rowCount !== 1) throw new DbError('createTournament format');
     const insertion = await dbQuery(
-        'INSERT INTO tournaments (id, name, location, start_date, end_date, case_format_id, standings_config_id) VALUES ($1,$2,$3,$4,$5,$6,$7)',
-        [tournamentID, t.name, t.location, t.startDate, t.endDate, formatID, tournament.standingsConfigId ?? null]
+        'INSERT INTO tournaments (id, name, location, start_date, end_date, case_format_id, standings_config_id, share_individual_rankings) VALUES ($1,$2,$3,$4,$5,$6,$7,$8)',
+        [tournamentID, t.name, t.location, t.startDate, t.endDate, formatID, tournament.standingsConfigId ?? null, t.shareIndividualRankings ?? true]
     );
     if (!insertion || insertion.rowCount !== 1) throw new DbError('createTournament insert');
     await insertWitnesses(formatID, cf);
@@ -1037,8 +1037,8 @@ export async function duplicateTournament(sourceTournamentID: string, options: I
          options.format ? formatRow.has_swing : false]
     );
     await dbQuery(
-        'INSERT INTO tournaments (id, name, location, start_date, end_date, case_format_id) VALUES ($1,$2,$3,$4,$5,$6)',
-        [newTournamentID, `${source.name} (copy)`, source.location, null, null, newFormatID]
+        'INSERT INTO tournaments (id, name, location, start_date, end_date, case_format_id, share_individual_rankings) VALUES ($1,$2,$3,$4,$5,$6,$7)',
+        [newTournamentID, `${source.name} (copy)`, source.location, null, null, newFormatID, source.share_individual_rankings]
     );
 
     // Award categories must be duplicated before scoring categories so that a

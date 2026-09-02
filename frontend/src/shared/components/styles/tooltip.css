@@ -13,6 +13,7 @@
 .tooltip-trigger {
     display: inline-flex;
     align-items: center;
+    width: 100%;
 }
 
 .tooltip-bubble {
@@ -23,8 +24,8 @@
     padding: 0.45rem 0.65rem;
     border-radius: 0.5rem;
     /* Semi-transparent surface with a soft blur behind it. */
-    background: color-mix(in srgb, var(--text) 88%, transparent);
-    color: var(--surface);
+    background: var(--surface);
+    color: var(--text);
     font-size: 0.8rem;
     font-weight: 500;
     line-height: 1.35;
@@ -37,6 +38,7 @@
     visibility: hidden;
     transform: scale(0.96);
     transition: opacity 120ms ease, transform 120ms ease, visibility 0s linear 120ms;
+    text-transform: none;
 }
 
 .tooltip-bubble--visible {

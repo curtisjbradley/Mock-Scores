@@ -6,6 +6,7 @@ import type { TournamentInfo, CaseFormatState } from '../types/tournament'
 import { apiFetch } from '../../auth/auth'
 import { ConfirmRemoveModal } from '../components/modals'
 import FormField from '../../shared/components/FormField'
+import DangerButton from '../../shared/components/DangerButton'
 import DateRangePicker from '../../shared/components/DateRangePicker'
 import { useTournamentSettings } from '../hooks/useTournamentSettings'
 
@@ -126,6 +127,18 @@ export default function TournamentSettingsTab({ tournamentId }: { tournamentId: 
                     Criminal case
                 </label>
 
+                <label className="tc-checkbox-label">
+                    <input
+                        type="checkbox"
+                        checked={info.shareIndividualRankings}
+                        onChange={() => setInfo({ ...info, shareIndividualRankings: !info.shareIndividualRankings })}
+                    />
+                    Share individual rankings
+                </label>
+                <p className="tc-field-hint">
+                    When enabled, coaches can see award nominations on ballots. Turn off to hide them.
+                </p>
+
                 <div className="tc-actions">
                     <button type="submit" className="btn-confirm" disabled={saving}>
                         {saving ? 'Saving…' : 'Save'}
@@ -167,9 +180,9 @@ export default function TournamentSettingsTab({ tournamentId }: { tournamentId: 
                 <div className="tc-danger-zone">
                     <h3>Danger zone</h3>
                     <p>Permanently delete this tournament. All configurations and scorecards will become unavailable and cannot be recovered.</p>
-                    <button type="button" className="tc-delete-btn" onClick={() => setShowDeleteModal(true)}>
+                    <DangerButton variant="outline" onClick={() => setShowDeleteModal(true)}>
                         Delete tournament
-                    </button>
+                    </DangerButton>
                 </div>
             )}
 

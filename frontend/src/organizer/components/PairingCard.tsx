@@ -3,6 +3,9 @@ import { Link } from 'react-router-dom'
 import type { IBallotStatus, ICourtroom, IPairing, IPairingScorer, IRound, IScorer, ITeam } from '@mock-scores/shared'
 import { apiFetch } from '../../auth/auth'
 import TeamSelectOptions from '../../shared/components/TeamSelectOptions'
+import DangerButton from '../../shared/components/DangerButton'
+import ModalBackdrop from '../../shared/components/ModalBackdrop'
+import { useAutoFocus } from '../../shared/hooks/useAutoFocus'
 
 interface Props {
     pairing: IPairing
@@ -47,6 +50,10 @@ export default function PairingCard({ pairing, teams, courtrooms, scorers, assig
     const [showPresiderModal, setShowPresiderModal] = useState(false)
     const [presiderDraft, setPresiderDraft] = useState('')
     const [onlyTiebreakerDraft, setOnlyTiebreakerDraft] = useState(false)
+
+    // Programmatic focus (accessible replacement for the autoFocus attribute).
+    const courtroomSelectRef = useAutoFocus<HTMLSelectElement>(editingCourtroom)
+    const scorerSearchRef = useAutoFocus<HTMLInputElement>(showScorerAdd)
 
     const teamName = (tid: string) => {
         const t = teams.find(t => t.id === tid)
@@ -160,7 +167,7 @@ export default function PairingCard({ pairing, teams, courtrooms, scorers, assig
                         ⬇ Download ballot
                     </button>
                     {!assignedScorers.some(s => s.is_presider) && (
-                        <button className="dash-remove-btn" onClick={onRemove}>Remove</button>
+                        <DangerButton onClick={onRemove}>Remove</DangerButton>
                     )}
                 </div>
             </div>
@@ -199,7 +206,7 @@ export default function PairingCard({ pairing, teams, courtrooms, scorers, assig
                     {editingCourtroom ? (
                         <div className="pc-matchup-col pc-inline-edit">
                             <span className="dash-side-label">Courtroom</span>
-                            <select className="rv-select" autoFocus
+                            <select className="rv-select" ref={courtroomSelectRef}
                                 value={courtroomDraft}
                                 onChange={e => setCourtroomDraft(e.target.value)}>
                                 <option value="" >No courtroom</option>
@@ -294,7 +301,7 @@ export default function PairingCard({ pairing, teams, courtrooms, scorers, assig
                             <button className="pc-cancel-btn" onClick={() => setManualEntryScorer({ name: s.name, assignmentId: s.assignment_id })}>Manually enter</button>
                         )}
                         {hasSubmitted ? (<></>) : (
-                            <button className="dash-remove-btn" onClick={() => setRemoveScorerTarget({ name: s.name, assignmentId: s.assignment_id })}>Remove</button>
+                            <DangerButton onClick={() => setRemoveScorerTarget({ name: s.name, assignmentId: s.assignment_id })}>Remove</DangerButton>
                         )}
                     </div>
                     )
@@ -305,15 +312,15 @@ export default function PairingCard({ pairing, teams, courtrooms, scorers, assig
         </div>
 
         {showScorerAdd && (
-            <div className="modal-backdrop" onClick={() => setShowScorerAdd(false)}>
-                <div className="confirm-modal" onClick={e => e.stopPropagation()}>
-                    <h2 style={{ margin: '0 0 0.75rem' }}>Add Scorer</h2>
+            <ModalBackdrop onClose={() => setShowScorerAdd(false)}>
+                <div className="confirm-modal" role="dialog" aria-modal="true" aria-labelledby="add-scorer-title">
+                    <h2 id="add-scorer-title" style={{ margin: '0 0 0.75rem' }}>Add Scorer</h2>
                     <label className="rv-field-label" style={{ display: 'block', marginBottom: '0.75rem' }}>
                         Scorer
                         <div className="pc-scorer-typeahead">
                             <input
                                 className="rv-select pc-scorer-search"
-                                autoFocus
+                                ref={scorerSearchRef}
                                 placeholder="Search scorers or type a name…"
                                 value={scorerQuery}
                                 onChange={e => { setScorerQuery(e.target.value); setScorerDraft('') }}
@@ -365,13 +372,13 @@ export default function PairingCard({ pairing, teams, courtrooms, scorers, assig
                         <button disabled={!scorerDraft} onClick={addRegisteredScorer}>Add</button>
                     </div>
                 </div>
-            </div>
+            </ModalBackdrop>
         )}
 
         {showPresiderModal && (
-            <div className="modal-backdrop" onClick={() => setShowPresiderModal(false)}>
-                <div className="confirm-modal" onClick={e => e.stopPropagation()}>
-                    <h2 style={{ margin: '0 0 0.75rem' }}>Change Presider</h2>
+            <ModalBackdrop onClose={() => setShowPresiderModal(false)}>
+                <div className="confirm-modal" role="dialog" aria-modal="true" aria-labelledby="presider-title">
+                    <h2 id="presider-title" style={{ margin: '0 0 0.75rem' }}>Change Presider</h2>
                     <label className="rv-field-label" style={{ display: 'block', marginBottom: '0.75rem' }}>
                         Presider
                         <select className="rv-select" value={presiderDraft} onChange={e => setPresiderDraft(e.target.value)}>
@@ -390,13 +397,13 @@ export default function PairingCard({ pairing, teams, courtrooms, scorers, assig
                         <button disabled={!presiderDraft} onClick={savePresider}>Save</button>
                     </div>
                 </div>
-            </div>
+            </ModalBackdrop>
         )}
 
         {manualEntryScorer && (
-            <div className="modal-backdrop" onClick={() => setManualEntryScorer(null)}>
-                <div className="confirm-modal" onClick={e => e.stopPropagation()}>
-                    <h2 style={{ margin: '0 0 0.75rem' }}>Manually Enter Scores</h2>
+            <ModalBackdrop onClose={() => setManualEntryScorer(null)}>
+                <div className="confirm-modal" role="dialog" aria-modal="true" aria-labelledby="manual-entry-title">
+                    <h2 id="manual-entry-title" style={{ margin: '0 0 0.75rem' }}>Manually Enter Scores</h2>
                     <p style={{ margin: '0 0 0.5rem', lineHeight: 1.6 }}>
                         You are about to manually enter scores for <strong>{manualEntryScorer.name}</strong>.
                     </p>
@@ -410,14 +417,14 @@ export default function PairingCard({ pairing, teams, courtrooms, scorers, assig
                         </button>
                     </div>
                 </div>
-            </div>
+            </ModalBackdrop>
         )}
 
 
         {removeScorerTarget && (
-            <div className="modal-backdrop" onClick={() => setRemoveScorerTarget(null)}>
-                <div className="confirm-modal" onClick={e => e.stopPropagation()}>
-                    <h2 style={{ margin: '0 0 0.75rem' }}>Remove Scorer</h2>
+            <ModalBackdrop onClose={() => setRemoveScorerTarget(null)}>
+                <div className="confirm-modal" role="dialog" aria-modal="true" aria-labelledby="remove-scorer-title">
+                    <h2 id="remove-scorer-title" style={{ margin: '0 0 0.75rem' }}>Remove Scorer</h2>
                     <p style={{ margin: '0 0 1rem', lineHeight: 1.6 }}>
                         Remove <strong>{removeScorerTarget.name}</strong> from this pairing?
                     </p>
@@ -428,7 +435,7 @@ export default function PairingCard({ pairing, teams, courtrooms, scorers, assig
                         </button>
                     </div>
                 </div>
-            </div>
+            </ModalBackdrop>
         )}
         </>
     )

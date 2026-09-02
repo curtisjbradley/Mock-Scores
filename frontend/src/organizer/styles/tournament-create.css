@@ -108,10 +108,11 @@
     cursor: pointer;
     user-select: none;
     padding: 0.6rem 0.875rem;
-    border: 1.5px solid var(--border);
+    border: 2px solid var(--border);
     border-radius: 0.6rem;
     background: var(--surface-muted);
     transition: border-color 140ms ease, background 140ms ease;
+    width: 100%;
 }
 
 .tc-checkbox-label:hover {
@@ -129,6 +130,13 @@
 
 .tc-checkboxes { gap: 0.6rem; }
 
+.tc-field-hint {
+    margin: 0.35rem 0 0;
+    font-size: 0.82rem;
+    color: var(--text-muted);
+    line-height: 1.4;
+}
+
 /* ── Witness list ── */
 .tc-witness-list {
     display: flex;
@@ -143,29 +151,6 @@
 }
 
 .tc-witness-row .tc-input { flex: 1; }
-
-.tc-remove-btn {
-    flex-shrink: 0;
-    width: 3rem;
-    height: 3rem;
-    border: 1.5px solid var(--border-strong);
-    border-radius: 0.6rem;
-    background: var(--surface-muted);
-    color: var(--text-muted);
-    font-size: 1.2rem;
-    line-height: 1;
-    cursor: pointer;
-    transition: background 140ms ease, color 140ms ease, border-color 140ms ease;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-}
-
-.tc-remove-btn:hover {
-    background: var(--danger-bg);
-    color: var(--danger);
-    border-color: var(--danger);
-}
 
 .tc-add-btn {
     align-self: flex-start;
@@ -226,6 +211,12 @@
     font-weight: 600;
     color: var(--text-muted);
     white-space: nowrap;
+    /* Reset native <button> styling for clickable (completed) steps */
+    background: none;
+    border: none;
+    padding: 0;
+    margin: 0;
+    font-family: inherit;
 }
 
 .tc-step span {
@@ -345,7 +336,6 @@
     max-width: 100%;
 }
 
-.tc-remove-btn--hidden { visibility: hidden; }
 .tc-step--clickable { cursor: pointer; }
 
 /* ── Danger zone ── */
@@ -383,23 +373,4 @@
     margin: 0 0 1rem;
     font-size: 0.875rem;
     color: var(--text);
-}
-
-.tc-delete-btn {
-    height: 2.5rem;
-    padding: 0 1.25rem;
-    border: 1.5px solid var(--danger);
-    border-radius: 0.6rem;
-    background: transparent;
-    color: var(--danger);
-    font-size: 0.9rem;
-    font-weight: 700;
-    font-family: inherit;
-    cursor: pointer;
-    transition: background 140ms ease, color 140ms ease;
-}
-
-.tc-delete-btn:hover {
-    background: var(--danger);
-    color: var(--white);
 }

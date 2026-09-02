@@ -4,8 +4,11 @@ import { apiFetch } from '../../auth/auth'
 import { isValidEmail } from '../../utils/validation'
 import { ConfirmRemoveModal } from '../components/modals'
 import ModalBackdrop from '../../shared/components/ModalBackdrop'
+import DangerButton from '../../shared/components/DangerButton'
+import AddButton from '../../shared/components/AddButton'
 import CsvImportModal from '../../shared/components/CsvImportModal'
 import { useConfirmRemove } from '../../shared/hooks/useConfirmRemove'
+import { useAutoFocus } from '../../shared/hooks/useAutoFocus'
 import Section from './Section'
 import { v4 as randomUUID } from 'uuid'
 
@@ -50,7 +53,7 @@ function ManageConflictsModal({ scorer, tournamentId, onClose }: {
                         {conflicts.map(c => (
                             <li key={c.team_id} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '4px 0' }}>
                                 <span>{c.team_name}</span>
-                                <button className="dash-remove-btn" onClick={() => removeConflict(c)}>Remove</button>
+                                <DangerButton onClick={() => removeConflict(c)}>Remove</DangerButton>
                             </li>
                         ))}
                     </ul>
@@ -90,6 +93,7 @@ export default function ScorersTab({ tournamentId }: { tournamentId: string }) {
     const [email, setEmail] = useState('')
     const [bouncedEmails, setBouncedEmails] = useState<Set<string>>(new Set())
     const [showImport, setShowImport] = useState(false)
+    const firstNameRef = useAutoFocus<HTMLInputElement>(showModal)
 
     useEffect(() => {
         apiFetch(`/organizer/tournament/${tournamentId}/scorers`)
@@ -139,7 +143,7 @@ export default function ScorersTab({ tournamentId }: { tournamentId: string }) {
     return (
         <Section title="Scorers" description="Manage available scorers">
             <div className="tab-actions">
-                <button className="org-new-btn" onClick={openAddModal}>+ Add scorer</button>
+                <AddButton onClick={openAddModal}>+ Add scorer</AddButton>
                 <button className="org-new-btn" onClick={() => setShowImport(true)} style={{ marginLeft: 8 }}>Import CSV</button>
             </div>
 
@@ -160,7 +164,7 @@ export default function ScorersTab({ tournamentId }: { tournamentId: string }) {
                                     <div className="dash-actions-cell">
                                         <button className="dash-remove-btn" onClick={() => openEditModal(scorer)}>Edit</button>
                                         <button className="dash-remove-btn" onClick={() => setConflictsScorer(scorer)}>Manage Conflicts</button>
-                                        <button className="dash-remove-btn" onClick={() => confirmRemove.open(scorer)}>Remove</button>
+                                        <DangerButton onClick={() => confirmRemove.open(scorer)}>Remove</DangerButton>
                                     </div>
                                 </td>
                             </tr>
@@ -176,7 +180,7 @@ export default function ScorersTab({ tournamentId }: { tournamentId: string }) {
                         <form className="tc-form" onSubmit={e => { e.preventDefault(); handleSave() }} noValidate>
                             <div className="tc-field">
                                 <label className="tc-label" htmlFor="first-name">First name</label>
-                                <input id="first-name" type="text" className="tc-input" required autoFocus
+                                <input id="first-name" type="text" className="tc-input" required ref={firstNameRef}
                                     value={firstName} onChange={e => setFirstName(e.target.value)} placeholder="First name" />
                             </div>
                             <div className="tc-field">
