@@ -5,11 +5,14 @@ import '../styles/tabs.css'
 import '../styles/rounds.css'
 import '../styles/pairings.css'
 import '../styles/standings.css'
+import '../../shared/styles/dashboard.css'
 import { dateRange } from '../data/utils'
 import { apiFetch } from '../../auth/auth'
 import type { ITournament } from '@mock-scores/shared'
 import { useSearchParamTab } from '../../shared/hooks/useSearchParamTab'
+import DashboardSidebar, { type DashboardNavItem } from '../../shared/components/DashboardSidebar'
 import { type OrganizerTab, type OrganizerScreen, VALID_SCREENS } from '../constants'
+import OverviewTab from '../tabs/OverviewTab'
 import RoundsTab from '../tabs/RoundsTab'
 import StandingsTab from '../tabs/StandingsTab'
 import WitnessesTab from '../tabs/WitnessesTab'
@@ -22,14 +25,16 @@ import TournamentSettingsTab from '../tabs/TournamentSettingsTab'
 import TiebreakersTab from '../tabs/TiebreakersTab'
 import AwardCategoriesTab from '../tabs/AwardCategoriesTab'
 
-const MAIN_CARDS: { label: string; screen: OrganizerScreen }[] = [
-    { label: 'Manage Rounds',        screen: 'rounds' },
-    { label: 'See Standings',        screen: 'standings' },
-    { label: 'Manage Teams',         screen: 'teams' },
-    { label: 'Manage Scorers',       screen: 'scorers' },
-    { label: 'Manage Courtrooms',    screen: 'courtrooms' },
-    { label: 'Manage Organizers',    screen: 'organizers' },
-    { label: 'Tournament Structure', screen: 'structure' },
+// Primary navigation — placeholder icon glyphs, swap for designed icons later.
+const NAV_ITEMS: DashboardNavItem<OrganizerScreen>[] = [
+    { key: 'overview',   label: 'Overview',   icon: '▦' },
+    { key: 'rounds',     label: 'Rounds',     icon: '▤' },
+    { key: 'standings',  label: 'Standings',  icon: '▲' },
+    { key: 'teams',      label: 'Teams',      icon: '⬡' },
+    { key: 'scorers',    label: 'Scorers',    icon: '◈' },
+    { key: 'courtrooms', label: 'Courtrooms', icon: '◫' },
+    { key: 'organizers', label: 'Organizers', icon: '◎' },
+    { key: 'structure',  label: 'Structure',  icon: '☰' },
 ]
 
 const STRUCTURE_CARDS: { label: string; tab: OrganizerTab }[] = [
@@ -42,15 +47,32 @@ const STRUCTURE_CARDS: { label: string; tab: OrganizerTab }[] = [
 
 const STRUCTURE_TABS = new Set<OrganizerTab>(['tournament', 'scoring', 'witnesses', 'tiebreakers', 'awards'])
 
+const SIDEBAR_STORAGE_KEY = 'organizer-sidebar-collapsed'
+
 export default function TournamentDashboard() {
     const { id } = useParams<{ id: string }>()
     const navigate = useNavigate()
-    const [screen, setScreen] = useSearchParamTab<OrganizerScreen>('home', VALID_SCREENS)
+    const [screen, setScreen] = useSearchParamTab<OrganizerScreen>('overview', VALID_SCREENS)
     const [tournament, setTournament] = useState<ITournament | null>(null)
     const [visitedTabs, setVisitedTabs] = useState<Set<OrganizerTab>>(() => {
-        if (screen !== 'home' && screen !== 'structure') return new Set([screen as OrganizerTab])
+        if (screen !== 'overview' && screen !== 'structure') return new Set([screen as OrganizerTab])
         return new Set()
     })
+
+    const [collapsed, setCollapsed] = useState<boolean>(() => {
+        try {
+            return localStorage.getItem(SIDEBAR_STORAGE_KEY) === 'true'
+        } catch {
+            return false
+        }
+    })
+    const toggleCollapsed = () => {
+        setCollapsed(prev => {
+            const next = !prev
+            try { localStorage.setItem(SIDEBAR_STORAGE_KEY, String(next)) } catch { /* ignore */ }
+            return next
+        })
+    }
 
     useEffect(() => {
         if (!id) { navigate('/organizer', { replace: true }); return }
@@ -68,66 +90,74 @@ export default function TournamentDashboard() {
         setVisitedTabs(prev => new Set([...prev, tab]))
     }
 
-    const goBack = () => {
-        if (STRUCTURE_TABS.has(screen as OrganizerTab)) setScreen('structure')
-        else if (screen !== 'home') setScreen('home')
-        else navigate('/organizer')
+    // Sidebar selection. "structure" reveals a card grid; tabs are lazily mounted.
+    const onNavSelect = (next: OrganizerScreen) => {
+        if (next === 'overview' || next === 'structure') setScreen(next)
+        else goToTab(next as OrganizerTab)
     }
 
     if (!id) return null
 
     const dates = [tournament?.start_date, tournament?.end_date].filter(Boolean).map(String)
-    const activeTab = (screen !== 'home' && screen !== 'structure') ? screen as OrganizerTab : null
+    const activeTab = (screen !== 'overview' && screen !== 'structure') ? screen as OrganizerTab : null
+    // Highlight "Structure" in the sidebar while viewing any structure sub-tab.
+    const activeNav: OrganizerScreen = STRUCTURE_TABS.has(screen as OrganizerTab) ? 'structure' : screen
 
     return (
         <main className="org-main">
-            <div className="org-container">
-                <button className="org-back-btn" onClick={goBack}>
-                    {screen === 'home' ? '← All tournaments' : '← Back'}
-                </button>
+            <div className="dash-shell">
+                <DashboardSidebar
+                    items={NAV_ITEMS}
+                    active={activeNav}
+                    onChange={onNavSelect}
+                    collapsed={collapsed}
+                    onToggleCollapse={toggleCollapsed}
+                    title={tournament?.name ?? 'Tournament'}
+                    subtitle={tournament?.location ?? undefined}
+                    ariaLabel="Tournament dashboard sections"
+                />
 
-                <div className="org-header">
-                    <h1>{tournament?.name ?? ''}</h1>
-                </div>
+                <div className="dash-content">
+                    <button className="org-back-btn" onClick={() => navigate('/organizer')}>
+                        ← All tournaments
+                    </button>
 
-                <div className="org-meta-row">
-                    <span>{dates.length ? dateRange(dates) : ''}</span>
-                    <span>{tournament?.location ?? ''}</span>
-                    {tournament && <span>{tournament.num_teams} teams · {tournament.num_rounds} rounds</span>}
-                </div>
-
-                {screen === 'home' && (
-                    <div className="dash-card-grid">
-                        {MAIN_CARDS.map(c => (
-                            <button key={c.screen} className="dash-nav-card"
-                                onClick={() => c.screen === 'structure' ? setScreen('structure') : goToTab(c.screen as OrganizerTab)}>
-                                {c.label}
-                            </button>
-                        ))}
+                    <div className="org-header">
+                        <h1>{tournament?.name ?? ''}</h1>
                     </div>
-                )}
 
-                {screen === 'structure' && (
-                    <div className="dash-card-grid">
-                        {STRUCTURE_CARDS.map(c => (
-                            <button key={c.tab} className="dash-nav-card" onClick={() => goToTab(c.tab)}>
-                                {c.label}
-                            </button>
-                        ))}
+                    <div className="org-meta-row">
+                        <span>{dates.length ? dateRange(dates) : ''}</span>
+                        <span>{tournament?.location ?? ''}</span>
+                        {tournament && <span>{tournament.num_teams} teams · {tournament.num_rounds} rounds</span>}
                     </div>
-                )}
 
-                {visitedTabs.has('tournament') && <div hidden={activeTab !== 'tournament'}><TournamentSettingsTab tournamentId={id} /></div>}
-                {visitedTabs.has('teams')      && <div hidden={activeTab !== 'teams'}><TeamsTab tournamentId={id} /></div>}
-                {visitedTabs.has('scorers')    && <div hidden={activeTab !== 'scorers'}><ScorersTab tournamentId={id} /></div>}
-                {visitedTabs.has('courtrooms') && <div hidden={activeTab !== 'courtrooms'}><CourtroomsTab tournamentId={id} /></div>}
-                {visitedTabs.has('organizers') && <div hidden={activeTab !== 'organizers'}><OrganizersTab tournamentId={id} /></div>}
-                {visitedTabs.has('witnesses')  && <div hidden={activeTab !== 'witnesses'}><WitnessesTab tournamentId={id} /></div>}
-                {visitedTabs.has('scoring')    && <div hidden={activeTab !== 'scoring'}><ScoringTab tournamentId={id} /></div>}
-                {visitedTabs.has('rounds')     && <div hidden={activeTab !== 'rounds'}><RoundsTab tournamentId={id} /></div>}
-                {visitedTabs.has('standings')  && <div hidden={activeTab !== 'standings'}><StandingsTab tournamentId={id} /></div>}
-                {visitedTabs.has('tiebreakers')&& <div hidden={activeTab !== 'tiebreakers'}><TiebreakersTab tournamentId={id} /></div>}
-                {visitedTabs.has('awards')     && <div hidden={activeTab !== 'awards'}><AwardCategoriesTab tournamentId={id} /></div>}
+                    {screen === 'overview' && (
+                        <OverviewTab tournamentId={id} tournament={tournament} onNavigate={setScreen} />
+                    )}
+
+                    {screen === 'structure' && (
+                        <div className="dash-card-grid">
+                            {STRUCTURE_CARDS.map(c => (
+                                <button key={c.tab} className="dash-nav-card" onClick={() => goToTab(c.tab)}>
+                                    {c.label}
+                                </button>
+                            ))}
+                        </div>
+                    )}
+
+                    {visitedTabs.has('tournament') && <div hidden={activeTab !== 'tournament'}><TournamentSettingsTab tournamentId={id} /></div>}
+                    {visitedTabs.has('teams')      && <div hidden={activeTab !== 'teams'}><TeamsTab tournamentId={id} /></div>}
+                    {visitedTabs.has('scorers')    && <div hidden={activeTab !== 'scorers'}><ScorersTab tournamentId={id} /></div>}
+                    {visitedTabs.has('courtrooms') && <div hidden={activeTab !== 'courtrooms'}><CourtroomsTab tournamentId={id} /></div>}
+                    {visitedTabs.has('organizers') && <div hidden={activeTab !== 'organizers'}><OrganizersTab tournamentId={id} /></div>}
+                    {visitedTabs.has('witnesses')  && <div hidden={activeTab !== 'witnesses'}><WitnessesTab tournamentId={id} /></div>}
+                    {visitedTabs.has('scoring')    && <div hidden={activeTab !== 'scoring'}><ScoringTab tournamentId={id} /></div>}
+                    {visitedTabs.has('rounds')     && <div hidden={activeTab !== 'rounds'}><RoundsTab tournamentId={id} /></div>}
+                    {visitedTabs.has('standings')  && <div hidden={activeTab !== 'standings'}><StandingsTab tournamentId={id} /></div>}
+                    {visitedTabs.has('tiebreakers')&& <div hidden={activeTab !== 'tiebreakers'}><TiebreakersTab tournamentId={id} /></div>}
+                    {visitedTabs.has('awards')     && <div hidden={activeTab !== 'awards'}><AwardCategoriesTab tournamentId={id} /></div>}
+                </div>
             </div>
         </main>
     )

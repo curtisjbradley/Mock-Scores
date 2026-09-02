@@ -49,9 +49,9 @@ function RoundRow({ round, tournamentId, ballotSummary, onRemove, onSave }: {
             </label>
             <div className="dash-round-checks">
                 {round.teams_public
-                    ? <span className="dash-publish-label dash-publish-label--active">✓ Round published</span>
+                    ? <span className="dash-publish-label dash-publish-label--active">✓ Pairings published</span>
                     : <button className="dash-round-save-btn" onClick={() => onSave({ ...round, name: draftName, round_time: tbd ? null : (draftTime ? new Date(draftTime).toISOString() : null), teams_public: true, results_public: round.results_public })}>
-                        Publish round
+                        Publish pairings
                       </button>
                 }
                 {round.results_public

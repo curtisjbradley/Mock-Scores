@@ -1,0 +1,75 @@
+export interface DashboardNavItem<T extends string> {
+    key: T
+    label: string
+    /** Placeholder icon glyph or node — can be swapped for designed icons later. */
+    icon: React.ReactNode
+}
+
+interface Props<T extends string> {
+    items: DashboardNavItem<T>[]
+    active: T
+    onChange: (key: T) => void
+    /** When true, the sidebar is collapsed to an icon rail. */
+    collapsed: boolean
+    onToggleCollapse: () => void
+    /** Title shown at the top of the sidebar (e.g. team code or tournament name). */
+    title: string
+    subtitle?: string
+    /** Accessible label for the nav landmark. */
+    ariaLabel?: string
+}
+
+/**
+ * Generic collapsible left navigation rail used by the coach and organizer
+ * dashboards.
+ *
+ * Expanded: fixed-width column with an icon + text label per item.
+ * Collapsed: narrow rail showing only icons (labels available via title attr).
+ *
+ * Icons are intentionally simple placeholders — they can be swapped for
+ * designed icons later without touching the layout. Styling lives in the
+ * shared `styles/dashboard.css` (`.dash-sidebar*` / `.dash-nav-*` classes).
+ */
+export default function DashboardSidebar<T extends string>({
+    items, active, onChange, collapsed, onToggleCollapse, title, subtitle,
+    ariaLabel = 'Dashboard sections',
+}: Props<T>) {
+    return (
+        <aside className={`dash-sidebar${collapsed ? ' dash-sidebar--collapsed' : ''}`}>
+            <div className="dash-sidebar-head">
+                {!collapsed && (
+                    <div className="dash-sidebar-titles">
+                        <span className="dash-sidebar-title">{title}</span>
+                        {subtitle && <span className="dash-sidebar-subtitle">{subtitle}</span>}
+                    </div>
+                )}
+                <button
+                    type="button"
+                    className="dash-sidebar-toggle"
+                    onClick={onToggleCollapse}
+                    aria-label={collapsed ? 'Expand navigation' : 'Collapse navigation'}
+                    aria-expanded={!collapsed}
+                    title={collapsed ? 'Expand navigation' : 'Collapse navigation'}
+                >
+                    <span aria-hidden="true">{collapsed ? '»' : '«'}</span>
+                </button>
+            </div>
+
+            <nav className="dash-sidebar-nav" aria-label={ariaLabel}>
+                {items.map(item => (
+                    <button
+                        key={item.key}
+                        type="button"
+                        className={`dash-nav-item${active === item.key ? ' dash-nav-item--active' : ''}`}
+                        onClick={() => onChange(item.key)}
+                        aria-current={active === item.key ? 'page' : undefined}
+                        title={collapsed ? item.label : undefined}
+                    >
+                        <span className="dash-nav-icon" aria-hidden="true">{item.icon}</span>
+                        {!collapsed && <span className="dash-nav-label">{item.label}</span>}
+                    </button>
+                ))}
+            </nav>
+        </aside>
+    )
+}

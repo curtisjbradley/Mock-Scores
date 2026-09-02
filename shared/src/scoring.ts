@@ -5,7 +5,6 @@ export interface IScoringFieldFull {
     max: number;
     multiplier: number;
     assignable: boolean;
-    eligibleForAward: boolean;
     /** ID of the individual award category this field is eligible for, or null */
     awardCategoryId: string | null;
     visibleToScorers: boolean;
@@ -48,4 +47,19 @@ export interface IIndividualAwardCategory {
     name: string
     minNominees: number
     maxNominees: number
+}
+
+/**
+ * A scoring template as served for the tournament creation wizard's picker.
+ *
+ * Only the identifier and display fields are sent to the client. When an
+ * organizer selects a preset, the client sends the template `id` and the
+ * backend copies the template's scoring categories, fields, and award
+ * categories into the new tournament server-side. The "Manual" option is
+ * represented client-side (absence of a template), not here.
+ */
+export interface IScoringTemplate {
+    id: string
+    label: string
+    description: string
 }

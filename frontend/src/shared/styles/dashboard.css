@@ -1,0 +1,310 @@
+/* ─────────────────────────────────────────────────────────────────────────
+   Shared dashboard chrome — collapsible sidebar layout + overview stat cards.
+   Used by both the coach and organizer dashboards. Relies on the shared theme
+   variables defined in styles/globals.css.
+   ───────────────────────────────────────────────────────────────────────── */
+
+/* Layout shell: sidebar + content, centered within the page like other views. */
+.dash-shell {
+    width: min(100%, 78rem);
+    display: flex;
+    align-items: flex-start;
+    gap: 1.5rem;
+}
+
+/* ── Sidebar ─────────────────────────────────────────────────────────────── */
+.dash-sidebar {
+    flex-shrink: 0;
+    position: sticky;
+    top: 1.5rem;
+    /* Cap to the viewport (matching the 1.5rem top offset top and bottom) so a
+       long nav list scrolls inside the sidebar rather than extending past it. */
+    max-height: calc(100vh - 3rem);
+    width: 15rem;
+    display: flex;
+    flex-direction: column;
+    gap: 0.75rem;
+    padding: 1rem 0.75rem;
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    background: var(--surface);
+    box-shadow: var(--shadow);
+    transition: width 160ms ease;
+}
+
+.dash-sidebar--collapsed {
+    width: 3.75rem;
+    padding: 1rem 0.5rem;
+}
+
+.dash-sidebar-head {
+    /* Stays pinned while the nav below scrolls. */
+    flex-shrink: 0;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 0.5rem;
+    min-height: 2.25rem;
+    padding: 0 0.35rem;
+}
+
+.dash-sidebar--collapsed .dash-sidebar-head {
+    justify-content: center;
+    padding: 0;
+}
+
+.dash-sidebar-titles {
+    display: flex;
+    flex-direction: column;
+    min-width: 0;
+}
+
+.dash-sidebar-title {
+    font-size: 1rem;
+    font-weight: 700;
+    color: var(--text);
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.dash-sidebar-subtitle {
+    font-size: 0.78rem;
+    color: var(--text-muted);
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.dash-sidebar-toggle {
+    flex-shrink: 0;
+    width: 2rem;
+    height: 2rem;
+    display: grid;
+    place-items: center;
+    border: 1px solid var(--border);
+    border-radius: 0.6rem;
+    background: var(--surface-muted);
+    color: var(--text-muted);
+    font-size: 1rem;
+    line-height: 1;
+    font-family: inherit;
+    cursor: pointer;
+    transition: background 120ms ease, color 120ms ease, border-color 120ms ease;
+}
+
+.dash-sidebar-toggle:hover {
+    background: var(--primary-subtle);
+    color: var(--primary);
+    border-color: var(--primary);
+}
+
+.dash-sidebar-nav {
+    display: flex;
+    flex-direction: column;
+    gap: 0.25rem;
+    /* Take the remaining sidebar height and scroll internally when the list is
+       taller than the available space, keeping items inside the sidebar. */
+    flex: 1;
+    min-height: 0;
+    overflow-y: auto;
+    scrollbar-width: thin;
+}
+
+.dash-nav-item {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    width: 100%;
+    padding: 0.6rem 0.7rem;
+    border: none;
+    border-radius: 0.7rem;
+    background: transparent;
+    color: var(--text-muted);
+    font-family: inherit;
+    font-size: 0.92rem;
+    font-weight: 600;
+    text-align: left;
+    cursor: pointer;
+    transition: background 120ms ease, color 120ms ease;
+}
+
+.dash-sidebar--collapsed .dash-nav-item {
+    justify-content: center;
+    padding: 0.6rem 0;
+}
+
+.dash-nav-item:hover {
+    background: var(--surface-muted);
+    color: var(--text);
+}
+
+.dash-nav-item--active,
+.dash-nav-item--active:hover {
+    background: var(--primary-subtle);
+    color: var(--primary);
+}
+
+.dash-nav-icon {
+    flex-shrink: 0;
+    width: 1.25rem;
+    height: 1.25rem;
+    display: grid;
+    place-items: center;
+    font-size: 1rem;
+    line-height: 1;
+}
+
+.dash-nav-label {
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+/* ── Content column ──────────────────────────────────────────────────────── */
+.dash-content {
+    flex: 1;
+    width: 100%;
+    min-width: 0;
+    display: flex;
+    flex-direction: column;
+    gap: 1.25rem;
+}
+
+/* ── Overview / dashboard landing ────────────────────────────────────────── */
+.dash-overview {
+    display: flex;
+    flex-direction: column;
+    gap: 1rem;
+}
+
+.dash-overview-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(13rem, 1fr));
+    gap: 1rem;
+}
+
+.dash-stat-card {
+    display: flex;
+    flex-direction: column;
+    gap: 0.4rem;
+    padding: 1.25rem;
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    background: var(--surface);
+    box-shadow: var(--shadow);
+}
+
+/* The feature card spans the full row on wider layouts. */
+.dash-stat-card--feature {
+    grid-column: 1 / -1;
+    background: linear-gradient(135deg, var(--primary-subtle), var(--surface) 70%);
+    border-color: var(--primary);
+}
+
+.dash-stat-card--alert {
+    border-color: var(--danger);
+}
+
+.dash-stat-label {
+    margin: 0;
+    font-size: 0.75rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+    color: var(--text-muted);
+}
+
+.dash-stat-value {
+    margin: 0;
+    font-size: 1.9rem;
+    font-weight: 700;
+    line-height: 1.1;
+    color: var(--text);
+}
+
+.dash-stat-card--feature .dash-stat-value {
+    color: var(--primary);
+}
+
+.dash-stat-card--alert .dash-stat-value {
+    color: var(--danger);
+}
+
+.dash-stat-sub {
+    margin: 0;
+    font-size: 0.85rem;
+    color: var(--text-muted);
+}
+
+.dash-stat-link {
+    align-self: flex-start;
+    margin-top: 0.35rem;
+    padding: 0;
+    border: none;
+    background: none;
+    color: var(--primary);
+    font-family: inherit;
+    font-size: 0.85rem;
+    font-weight: 600;
+    cursor: pointer;
+    transition: color 120ms ease;
+}
+
+.dash-stat-link:hover {
+    color: var(--primary-dark);
+    text-decoration: underline;
+}
+
+/* Simple progress bar for completion-style stats (e.g. ballots submitted). */
+.dash-stat-progress {
+    height: 0.5rem;
+    border-radius: 999px;
+    background: var(--surface-muted);
+    overflow: hidden;
+}
+
+.dash-stat-progress-fill {
+    height: 100%;
+    border-radius: 999px;
+    background: var(--primary);
+    transition: width 200ms ease;
+}
+
+/* ── Responsive: stack the sidebar on top as a horizontal rail on mobile ──── */
+@media (max-width: 48rem) {
+    .dash-shell {
+        flex-direction: column;
+        gap: 1rem;
+    }
+
+    .dash-sidebar,
+    .dash-sidebar--collapsed {
+        position: static;
+        width: 100%;
+        max-height: none;
+        padding: 0.75rem;
+    }
+
+    .dash-sidebar-nav {
+        flex-direction: row;
+        flex-wrap: wrap;
+        gap: 0.35rem;
+        overflow-y: visible;
+    }
+
+    .dash-nav-item,
+    .dash-sidebar--collapsed .dash-nav-item {
+        width: auto;
+        padding: 0.5rem 0.85rem;
+    }
+
+    /* On mobile the collapse toggle is not useful; hide it and always show labels. */
+    .dash-sidebar-toggle {
+        display: none;
+    }
+
+    .dash-sidebar--collapsed .dash-nav-label {
+        display: inline;
+    }
+}

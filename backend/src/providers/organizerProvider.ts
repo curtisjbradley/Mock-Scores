@@ -8,6 +8,7 @@ import type {
     IRound,
     IScorer,
     IScoringCategory,
+    IScoringTemplate,
     ITeam,
     ITournament,
     IWitnesses,
@@ -21,6 +22,7 @@ import type {
     IRoundRow,
     IScoringCategoryRow,
     IScoringFieldRow,
+    IScoringTemplateFieldRow,
     ITeamRow,
     ITournamentDelegateInviteRow,
     ITournamentFormatRow,
@@ -40,8 +42,38 @@ async function insertWitnesses(formatID: string, cf: TournamentPayload['caseForm
     ));
 }
 
-async function insertCategories(tournamentID: string, categories: TournamentPayload['scoringCategories']): Promise<void> {
-    await Promise.all(categories.map(async cat => {
+/**
+ * Inserts the tournament's individual award categories and returns a map from
+ * each payload `tempId` to the generated database UUID. Scoring fields use this
+ * map to resolve their `awardCategoryId` links.
+ */
+async function insertAwardCategories(
+    tournamentID: string,
+    awardCategories: TournamentPayload['awardCategories'],
+): Promise<Map<string, string>> {
+    const tempIdToUuid = new Map<string, string>();
+    await Promise.all((awardCategories ?? []).map(async ac => {
+        const row = (await dbQuery<{ id: string }>(
+            'INSERT INTO individual_award_categories (tournament_id, name, min_nominees, max_nominees) VALUES ($1,$2,$3,$4) RETURNING id',
+            [tournamentID, ac.name, ac.minNominees, ac.maxNominees]
+        ))?.rows[0];
+        if (!row) throw new DbError('insertAwardCategories');
+        tempIdToUuid.set(ac.tempId, row.id);
+    }));
+    return tempIdToUuid;
+}
+
+async function insertCategories(
+    tournamentID: string,
+    categories: TournamentPayload['scoringCategories'],
+    awardTempIdToUuid: Map<string, string> = new Map(),
+): Promise<void> {
+    /** Resolves a field's awardCategoryId, mapping a creation tempId to its UUID. */
+    const resolveAwardId = (awardCategoryId: string | null): string | null => {
+        if (!awardCategoryId) return null;
+        return awardTempIdToUuid.get(awardCategoryId) ?? awardCategoryId;
+    };
+    await Promise.all((categories ?? []).map(async cat => {
         const categoryID = randomUUID();
         await dbQuery(
             'INSERT INTO scoring_categories (id, tournament_id, name, witness_category, position) VALUES ($1,$2,$3,$4,$5)',
@@ -49,8 +81,8 @@ async function insertCategories(tournamentID: string, categories: TournamentPayl
         );
         await Promise.all(cat.fields.map(f =>
             dbQuery(
-                'INSERT INTO scoring_fields (category_id, label, min_score, max_score, multiplier, assignable, eligible_for_award, visible_to_scorers, prosecution, defense, calling, crossing, position, award_category_id) VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14)',
-                [categoryID, f.label, f.min, f.max, f.multiplier, f.assignable, f.eligibleForAward, f.visibleToScorers, f.prosecution, f.defense, f.calling, f.crossing, f.position, f.awardCategoryId ?? null]
+                'INSERT INTO scoring_fields (category_id, label, min_score, max_score, multiplier, assignable, visible_to_scorers, prosecution, defense, calling, crossing, position, award_category_id) VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13)',
+                [categoryID, f.label, f.min, f.max, f.multiplier, f.assignable, f.visibleToScorers, f.prosecution, f.defense, f.calling, f.crossing, f.position, resolveAwardId(f.awardCategoryId)]
             )
         ));
     }));
@@ -110,7 +142,7 @@ export async function getScoringCategories(tournamentID: string): Promise<IScori
     const catIds = cats.map(c => c.id);
     const fields = catIds.length > 0
         ? (await dbQuery<IScoringFieldRow>(
-            `SELECT id, category_id, label, min_score, max_score, multiplier, assignable, eligible_for_award, visible_to_scorers, prosecution, defense, calling, crossing, position, award_category_id
+            `SELECT id, category_id, label, min_score, max_score, multiplier, assignable, visible_to_scorers, prosecution, defense, calling, crossing, position, award_category_id
              FROM scoring_fields WHERE category_id IN (${catIds.map((_, i) => `$${i + 1}`).join(',')}) ORDER BY position`,
             catIds
         ))?.rows ?? []
@@ -120,7 +152,7 @@ export async function getScoringCategories(tournamentID: string): Promise<IScori
         fields: fields.filter(f => f.category_id === c.id).map(f => ({
             id: f.id, label: f.label, min: f.min_score, max: f.max_score,
             multiplier: Number(f.multiplier), assignable: f.assignable,
-            eligibleForAward: f.eligible_for_award, visibleToScorers: f.visible_to_scorers,
+            visibleToScorers: f.visible_to_scorers,
             prosecution: f.prosecution, defense: f.defense, calling: f.calling, crossing: f.crossing,
             awardCategoryId: f.award_category_id,
         })),
@@ -231,6 +263,74 @@ export async function getStandingsTemplates(): Promise<{ id: string; label: stri
     return result.rows;
 }
 
+/**
+ * Returns the built-in scoring templates for the creation wizard's picker.
+ * Only identifiers and display fields are sent; the full contents are copied
+ * server-side via {@link copyScoringTemplateToTournament} when a preset is
+ * chosen.
+ */
+export async function getScoringTemplates(): Promise<IScoringTemplate[]> {
+    const result = await dbQuery<IScoringTemplate>(
+        'SELECT id, label, description FROM scoring_templates ORDER BY label'
+    );
+    if (!result) throw new DbError('getScoringTemplates');
+    return result.rows;
+}
+
+/**
+ * Copies a scoring template's award categories, scoring categories, and fields
+ * into a newly created tournament. Field→award-category links are remapped from
+ * the template's award categories to the tournament's freshly-created ones.
+ *
+ * Throws NotFoundError if the template does not exist.
+ */
+export async function copyScoringTemplateToTournament(templateID: string, tournamentID: string): Promise<void> {
+    const template = (await dbQuery<{ id: string }>('SELECT id FROM scoring_templates WHERE id=$1', [templateID]))?.rows[0];
+    if (!template) throw new NotFoundError('scoring template');
+
+    // 1. Copy award categories, mapping each template award id → new tournament award id.
+    const templateAwards = (await dbQuery<{ id: string; name: string; min_nominees: number; max_nominees: number }>(
+        'SELECT id, name, min_nominees, max_nominees FROM scoring_template_award_categories WHERE template_id=$1',
+        [templateID]
+    ))?.rows ?? [];
+    const awardIdMap = new Map<string, string>();
+    await Promise.all(templateAwards.map(async a => {
+        const newId = (await dbQuery<{ id: string }>(
+            'INSERT INTO individual_award_categories (tournament_id, name, min_nominees, max_nominees) VALUES ($1,$2,$3,$4) RETURNING id',
+            [tournamentID, a.name, a.min_nominees, a.max_nominees]
+        ))?.rows[0]?.id;
+        if (newId) awardIdMap.set(a.id, newId);
+    }));
+
+    // 2. Copy scoring categories + their fields, remapping field award links.
+    const templateCats = (await dbQuery<{ id: string; name: string; witness_category: boolean; position: number }>(
+        'SELECT id, name, witness_category, position FROM scoring_template_categories WHERE template_id=$1 ORDER BY position',
+        [templateID]
+    ))?.rows ?? [];
+    if (!templateCats.length) return;
+
+    const catIds = templateCats.map(c => c.id);
+    const templateFields = (await dbQuery<IScoringTemplateFieldRow>(
+        `SELECT template_category_id, label, min_score, max_score, multiplier, assignable, visible_to_scorers, prosecution, defense, calling, crossing, position, award_category_id
+         FROM scoring_template_fields WHERE template_category_id IN (${catIds.map((_, i) => `$${i + 1}`).join(',')}) ORDER BY position`,
+        catIds
+    ))?.rows ?? [];
+
+    await Promise.all(templateCats.map(async cat => {
+        const newCatID = randomUUID();
+        await dbQuery(
+            'INSERT INTO scoring_categories (id, tournament_id, name, witness_category, position) VALUES ($1,$2,$3,$4,$5)',
+            [newCatID, tournamentID, cat.name, cat.witness_category, cat.position]
+        );
+        await Promise.all(templateFields.filter(f => f.template_category_id === cat.id).map(f =>
+            dbQuery(
+                'INSERT INTO scoring_fields (category_id, label, min_score, max_score, multiplier, assignable, visible_to_scorers, prosecution, defense, calling, crossing, position, award_category_id) VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13)',
+                [newCatID, f.label, f.min_score, f.max_score, Number(f.multiplier), f.assignable, f.visible_to_scorers, f.prosecution, f.defense, f.calling, f.crossing, f.position, f.award_category_id ? (awardIdMap.get(f.award_category_id) ?? null) : null]
+            )
+        ));
+    }));
+}
+
 export async function deleteTournament(tournamentID: string): Promise<void> {
     const row = (await dbQuery('DELETE FROM tournaments WHERE id=$1 RETURNING id', [tournamentID]))?.rows[0];
     if (!row) throw new NotFoundError('tournament');
@@ -265,7 +365,14 @@ export async function createTournament(tournament: TournamentPayload): Promise<I
     );
     if (!insertion || insertion.rowCount !== 1) throw new DbError('createTournament insert');
     await insertWitnesses(formatID, cf);
-    await insertCategories(tournamentID, tournament.scoringCategories);
+    if (tournament.scoringTemplateId) {
+        // Preset branch: copy the chosen template's categories/fields/awards server-side.
+        await copyScoringTemplateToTournament(tournament.scoringTemplateId, tournamentID);
+    } else {
+        // Manual branch: insert the award + scoring categories supplied in the payload.
+        const awardTempIdToUuid = await insertAwardCategories(tournamentID, tournament.awardCategories);
+        await insertCategories(tournamentID, tournament.scoringCategories, awardTempIdToUuid);
+    }
     const row = (await dbQuery<ITournament>('SELECT * FROM tournaments WHERE id = $1', [tournamentID]))?.rows[0];
     if (!row) throw new DbError('createTournament select');
     return row;
@@ -755,21 +862,50 @@ async function duplicateWitnesses(sourceCaseFormatID: string, newFormatID: strin
     }
 }
 
-async function duplicateScoringCategories(sourceTournamentID: string, newTournamentID: string): Promise<void> {
+/**
+ * Duplicates the source tournament's individual award categories into the new
+ * tournament and returns a map from each source award-category UUID to its new
+ * UUID, so scoring-field links can be remapped when both are duplicated.
+ */
+async function duplicateAwardCategories(sourceTournamentID: string, newTournamentID: string): Promise<Map<string, string>> {
+    const map = new Map<string, string>();
+    const cats = (await dbQuery<{ id: string; name: string; min_nominees: number; max_nominees: number }>(
+        'SELECT id, name, min_nominees, max_nominees FROM individual_award_categories WHERE tournament_id=$1',
+        [sourceTournamentID]
+    ))?.rows ?? [];
+    await Promise.all(cats.map(async c => {
+        const newId = (await dbQuery<{ id: string }>(
+            'INSERT INTO individual_award_categories (tournament_id, name, min_nominees, max_nominees) VALUES ($1,$2,$3,$4) RETURNING id',
+            [newTournamentID, c.name, c.min_nominees, c.max_nominees]
+        ))?.rows[0]?.id;
+        if (newId) map.set(c.id, newId);
+    }));
+    return map;
+}
+
+async function duplicateScoringCategories(
+    sourceTournamentID: string,
+    newTournamentID: string,
+    awardIdMap: Map<string, string> = new Map(),
+): Promise<void> {
     const cats = (await dbQuery<IScoringCategoryRow>('SELECT id, name, witness_category, position FROM scoring_categories WHERE tournament_id=$1 ORDER BY position', [sourceTournamentID]))?.rows ?? [];
     if (!cats.length) return;
     const fields = (await dbQuery<IScoringFieldRow>(
-        `SELECT category_id, label, min_score, max_score, multiplier, assignable, eligible_for_award, visible_to_scorers, prosecution, defense, calling, crossing, position
+        `SELECT category_id, label, min_score, max_score, multiplier, assignable, visible_to_scorers, prosecution, defense, calling, crossing, position, award_category_id
          FROM scoring_fields WHERE category_id IN (${cats.map((_, i) => `$${i + 1}`).join(',')}) ORDER BY position`,
         cats.map(c => c.id)
     ))?.rows ?? [];
+    // Remap a field's source award-category link to the new tournament's award
+    // category. If the awards weren't duplicated (empty map), the link is dropped.
+    const remapAward = (awardId: string | null): string | null =>
+        awardId ? (awardIdMap.get(awardId) ?? null) : null;
     await Promise.all(cats.map(async cat => {
         const newCatID = randomUUID();
         await dbQuery('INSERT INTO scoring_categories (id, tournament_id, name, witness_category, position) VALUES ($1,$2,$3,$4,$5)', [newCatID, newTournamentID, cat.name, cat.witness_category, cat.position]);
         await Promise.all(fields.filter(f => f.category_id === cat.id).map(f =>
             dbQuery(
-                'INSERT INTO scoring_fields (category_id, label, min_score, max_score, multiplier, assignable, eligible_for_award, visible_to_scorers, prosecution, defense, calling, crossing, position) VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13)',
-                [newCatID, f.label, f.min_score, f.max_score, f.multiplier, f.assignable, f.eligible_for_award, f.visible_to_scorers, f.prosecution, f.defense, f.calling, f.crossing, f.position]
+                'INSERT INTO scoring_fields (category_id, label, min_score, max_score, multiplier, assignable, visible_to_scorers, prosecution, defense, calling, crossing, position, award_category_id) VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13)',
+                [newCatID, f.label, f.min_score, f.max_score, f.multiplier, f.assignable, f.visible_to_scorers, f.prosecution, f.defense, f.calling, f.crossing, f.position, remapAward(f.award_category_id)]
             )
         ));
     }));
@@ -905,9 +1041,15 @@ export async function duplicateTournament(sourceTournamentID: string, options: I
         [newTournamentID, `${source.name} (copy)`, source.location, null, null, newFormatID]
     );
 
+    // Award categories must be duplicated before scoring categories so that a
+    // field's award-category link can be remapped to the new award UUID.
+    const awardIdMap = options.awards
+        ? await duplicateAwardCategories(sourceTournamentID, newTournamentID)
+        : new Map<string, string>();
+
     await Promise.all([
         options.witnesses        && duplicateWitnesses(source.case_format_id, newFormatID),
-        options.scoringCategories && duplicateScoringCategories(sourceTournamentID, newTournamentID),
+        options.scoringCategories && duplicateScoringCategories(sourceTournamentID, newTournamentID, awardIdMap),
         options.scorers          && duplicateScorers(sourceTournamentID, newTournamentID),
         options.courtrooms       && duplicateCourtrooms(sourceTournamentID, newTournamentID),
         options.tiebreaker       && duplicateTiebreaker(sourceTournamentID, newTournamentID),

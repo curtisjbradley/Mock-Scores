@@ -7,8 +7,8 @@ const CATEGORIES = [
     witnessCategory: false,
     position: 0,
     fields: [
-      { id: 'f-1', label: 'Opening Statement', min: 1, max: 10, multiplier: 1, assignable: true, eligibleForAward: false, visibleToScorers: true, prosecution: true, defense: false, calling: false, crossing: false },
-      { id: 'f-2', label: 'Closing Argument', min: 1, max: 10, multiplier: 1, assignable: true, eligibleForAward: false, visibleToScorers: true, prosecution: true, defense: false, calling: false, crossing: false },
+      { id: 'f-1', label: 'Opening Statement', min: 1, max: 10, multiplier: 1, assignable: true, visibleToScorers: true, prosecution: true, defense: false, calling: false, crossing: false },
+      { id: 'f-2', label: 'Closing Argument', min: 1, max: 10, multiplier: 1, assignable: true, visibleToScorers: true, prosecution: true, defense: false, calling: false, crossing: false },
     ],
   },
 ]
