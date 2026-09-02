@@ -1,9 +1,8 @@
 import { useState } from 'react'
 import { Link } from 'react-router-dom'
-import type { IBallotStatus, ICourtroom, IPairing, IPairingScorer, IRound, IScorer, IScoreSheetFormat, ITeam } from '@mock-scores/shared'
+import type { IBallotStatus, ICourtroom, IPairing, IPairingScorer, IRound, IScorer, ITeam } from '@mock-scores/shared'
 import { apiFetch } from '../../auth/auth'
 import TeamSelectOptions from '../../shared/components/TeamSelectOptions'
-import { downloadBallot } from '../utils/ballotPdf'
 
 interface Props {
     pairing: IPairing
@@ -16,6 +15,7 @@ interface Props {
     roundId: string
     round: IRound | null
     conflictSet: Set<string>
+    courtroomInUse: boolean
     onRemove: () => void
     onUpdate: (updated: IPairing) => void
     onScorerAssigned: (scorer: IPairingScorer) => void
@@ -28,7 +28,7 @@ interface Props {
  * Supports inline editing of courtroom and team assignments, and manages
  * scorer assignment / presider selection.
  */
-export default function PairingCard({ pairing, teams, courtrooms, scorers, assignedScorers, ballotStatus, tournamentId, roundId, round, conflictSet, onRemove, onUpdate, onScorerAssigned, onScorerRemoved, onPresiderChanged }: Props) {
+export default function PairingCard({ pairing, teams, courtrooms, scorers, assignedScorers, ballotStatus, tournamentId, roundId, round, conflictSet, courtroomInUse, onRemove, onUpdate, onScorerAssigned, onScorerRemoved, onPresiderChanged }: Props) {
     const [editingCourtroom, setEditingCourtroom] = useState(false)
     const [courtroomDraft, setCourtroomDraft] = useState(pairing.courtroom ?? '')
 
@@ -38,15 +38,11 @@ export default function PairingCard({ pairing, teams, courtrooms, scorers, assig
 
     const [showScorerAdd, setShowScorerAdd] = useState(false)
     const [scorerDraft, setScorerDraft] = useState('')
-    const [paperMode, setPaperMode] = useState(false)
-    const [paperName, setPaperName] = useState('')
+    const [scorerQuery, setScorerQuery] = useState('')
     const [manualEntryScorer, setManualEntryScorer] = useState<{ name: string; assignmentId: string } | null>(null)
     const [removeScorerTarget, setRemoveScorerTarget] = useState<{ name: string; assignmentId: string } | null>(null)
 
     const [sentLinks, setSentLinks] = useState<Set<string>>(new Set<string>);
-
-    const [downloadingBallot, setDownloadingBallot] = useState(false)
-    const [ballotError, setBallotError] = useState<string | null>(null)
 
     const [showPresiderModal, setShowPresiderModal] = useState(false)
     const [presiderDraft, setPresiderDraft] = useState('')
@@ -63,27 +59,16 @@ export default function PairingCard({ pairing, teams, courtrooms, scorers, assig
         return c ? c.name + (c.location ? ` (${c.location})` : '') : id
     }
 
-    const downloadBallotPdf = () => {
-        if (downloadingBallot) return
-        setDownloadingBallot(true)
-        setBallotError(null)
-        apiFetch(`/organizer/tournament/${tournamentId}/rounds/${roundId}/pairings/${pairing.pairing_id}/ballot-format`)
-            .then(r => {
-                if (!r.ok) throw new Error('Failed to load ballot')
-                return r.json() as Promise<IScoreSheetFormat>
-            })
-            .then(fmt => {
-                const opened = downloadBallot(fmt, {
-                    prosecutionCode: teams.find(t => t.id === pairing.p_team)?.code,
-                    defenseCode: teams.find(t => t.id === pairing.d_team)?.code,
-                    courtroom: pairing.courtroom ? courtroomName(pairing.courtroom) : '',
-                    roundName: round?.name,
-                    roundTime: round?.round_time ?? null,
-                })
-                if (!opened) setBallotError('Popup blocked — allow popups to download the ballot.')
-            })
-            .catch(() => setBallotError('Could not generate ballot.'))
-            .finally(() => setDownloadingBallot(false))
+    const openBallot = () => {
+        const qs = new URLSearchParams()
+        if (pairing.courtroom) qs.set('courtroom', courtroomName(pairing.courtroom))
+        if (round?.name) qs.set('roundName', round.name)
+        if (round?.round_time) qs.set('roundTime', round.round_time)
+        const query = qs.toString()
+        window.open(
+            `/organizer/${tournamentId}/round/${roundId}/ballot/${pairing.pairing_id}${query ? `?${query}` : ''}`,
+            '_blank',
+        )
     }
 
     const saveCourtroomEdit = () => {
@@ -114,14 +99,16 @@ export default function PairingCard({ pairing, teams, courtrooms, scorers, assig
             }
             onScorerAssigned({ assignment_id: data.assignment_id, type: 'registered', scorer_id: scorerDraft, name: `${scorer.first_name} ${scorer.last_name}`, is_presider: isFirst, presider_only_tiebreaker: false, conflict_reported: false, p_points: null, d_points: null })
             setScorerDraft('')
+            setScorerQuery('')
             setShowScorerAdd(false)
         })
     }
 
     const addPaperScorer = () => {
-        if (!paperName.trim()) return
+        const name = scorerQuery.trim()
+        if (!name) return
         apiFetch(`/organizer/tournament/${tournamentId}/rounds/${roundId}/pairings/${pairing.pairing_id}/scorers`, {
-            method: 'POST', body: JSON.stringify({ paper_name: paperName.trim() }),
+            method: 'POST', body: JSON.stringify({ paper_name: name }),
         }).then(r => r.json()).then((data: { assignment_id: string; scorer_id: string }) => {
             const isFirst = assignedScorers.length === 0
             if (isFirst) {
@@ -130,8 +117,8 @@ export default function PairingCard({ pairing, teams, courtrooms, scorers, assig
                 })
                 onPresiderChanged(data.assignment_id)
             }
-            onScorerAssigned({ assignment_id: data.assignment_id, type: 'paper', scorer_id: data.scorer_id, name: paperName.trim(), is_presider: isFirst, presider_only_tiebreaker: false, conflict_reported: false, p_points: null, d_points: null })
-            setPaperName('')
+            onScorerAssigned({ assignment_id: data.assignment_id, type: 'paper', scorer_id: data.scorer_id, name, is_presider: isFirst, presider_only_tiebreaker: false, conflict_reported: false, p_points: null, d_points: null })
+            setScorerQuery('')
             setShowScorerAdd(false)
         })
     }
@@ -169,15 +156,14 @@ export default function PairingCard({ pairing, teams, courtrooms, scorers, assig
         <div className="dash-pairing-card">
             <div className="dash-pairing-topbar">
                 <div className="pc-topbar-actions">
-                    <button className="pc-download-ballot-btn" onClick={downloadBallotPdf} disabled={downloadingBallot}>
-                        {downloadingBallot ? 'Preparing…' : '⬇ Download ballot'}
+                    <button className="pc-download-ballot-btn" onClick={openBallot}>
+                        ⬇ Download ballot
                     </button>
                     {!assignedScorers.some(s => s.is_presider) && (
                         <button className="dash-remove-btn" onClick={onRemove}>Remove</button>
                     )}
                 </div>
             </div>
-            {ballotError && <p className="pc-ballot-error">{ballotError}</p>}
 
             {editingTeams ? (
                 <div className="pc-edit-teams">
@@ -230,6 +216,11 @@ export default function PairingCard({ pairing, teams, courtrooms, scorers, assig
                         <button className="pc-matchup-col" onClick={() => { setCourtroomDraft(pairing.courtroom ?? ''); setEditingCourtroom(true) }}>
                             <span className="dash-side-label">Courtroom</span>
                             {pairing.courtroom ?  <span className="dash-team-name">{courtroomName(pairing.courtroom)}</span> : <span className={"pc-no-courtroom"}> No Courtroom</span> }
+                            {courtroomInUse && (
+                                <span className="pc-courtroom-warning" title="This courtroom is assigned to another trial in the same round.">
+                                    ⚠ Double-booked
+                                </span>
+                            )}
                             <span className="pc-col-edit-hint">✎</span>
                         </button>
                     )}
@@ -309,38 +300,73 @@ export default function PairingCard({ pairing, teams, courtrooms, scorers, assig
                     )
                 })}
 
-                {showScorerAdd && (
-                    <div className="pc-scorer-add-row">
-                        <label className="pc-presider-radio">
-                            <input type="radio" checked={!paperMode} onChange={() => setPaperMode(false)} /> Registered
-                        </label>
-                        <label className="pc-presider-radio">
-                            <input type="radio" checked={paperMode} onChange={() => setPaperMode(true)} /> Paper
-                        </label>
-                        {paperMode ? (
-                            <>
-                                <input className="pc-paper-input" autoFocus placeholder="Scorer name"
-                                    value={paperName} onChange={e => setPaperName(e.target.value)}
-                                    onKeyDown={e => e.key === 'Enter' && addPaperScorer()} />
-                                <button className="pc-paper-add" disabled={!paperName.trim()} onClick={addPaperScorer}>Add</button>
-                            </>
-                        ) : (
-                            <>
-                                <select className="rv-select" autoFocus value={scorerDraft} onChange={e => setScorerDraft(e.target.value)}>
-                                    <option value="">Select scorer…</option>
-                                    {availableScorers.map(s => <option key={s.scorer_id} value={s.scorer_id}>{s.first_name} {s.last_name}</option>)}
-                                </select>
-                                <button className="pc-paper-add" disabled={!scorerDraft} onClick={addRegisteredScorer}>Add</button>
-                            </>
-                        )}
-                        <button className="pc-paper-cancel" onClick={() => setShowScorerAdd(false)}>✕</button>
-                    </div>
-                )}
             </div>
-            {!showScorerAdd && (
-                <button className="pc-save-btn" onClick={() => { setShowScorerAdd(true); setPaperMode(false); setScorerDraft(''); setPaperName('') }}>+ Add Scorer</button>
-            )}
+            <button className="pc-save-btn" onClick={() => { setShowScorerAdd(true); setScorerDraft(''); setScorerQuery('') }}>+ Add Scorer</button>
         </div>
+
+        {showScorerAdd && (
+            <div className="modal-backdrop" onClick={() => setShowScorerAdd(false)}>
+                <div className="confirm-modal" onClick={e => e.stopPropagation()}>
+                    <h2 style={{ margin: '0 0 0.75rem' }}>Add Scorer</h2>
+                    <label className="rv-field-label" style={{ display: 'block', marginBottom: '0.75rem' }}>
+                        Scorer
+                        <div className="pc-scorer-typeahead">
+                            <input
+                                className="rv-select pc-scorer-search"
+                                autoFocus
+                                placeholder="Search scorers or type a name…"
+                                value={scorerQuery}
+                                onChange={e => { setScorerQuery(e.target.value); setScorerDraft('') }}
+                            />
+                            <div className="pc-scorer-results">
+                                {(() => {
+                                    const q = scorerQuery.trim().toLowerCase()
+                                    const matches = q === '' || scorerDraft
+                                        ? availableScorers
+                                        : availableScorers.filter(s =>
+                                            `${s.first_name} ${s.last_name}`.toLowerCase().includes(q)
+                                        )
+                                    if (matches.length === 0) {
+                                        return <p className="pc-scorer-results-empty">No matching scorers</p>
+                                    }
+                                    return (
+                                        <ul className="pc-scorer-options pc-scorer-options--inline">
+                                            {matches.map(s => {
+                                                const selected = s.scorer_id === scorerDraft
+                                                return (
+                                                    <li key={s.scorer_id}>
+                                                        <button
+                                                            type="button"
+                                                            className={`pc-scorer-option${selected ? ' pc-scorer-option--selected' : ''}`}
+                                                            onClick={() => { setScorerDraft(s.scorer_id); setScorerQuery(`${s.first_name} ${s.last_name}`) }}
+                                                        >
+                                                            {s.first_name} {s.last_name}
+                                                        </button>
+                                                    </li>
+                                                )
+                                            })}
+                                        </ul>
+                                    )
+                                })()}
+                            </div>
+                        </div>
+                    </label>
+
+                    <button
+                        className="pc-create-offline-btn"
+                        disabled={!scorerQuery.trim() || !!scorerDraft}
+                        onClick={addPaperScorer}
+                    >
+                        + Create offline scorer{scorerQuery.trim() ? ` "${scorerQuery.trim()}"` : ''}
+                    </button>
+
+                    <div className="confirm-actions">
+                        <button onClick={() => setShowScorerAdd(false)}>Cancel</button>
+                        <button disabled={!scorerDraft} onClick={addRegisteredScorer}>Add</button>
+                    </div>
+                </div>
+            </div>
+        )}
 
         {showPresiderModal && (
             <div className="modal-backdrop" onClick={() => setShowPresiderModal(false)}>
