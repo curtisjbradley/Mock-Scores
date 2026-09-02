@@ -24,7 +24,7 @@ export interface TournamentSettingsState {
 
 const emptyInfo: TournamentInfo = {
     name: '', location: '', startDate: '', endDate: '',
-    startTbd: false, endTbd: false,
+    startTbd: false, endTbd: false, shareIndividualRankings: true,
 }
 
 /**
@@ -63,6 +63,7 @@ export function useTournamentSettings(
                 startDate: t.start_date ? String(t.start_date).slice(0, 10) : '',
                 endDate: t.end_date ? String(t.end_date).slice(0, 10) : '',
                 startTbd: !t.start_date, endTbd: !t.end_date,
+                shareIndividualRankings: t.share_individual_rankings ?? true,
             })
             setCaseFormat(cf)
             setLoading(false)

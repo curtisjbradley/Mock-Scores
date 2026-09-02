@@ -2,6 +2,8 @@ import { useEffect, useState } from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
 import { apiFetch } from '../../auth/auth'
 import type { IScoreSheetFormat, ScorecardPayload } from '@mock-scores/shared'
+import ModalBackdrop from '../../shared/components/ModalBackdrop'
+import { useAutoFocus } from '../../shared/hooks/useAutoFocus'
 import '../styles/organizer.css'
 import '../../judges/styles/scoresheet.css'
 import '../../judges/styles/modal.css'
@@ -30,6 +32,8 @@ const ScorecardViewer = () => {
     const [editedScores, setEditedScores] = useState<Record<string, number>>({})
     const [showSaveModal, setShowSaveModal] = useState(false)
     const [editReason, setEditReason] = useState('')
+    // Programmatic focus (accessible replacement for the autoFocus attribute).
+    const reasonRef = useAutoFocus<HTMLTextAreaElement>(showSaveModal)
     const [saving, setSaving] = useState(false)
     const [editLog, setEditLog] = useState<{ editor_email: string; edited_at: string; reason: string; p_points_before: number; p_points_after: number; d_points_before: number; d_points_after: number }[]>([])
     const [showEditLog, setShowEditLog] = useState(false)
@@ -422,8 +426,8 @@ const ScorecardViewer = () => {
         </main>
 
         {showDeleteModal && (
-            <div className="modal-backdrop" role="dialog" aria-modal="true" aria-labelledby="delete-modal-title" onClick={() => !deleting && setShowDeleteModal(false)}>
-                <div className="confirm-modal" onClick={e => e.stopPropagation()}>
+            <ModalBackdrop onClose={() => setShowDeleteModal(false)} dismissible={!deleting}>
+                <div className="confirm-modal" role="dialog" aria-modal="true" aria-labelledby="delete-modal-title">
                     <h2 id="delete-modal-title" style={{ margin: '0 0 0.75rem', color: '#d32f2f' }}>Delete Ballot</h2>
                     <p style={{ margin: '0 0 0.5rem', lineHeight: 1.6 }}>
                         Are you sure you want to delete this ballot? This action cannot be undone.
@@ -438,12 +442,12 @@ const ScorecardViewer = () => {
                         </button>
                     </div>
                 </div>
-            </div>
+            </ModalBackdrop>
         )}
 
         {showSaveModal && (
-            <div className="modal-backdrop" role="dialog" aria-modal="true" aria-labelledby="save-modal-title" onClick={() => !saving && setShowSaveModal(false)}>
-                <div className="confirm-modal" onClick={e => e.stopPropagation()}>
+            <ModalBackdrop onClose={() => setShowSaveModal(false)} dismissible={!saving}>
+                <div className="confirm-modal" role="dialog" aria-modal="true" aria-labelledby="save-modal-title">
                     <h2 id="save-modal-title" style={{ margin: '0 0 0.75rem' }}>Save Ballot Edits</h2>
                     <p style={{ margin: '0 0 1rem', lineHeight: 1.6, fontSize: '0.9rem' }}>
                         Please provide a reason for this edit. This will be logged for audit purposes.
@@ -451,12 +455,12 @@ const ScorecardViewer = () => {
                     <label htmlFor="edit-reason" style={{ display: 'block', marginBottom: '0.4rem', fontSize: '0.85rem', fontWeight: 600 }}>Reason for edit</label>
                     <textarea
                         id="edit-reason"
+                        ref={reasonRef}
                         className="modal-input"
                         style={{ width: '100%', minHeight: '5rem', resize: 'vertical', padding: '0.5rem 0.75rem', fontFamily: 'inherit', fontSize: '0.9rem' }}
                         value={editReason}
                         onChange={e => setEditReason(e.target.value)}
                         placeholder="e.g., Scorer reported incorrect score for witness #2"
-                        autoFocus
                     />
                     <div className="confirm-actions" style={{ marginTop: '1rem' }}>
                         <button onClick={() => { setShowSaveModal(false); setEditReason('') }} disabled={saving}>Cancel</button>
@@ -465,7 +469,7 @@ const ScorecardViewer = () => {
                         </button>
                     </div>
                 </div>
-            </div>
+            </ModalBackdrop>
         )}
         </>
     )

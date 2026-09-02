@@ -1,5 +1,6 @@
 import { useState } from 'react'
 import type { IRound } from '@mock-scores/shared'
+import { useAutoFocus } from '../../shared/hooks/useAutoFocus'
 
 interface RoundNameEditorProps {
     round: IRound | null
@@ -16,6 +17,7 @@ interface RoundNameEditorProps {
 export default function RoundNameEditor({ round, onSave }: RoundNameEditorProps) {
     const [editing, setEditing] = useState(false)
     const [value, setValue] = useState('')
+    const inputRef = useAutoFocus<HTMLInputElement>(editing)
 
     const commit = () => { onSave(value); setEditing(false) }
 
@@ -23,7 +25,7 @@ export default function RoundNameEditor({ round, onSave }: RoundNameEditorProps)
         return (
             <form onSubmit={e => { e.preventDefault(); commit() }}>
                 <input
-                    autoFocus
+                    ref={inputRef}
                     className="rv-name-input"
                     value={value}
                     onChange={e => setValue(e.target.value)}

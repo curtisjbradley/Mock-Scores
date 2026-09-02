@@ -1,4 +1,5 @@
 import { isValidEmail } from '../../utils/validation'
+import { useAutoFocus } from '../hooks/useAutoFocus'
 
 interface Props {
     value: string
@@ -9,10 +10,11 @@ interface Props {
 
 /** Inline email edit form used in organizer/team tables. */
 export default function InlineEmailEdit({ value, onChange, onSave, onCancel }: Props) {
+    const inputRef = useAutoFocus<HTMLInputElement>()
     return (
         <form className="dash-edit-form" onSubmit={e => { e.preventDefault(); onSave() }}>
             <input
-                autoFocus
+                ref={inputRef}
                 type="email"
                 value={value}
                 onChange={e => onChange(e.target.value)}

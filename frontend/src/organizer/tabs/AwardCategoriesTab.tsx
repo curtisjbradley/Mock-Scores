@@ -5,6 +5,8 @@ import Section from './Section'
 import ModalBackdrop from '../../shared/components/ModalBackdrop'
 import { ConfirmRemoveModal } from '../components/modals'
 import { useConfirmRemove } from '../../shared/hooks/useConfirmRemove'
+import DangerButton from '../../shared/components/DangerButton'
+import AddButton from '../../shared/components/AddButton'
 
 interface Props {
     tournamentId: string
@@ -94,7 +96,7 @@ export default function AwardCategoriesTab({ tournamentId }: Props) {
             {error && <div className="tc-error-banner">{error}</div>}
 
             <div className="tab-actions">
-                <button className="org-new-btn" onClick={openAddModal}>+ Add category</button>
+                <AddButton onClick={openAddModal}>+ Add category</AddButton>
             </div>
 
             <div className="dash-table-scroll">
@@ -119,7 +121,7 @@ export default function AwardCategoriesTab({ tournamentId }: Props) {
                                 <td>
                                     <div className="dash-actions-cell">
                                         <button className="dash-remove-btn" onClick={() => openEditModal(cat)}>Edit</button>
-                                        <button className="dash-remove-btn" onClick={() => confirmRemove.open(cat)}>Remove</button>
+                                        <DangerButton onClick={() => confirmRemove.open(cat)}>Remove</DangerButton>
                                     </div>
                                 </td>
                             </tr>

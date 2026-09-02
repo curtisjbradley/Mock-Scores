@@ -368,6 +368,22 @@
     color: var(--text-muted);
 }
 
+.dash-remove-btn {
+    background: none;
+    border: none;
+    color: var(--danger);
+    font-size: 0.85rem;
+    font-weight: 600;
+    font-family: inherit;
+    cursor: pointer;
+    padding: 0.2rem 0.4rem;
+    border-radius: 0.4rem;
+    transition: background 120ms ease;
+}
+.dash-remove-btn:hover{
+    background: var(--surface-muted);
+}
+
 /* ── Print ──────────────────────────────────────────────────────────────── */
 
 @media print {

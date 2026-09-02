@@ -2,7 +2,10 @@ import { useState, useEffect } from 'react'
 import type { ICourtroom } from '@mock-scores/shared'
 import { ConfirmRemoveModal } from '../components/modals'
 import ModalBackdrop from '../../shared/components/ModalBackdrop'
+import DangerButton from '../../shared/components/DangerButton'
+import AddButton from '../../shared/components/AddButton'
 import { useConfirmRemove } from '../../shared/hooks/useConfirmRemove'
+import { useAutoFocus } from '../../shared/hooks/useAutoFocus'
 import Section from './Section'
 import { apiFetch } from '../../auth/auth'
 import { v4 as randomUUID } from 'uuid'
@@ -14,6 +17,7 @@ export default function CourtroomsTab({ tournamentId }: { tournamentId: string }
     const confirmRemove = useConfirmRemove<ICourtroom>()
     const [name, setName] = useState('')
     const [location, setLocation] = useState('')
+    const nameRef = useAutoFocus<HTMLInputElement>(showModal)
 
     useEffect(() => {
         apiFetch(`/organizer/tournament/${tournamentId}/courtrooms`)
@@ -43,7 +47,7 @@ export default function CourtroomsTab({ tournamentId }: { tournamentId: string }
     return (
         <Section title="Courtrooms" description="Manage available courtrooms">
             <div className="tab-actions">
-                <button className="org-new-btn" onClick={openAddModal}>+ Add courtroom</button>
+                <AddButton onClick={openAddModal}>+ Add courtroom</AddButton>
             </div>
 
             <div className="dash-table-scroll">
@@ -57,7 +61,7 @@ export default function CourtroomsTab({ tournamentId }: { tournamentId: string }
                                 <td>
                                     <div className="dash-actions-cell">
                                         <button className="dash-remove-btn" onClick={() => openEditModal(c)}>Edit</button>
-                                        <button className="dash-remove-btn" onClick={() => confirmRemove.open(c)}>Remove</button>
+                                        <DangerButton onClick={() => confirmRemove.open(c)}>Remove</DangerButton>
                                     </div>
                                 </td>
                             </tr>
@@ -73,7 +77,7 @@ export default function CourtroomsTab({ tournamentId }: { tournamentId: string }
                         <form className="tc-form" onSubmit={e => { e.preventDefault(); handleSave() }} noValidate>
                             <div className="tc-field">
                                 <label className="tc-label" htmlFor="cr-name">Name</label>
-                                <input id="cr-name" type="text" className="tc-input" required autoFocus
+                                <input id="cr-name" type="text" className="tc-input" required ref={nameRef}
                                     value={name} onChange={e => setName(e.target.value)} placeholder="e.g. 1A" />
                             </div>
                             <div className="tc-field">

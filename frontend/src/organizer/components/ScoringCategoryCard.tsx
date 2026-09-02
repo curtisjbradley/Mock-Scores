@@ -1,5 +1,8 @@
 import type { ScoringCategory, ScoringField } from '../types/tournament'
 import type { IIndividualAwardCategory } from '@mock-scores/shared'
+import DangerButton from '../../shared/components/DangerButton'
+import AddButton from '../../shared/components/AddButton'
+import Tooltip from "../../shared/components/Tooltip.tsx";
 
 interface Props {
     cat: ScoringCategory
@@ -26,6 +29,13 @@ export default function ScoringCategoryCard({
     onUpdateName, onRemoveCategory, onUpdateField, onAddField, onRemoveField, fieldError,
     awardCategories,
 }: Props) {
+
+    const removeButton = <DangerButton
+        variant="solid"
+        aria-label="Remove category"
+        onClick={onRemoveCategory}
+        disabled={cat.witnessCategory ?? false}
+    >Remove Category</DangerButton>
     return (
         // eslint-disable-next-line jsx-a11y/no-static-element-interactions
         <div
@@ -44,15 +54,42 @@ export default function ScoringCategoryCard({
                     readOnly={cat.witnessCategory}
                     title={cat.witnessCategory ? 'Witness category names cannot be renamed' : undefined}
                 />
-                <button type="button" className={`tc-remove-btn${cat.witnessCategory ? ' tc-remove-btn--hidden' : ''}`} onClick={onRemoveCategory}>×</button>
+                {cat.witnessCategory ? <Tooltip content={<p>This category cannot be removed.</p>} children={[removeButton]}/> : removeButton}
             </div>
             <div className="sf-table-wrap">
                 <table className="sf-table">
                     <thead><tr>
                         <th>Role</th><th>Min</th><th>Max</th><th>Multiplier</th>
-                        <th>Assignable</th><th>Award</th><th>Visible</th>
-                        {!cat.witnessCategory && <><th>P</th><th>D</th></>}
-                        {cat.witnessCategory && <><th>Calling</th><th>Crossing</th></>}
+                         <th>
+                            <Tooltip placement="bottom" content={<p>Allows coaches to assign a student to the score. Uncheck this for fields like sportsmanship and deductions.</p>}>
+                                <span className="sf-th-info">Assignable</span>
+                            </Tooltip>
+                        </th>
+                        <th><Tooltip placement="bottom" content={<p>The award category this position is eligible for.</p>}>
+                            <span className="sf-th-info">Award</span>
+                        </Tooltip></th><th><Tooltip placement="bottom" content={<p>Visible fields are ones that scorers will enter. Nonvisible fields may be used by organizers to enforce point deductions.</p>}>
+                        <span className="sf-th-info">Visible</span>
+                    </Tooltip></th>
+                        {!cat.witnessCategory && <><th>
+                            <Tooltip placement="bottom" content={<p>Points go the Prosecution.</p>}>
+                                <span className="sf-th-info">P</span>
+                            </Tooltip>
+                        </th><th>
+                            <Tooltip placement="bottom" content={<p>Points go the Defense.</p>}>
+                            <span className="sf-th-info">D</span>
+                        </Tooltip></th></>}
+                        {cat.witnessCategory && <>
+                            <th>
+                                <Tooltip placement="bottom" content={<p>Points go the side calling the witness.</p>}>
+                                    <span className="sf-th-info">Calling</span>
+                                </Tooltip>
+                            </th>
+                            <th>
+                                <Tooltip placement="bottom" content={<p>Points go to the side crossing the witness.</p>}>
+                                    <span className="sf-th-info">Crossing</span>
+                                </Tooltip>
+                            </th>
+                        </>}
                         <th></th>
                     </tr></thead>
                     <tbody>
@@ -64,7 +101,7 @@ export default function ScoringCategoryCard({
                                     <td><input type="number" className={`tc-input sf-num${err ? ' tc-input--invalid' : ''}`} value={f.min} onChange={e => onUpdateField(f.id, 'min', +e.target.value)} /></td>
                                     <td><input type="number" className={`tc-input sf-num${err ? ' tc-input--invalid' : ''}`} value={f.max} onChange={e => onUpdateField(f.id, 'max', +e.target.value)} /></td>
                                     <td><input type="number" step="0.1" className={`tc-input sf-num${err ? ' tc-input--invalid' : ''}`} value={f.multiplier} onChange={e => onUpdateField(f.id, 'multiplier', +e.target.value)} /></td>
-                                    <td className="sf-assignable-cell"><input type="checkbox" checked={f.assignable} onChange={e => onUpdateField(f.id, 'assignable', e.target.checked)} /></td>
+                                    <td className="sf-assignable-cell"><input type="checkbox" checked={f.assignable} onChange={e => onUpdateField(f.id, 'assignable', e.target.checked)} /> </td>
                                     <td className="sf-award-cell">
                                         <select className="tc-input sf-award-select" value={f.awardCategoryId ?? ''} onChange={e => {
                                             const val = e.target.value || null
@@ -81,14 +118,14 @@ export default function ScoringCategoryCard({
                                     {!cat.witnessCategory && <td className="sf-assignable-cell"><input type="checkbox" checked={f.defense} onChange={e => onUpdateField(f.id, 'defense', e.target.checked)} /></td>}
                                     {cat.witnessCategory && <td className="sf-assignable-cell"><input type="checkbox" checked={f.calling} onChange={e => onUpdateField(f.id, 'calling', e.target.checked)} /></td>}
                                     {cat.witnessCategory && <td className="sf-assignable-cell"><input type="checkbox" checked={f.crossing} onChange={e => onUpdateField(f.id, 'crossing', e.target.checked)} /></td>}
-                                    <td className="sf-remove-cell"><button type="button" className="tc-remove-btn" onClick={() => onRemoveField(f.id)}>×</button></td>
+                                    <td ><DangerButton variant="subtle" aria-label="Remove field" onClick={() => onRemoveField(f.id)}>Remove</DangerButton></td>
                                 </tr>
                             )
                         })}
                     </tbody>
                 </table>
             </div>
-            <button type="button" className="tc-add-btn" onClick={onAddField}>+ Add field</button>
+            <AddButton variant="dashed" onClick={onAddField}>+ Add field</AddButton>
         </div>
     )
 }

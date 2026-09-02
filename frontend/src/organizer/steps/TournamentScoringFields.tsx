@@ -2,6 +2,7 @@ import { useState, useRef } from 'react'
 import type { ScoringCategory, ScoringField, CaseFormatState } from '../types/tournament'
 import { makeField, makeCategory } from '../types/tournament'
 import ScoringCategoryCard from '../components/ScoringCategoryCard'
+import AddButton from '../../shared/components/AddButton'
 import type { IIndividualAwardCategory } from '@mock-scores/shared'
 
 interface Props {
@@ -57,7 +58,7 @@ export default function TournamentScoringFields({ categories, onChange, caseForm
     const dWitnesses = Number(caseFormat.dWitnessesCalled) || 0
     let pMax = 0, dMax = 0
     categories.forEach(cat => cat.fields.forEach(f => {
-        const pts = f.max * f.multiplier
+        const pts = f.multiplier > 0 ? f.max * f.multiplier : f.min * f.multiplier
         if (cat.witnessCategory) {
             if (f.calling)  { pMax += pts * pWitnesses; dMax += pts * dWitnesses }
             if (f.crossing) { pMax += pts * dWitnesses; dMax += pts * pWitnesses }
@@ -91,7 +92,7 @@ export default function TournamentScoringFields({ categories, onChange, caseForm
                 />
             ))}
 
-            <button type="button" className="tc-add-btn" onClick={addCategory}>+ Add category</button>
+            <AddButton variant="dashed" onClick={addCategory}>+ Add category</AddButton>
 
             {hasErrors && <div className="tc-error-banner">Fix invalid fields: min ≤ max, multiplier ≠ 0, and each row needs a side.</div>}
 
@@ -99,7 +100,7 @@ export default function TournamentScoringFields({ categories, onChange, caseForm
                 <span>Max score — P: <strong>{pMax}</strong></span>
                 <span>D: <strong>{dMax}</strong></span>
             </div>
-            {pMax !== dMax && <div className="tc-error-banner">Max scores are unequal — P: {pMax}, D: {dMax}.</div>}
+            {pMax !== dMax && <div className="tc-error-banner">Max scores are unequal - P: {pMax}, D: {dMax}.</div>}
 
             <div className="tc-actions">
                 <button type="submit" className="btn-confirm">{submitLabel ?? (isEditing ? 'Save changes' : 'Create tournament')}</button>

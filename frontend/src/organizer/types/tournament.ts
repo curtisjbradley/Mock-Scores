@@ -5,6 +5,8 @@ export interface TournamentInfo {
     endDate: string
     startTbd: boolean
     endTbd: boolean
+    /** When false, coaches cannot see individual award nominations on ballots. */
+    shareIndividualRankings: boolean
 }
 
 export interface CaseFormatState {
@@ -51,7 +53,7 @@ export interface AwardCategory {
 
 export const emptyInfo: TournamentInfo = {
     name: '', location: '', startDate: '', endDate: '',
-    startTbd: false, endTbd: false,
+    startTbd: false, endTbd: false, shareIndividualRankings: true,
 }
 
 export const emptyCaseFormat: CaseFormatState = {

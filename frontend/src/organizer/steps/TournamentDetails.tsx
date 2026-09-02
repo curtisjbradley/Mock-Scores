@@ -2,6 +2,7 @@ import { useState } from 'react'
 import type { TournamentInfo } from '../types/tournament'
 import FormField from '../../shared/components/FormField'
 import DateRangePicker from '../../shared/components/DateRangePicker'
+import Tooltip from "../../shared/components/Tooltip.tsx";
 
 interface Props {
     info: TournamentInfo
@@ -47,7 +48,7 @@ export default function TournamentDetails({ info, onChange, onNext, onBack }: Pr
             <FormField
                 id="name"
                 label="Tournament name"
-                autoFocus
+                focusOnMount
                 value={info.name}
                 placeholder="e.g. San Luis Obispo County"
                 submitted={submitted}
@@ -71,6 +72,19 @@ export default function TournamentDetails({ info, onChange, onNext, onBack }: Pr
                 errors={{ startDate: errors.startDate, endDate: errors.endDate }}
                 onChange={onChange}
             />
+            <Tooltip content={ <p className="tc-field-hint">
+                When enabled, coaches can see award nominations on ballots. Turn off to hide them.
+            </p>} >
+            <label className="tc-checkbox-label">
+                <input
+                    type="checkbox"
+                    checked={info.shareIndividualRankings}
+                    onChange={() => onChange({ ...info, shareIndividualRankings: !info.shareIndividualRankings })}
+                />
+                Share individual rankings
+            </label>
+            </Tooltip>
+
 
             <div className="tc-actions">
                 <button type="button" className="btn-cancel" onClick={onBack}>← Back</button>

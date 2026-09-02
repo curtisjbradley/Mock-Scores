@@ -1,4 +1,5 @@
 import type { InputHTMLAttributes, ReactNode } from 'react'
+import { useAutoFocus } from '../hooks/useAutoFocus'
 
 interface FormFieldProps extends InputHTMLAttributes<HTMLInputElement> {
     /** HTML id for the input and the associated <label> */
@@ -13,6 +14,11 @@ interface FormFieldProps extends InputHTMLAttributes<HTMLInputElement> {
     children?: ReactNode
     /** CSS class prefix for BEM-style class names (default "tc") */
     classPrefix?: string
+    /**
+     * Move focus to this field when it mounts. Accessible replacement for the
+     * `autoFocus` attribute — focus is set programmatically.
+     */
+    focusOnMount?: boolean
 }
 
 /**
@@ -40,10 +46,14 @@ export default function FormField({
     children,
     classPrefix = 'tc',
     className,
+    focusOnMount,
     ...inputProps
 }: FormFieldProps) {
     const hasError = submitted && !!error
     const inputClass = `${classPrefix}-input${hasError ? ` ${classPrefix}-input--invalid` : ''}${className ? ` ${className}` : ''}`
+    // Move focus programmatically instead of using the `autoFocus` attribute,
+    // which jsx-a11y flags for accessibility reasons.
+    const inputRef = useAutoFocus<HTMLInputElement>(!!focusOnMount)
 
     return (
         <div className={`${classPrefix}-field`}>
@@ -51,6 +61,7 @@ export default function FormField({
                 {label}
             </label>
             <input
+                ref={inputRef}
                 id={id}
                 className={inputClass}
                 {...inputProps}

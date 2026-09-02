@@ -5,6 +5,8 @@ import { ConfirmRemoveModal } from '../../organizer/components/modals'
 import { useConfirmRemove } from '../../shared/hooks/useConfirmRemove'
 import EmptyState from '../../shared/components/EmptyState'
 import ModalBackdrop from '../../shared/components/ModalBackdrop'
+import DangerButton from '../../shared/components/DangerButton'
+import AddButton from '../../shared/components/AddButton'
 import '../../organizer/styles/organizer.css'
 import '../../organizer/styles/tabs.css'
 import '../../organizer/styles/round-view.css'
@@ -283,7 +285,7 @@ export default function RosterTab({ students, tournamentId, teamId, onAdd, onRem
                         onChange={e => { setCustomPronouns(e.target.value); setFormError('') }}
                     />
                 )}
-                <button type="submit" className="org-new-btn">+ Add</button>
+                <AddButton type="submit">+ Add</AddButton>
             </form>
             {formError && <p className="sb-config-error">{formError}</p>}
 
@@ -296,7 +298,7 @@ export default function RosterTab({ students, tournamentId, teamId, onAdd, onRem
                                 {s.student_name}
                                 {s.pronouns ? <span className="roster-pronouns">({s.pronouns})</span> : null}
                             </span>
-                            <button className="dash-remove-btn" onClick={() => confirmRemove.open(s)}>Remove</button>
+                            <DangerButton onClick={() => confirmRemove.open(s)}>Remove</DangerButton>
                         </li>
                     ))}
                 </ul>

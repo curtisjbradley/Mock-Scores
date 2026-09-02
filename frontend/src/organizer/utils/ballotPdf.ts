@@ -129,79 +129,82 @@ export const BALLOT_STYLES = `
         width: 100%;
         font-family: "Helvetica Neue", Arial, sans-serif;
         color: #111;
-        font-size: 8.5px;
+        /* Master size knob. Every text size below is expressed in em relative
+           to this value, so setting --ballot-font uniformly scales the whole
+           ballot. Defaults to the previous fixed 8.5px. */
+        font-size: var(--ballot-font, 8.5px);
         line-height: 1.25;
     }
 
-    .ballot .header { border-bottom: 2px solid #111; padding-bottom: 4px; margin-bottom: 6px; }
+    .ballot .header { border-bottom: 2px solid #111; padding-bottom: 0.47em; margin-bottom: 0.7em; }
     .ballot .header-top { display: flex; justify-content: space-between; align-items: flex-start; }
-    .ballot .tournament-name { font-size: 13px; font-weight: 700; margin: 0; }
-    .ballot .case-name { font-size: 9px; font-style: italic; color: #555; margin-top: 1px; }
-    .ballot .header-meta { text-align: right; font-size: 8px; }
-    .ballot .teams { display: flex; gap: 24px; margin-top: 4px; align-items: baseline; }
-    .ballot .team-line { font-size: 13px; }
-    .ballot .team-role { font-size: 9px; text-transform: uppercase; letter-spacing: 0.04em; color: #555; font-weight: 600; }
-    .ballot .team-code { font-size: 13px; font-weight: 700; }
+    .ballot .tournament-name { font-size: 1.53em; font-weight: 700; margin: 0; }
+    .ballot .case-name { font-size: 1.06em; font-style: italic; color: #555; margin-top: 0.12em; }
+    .ballot .header-meta { text-align: right; font-size: 0.94em; }
+    .ballot .teams { display: flex; gap: 2.8em; margin-top: 0.47em; align-items: baseline; }
+    .ballot .team-line { font-size: 1.53em; }
+    .ballot .team-role { font-size: 1.06em; text-transform: uppercase; letter-spacing: 0.04em; color: #555; font-weight: 600; }
+    .ballot .team-code { font-size: 1.53em; font-weight: 700; }
 
-    .ballot .scorer-line { display: flex; gap: 16px; margin: 5px 0; font-size: 8px; }
+    .ballot .scorer-line { display: flex; gap: 1.9em; margin: 0.6em 0; font-size: 0.94em; }
     .ballot .field { flex: 1; }
-    .ballot .field .label { color: #555; text-transform: uppercase; font-size: 7px; letter-spacing: 0.04em; }
-    .ballot .field .value { border-bottom: 1px solid #999; display: inline-block; min-width: 90px; padding: 0 3px; }
+    .ballot .field .label { color: #555; text-transform: uppercase; font-size: 0.82em; letter-spacing: 0.04em; }
+    .ballot .field .value { border-bottom: 1px solid #999; display: inline-block; min-width: 10.6em; padding: 0 0.35em; }
 
-    .ballot .categories { column-count: 2; column-gap: 10px; }
+    .ballot .categories { column-count: 2; column-gap: 1.2em; }
     .ballot .cat-table {
-        width: 100%; border-collapse: collapse; margin-bottom: 5px;
+        width: 100%; border-collapse: collapse; margin-bottom: 0.6em;
         break-inside: avoid; page-break-inside: avoid;
     }
     .ballot .cat-heading th {
-        color: #111; text-align: left; padding: 3px 0 2px;
-        font-size: 8.5px; font-weight: 700; text-transform: uppercase;
+        color: #111; text-align: left; padding: 0.35em 0 0.24em;
+        font-size: 1em; font-weight: 700; text-transform: uppercase;
         letter-spacing: 0.03em;
         border-top: 2px solid #111; border-bottom: 2px solid #111;
     }
     .ballot .col-heading th {
-        border-bottom: 1px solid #111; padding: 1px 4px; font-size: 7px;
+        border-bottom: 1px solid #111; padding: 0.12em 0.47em; font-size: 0.82em;
         text-transform: uppercase; color: #333; text-align: center;
     }
     .ballot .col-heading .assignment-col { text-align: left; }
-    .ballot .cat-table td { padding: 2px 4px; border-bottom: 1px solid #ddd; vertical-align: top; }
+    .ballot .cat-table td { padding: 0.24em 0.47em; border-bottom: 1px solid #ddd; vertical-align: top; }
     .ballot .cat-table td.assignment { width: 46%; }
-    .ballot .cat-table .range { color: #888; font-size: 7px; }
+    .ballot .cat-table .range { color: #888; font-size: 0.82em; }
     .ballot .score-cell { text-align: center; width: 27%; }
     .ballot .score-blank {
-        display: inline-block; width: 26px; height: 13px;
+        display: inline-block; width: 3.05em; height: 1.53em;
         border: 1px solid #333; border-radius: 2px; vertical-align: middle;
     }
-    .ballot .student { display: block; font-size: 6.5px; color: #444; margin-top: 1px; }
+    .ballot .student { display: block; font-size: 0.76em; color: #444; margin-top: 0.12em; }
 
-    .ballot .footer { margin-top: 6px; display: flex; gap: 12px; break-inside: avoid; }
+    .ballot .footer { margin-top: 0.7em; display: flex; gap: 1.4em; break-inside: avoid; }
     .ballot .signature-line {
-        margin-top: 10px; display: flex; gap: 24px; break-inside: avoid;
-        font-size: 8px; align-items: flex-end;
+        margin-top: 1.2em; display: flex; gap: 2.8em; break-inside: avoid;
+        font-size: 0.94em; align-items: flex-end;
     }
     .ballot .signature-line .field { flex: 1; }
-    .ballot .signature-line .field--date { flex: 0 0 130px; }
-    .ballot .signature-line .value { display: block; border-bottom: 1px solid #333; min-width: 100%; height: 16px; }
+    .ballot .signature-line .field--date { flex: 0 0 15.3em; }
+    .ballot .signature-line .value { display: block; border-bottom: 1px solid #333; min-width: 100%; height: 1.9em; }
     .ballot .awards { flex: 1.4; }
-    .ballot .tiebreaker { flex: 1; border: 1px solid #111; padding: 4px 6px; }
+    .ballot .tiebreaker { flex: 1; border: 1px solid #111; padding: 0.47em 0.7em; }
     .ballot .section-title {
-        font-size: 8.5px; font-weight: 700; text-transform: uppercase;
+        font-size: 1em; font-weight: 700; text-transform: uppercase;
         letter-spacing: 0.04em; border-bottom: 1px solid #111;
-        margin-bottom: 3px; padding-bottom: 1px;
+        margin-bottom: 0.35em; padding-bottom: 0.12em;
     }
-    .ballot .award { margin-bottom: 4px; }
-    .ballot .award-name { font-size: 8px; font-weight: 600; }
-    .ballot .award-hint { font-weight: 400; color: #777; font-size: 7px; }
-    .ballot .award-blanks { display: block; margin-top: 2px; }
+    .ballot .award { margin-bottom: 0.47em; }
+    .ballot .award-name { font-size: 0.94em; font-weight: 600; }
+    .ballot .award-hint { font-weight: 400; color: #777; font-size: 0.82em; }
+    .ballot .award-blanks { display: block; margin-top: 0.24em; }
     .ballot .award-line {
         display: inline-block; border-bottom: 1px solid #333;
-        height: 12px; min-width: 46%; margin: 0 2% 3px 0;
+        height: 1.4em; min-width: 46%; margin: 0 2% 0.35em 0;
     }
-    .ballot .tb-note { font-size: 7px; color: #555; margin-bottom: 4px; }
-    .ballot .tb-option { display: block; font-size: 8.5px; margin-bottom: 4px; }
+    .ballot .tb-note { font-size: 0.82em; color: #555; margin-bottom: 0.47em; }
+    .ballot .tb-option { display: block; font-size: 1em; margin-bottom: 0.47em; }
     .ballot .tb-box {
-        display: inline-block; width: 11px; height: 11px;
-        border: 1.5px solid #111; vertical-align: middle; margin-right: 4px;
+        display: inline-block; width: 1.3em; height: 1.3em;
+        border: 1.5px solid #111; vertical-align: middle; margin-right: 0.47em;
     }`
 
 /**
@@ -279,4 +282,82 @@ export function buildBallotHtml(fmt: IScoreSheetFormat, meta: BallotMeta = {}): 
 ${buildBallotInner(fmt, meta)}
 </body>
 </html>`
+}
+
+
+/** CSS pixels per inch (browser standard for layout units). */
+const PX_PER_IN = 96
+
+/**
+ * Usable printable area of a Letter portrait page after the 0.4in @page
+ * margins on all sides: 8.5in × 11in minus 0.4in × 2.
+ */
+export const BALLOT_PAGE = {
+    /** Usable content width in CSS pixels (7.7in). */
+    width: (8.5 - 0.4 * 2) * PX_PER_IN,
+    /** Usable content height in CSS pixels (10.2in). */
+    height: (11 - 0.4 * 2) * PX_PER_IN,
+} as const
+
+/** Bounds for the auto-fit search, in CSS px for the ballot root font-size. */
+const MIN_BALLOT_FONT = 6
+const MAX_BALLOT_FONT = 48
+
+/**
+ * Finds the largest ballot root font-size (the `--ballot-font` value, in px)
+ * that keeps the ballot content within a single printable page.
+ *
+ * The ballot's markup is rendered into a detached, fixed-width probe element
+ * (matching the printable width) and its scrollHeight is measured while the
+ * font-size is grown via binary search. Because every text size and text-paired
+ * spacing in {@link BALLOT_STYLES} is expressed in `em` relative to the root
+ * font-size, changing this single value scales the whole ballot proportionally.
+ *
+ * @param innerHtml The `.ballot` markup from {@link buildBallotInner}.
+ * @param maxHeight Available page height in CSS px (defaults to a Letter page).
+ * @returns The chosen font-size in px.
+ */
+export function fitBallotFontSize(
+    innerHtml: string,
+    maxHeight: number = BALLOT_PAGE.height,
+    maxWidth: number = BALLOT_PAGE.width,
+): number {
+    // Probe container sized to the printable area, rendered off-screen.
+    const probe = document.createElement('div')
+    probe.setAttribute('aria-hidden', 'true')
+    probe.style.position = 'fixed'
+    probe.style.left = '-10000px'
+    probe.style.top = '0'
+    probe.style.width = `${maxWidth}px`
+    probe.style.visibility = 'hidden'
+    probe.style.pointerEvents = 'none'
+    probe.innerHTML = innerHtml
+
+    const ballotEl = probe.firstElementChild as HTMLElement | null
+    document.body.appendChild(probe)
+
+    const fitsAt = (fontPx: number): boolean => {
+        if (!ballotEl) return true
+        ballotEl.style.setProperty('--ballot-font', `${fontPx}px`)
+        // Content fits if it does not exceed the usable page height. scrollHeight
+        // captures overflow beyond the probe's own box.
+        return ballotEl.scrollHeight <= maxHeight
+    }
+
+    try {
+        // Binary search for the largest integer-ish font size that still fits.
+        let lo = MIN_BALLOT_FONT
+        let hi = MAX_BALLOT_FONT
+        // If even the minimum overflows, just use the minimum.
+        if (!fitsAt(lo)) return lo
+        // 0.25px precision is well below a visible difference in print.
+        while (hi - lo > 0.25) {
+            const mid = (lo + hi) / 2
+            if (fitsAt(mid)) lo = mid
+            else hi = mid
+        }
+        return Math.floor(lo * 4) / 4 // round down to nearest 0.25px
+    } finally {
+        document.body.removeChild(probe)
+    }
 }

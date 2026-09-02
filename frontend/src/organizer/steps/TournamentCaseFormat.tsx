@@ -2,6 +2,7 @@ import { useState } from 'react'
 import type { CaseFormatState } from '../types/tournament'
 import FormField from '../../shared/components/FormField'
 import WitnessNameList from '../../shared/components/WitnessNameList'
+import Tooltip from "../../shared/components/Tooltip.tsx";
 
 interface Props {
     caseFormat: CaseFormatState
@@ -57,7 +58,7 @@ export default function TournamentCaseFormat({ caseFormat, onChange, onNext, onB
             <FormField
                 id="caseName"
                 label="Case name"
-                autoFocus
+                focusOnMount
                 value={caseFormat.caseName}
                 placeholder="e.g. People v. Fromholz"
                 submitted={submitted}
@@ -100,11 +101,13 @@ export default function TournamentCaseFormat({ caseFormat, onChange, onNext, onB
                 )
             })}
 
+            <Tooltip content={<p>Swing witnesses can be called by either side. This is typically used for AMTA cases.</p>}>
             <label className="tc-checkbox-label">
                 <input type="checkbox" checked={caseFormat.hasSwing}
                     onChange={() => onChange({ ...caseFormat, hasSwing: !caseFormat.hasSwing })} />
                 Case has swing witnesses
             </label>
+            </Tooltip>
 
             {caseFormat.hasSwing && (
                 <WitnessNameList

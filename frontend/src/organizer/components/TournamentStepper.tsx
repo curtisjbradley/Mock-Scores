@@ -27,12 +27,19 @@ export default function TournamentStepper({ steps, currentIndex, onGoTo }: Props
                 return (
                     <React.Fragment key={step.key}>
                         {i > 0 && <div className={`tc-step-line${done || active ? ' tc-step-line--done' : ''}`} />}
-                        <div
-                            className={`tc-step${active ? ' tc-step--active' : done ? ' tc-step--done tc-step--clickable' : ''}`}
-                            onClick={() => done && onGoTo(i)}
-                        >
-                            <span>{done ? '✓' : i + 1}</span>{step.label}
-                        </div>
+                        {done ? (
+                            <button
+                                type="button"
+                                className="tc-step tc-step--done tc-step--clickable"
+                                onClick={() => onGoTo(i)}
+                            >
+                                <span>✓</span>{step.label}
+                            </button>
+                        ) : (
+                            <div className={`tc-step${active ? ' tc-step--active' : ''}`}>
+                                <span>{i + 1}</span>{step.label}
+                            </div>
+                        )}
                     </React.Fragment>
                 )
             })}

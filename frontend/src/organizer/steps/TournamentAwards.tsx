@@ -1,6 +1,9 @@
 import { useState } from 'react'
 import type { AwardCategory } from '../types/tournament'
 import { makeAwardCategory } from '../types/tournament'
+import DangerButton from '../../shared/components/DangerButton'
+import AddButton from '../../shared/components/AddButton'
+import '../styles/organizer.css'
 
 interface Props {
     awardCategories: AwardCategory[]
@@ -46,7 +49,7 @@ export default function TournamentAwards({ awardCategories, onChange, onNext, on
             <p className="ts-note">
                 Define award categories that scorers can nominate students for after
                 submitting a ballot. You can link scoring fields to these categories in the
-                next step. This step is optional — add none to skip individual awards.
+                next step. This step is optional.
             </p>
 
             {awardCategories.map((ac, i) => (
@@ -87,11 +90,11 @@ export default function TournamentAwards({ awardCategories, onChange, onNext, on
                         </div>
                     </div>
                     {submitted && errors[i] && <span className="tc-field-error">{errors[i]}</span>}
-                    <button type="button" className="dash-remove-btn" onClick={() => remove(ac.id)}>Remove</button>
+                    <DangerButton onClick={() => remove(ac.id)}>Remove Category</DangerButton>
                 </div>
             ))}
 
-            <button type="button" className="tc-add-btn" onClick={add}>+ Add award category</button>
+            <AddButton variant="dashed" onClick={add}>+ Add award category</AddButton>
 
             {submitted && hasErrors && <div className="tc-error-banner">Fix the highlighted award categories before continuing.</div>}
 

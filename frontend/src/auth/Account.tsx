@@ -4,6 +4,8 @@ import { validatePassword } from '../utils/validation'
 import PasswordRequirements from './PasswordRequirements'
 import { useNavigate } from 'react-router-dom'
 import { useChangePasswordForm } from './hooks/useChangePasswordForm'
+import DangerButton from '../shared/components/DangerButton'
+import ModalBackdrop from '../shared/components/ModalBackdrop'
 import './styles/account.css'
 import '../judges/styles/modal.css'
 
@@ -91,17 +93,17 @@ export function Account() {
                     <p className="account-danger-description">
                         Permanently delete your account and all associated data. This cannot be undone.
                     </p>
-                    <button className="account-delete" onClick={() => setShowDeleteModal(true)}>
+                    <DangerButton variant="solid" onClick={() => setShowDeleteModal(true)}>
                         Delete account
-                    </button>
+                    </DangerButton>
                 </div>
             </div>
         </main>
 
         {showDeleteModal && (
-            <div className="modal-backdrop" onClick={() => !deleting && setShowDeleteModal(false)}>
-                <div className="confirm-modal" onClick={e => e.stopPropagation()}>
-                    <h2 style={{ margin: '0 0 0.75rem', color: '#d32f2f' }}>Delete Account</h2>
+            <ModalBackdrop onClose={() => setShowDeleteModal(false)} dismissible={!deleting}>
+                <div className="confirm-modal" role="dialog" aria-modal="true" aria-labelledby="delete-account-title">
+                    <h2 id="delete-account-title" style={{ margin: '0 0 0.75rem', color: '#d32f2f' }}>Delete Account</h2>
                     <p style={{ margin: '0 0 0.5rem', lineHeight: 1.6 }}>
                         Are you sure you want to permanently delete your account?
                     </p>
@@ -115,7 +117,7 @@ export function Account() {
                         </button>
                     </div>
                 </div>
-            </div>
+            </ModalBackdrop>
         )}
         </>
     )

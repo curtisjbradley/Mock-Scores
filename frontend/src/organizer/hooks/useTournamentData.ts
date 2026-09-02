@@ -113,6 +113,7 @@ export async function saveTournamentInfo(tournamentId: string, info: TournamentI
         startDate: info.startTbd ? null : info.startDate,
         endDate: info.endTbd ? null : info.endDate,
         startTbd: info.startTbd, endTbd: info.endTbd,
+        shareIndividualRankings: info.shareIndividualRankings,
     }
     const r = await apiFetch(`/organizer/tournament/${tournamentId}`, { method: 'PATCH', body: JSON.stringify({ tournament: payload }) })
     if (!r.ok) throw new Error(r.statusText)

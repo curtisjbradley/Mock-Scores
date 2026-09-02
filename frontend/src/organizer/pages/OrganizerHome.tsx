@@ -5,6 +5,7 @@ import type { ITournament, IDuplicateOptions } from '@mock-scores/shared'
 import { apiFetch } from '../../auth/auth'
 import { fmt } from '../data/utils'
 import { DuplicateTournamentModal } from '../components/DuplicateTournamentModal'
+import AddButton from '../../shared/components/AddButton'
 
 const fmtDate = (d: Date | null) => d ? fmt(String(d)) : 'TBD'
 
@@ -43,9 +44,9 @@ const OrganizerHome = () => {
             <div className="org-container">
                 <div className="org-header">
                     <h1>Tournaments</h1>
-                    <button className="org-new-btn" onClick={() => navigate('/organizer/new')}>
+                    <AddButton onClick={() => navigate('/organizer/new')}>
                         + New tournament
-                    </button>
+                    </AddButton>
                 </div>
 
                 <div className="org-status-filter" role="tablist" aria-label="Filter by status">

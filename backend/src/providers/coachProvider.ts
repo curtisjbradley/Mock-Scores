@@ -25,6 +25,20 @@ export async function getTournamentFromTeamId(teamId: string): Promise<ITourname
     return result.rows[0]
 }
 
+/**
+ * Returns whether the tournament shares individual award rankings with coaches.
+ * When false, coaches must not see award nominations on ballots.
+ * Defaults to true if the tournament is not found.
+ */
+export async function sharesIndividualRankings(tournamentId: string): Promise<boolean> {
+    const result = await dbQuery<{ share_individual_rankings: boolean }>(
+        'SELECT share_individual_rankings FROM tournaments WHERE id = $1',
+        [tournamentId],
+    );
+    if (!result) throw new DbError('sharesIndividualRankings');
+    return result.rows[0]?.share_individual_rankings ?? true;
+}
+
 export async function getAllTournaments(userId: string): Promise<ICoachTournament[]> {
     const result = await dbQuery<ICoachTournament>(
         `SELECT t.id, t.name, t.location, t.start_date, t.end_date, t.num_teams, t.num_rounds,
