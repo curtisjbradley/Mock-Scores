@@ -25,7 +25,6 @@ export interface ScoringField {
     max: number
     multiplier: number
     assignable: boolean
-    eligibleForAward: boolean
     awardCategoryId: string | null
     visibleToScorers: boolean
     prosecution: boolean
@@ -39,6 +38,15 @@ export interface ScoringCategory {
     name: string
     fields: ScoringField[]
     witnessCategory?: boolean
+}
+
+/** Client-side individual award category defined during tournament creation. */
+export interface AwardCategory {
+    /** Client-side temp id; referenced by ScoringField.awardCategoryId. */
+    id: string
+    name: string
+    minNominees: number
+    maxNominees: number
 }
 
 export const emptyInfo: TournamentInfo = {
@@ -61,11 +69,18 @@ let _seq = 0
 const uid = () => `sf${_seq++}`
 
 export function makeField(label = ''): ScoringField {
-    return { id: uid(), label, min: 0, max: 10, multiplier: 1, assignable: true, eligibleForAward: false, awardCategoryId: null, visibleToScorers: true, prosecution: false, defense: false, calling: false, crossing: false }
+    return { id: uid(), label, min: 0, max: 10, multiplier: 1, assignable: true, awardCategoryId: null, visibleToScorers: true, prosecution: false, defense: false, calling: false, crossing: false }
 }
 
 export function makeCategory(name = ''): ScoringCategory {
     return { id: uid(), name, fields: [makeField()] }
+}
+
+let _acSeq = 0
+const acUid = () => `ac${_acSeq++}`
+
+export function makeAwardCategory(name = '', minNominees = 1, maxNominees = 3): AwardCategory {
+    return { id: acUid(), name, minNominees, maxNominees }
 }
 
 export const defaultWitnessCategory = (): ScoringCategory => ({

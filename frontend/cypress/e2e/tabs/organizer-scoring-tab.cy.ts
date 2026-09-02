@@ -8,7 +8,7 @@ const CATEGORIES = [
     witnessCategory: true,
     position: 0,
     fields: [
-      { id: 'f-1', label: 'Direct Exam', min: 1, max: 10, multiplier: 1, assignable: true, eligibleForAward: true, visibleToScorers: true, prosecution: true, defense: true, calling: true, crossing: false, position: 0 },
+      { id: 'f-1', label: 'Direct Exam', min: 1, max: 10, multiplier: 1, assignable: true, visibleToScorers: true, prosecution: true, defense: true, calling: true, crossing: false, position: 0 },
     ],
   },
 ]

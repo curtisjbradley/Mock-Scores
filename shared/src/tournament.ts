@@ -17,7 +17,14 @@ export interface TournamentPayload {
         dWitnessNames: string[]
         swingWitnessNames: string[]
     }
-    scoringCategories: {
+    /**
+     * When set, the new tournament copies its scoring categories, fields, and
+     * award categories from this scoring template (server-side). In this case
+     * `scoringCategories` and `awardCategories` are omitted. When null, the
+     * manual branch is used and those arrays carry the definitions instead.
+     */
+    scoringTemplateId?: string | null
+    scoringCategories?: {
         name: string
         witnessCategory: boolean
         position: number
@@ -27,8 +34,12 @@ export interface TournamentPayload {
             max: number
             multiplier: number
             assignable: boolean
-            eligibleForAward: boolean
-            /** ID of the award category this field is linked to, or null */
+            /**
+             * Links this field to an award category. During tournament creation
+             * this may reference an award category's client-side `tempId` from
+             * `awardCategories` below (the backend remaps it to the real UUID),
+             * or a persisted award category UUID. Null when not eligible.
+             */
             awardCategoryId: string | null
             visibleToScorers: boolean
             prosecution: boolean
@@ -37,6 +48,17 @@ export interface TournamentPayload {
             crossing: boolean
             position: number
         }[]
+    }[]
+    /**
+     * Individual award categories to create with the tournament (manual branch).
+     * Each `tempId` is a client-side identifier that scoring fields reference via
+     * their `awardCategoryId`; the backend maps it to the generated UUID on insert.
+     */
+    awardCategories?: {
+        tempId: string
+        name: string
+        minNominees: number
+        maxNominees: number
     }[]
     standingsConfigId: string | null
 }
@@ -71,6 +93,7 @@ export interface IDuplicateOptions {
     scorers: boolean
     courtrooms: boolean
     scoringCategories: boolean
+    awards: boolean
     witnesses: boolean
     format: boolean
     tiebreaker: boolean

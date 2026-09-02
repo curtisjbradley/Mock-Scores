@@ -55,7 +55,6 @@ export interface IScoringFieldRow {
     max_score: number;
     multiplier: number;
     assignable: boolean;
-    eligible_for_award: boolean;
     visible_to_scorers: boolean;
     prosecution: boolean;
     defense: boolean;
@@ -65,8 +64,23 @@ export interface IScoringFieldRow {
     award_category_id: string | null;
 }
 
-export interface ITournamentOwnerRow {
-    id : string,
+export interface IScoringTemplateFieldRow {
+    template_category_id: string;
+    label: string;
+    min_score: number;
+    max_score: number;
+    multiplier: number;
+    assignable: boolean;
+    visible_to_scorers: boolean;
+    prosecution: boolean;
+    defense: boolean;
+    calling: boolean;
+    crossing: boolean;
+    position: number;
+    award_category_id: string | null;
+}
+
+export interface ITournamentOwnerRow {    id : string,
     tournament_id: string;
     delegate_id: string;
     role: 'owner' | 'delegate';

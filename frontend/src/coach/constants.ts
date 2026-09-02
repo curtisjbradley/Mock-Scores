@@ -1,1 +1,1 @@
-export type CoachTab = 'schedule' | 'results' | 'coaches' | 'roster' | 'field' | 'standings'
+export type CoachTab = 'overview' | 'schedule' | 'results' | 'coaches' | 'roster' | 'field' | 'standings'

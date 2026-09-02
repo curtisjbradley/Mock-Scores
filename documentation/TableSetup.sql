@@ -1,6 +1,6 @@
 -- Mock-Scores Complete Schema Definition
 -- This file represents the current live database schema.
--- All migrations (001–011) have been folded in.
+-- All migrations (001–012) have been folded in.
 
 create table auth
 (
@@ -57,6 +57,69 @@ create table standings_templates
 );
 
 create index standings_templates_config_id_idx on standings_templates (config_id);
+
+create table scoring_templates
+(
+    id          uuid     default gen_random_uuid() not null primary key,
+    label       text                               not null,
+    description text     default ''                not null,
+    position    smallint default 0                 not null
+);
+
+create table scoring_template_award_categories
+(
+    id           uuid     default gen_random_uuid() not null primary key,
+    template_id  uuid                               not null
+        references scoring_templates (id) on delete cascade,
+    name         text                               not null,
+    min_nominees smallint default 1                 not null
+        constraint scoring_template_award_min_nominees_check check (min_nominees >= 0),
+    max_nominees smallint default 3                 not null
+        constraint scoring_template_award_max_nominees_check check (max_nominees >= 1),
+    constraint scoring_template_award_min_max_check check (min_nominees <= max_nominees)
+);
+
+create index scoring_template_award_categories_template_id_idx
+    on scoring_template_award_categories (template_id);
+
+create table scoring_template_categories
+(
+    id               uuid     default gen_random_uuid() not null primary key,
+    template_id      uuid                               not null
+        references scoring_templates (id) on delete cascade,
+    name             text                               not null,
+    witness_category boolean  default false             not null,
+    position         smallint                           not null
+);
+
+create index scoring_template_categories_template_id_idx
+    on scoring_template_categories (template_id);
+
+create table scoring_template_fields
+(
+    id                   uuid          default gen_random_uuid() not null primary key,
+    template_category_id uuid                                    not null
+        references scoring_template_categories (id) on delete cascade,
+    label                text                                    not null,
+    min_score            smallint      default 0                 not null,
+    max_score            smallint      default 10                not null,
+    multiplier           numeric(5, 2) default 1                 not null
+        constraint scoring_template_fields_multiplier_check check (multiplier <> 0),
+    assignable           boolean       default true              not null,
+    eligible_for_award   boolean       default false             not null,
+    visible_to_scorers   boolean       default true              not null,
+    prosecution          boolean       default false             not null,
+    defense              boolean       default false             not null,
+    calling              boolean       default false             not null,
+    crossing             boolean       default false             not null,
+    position             smallint                                not null,
+    award_category_id    uuid
+        references scoring_template_award_categories (id) on delete set null
+);
+
+create index scoring_template_fields_category_id_idx
+    on scoring_template_fields (template_category_id);
+
 
 create table tournaments
 (
@@ -139,9 +202,8 @@ create table scoring_fields
     max_score          smallint      default 10                not null,
     multiplier         numeric(5, 2) default 1                 not null
         constraint scoring_fields_multiplier_check
-            check (multiplier >= 0),
+            check (multiplier <> 0),
     assignable         boolean       default true              not null,
-    eligible_for_award boolean       default false             not null,
     visible_to_scorers boolean       default true              not null,
     prosecution        boolean       default false             not null,
     defense            boolean       default false             not null,
@@ -368,7 +430,9 @@ create table ballots
     d_team_id            uuid
         references teams (id),
     d_points             integer                        not null,
-    p_points             integer                        not null
+    p_points             integer                        not null,
+    tiebreaker           uuid    default '10db69a9-7596-49e8-9591-b48d0cd28c58' not null,
+    presider_ballot      boolean default false          not null
 );
 
 create index ballots_tournament_id_idx on ballots (tournament_id);
@@ -568,3 +632,204 @@ do $$
             (gen_random_uuid(), 'AMTA', 'Ballots -> CS -> PD -> OCS', template_id);
     end;
 $$;
+
+DO $$
+    DECLARE
+        v_template   uuid;
+        v_attorney   uuid;
+        v_witness    uuid;
+        v_cat        uuid;
+        v_pretrial uuid;
+        v_clerk uuid;
+        v_bailiff uuid;
+    BEGIN
+        -- ============================================================
+        -- Template: Teach Democracy Default
+        -- ============================================================
+        INSERT INTO scoring_templates (label, description)
+        VALUES ('Teach Democracy Default', 'Standard Teach Democracy scoring format')
+        RETURNING id INTO v_template;
+
+        INSERT INTO scoring_template_award_categories (template_id, name, min_nominees, max_nominees)
+        VALUES (v_template, 'Outstanding Pretrial', 1, 1) RETURNING id INTO v_pretrial;
+
+        INSERT INTO scoring_template_award_categories (template_id, name, min_nominees, max_nominees)
+        VALUES (v_template, 'Outstanding Attorney', 4, 4) RETURNING id INTO v_attorney;
+
+        INSERT INTO scoring_template_award_categories (template_id, name, min_nominees, max_nominees)
+        VALUES (v_template, 'Outstanding Witness', 4, 4) RETURNING id INTO v_witness;
+
+        INSERT INTO scoring_template_award_categories (template_id, name, min_nominees, max_nominees)
+        VALUES (v_template, 'Outstanding Clerk', 0, 1) RETURNING id INTO v_clerk;
+
+        INSERT INTO scoring_template_award_categories (template_id, name, min_nominees, max_nominees)
+        VALUES (v_template, 'Outstanding Bailiff', 0, 1) RETURNING id INTO v_bailiff;
+
+        -- Pretrial
+        INSERT INTO scoring_template_categories (template_id, name, witness_category, position)
+        VALUES (v_template, 'Pretrial', false, 0) RETURNING id INTO v_cat;
+        INSERT INTO scoring_template_fields (template_category_id, label, multiplier, defense, position, award_category_id)
+        VALUES (v_cat, 'Pretrial D', 2, true, 0,v_pretrial);
+        INSERT INTO scoring_template_fields (template_category_id, label, multiplier, award_category_id, prosecution, position)
+        VALUES (v_cat, 'Pretrial P', 2, v_pretrial, true, 1);
+
+        -- Opening
+        INSERT INTO scoring_template_categories (template_id, name, witness_category, position)
+        VALUES (v_template, 'Opening', false, 1) RETURNING id INTO v_cat;
+        INSERT INTO scoring_template_fields (template_category_id, label, prosecution, defense, award_category_id, position)
+        VALUES (v_cat, 'Opening', true, true, v_attorney, 0);
+
+        -- Witnesses
+        INSERT INTO scoring_template_categories (template_id, name, witness_category, position)
+        VALUES (v_template, 'Witnesses', true, 2) RETURNING id INTO v_cat;
+        INSERT INTO scoring_template_fields (template_category_id, label, calling, award_category_id, position)
+        VALUES (v_cat, 'Atty Direct', true, v_attorney, 0);
+        INSERT INTO scoring_template_fields (template_category_id, label, crossing, award_category_id, position)
+        VALUES (v_cat, 'Atty Cross', true, v_attorney, 1);
+        INSERT INTO scoring_template_fields (template_category_id, label, calling, award_category_id, position)
+        VALUES (v_cat, 'Witness', true, v_witness, 2);
+
+        -- Closing
+        INSERT INTO scoring_template_categories (template_id, name, witness_category, position)
+        VALUES (v_template, 'Closing', false, 3) RETURNING id INTO v_cat;
+        INSERT INTO scoring_template_fields (template_category_id, label, multiplier, prosecution, defense, award_category_id, position)
+        VALUES (v_cat, 'Closing', 2, true, true, v_attorney, 0);
+
+        -- Clerk / Bailiff
+        INSERT INTO scoring_template_categories (template_id, name, witness_category, position)
+        VALUES (v_template, 'Clerk / Bailiff', false, 4) RETURNING id INTO v_cat;
+        INSERT INTO scoring_template_fields (template_category_id, label, max_score, award_category_id, prosecution, position)
+        VALUES (v_cat, 'Clerk', 5, v_clerk, true, 0);
+        INSERT INTO scoring_template_fields (template_category_id, label, max_score, award_category_id, defense, position)
+        VALUES (v_cat, 'Bailiff', 5, v_bailiff, true, 1);
+
+        -- Team Score
+        INSERT INTO scoring_template_categories (template_id, name, witness_category, position)
+        VALUES (v_template, 'Team Score', false, 5) RETURNING id INTO v_cat;
+        INSERT INTO scoring_template_fields (template_category_id, label, assignable, prosecution, defense, position)
+        VALUES (v_cat, 'Team Score', false, true, true, 0);
+
+        -- Point Deductions
+        INSERT INTO scoring_template_categories (template_id, name, witness_category, position)
+        VALUES (v_template, 'Point Deductions', false, 6) RETURNING id INTO v_cat;
+        INSERT INTO scoring_template_fields (template_category_id, label, min_score, max_score, multiplier, assignable, eligible_for_award, prosecution, defense, position)
+        VALUES (v_cat, 'Deductions', 0, 100, -1, false, false, true, true, 0);
+
+        -- ============================================================
+        -- Template: SLO County
+        -- ============================================================
+        INSERT INTO scoring_templates (label, description)
+        VALUES ('SLO County', 'SLO County scoring format')
+        RETURNING id INTO v_template;
+
+        INSERT INTO scoring_template_award_categories (template_id, name, min_nominees, max_nominees)
+        VALUES (v_template, 'Outstanding Pretrial', 0, 2) RETURNING id INTO v_pretrial;
+
+        INSERT INTO scoring_template_award_categories (template_id, name, min_nominees, max_nominees)
+        VALUES (v_template, 'Outstanding Attorney', 0, 8) RETURNING id INTO v_attorney;
+
+        INSERT INTO scoring_template_award_categories (template_id, name, min_nominees, max_nominees)
+        VALUES (v_template, 'Outstanding Witness', 0, 8) RETURNING id INTO v_witness;
+
+        INSERT INTO scoring_template_award_categories (template_id, name, min_nominees, max_nominees)
+        VALUES (v_template, 'Outstanding Clerk', 0, 1) RETURNING id INTO v_clerk;
+
+        INSERT INTO scoring_template_award_categories (template_id, name, min_nominees, max_nominees)
+        VALUES (v_template, 'Outstanding Bailiff', 0, 1) RETURNING id INTO v_bailiff;
+
+        -- Pretrial
+        INSERT INTO scoring_template_categories (template_id, name, witness_category, position)
+        VALUES (v_template, 'Pretrial', false, 0) RETURNING id INTO v_cat;
+        INSERT INTO scoring_template_fields (template_category_id, label, multiplier, defense, position, award_category_id)
+        VALUES (v_cat, 'Pretrial D', 2, true, 0,v_pretrial);
+        INSERT INTO scoring_template_fields (template_category_id, label, multiplier, award_category_id, prosecution, position)
+        VALUES (v_cat, 'Pretrial P', 2, v_pretrial, true, 1);
+
+        -- Opening
+        INSERT INTO scoring_template_categories (template_id, name, witness_category, position)
+        VALUES (v_template, 'Opening', false, 1) RETURNING id INTO v_cat;
+        INSERT INTO scoring_template_fields (template_category_id, label, prosecution, defense, award_category_id, position)
+        VALUES (v_cat, 'Opening', true, true, v_attorney, 0);
+
+        -- Witnesses
+        INSERT INTO scoring_template_categories (template_id, name, witness_category, position)
+        VALUES (v_template, 'Witnesses', true, 2) RETURNING id INTO v_cat;
+        INSERT INTO scoring_template_fields (template_category_id, label, calling, award_category_id, position)
+        VALUES (v_cat, 'Atty Direct', true, v_attorney, 0);
+        INSERT INTO scoring_template_fields (template_category_id, label, crossing, award_category_id, position)
+        VALUES (v_cat, 'Atty Cross', true, v_attorney, 1);
+        INSERT INTO scoring_template_fields (template_category_id, label, calling, award_category_id, position)
+        VALUES (v_cat, 'Witness', true, v_witness, 2);
+
+        -- Closing
+        INSERT INTO scoring_template_categories (template_id, name, witness_category, position)
+        VALUES (v_template, 'Closing', false, 3) RETURNING id INTO v_cat;
+        INSERT INTO scoring_template_fields (template_category_id, label, multiplier, prosecution, defense, award_category_id, position)
+        VALUES (v_cat, 'Closing', 2, true, true, v_attorney, 0);
+
+        -- Clerk / Bailiff
+        INSERT INTO scoring_template_categories (template_id, name, witness_category, position)
+        VALUES (v_template, 'Clerk / Bailiff', false, 4) RETURNING id INTO v_cat;
+        INSERT INTO scoring_template_fields (template_category_id, label, max_score, award_category_id, prosecution, position)
+        VALUES (v_cat, 'Clerk', 10, v_clerk, true, 0);
+        INSERT INTO scoring_template_fields (template_category_id, label, max_score, award_category_id, defense, position)
+        VALUES (v_cat, 'Bailiff', 10, v_bailiff, true, 1);
+
+        -- Team Score
+        INSERT INTO scoring_template_categories (template_id, name, witness_category, position)
+        VALUES (v_template, 'Team Score', false, 5) RETURNING id INTO v_cat;
+        INSERT INTO scoring_template_fields (template_category_id, label, assignable, prosecution, defense, position)
+        VALUES (v_cat, 'Team Score', false, true, true, 0);
+
+        -- Point Deductions
+        INSERT INTO scoring_template_categories (template_id, name, witness_category, position)
+        VALUES (v_template, 'Point Deductions', false, 6) RETURNING id INTO v_cat;
+        INSERT INTO scoring_template_fields (template_category_id, label, min_score, max_score, multiplier, assignable, prosecution, defense, position)
+        VALUES (v_cat, 'Deductions', 0, 100, -1, false, true, true, 0);
+
+
+        -- ============================================================
+        -- Template: AMTA
+        -- ============================================================
+        INSERT INTO scoring_templates (label, description)
+        VALUES ('AMTA Regular', 'College Mock Trial Format. 3 Attorneys + 3 Witnesses.')
+        RETURNING id INTO v_template;
+
+
+        INSERT INTO scoring_template_award_categories (template_id, name, min_nominees, max_nominees)
+        VALUES (v_template, 'Outstanding Attorney', 4, 4) RETURNING id INTO v_attorney;
+
+        INSERT INTO scoring_template_award_categories (template_id, name, min_nominees, max_nominees)
+        VALUES (v_template, 'Outstanding Witness', 4, 4) RETURNING id INTO v_witness;
+
+        -- Opening
+        INSERT INTO scoring_template_categories (template_id, name, witness_category, position)
+        VALUES (v_template, 'Opening', false, 0) RETURNING id INTO v_cat;
+        INSERT INTO scoring_template_fields (template_category_id, label, prosecution, defense, award_category_id, position)
+        VALUES (v_cat, 'Opening', true, true, v_attorney, 0);
+
+        -- Witnesses
+        INSERT INTO scoring_template_categories (template_id, name, witness_category, position)
+        VALUES (v_template, 'Witnesses', true, 1) RETURNING id INTO v_cat;
+        INSERT INTO scoring_template_fields (template_category_id, label, calling, award_category_id, position)
+        VALUES (v_cat, 'Atty Direct', true, v_attorney, 0);
+        INSERT INTO scoring_template_fields (template_category_id, label, calling, award_category_id, position)
+        VALUES (v_cat, 'Witness Direct', true, v_witness, 1);
+        INSERT INTO scoring_template_fields (template_category_id, label, crossing, award_category_id, position)
+        VALUES (v_cat, 'Atty Cross', true, v_attorney, 2);
+        INSERT INTO scoring_template_fields (template_category_id, label, calling, award_category_id, position)
+        VALUES (v_cat, 'Witness Cross', true, v_witness, 3);
+
+
+        -- Closing
+        INSERT INTO scoring_template_categories (template_id, name, witness_category, position)
+        VALUES (v_template, 'Closing', false, 2) RETURNING id INTO v_cat;
+        INSERT INTO scoring_template_fields (template_category_id, label, multiplier, prosecution, defense, award_category_id, position)
+        VALUES (v_cat, 'Closing', 1, true, true, v_attorney, 0);
+
+        -- Point Deductions
+        INSERT INTO scoring_template_categories (template_id, name, witness_category,  position)
+        VALUES (v_template, 'Point Deductions', false, 6) RETURNING id INTO v_cat;
+        INSERT INTO scoring_template_fields (template_category_id, label, min_score, max_score, multiplier, assignable, prosecution, defense, position, visible_to_scorers)
+        VALUES (v_cat, 'Deductions', 0, 100, -1, false, true, true, 0, false);
+    END $$;

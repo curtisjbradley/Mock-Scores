@@ -1,7 +1,7 @@
 import { useState } from 'react'
 import type { ICoach } from '@mock-scores/shared'
 import { ConfirmRemoveModal, AddOrganizerModal } from '../../organizer/components/modals'
-import { useConfirmRemove } from '../../organizer/../shared/hooks/useConfirmRemove'
+import { useConfirmRemove } from '../../shared/hooks/useConfirmRemove.ts'
 import StatusChip from '../../shared/components/StatusChip'
 
 interface Props {
@@ -24,13 +24,14 @@ export default function CoachesTab({ coaches, isOrganizerView, onAdd, onRemove, 
             </div>
             <div className="dash-table-scroll">
                 <table className="dash-standings-table">
-                    <thead><tr><th>Name</th><th>Email</th><th>Role</th><th>Status</th><th></th></tr></thead>
+                    <thead><tr><th>Name</th><th>Email</th><th>Role</th><th>Status</th><th>Notifications</th><th></th></tr></thead>
                     <tbody>{coaches.map(c => (
                         <tr key={c.coach_id}>
                             <td>{c.name}</td>
                             <td><span className="dash-judge-name">{c.email}</span></td>
                             <td><StatusChip label={c.is_owner ? 'Owner' : 'Coach'} variant={c.is_owner ? 'submitted' : 'pending'} /></td>
                             <td><StatusChip label={c.has_joined ? 'Joined' : 'Invited'} variant={c.has_joined ? 'submitted' : 'pending'} /></td>
+                            <td> //TODO</td>
                             <td>{!c.is_owner && (
                                 <div className="dash-actions-cell">
                                     {isOrganizerView && c.has_joined && (

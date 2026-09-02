@@ -48,6 +48,25 @@ router.get("/standings-templates", async (req: Request, res: Response) => {
 
 /**
  * @swagger
+ * /organizer/tournament/scoring-templates:
+ *   get:
+ *     summary: Get available scoring templates (categories, fields, award categories)
+ *     tags: [Organizer - Tournaments]
+ *     responses:
+ *       200: { description: Array of scoring templates }
+ *       500: { description: Database error }
+ */
+router.get("/scoring-templates", async (req: Request, res: Response) => {
+    try {
+        return res.status(200).json(await organizer.getScoringTemplates());
+    } catch (e) {
+        if (e instanceof DbError) return res.status(500).json({ message: 'Database error' });
+        throw e;
+    }
+});
+
+/**
+ * @swagger
  * /organizer/tournament:
  *   post:
  *     summary: Create a new tournament
@@ -103,9 +122,9 @@ router.post("/", authedHandler(async (req, res) => {
  *       500: { description: Unable to duplicate tournament }
  */
 router.post("/duplicate/:tournamentId", verifyTournamentAccess, tournamentHandler(async (req, res) => {
-    const { scorers = false, courtrooms = false, scoringCategories = false, witnesses = false, format = false, tiebreaker = false } = req.body ?? {};
+    const { scorers = false, courtrooms = false, scoringCategories = false, awards = false, witnesses = false, format = false, tiebreaker = false } = req.body ?? {};
     try {
-        const dup = await organizer.duplicateTournament(req.tournament, { scorers, courtrooms, scoringCategories, witnesses, format, tiebreaker });
+        const dup = await organizer.duplicateTournament(req.tournament, { scorers, courtrooms, scoringCategories, awards, witnesses, format, tiebreaker });
         await organizer.addTournamentOrganizer(dup.id, req.session.userId, 'owner');
         return res.status(201).json(dup);
     } catch (e) {

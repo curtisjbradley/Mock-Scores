@@ -1,23 +1,37 @@
 import React from 'react'
 
-const STEPS = [['Details', 1], ['Case format', 2], ['Scoring fields', 3], ['Standings', 4]] as const
+export interface StepperStep {
+    key: string
+    label: string
+}
 
-interface Props { current: number; onGoTo: (step: number) => void }
+interface Props {
+    steps: StepperStep[]
+    /** Index (0-based) of the current step within `steps`. */
+    currentIndex: number
+    /** Navigate to a completed step by index. */
+    onGoTo: (index: number) => void
+}
 
-export default function TournamentStepper({ current, onGoTo }: Props) {
+/**
+ * Config-driven progress stepper for the tournament creation wizard. The step
+ * list is dynamic because the flow branches (a manual scoring template adds the
+ * award and scoring-category steps).
+ */
+export default function TournamentStepper({ steps, currentIndex, onGoTo }: Props) {
     return (
         <div className="tc-stepper">
-            {STEPS.map(([label, n], i) => {
-                const done = current > n
-                const active = current === n
+            {steps.map((step, i) => {
+                const done = currentIndex > i
+                const active = currentIndex === i
                 return (
-                    <React.Fragment key={n}>
+                    <React.Fragment key={step.key}>
                         {i > 0 && <div className={`tc-step-line${done || active ? ' tc-step-line--done' : ''}`} />}
                         <div
                             className={`tc-step${active ? ' tc-step--active' : done ? ' tc-step--done tc-step--clickable' : ''}`}
-                            onClick={() => done && onGoTo(n)}
+                            onClick={() => done && onGoTo(i)}
                         >
-                            <span>{done ? '✓' : n}</span>{label}
+                            <span>{done ? '✓' : i + 1}</span>{step.label}
                         </div>
                     </React.Fragment>
                 )
