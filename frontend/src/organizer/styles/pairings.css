@@ -94,6 +94,18 @@
     font-weight: bold;
 }
 
+.pc-courtroom-warning {
+    display: inline-block;
+    margin-top: 2px;
+    font-size: 0.72rem;
+    font-weight: 700;
+    color: #fff;
+    background: var(--danger);
+    padding: 1px 6px;
+    border-radius: 3px;
+    white-space: nowrap;
+}
+
 .dash-vs {
     color: var(--text-muted);
     font-weight: 400;

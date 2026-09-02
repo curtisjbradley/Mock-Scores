@@ -16,6 +16,7 @@ interface Props {
     roundId: string
     round: IRound | null
     conflictSet: Set<string>
+    courtroomInUse: boolean
     onRemove: () => void
     onUpdate: (updated: IPairing) => void
     onScorerAssigned: (scorer: IPairingScorer) => void
@@ -28,7 +29,7 @@ interface Props {
  * Supports inline editing of courtroom and team assignments, and manages
  * scorer assignment / presider selection.
  */
-export default function PairingCard({ pairing, teams, courtrooms, scorers, assignedScorers, ballotStatus, tournamentId, roundId, round, conflictSet, onRemove, onUpdate, onScorerAssigned, onScorerRemoved, onPresiderChanged }: Props) {
+export default function PairingCard({ pairing, teams, courtrooms, scorers, assignedScorers, ballotStatus, tournamentId, roundId, round, conflictSet, courtroomInUse, onRemove, onUpdate, onScorerAssigned, onScorerRemoved, onPresiderChanged }: Props) {
     const [editingCourtroom, setEditingCourtroom] = useState(false)
     const [courtroomDraft, setCourtroomDraft] = useState(pairing.courtroom ?? '')
 
@@ -230,6 +231,11 @@ export default function PairingCard({ pairing, teams, courtrooms, scorers, assig
                         <button className="pc-matchup-col" onClick={() => { setCourtroomDraft(pairing.courtroom ?? ''); setEditingCourtroom(true) }}>
                             <span className="dash-side-label">Courtroom</span>
                             {pairing.courtroom ?  <span className="dash-team-name">{courtroomName(pairing.courtroom)}</span> : <span className={"pc-no-courtroom"}> No Courtroom</span> }
+                            {courtroomInUse && (
+                                <span className="pc-courtroom-warning" title="This courtroom is assigned to another trial in the same round.">
+                                    ⚠ Double-booked
+                                </span>
+                            )}
                             <span className="pc-col-edit-hint">✎</span>
                         </button>
                     )}

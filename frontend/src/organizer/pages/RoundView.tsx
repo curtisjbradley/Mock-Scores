@@ -66,6 +66,15 @@ const RoundView = () => {
         addMatchup(addPros, addDef, addCourtroom, reset)
     }
 
+    // Courtroom IDs assigned to more than one pairing in this round — flagged as double-booked.
+    const duplicateCourtrooms = new Set<string>()
+    const seenCourtrooms = new Set<string>()
+    for (const p of pairings) {
+        if (!p.courtroom) continue
+        if (seenCourtrooms.has(p.courtroom)) duplicateCourtrooms.add(p.courtroom)
+        else seenCourtrooms.add(p.courtroom)
+    }
+
     if (notFound) return <NotFound />
 
     return (
@@ -116,6 +125,7 @@ const RoundView = () => {
                             roundId={roundId!}
                             round={round}
                             conflictSet={conflictSet}
+                            courtroomInUse={!!pairing.courtroom && duplicateCourtrooms.has(pairing.courtroom)}
                             onRemove={() => confirmRemove.open(pairing)}
                             onUpdate={updatePairing}
                             onScorerAssigned={s => onScorerAssigned(pairing.pairing_id, s)}
