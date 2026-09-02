@@ -576,6 +576,119 @@
     cursor: pointer;
 }
 
+.pc-scorer-typeahead {
+    position: relative;
+    flex: 1;
+    min-width: 0;
+}
+
+.pc-scorer-search {
+    width: 100%;
+}
+
+.pc-scorer-options {
+    position: absolute;
+    top: calc(100% + 2px);
+    left: 0;
+    right: 0;
+    z-index: 20;
+    margin: 0;
+    padding: 0.2rem 0;
+    list-style: none;
+    max-height: 12rem;
+    overflow-y: auto;
+    background: var(--surface);
+    border: 1px solid var(--primary);
+    border-radius: var(--radius);
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+}
+
+.pc-scorer-option {
+    display: block;
+    width: 100%;
+    text-align: left;
+    padding: 0.4rem 0.6rem;
+    border: 0;
+    background: transparent;
+    color: var(--text);
+    font-size: 0.85rem;
+    font-family: inherit;
+    cursor: pointer;
+}
+
+.pc-scorer-option:hover,
+.pc-scorer-option:focus {
+    background: var(--focus);
+    outline: none;
+}
+
+.pc-scorer-option--empty {
+    color: var(--text-muted);
+    cursor: default;
+    padding: 0.4rem 0.6rem;
+    font-size: 0.85rem;
+}
+
+/* Inline variant used inside the Add Scorer modal, where an absolutely
+   positioned dropdown would be clipped by the modal's overflow. */
+.pc-scorer-options--inline {
+    position: static;
+    margin-top: 0;
+    border: 0;
+    box-shadow: none;
+    max-height: none;
+    overflow: visible;
+    padding: 0;
+}
+
+/* Fixed-height results region so the modal size stays constant as the
+   filtered list grows or shrinks; the list scrolls internally. */
+.pc-scorer-results {
+    height: 12rem;
+    margin-top: 0.35rem;
+    overflow-y: auto;
+    border: 1px solid var(--primary);
+    border-radius: var(--radius);
+    background: var(--surface);
+}
+
+.pc-scorer-results-empty {
+    margin: 0;
+    padding: 0.6rem;
+    color: var(--text-muted);
+    font-size: 0.85rem;
+}
+
+.pc-scorer-option--selected {
+    background: var(--focus);
+    font-weight: 700;
+}
+
+.pc-create-offline-btn {
+    display: block;
+    width: 100%;
+    margin-bottom: 1rem;
+    padding: 0.5rem 0.75rem;
+    border: 1px dashed var(--primary);
+    border-radius: var(--radius);
+    background: transparent;
+    color: var(--primary);
+    font-size: 0.85rem;
+    font-weight: 600;
+    font-family: inherit;
+    cursor: pointer;
+    text-align: left;
+}
+
+.pc-create-offline-btn:hover:not(:disabled) {
+    background: var(--focus);
+}
+
+.pc-create-offline-btn:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+}
+
 .pc-send-link {
     border: 0;
     border-radius: var(--radius);

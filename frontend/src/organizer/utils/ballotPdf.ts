@@ -118,10 +118,98 @@ function formatRoundTime(roundTime?: string | null): string {
 }
 
 /**
- * Builds the full self-contained HTML document for a printable one-page ballot.
- * Exported for testing / preview; consumers normally call {@link downloadBallot}.
+ * Print/page-oriented CSS for the ballot. Screen-only chrome (the print bar,
+ * page background) lives in the consuming React route, not here, so the same
+ * styles drive both the on-screen route and the printed page.
  */
-export function buildBallotHtml(fmt: IScoreSheetFormat, meta: BallotMeta = {}): string {
+export const BALLOT_STYLES = `
+    @page { size: letter portrait; margin: 0.4in; }
+    .ballot, .ballot * { box-sizing: border-box; }
+    .ballot {
+        width: 100%;
+        font-family: "Helvetica Neue", Arial, sans-serif;
+        color: #111;
+        font-size: 8.5px;
+        line-height: 1.25;
+    }
+
+    .ballot .header { border-bottom: 2px solid #111; padding-bottom: 4px; margin-bottom: 6px; }
+    .ballot .header-top { display: flex; justify-content: space-between; align-items: flex-start; }
+    .ballot .tournament-name { font-size: 13px; font-weight: 700; margin: 0; }
+    .ballot .case-name { font-size: 9px; font-style: italic; color: #555; margin-top: 1px; }
+    .ballot .header-meta { text-align: right; font-size: 8px; }
+    .ballot .teams { display: flex; gap: 24px; margin-top: 4px; align-items: baseline; }
+    .ballot .team-line { font-size: 13px; }
+    .ballot .team-role { font-size: 9px; text-transform: uppercase; letter-spacing: 0.04em; color: #555; font-weight: 600; }
+    .ballot .team-code { font-size: 13px; font-weight: 700; }
+
+    .ballot .scorer-line { display: flex; gap: 16px; margin: 5px 0; font-size: 8px; }
+    .ballot .field { flex: 1; }
+    .ballot .field .label { color: #555; text-transform: uppercase; font-size: 7px; letter-spacing: 0.04em; }
+    .ballot .field .value { border-bottom: 1px solid #999; display: inline-block; min-width: 90px; padding: 0 3px; }
+
+    .ballot .categories { column-count: 2; column-gap: 10px; }
+    .ballot .cat-table {
+        width: 100%; border-collapse: collapse; margin-bottom: 5px;
+        break-inside: avoid; page-break-inside: avoid;
+    }
+    .ballot .cat-heading th {
+        color: #111; text-align: left; padding: 3px 0 2px;
+        font-size: 8.5px; font-weight: 700; text-transform: uppercase;
+        letter-spacing: 0.03em;
+        border-top: 2px solid #111; border-bottom: 2px solid #111;
+    }
+    .ballot .col-heading th {
+        border-bottom: 1px solid #111; padding: 1px 4px; font-size: 7px;
+        text-transform: uppercase; color: #333; text-align: center;
+    }
+    .ballot .col-heading .assignment-col { text-align: left; }
+    .ballot .cat-table td { padding: 2px 4px; border-bottom: 1px solid #ddd; vertical-align: top; }
+    .ballot .cat-table td.assignment { width: 46%; }
+    .ballot .cat-table .range { color: #888; font-size: 7px; }
+    .ballot .score-cell { text-align: center; width: 27%; }
+    .ballot .score-blank {
+        display: inline-block; width: 26px; height: 13px;
+        border: 1px solid #333; border-radius: 2px; vertical-align: middle;
+    }
+    .ballot .student { display: block; font-size: 6.5px; color: #444; margin-top: 1px; }
+
+    .ballot .footer { margin-top: 6px; display: flex; gap: 12px; break-inside: avoid; }
+    .ballot .signature-line {
+        margin-top: 10px; display: flex; gap: 24px; break-inside: avoid;
+        font-size: 8px; align-items: flex-end;
+    }
+    .ballot .signature-line .field { flex: 1; }
+    .ballot .signature-line .field--date { flex: 0 0 130px; }
+    .ballot .signature-line .value { display: block; border-bottom: 1px solid #333; min-width: 100%; height: 16px; }
+    .ballot .awards { flex: 1.4; }
+    .ballot .tiebreaker { flex: 1; border: 1px solid #111; padding: 4px 6px; }
+    .ballot .section-title {
+        font-size: 8.5px; font-weight: 700; text-transform: uppercase;
+        letter-spacing: 0.04em; border-bottom: 1px solid #111;
+        margin-bottom: 3px; padding-bottom: 1px;
+    }
+    .ballot .award { margin-bottom: 4px; }
+    .ballot .award-name { font-size: 8px; font-weight: 600; }
+    .ballot .award-hint { font-weight: 400; color: #777; font-size: 7px; }
+    .ballot .award-blanks { display: block; margin-top: 2px; }
+    .ballot .award-line {
+        display: inline-block; border-bottom: 1px solid #333;
+        height: 12px; min-width: 46%; margin: 0 2% 3px 0;
+    }
+    .ballot .tb-note { font-size: 7px; color: #555; margin-bottom: 4px; }
+    .ballot .tb-option { display: block; font-size: 8.5px; margin-bottom: 4px; }
+    .ballot .tb-box {
+        display: inline-block; width: 11px; height: 11px;
+        border: 1.5px solid #111; vertical-align: middle; margin-right: 4px;
+    }`
+
+/**
+ * Builds the inner `.ballot` markup (header, categories, awards, tiebreaker,
+ * signature) as an HTML string. Rendered by the ballot route via
+ * `dangerouslySetInnerHTML` and paired with {@link BALLOT_STYLES}.
+ */
+export function buildBallotInner(fmt: IScoreSheetFormat, meta: BallotMeta = {}): string {
     const prosLabel = fmt.isCriminal ? 'Prosecution' : 'Plaintiff'
     const pCode = esc(meta.prosecutionCode ?? fmt.prosecutionCode)
     const dCode = esc(meta.defenseCode ?? fmt.defenseCode)
@@ -135,107 +223,7 @@ export function buildBallotHtml(fmt: IScoreSheetFormat, meta: BallotMeta = {}): 
     const awards = renderAwards(fmt)
     const tiebreaker = renderTiebreaker(fmt, meta)
 
-    const title = `Ballot — ${pCode} v. ${dCode}`
-
-    return `<!DOCTYPE html>
-<html lang="en">
-<head>
-<meta charset="utf-8" />
-<title>${esc(title)}</title>
-<style>
-    @page { size: letter portrait; margin: 0.4in; }
-    * { box-sizing: border-box; }
-    html, body { margin: 0; padding: 0; }
-    body {
-        font-family: "Helvetica Neue", Arial, sans-serif;
-        color: #111;
-        font-size: 8.5px;
-        line-height: 1.25;
-    }
-    .ballot { width: 100%; }
-
-    .header { border-bottom: 2px solid #111; padding-bottom: 4px; margin-bottom: 6px; }
-    .header-top { display: flex; justify-content: space-between; align-items: flex-start; }
-    .tournament-name { font-size: 13px; font-weight: 700; margin: 0; }
-    .case-name { font-size: 9px; font-style: italic; color: #555; margin-top: 1px; }
-    .header-meta { text-align: right; font-size: 8px; }
-    .teams { display: flex; gap: 24px; margin-top: 4px; align-items: baseline; }
-    .team-line { font-size: 13px; }
-    .team-role { font-size: 9px; text-transform: uppercase; letter-spacing: 0.04em; color: #555; font-weight: 600; }
-    .team-code { font-size: 13px; font-weight: 700; }
-
-    .scorer-line { display: flex; gap: 16px; margin: 5px 0; font-size: 8px; }
-    .field { flex: 1; }
-    .field .label { color: #555; text-transform: uppercase; font-size: 7px; letter-spacing: 0.04em; }
-    .field .value { border-bottom: 1px solid #999; display: inline-block; min-width: 90px; padding: 0 3px; }
-
-    .categories { column-count: 2; column-gap: 10px; }
-    .cat-table {
-        width: 100%; border-collapse: collapse; margin-bottom: 5px;
-        break-inside: avoid; page-break-inside: avoid;
-    }
-    .cat-heading th {
-        background: #222; color: #fff; text-align: left; padding: 2px 4px;
-        font-size: 8px; font-weight: 700;
-    }
-    .col-heading th {
-        border-bottom: 1px solid #111; padding: 1px 4px; font-size: 7px;
-        text-transform: uppercase; color: #333; text-align: center;
-    }
-    .col-heading .assignment-col { text-align: left; }
-    .cat-table td { padding: 2px 4px; border-bottom: 1px solid #ddd; vertical-align: top; }
-    .cat-table td.assignment { width: 46%; }
-    .cat-table .range { color: #888; font-size: 7px; }
-    .score-cell { text-align: center; width: 27%; }
-    .score-blank {
-        display: inline-block; width: 26px; height: 13px;
-        border: 1px solid #333; border-radius: 2px; vertical-align: middle;
-    }
-    .student { display: block; font-size: 6.5px; color: #444; margin-top: 1px; }
-
-    .footer { margin-top: 6px; display: flex; gap: 12px; break-inside: avoid; }
-    .signature-line {
-        margin-top: 10px; display: flex; gap: 24px; break-inside: avoid;
-        font-size: 8px; align-items: flex-end;
-    }
-    .signature-line .field { flex: 1; }
-    .signature-line .field--date { flex: 0 0 130px; }
-    .signature-line .value { display: block; border-bottom: 1px solid #333; min-width: 100%; height: 16px; }
-    .awards { flex: 1.4; }
-    .tiebreaker { flex: 1; border: 1px solid #111; padding: 4px 6px; }
-    .section-title {
-        font-size: 8.5px; font-weight: 700; text-transform: uppercase;
-        letter-spacing: 0.04em; border-bottom: 1px solid #111;
-        margin-bottom: 3px; padding-bottom: 1px;
-    }
-    .award { margin-bottom: 4px; }
-    .award-name { font-size: 8px; font-weight: 600; }
-    .award-hint { font-weight: 400; color: #777; font-size: 7px; }
-    .award-blanks { display: block; margin-top: 2px; }
-    .award-line {
-        display: inline-block; border-bottom: 1px solid #333;
-        height: 12px; min-width: 46%; margin: 0 2% 3px 0;
-    }
-    .tb-note { font-size: 7px; color: #555; margin-bottom: 4px; }
-    .tb-option { display: block; font-size: 8.5px; margin-bottom: 4px; }
-    .tb-box {
-        display: inline-block; width: 11px; height: 11px;
-        border: 1.5px solid #111; vertical-align: middle; margin-right: 4px;
-    }
-
-    @media screen {
-        body { background: #eee; padding: 16px; }
-        .ballot { background: #fff; max-width: 8.5in; min-height: 11in; margin: 0 auto; padding: 0.4in; box-shadow: 0 2px 12px rgba(0,0,0,0.2); }
-        .print-bar { max-width: 8.5in; margin: 0 auto 12px; text-align: right; }
-        .print-bar button { font-size: 13px; padding: 6px 14px; cursor: pointer; }
-    }
-    @media print { .print-bar { display: none; } }
-</style>
-</head>
-<body>
-    <div class="print-bar">
-        <button onclick="window.print()">Print / Save as PDF</button>
-    </div>
+    return `
     <div class="ballot">
         <div class="header">
             <div class="header-top">
@@ -268,24 +256,27 @@ export function buildBallotHtml(fmt: IScoreSheetFormat, meta: BallotMeta = {}): 
         <div class="signature-line">
             <span class="field"><span class="label">Scorer Signature</span> <span class="value">&nbsp;</span></span>
         </div>
-    </div>
-</body>
-</html>`
+    </div>`
 }
 
 /**
- * Opens the generated ballot in a new browser tab/window so the user can
- * print it or save it as a PDF. The document is fully self-contained (inline
- * CSS) and sized for a single 8.5×11 page.
- *
- * @returns true if the window opened, false if it was blocked by a popup blocker.
+ * Builds the full self-contained HTML document for a printable one-page ballot.
+ * Exported for testing / preview; consumers normally call {@link downloadBallot}.
  */
-export function downloadBallot(fmt: IScoreSheetFormat, meta: BallotMeta = {}): boolean {
-    const html = buildBallotHtml(fmt, meta)
-    const win = window.open('', '_blank')
-    if (!win) return false
-    win.document.open()
-    win.document.write(html)
-    win.document.close()
-    return true
+export function buildBallotHtml(fmt: IScoreSheetFormat, meta: BallotMeta = {}): string {
+    const pCode = esc(meta.prosecutionCode ?? fmt.prosecutionCode)
+    const dCode = esc(meta.defenseCode ?? fmt.defenseCode)
+    const title = `Ballot — ${pCode} v. ${dCode}`
+
+    return `<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<title>${esc(title)}</title>
+<style>${BALLOT_STYLES}</style>
+</head>
+<body>
+${buildBallotInner(fmt, meta)}
+</body>
+</html>`
 }

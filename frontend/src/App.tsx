@@ -13,6 +13,7 @@ const TournamentDashboard = lazy(() => import('./organizer/pages/TournamentDashb
 const TournamentNew = lazy(() => import('./organizer/pages/TournamentNew.tsx'));
 const ScorecardViewer = lazy(() => import('./organizer/pages/ScorecardViewer.tsx'));
 const RoundView = lazy(() => import('./organizer/pages/RoundView.tsx'));
+const BallotPage = lazy(() => import('./organizer/pages/BallotPage.tsx'));
 const CoachHome = lazy(() => import('./coach/CoachHome.tsx'));
 const CoachDashboard = lazy(() => import('./coach/CoachDashboard.tsx'));
 const AssignRoles = lazy(() => import('./coach/pages/AssignRoles.tsx'));
@@ -75,6 +76,10 @@ function App() {
             </Route>
 
             <Route path="/score/:scorerID" element={<ScoreSheetHome />} />
+
+            <Route element={<ProtectedRoute />}>
+              <Route path="/organizer/:id/round/:round/ballot/:pairingId" element={<BallotPage />} />
+            </Route>
           </Routes>
       </BrowserRouter>
   )

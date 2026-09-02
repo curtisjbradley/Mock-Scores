@@ -1,0 +1,57 @@
+/* Screen chrome for the printable ballot route. The ballot content itself is
+   styled by BALLOT_STYLES (shared with the print output); this file only
+   handles the on-screen page background, sheet framing, and print toolbar. */
+
+.ballot-page {
+    min-height: 100vh;
+    background: #eee;
+    padding: 16px;
+}
+
+.ballot-print-bar {
+    max-width: 8.5in;
+    margin: 0 auto 12px;
+    text-align: right;
+}
+
+.ballot-print-bar button {
+    font-size: 13px;
+    padding: 6px 14px;
+    cursor: pointer;
+}
+
+.ballot-sheet {
+    background: #fff;
+    max-width: 8.5in;
+    min-height: 11in;
+    margin: 0 auto;
+    padding: 0.4in;
+    box-shadow: 0 2px 12px rgba(0, 0, 0, 0.2);
+}
+
+.ballot-page-loading,
+.ballot-page-error {
+    max-width: 8.5in;
+    margin: 2rem auto;
+    text-align: center;
+    color: #444;
+}
+
+@media print {
+    .ballot-page {
+        background: #fff;
+        padding: 0;
+    }
+
+    .ballot-print-bar {
+        display: none;
+    }
+
+    .ballot-sheet {
+        max-width: none;
+        min-height: 0;
+        margin: 0;
+        padding: 0;
+        box-shadow: none;
+    }
+}
