@@ -1,0 +1,176 @@
+/* Combined per-trial scoresheet — modeled on the tabulation spreadsheet.
+   Bordered grid, gray header band, and red defense figures like the reference.
+   Self-contained: this route does not load the organizer/pairings stylesheets,
+   so the page frame and toolbar buttons are styled here. */
+
+/* ── Page frame ─────────────────────────────────────────────────────────── */
+.cs-page {
+    max-width: 60rem;
+    margin: 0 auto;
+    padding: 1.5rem 1rem 3rem;
+}
+
+.cs-message {
+    color: var(--text-muted, #4b5563);
+    margin-top: 1rem;
+}
+
+.cs-toolbar {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 0.5rem;
+    margin-bottom: 1rem;
+    flex-wrap: wrap;
+}
+
+.cs-back-btn,
+.cs-print-btn {
+    font-family: inherit;
+    font-size: 0.9rem;
+    font-weight: 600;
+    padding: 0.45rem 0.9rem;
+    border-radius: 0.5rem;
+    cursor: pointer;
+    border: 1px solid var(--border-strong, #cbd5e1);
+    background: var(--surface, #fff);
+    color: var(--text-primary, #1a1a2e);
+    transition: background 120ms ease, border-color 120ms ease;
+}
+.cs-back-btn:hover { background: var(--surface-muted, #f1f5f9); }
+.cs-print-btn {
+    border-color: var(--primary, #2563eb);
+    background: var(--primary, #2563eb);
+    color: #fff;
+}
+.cs-print-btn:hover { filter: brightness(0.95); }
+
+/* ── Sheet ──────────────────────────────────────────────────────────────── */
+.cs-sheet {
+    font-family: "Helvetica Neue", Arial, sans-serif;
+    color: #111;
+    background: #fff;
+}
+
+.cs-header {
+    display: flex;
+    align-items: baseline;
+    justify-content: space-between;
+    gap: 1rem;
+    padding-bottom: 0.5rem;
+    margin-bottom: 0.5rem;
+    border-bottom: 2px solid #000;
+    flex-wrap: wrap;
+}
+
+.cs-header-meta { display: inline-flex; align-items: baseline; gap: 0.75rem; }
+.cs-round { font-size: 1rem; font-weight: 700; }
+.cs-date { font-size: 0.9rem; color: #333; }
+.cs-matchup { display: inline-flex; align-items: baseline; gap: 0.5rem; font-size: 1.1rem; }
+.cs-team { font-weight: 700; }
+.cs-vs { color: #666; font-style: italic; }
+
+.cs-table-scroll { overflow-x: auto; }
+
+.cs-table {
+    border-collapse: collapse;
+    width: 100%;
+    font-size: 0.8rem;
+    line-height: 1.2;
+}
+
+.cs-table th,
+.cs-table td {
+    border: 1px solid #000;
+    padding: 2px 6px;
+    text-align: center;
+    white-space: nowrap;
+    vertical-align: middle;
+}
+
+/* Segment (leftmost) column */
+.cs-seg-col {
+    text-align: left;
+    font-weight: 600;
+    background: #fff;
+    position: sticky;
+    left: 0;
+    z-index: 1;
+}
+tfoot .cs-seg-col { font-weight: 700; }
+
+.cs-scorer-count { font-weight: 400; font-size: 0.72rem; color: #333; }
+
+/* Header band */
+.cs-scorer-head { background: #bfbfbf; font-weight: 700; }
+.cs-scorer-sub { background: #bfbfbf; font-size: 0.72rem; font-weight: 600; }
+
+/* Defense figures rendered red like the reference sheet */
+.cs-side-d { color: #c00000; }
+.cs-side-p { color: #000; }
+
+.cs-total-row td { border-top: 2px solid #000; font-weight: 700; background: #fafafa; }
+
+/* Rightmost per-row student/name column */
+.cs-student-col {
+    text-align: left;
+    min-width: 5rem;
+    border-left: 2px solid #000;
+    color: #222;
+}
+
+/* ── Summary block ──────────────────────────────────────────────────────── */
+.cs-summary {
+    margin-top: 0.75rem;
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    justify-content: space-between;
+    gap: 1rem;
+}
+.cs-summary-pcts { display: flex; gap: 1.5rem; }
+.cs-pct {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-start;
+    border: 1px solid #000;
+    padding: 0.35rem 0.6rem;
+    min-width: 8rem;
+}
+.cs-pct-label { font-size: 0.75rem; text-transform: uppercase; letter-spacing: 0.03em; color: #444; }
+.cs-pct-points { font-size: 1.1rem; font-weight: 700; }
+.cs-pct-value { font-size: 0.85rem; color: #333; }
+
+.cs-summary-right {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-end;
+    gap: 0.35rem;
+}
+.cs-tiebreaker {
+    display: inline-flex;
+    align-items: baseline;
+    gap: 0.5rem;
+    font-size: 0.95rem;
+}
+.cs-tiebreaker-label { font-weight: 600; color: #444; }
+.cs-tiebreaker-value { font-weight: 700; }
+
+.cs-winner {
+    display: inline-flex;
+    align-items: baseline;
+    gap: 0.5rem;
+    font-size: 1.05rem;
+}
+.cs-winner-label { font-weight: 600; color: #444; }
+.cs-winner-value { font-weight: 700; }
+
+/* Print: fill the page, drop chrome, keep the grid crisp. */
+@media print {
+    .cs-page { max-width: none; padding: 0; }
+    .cs-sheet { font-size: 100%; }
+    .cs-table { font-size: 0.72rem; }
+    .cs-seg-col { position: static; }
+    .cs-table-scroll { overflow: visible; }
+    .cs-toolbar { display: none !important; }
+}
