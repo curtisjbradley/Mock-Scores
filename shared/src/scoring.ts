@@ -39,6 +39,35 @@ export interface ScorecardPayload {
         rank: number
     }[]
     tiebreaker: string
+    /**
+     * Snapshot of the scoresheet segment structure at submission time, captured
+     * so a combined/tabulated view can render this ballot's rows deterministically
+     * even if the tournament's scoring template later changes (its category/field
+     * IDs, and therefore `assignmentKey`s, can drift). Optional for backward
+     * compatibility: ballots submitted before this field existed will not have it.
+     */
+    layout?: BallotLayoutSegment[]
+}
+
+/**
+ * One row of the captured ballot layout: a single scoring assignment together
+ * with its display context, in the order it appeared on the scoresheet.
+ */
+export interface BallotLayoutSegment {
+    /** Stable key for this assignment, matching the `assignmentKey` on its scores. */
+    assignmentKey: string
+    /** The assignment's display label, e.g. "Attorney Direct Examination". */
+    assignmentName: string
+    /** The owning category's display name, e.g. "Pretrial" or "Witnesses". */
+    categoryName: string
+    /** Witness character name when the category is witness-scoped, else null. */
+    witnessName: string | null
+    /** Which side(s) this assignment is scored on. */
+    side: 'D' | 'P' | 'BOTH'
+    /** Prosecution student name, if any. */
+    pStudentName: string | null
+    /** Defense student name, if any. */
+    dStudentName: string | null
 }
 
 /** Individual award category as configured by the organizer */

@@ -57,6 +57,10 @@ export default function ResultsTab({ results, tournamentId }: { results: ICoachR
                                             {loadingId === p.pairing_id && <span style={{ fontSize: '0.85rem', color: 'var(--text-muted)' }}>Loading ballots…</span>}
                                             {pairingBallots && pairingBallots.length === 0 && <span style={{ fontSize: '0.85rem', color: 'var(--text-muted)', fontStyle: 'italic' }}>No individual ballots available.</span>}
                                             {pairingBallots && pairingBallots.length > 0 && (
+                                                <>
+                                                <div style={{ marginBottom: '0.5rem' }}>
+                                                    <Link to={`/coach/${tournamentId}/pairing/${p.pairing_id}/scoresheet?roundName=${encodeURIComponent(round.name)}${round.round_time ? `&roundTime=${encodeURIComponent(round.round_time)}` : ''}`} className="pc-view-btn">View combined scoresheet</Link>
+                                                </div>
                                                 <table style={{ width: '100%', fontSize: '0.85rem', borderCollapse: 'collapse' }}>
                                                     <thead><tr style={{ borderBottom: '1px solid var(--border)' }}>
                                                         <th style={{ textAlign: 'left', padding: '0.25rem 0.5rem' }}>Ballot</th>
@@ -83,6 +87,7 @@ export default function ResultsTab({ results, tournamentId }: { results: ICoachR
                                                         )
                                                     })}</tbody>
                                                 </table>
+                                                </>
                                             )}
                                         </td>
                                     </tr>

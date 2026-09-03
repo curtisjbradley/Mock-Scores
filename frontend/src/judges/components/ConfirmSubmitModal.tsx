@@ -147,11 +147,28 @@ const ConfirmSubmitModal = ({
             studentIds.map((studentId, idx) => ({ awardCategoryId: catId, studentId, rank: idx + 1 }))
         );
 
+        // Snapshot the segment layout so combined/tabulated views can render this
+        // ballot deterministically even if the template's IDs later drift.
+        const layout = details.categoryOrder.flatMap((catId) => {
+            const cat = details.scoringCategories[catId];
+            const witnessName = cat.witnessId ? details.witnesses[cat.witnessId]?.characterName ?? null : null;
+            return cat.categoryAssignments.map((a) => ({
+                assignmentKey: a.assignmentKey,
+                assignmentName: a.assignmentName,
+                categoryName: cat.categoryName,
+                witnessName,
+                side: a.side,
+                pStudentName: a.pStudentId ? details.students[a.pStudentId]?.name ?? null : null,
+                dStudentName: a.dStudentId ? details.students[a.dStudentId]?.name ?? null : null,
+            }));
+        });
+
         const payload: ScorecardPayload = {
             pairingID: details.pairingID,
             scores,
             nominations: nominationPayload,
             tiebreaker: tiebreaker,
+            layout,
         };
 
         setSubmitting(true);

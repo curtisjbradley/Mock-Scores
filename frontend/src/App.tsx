@@ -14,6 +14,7 @@ const TournamentNew = lazy(() => import('./organizer/pages/TournamentNew.tsx'));
 const ScorecardViewer = lazy(() => import('./organizer/pages/ScorecardViewer.tsx'));
 const RoundView = lazy(() => import('./organizer/pages/RoundView.tsx'));
 const BallotPage = lazy(() => import('./organizer/pages/BallotPage.tsx'));
+const CombinedScoresheetPage = lazy(() => import('./shared/components/CombinedScoresheetPage.tsx'));
 const CoachHome = lazy(() => import('./coach/CoachHome.tsx'));
 const CoachDashboard = lazy(() => import('./coach/CoachDashboard.tsx'));
 const AssignRoles = lazy(() => import('./coach/pages/AssignRoles.tsx'));
@@ -52,6 +53,7 @@ function App() {
                   <Route path=":id/school/:teamId/assign-roles/:pairingId/:side" element={<AssignRoles />} />
                   <Route path=":id/school/:teamId/witness-order/:pairingId" element={<WitnessCallOrder />} />
                   <Route path=":id/scoresheet/:pairingId/:judgeId" element={<ScorecardViewer />} />
+                  <Route path=":id/round/:round/pairing/:pairingId/scoresheet" element={<CombinedScoresheetPage />} />
                   <Route path=":id/*" element={<NotFound />} />
 
               </Route>
@@ -62,6 +64,7 @@ function App() {
                 <Route path=":id/assign-roles/:teamId/:pairingId/:side" element={<AssignRoles />} />
                 <Route path=":id/witness-order/:teamId/:pairingId" element={<WitnessCallOrder />} />
                 <Route path=":id/ballot/:pairingId/:assignmentId" element={<ScorecardViewer />} />
+                <Route path=":id/pairing/:pairingId/scoresheet" element={<CombinedScoresheetPage />} />
                 <Route path=":id/:tab" element={<CoachDashboard />} />
                   <Route path=":id/*" element={<NotFound />} />
               </Route>

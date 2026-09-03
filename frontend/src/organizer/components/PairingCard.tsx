@@ -251,6 +251,16 @@ export default function PairingCard({ pairing, teams, courtrooms, scorers, assig
                             {ballotStatus.submitted}/{ballotStatus.total_scorers} ballots
                         </span>
                     )}
+                    {assignedScorers.some(s => s.p_points != null || s.d_points != null) && (
+                        <Link
+                            to={`/organizer/${tournamentId}/round/${roundId}/pairing/${pairing.pairing_id}/scoresheet${
+                                round ? `?roundName=${encodeURIComponent(round.name)}${round.round_time ? `&roundTime=${encodeURIComponent(round.round_time)}` : ''}` : ''
+                            }`}
+                            className="pc-view-btn"
+                        >
+                            Combined scoresheet
+                        </Link>
+                    )}
 
                 </div>
 
