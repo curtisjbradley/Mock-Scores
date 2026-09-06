@@ -13,23 +13,29 @@
 }
 
 /* ── Sidebar ─────────────────────────────────────────────────────────────── */
+.org-main {
+    padding: 0;
+}
+.site-header {
+    border-bottom: 0;
+}
 .dash-sidebar {
     flex-shrink: 0;
     position: sticky;
-    top: 1.5rem;
     /* Cap to the viewport (matching the 1.5rem top offset top and bottom) so a
        long nav list scrolls inside the sidebar rather than extending past it. */
-    max-height: calc(100vh - 3rem);
-    width: 15rem;
+    height: 100%;
+    width: 12rem;
     display: flex;
     flex-direction: column;
     gap: 0.75rem;
-    padding: 1rem 0.75rem;
-    border: 1px solid var(--border);
-    border-radius: var(--radius);
     background: var(--surface);
-    box-shadow: var(--shadow);
     transition: width 160ms ease;
+    padding-left: 1rem;
+}
+
+.site-footer {
+    border: 0;
 }
 
 .dash-sidebar--collapsed {
@@ -169,6 +175,7 @@
     display: flex;
     flex-direction: column;
     gap: 1.25rem;
+    padding: 1rem;
 }
 
 /* ── Overview / dashboard landing ────────────────────────────────────────── */
@@ -192,7 +199,6 @@
     border: 1px solid var(--border);
     border-radius: var(--radius);
     background: var(--surface);
-    box-shadow: var(--shadow);
 }
 
 /* The feature card spans the full row on wider layouts. */
@@ -277,13 +283,23 @@
         flex-direction: column;
         gap: 1rem;
     }
-
+    .org-main {
+        padding-right: 0;
+    }
+    .site-header{
+        border-bottom: 1px solid var(--border);
+    }
     .dash-sidebar,
     .dash-sidebar--collapsed {
         position: static;
         width: 100%;
         max-height: none;
         padding: 0.75rem;
+        height: auto;
+        margin: .5rem 0;
+        border-radius: var(--radius);
+        transition: none;
+
     }
 
     .dash-sidebar-nav {
