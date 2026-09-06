@@ -3,8 +3,11 @@ import {useState} from "react";
 export interface DashboardNavItem<T extends string> {
     key: T
     label: string
-    /** Icon node — typically an `<img>` of a designed SVG from `/icons/`. */
-    icon: React.ReactNode
+    /**
+     * Icon name (without extension) of a designed SVG in `public/icons/`.
+     * The sidebar renders it as `<img src="/icons/{icon}.svg">`.
+     */
+    icon: string
 }
 
 interface Props<T extends string> {
@@ -25,9 +28,9 @@ interface Props<T extends string> {
  * Expanded: fixed-width column with an icon + text label per item.
  * Collapsed: narrow rail showing only icons (labels available via title attr).
  *
- * Icons are designed SVGs served from `/icons/` (passed in as `<img>` nodes by
- * each dashboard). Styling lives in the shared `styles/dashboard.css`
- * (`.dash-sidebar*` / `.dash-nav-*` classes).
+ * Icons are designed SVGs from `public/icons/`, passed in by name and rendered
+ * as CSS masks so they take the current text color (`var(--text)`). Styling
+ * lives in the shared `styles/dashboard.css` (`.dash-sidebar*` / `.dash-nav-*`).
  */
 
 const SIDEBAR_STORAGE_KEY = 'sidebar-storage-state'
@@ -71,10 +74,13 @@ export default function DashboardSidebar<T extends string>({
                     aria-expanded={!collapsed}
                     title={collapsed ? 'Expand navigation' : 'Collapse navigation'}
                 >
-                    <img
-                        src={collapsed ? '/icons/Expand.svg' : '/icons/Shrink.svg'}
-                        alt=""
+                    <span
+                        className="dash-sidebar-toggle-icon"
                         aria-hidden="true"
+                        style={{
+                            maskImage: `url(/icons/${collapsed ? 'Expand' : 'Shrink'}.svg)`,
+                            WebkitMaskImage: `url(/icons/${collapsed ? 'Expand' : 'Shrink'}.svg)`,
+                        }}
                     />
                 </button>
             </div>
@@ -89,7 +95,14 @@ export default function DashboardSidebar<T extends string>({
                         aria-current={active === item.key ? 'page' : undefined}
                         title={collapsed ? item.label : undefined}
                     >
-                        <span className="dash-nav-icon" aria-hidden="true">{item.icon}</span>
+                        <span
+                            className="dash-nav-icon"
+                            aria-hidden="true"
+                            style={{
+                                maskImage: `url(/icons/${item.icon}.svg)`,
+                                WebkitMaskImage: `url(/icons/${item.icon}.svg)`,
+                            }}
+                        />
                         {!collapsed && <span className="dash-nav-label">{item.label}</span>}
                     </button>
                 ))}

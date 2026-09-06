@@ -24,16 +24,16 @@ import TournamentSettingsTab from '../tabs/TournamentSettingsTab'
 import TiebreakersTab from '../tabs/TiebreakersTab'
 import AwardCategoriesTab from '../tabs/AwardCategoriesTab'
 
-// Primary navigation — designed SVG icons served from `/icons/`.
+// Primary navigation — icon names map to SVGs in `public/icons/`.
 const NAV_ITEMS: DashboardNavItem<OrganizerScreen>[] = [
-    { key: 'overview',   label: 'Overview',   icon: <img src="/icons/Overview.svg" alt="" aria-hidden="true" /> },
-    { key: 'rounds',     label: 'Rounds',     icon: <img src="/icons/Rounds.svg" alt="" aria-hidden="true" /> },
-    { key: 'standings',  label: 'Standings',  icon: <img src="/icons/Standings.svg" alt="" aria-hidden="true" /> },
-    { key: 'teams',      label: 'Teams',      icon: <img src="/icons/Teams.svg" alt="" aria-hidden="true" /> },
-    { key: 'scorers',    label: 'Scorers',    icon: <img src="/icons/Scorers.svg" alt="" aria-hidden="true" /> },
-    { key: 'courtrooms', label: 'Courtrooms', icon: <img src="/icons/Courtrooms.svg" alt="" aria-hidden="true" /> },
-    { key: 'organizers', label: 'Organizers', icon: <img src="/icons/Organizers.svg" alt="" aria-hidden="true" /> },
-    { key: 'structure',  label: 'Structure',  icon: <img src="/icons/Settings.svg" alt="" aria-hidden="true" /> },
+    { key: 'overview',   label: 'Overview',   icon: 'Overview' },
+    { key: 'rounds',     label: 'Rounds',     icon: 'Rounds' },
+    { key: 'standings',  label: 'Standings',  icon: 'Standings' },
+    { key: 'teams',      label: 'Teams',      icon: 'Teams' },
+    { key: 'scorers',    label: 'Scorers',    icon: 'Scorers' },
+    { key: 'courtrooms', label: 'Courtrooms', icon: 'Courtrooms' },
+    { key: 'organizers', label: 'Organizers', icon: 'Organizers' },
+    { key: 'structure',  label: 'Structure',  icon: 'Settings' },
 ]
 
 const STRUCTURE_CARDS: { label: string; tab: OrganizerTab }[] = [

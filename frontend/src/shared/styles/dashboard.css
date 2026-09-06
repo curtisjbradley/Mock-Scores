@@ -104,11 +104,16 @@
     border-color: var(--primary);
 }
 
-.dash-sidebar-toggle img {
+.dash-sidebar-toggle-icon {
     width: 1rem;
     height: 1rem;
-    object-fit: contain;
-    display: block;
+    background-color: currentColor;
+    mask-repeat: no-repeat;
+    -webkit-mask-repeat: no-repeat;
+    mask-position: center;
+    -webkit-mask-position: center;
+    mask-size: contain;
+    -webkit-mask-size: contain;
 }
 
 .dash-sidebar-nav {
@@ -161,17 +166,13 @@
     flex-shrink: 0;
     width: 1.25rem;
     height: 1.25rem;
-    display: grid;
-    place-items: center;
-    font-size: 1rem;
-    line-height: 1;
-}
-
-.dash-nav-icon img {
-    width: 1.25rem;
-    height: 1.25rem;
-    object-fit: contain;
-    display: block;
+    background-color: var(--text);
+    mask-repeat: no-repeat;
+    -webkit-mask-repeat: no-repeat;
+    mask-position: center;
+    -webkit-mask-position: center;
+    mask-size: contain;
+    -webkit-mask-size: contain;
 }
 
 .dash-nav-label {
