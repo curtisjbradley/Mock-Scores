@@ -44,7 +44,7 @@ const AddTeamModal = ({ onClose, onAdd, existingNames }: Props) => {
                         onChange={e => setName(e.target.value)}
                         placeholder="e.g Morro Bay High School"
                     />
-                    <label htmlFor="team-code" className="modal-label">Team code <span style={{ fontWeight: 'normal', opacity: 0.6 }}>(optional)</span></label>
+                    <label htmlFor="team-code" className="modal-label">Team code <span className="modal-label-optional">(optional)</span></label>
                     <input
                         id="team-code"
                         type="text"

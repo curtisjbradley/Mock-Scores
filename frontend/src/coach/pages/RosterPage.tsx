@@ -11,6 +11,7 @@ import { useCoachContext } from '../CoachContext'
 import '../../organizer/styles/organizer.css'
 import '../../organizer/styles/tabs.css'
 import '../../organizer/styles/round-view.css'
+import '../styles/coach-pages.css'
 
 const PRONOUN_OPTIONS = [
     { value: 'he/him',    label: 'he/him (Mr)' },
@@ -134,14 +135,13 @@ function SideSetupModal({
 
     return (
         <ModalBackdrop onClose={onClose}>
-            <div className="confirm-modal" role="dialog" aria-modal="true"
-                style={{ maxWidth: '36rem', width: '100%', maxHeight: '80vh', overflowY: 'auto' }}>
-                <h2 style={{ marginTop: 0 }}>{sideLabel} — Default Setup</h2>
+            <div className="confirm-modal coach-setup-modal" role="dialog" aria-modal="true">
+                <h2>{sideLabel} — Default Setup</h2>
 
                 {callOrderSlots.length > 0 && (
                     <>
-                        <h3 style={{ margin: '0 0 0.5rem' }}>Witness Call Order</h3>
-                        <table className="dash-standings-table" style={{ marginBottom: '1rem' }}>
+                        <h3 className="coach-setup-heading">Witness Call Order</h3>
+                        <table className="dash-standings-table coach-setup-table">
                             <thead><tr><th>Call #</th><th>Witness</th></tr></thead>
                             <tbody>
                                 {callOrderSlots.map((val, i) => (
@@ -168,8 +168,8 @@ function SideSetupModal({
 
                 {roleRows.length > 0 && students.length > 0 && (
                     <>
-                        <h3 style={{ margin: '0 0 0.5rem' }}>Role Assignments</h3>
-                        <table className="dash-standings-table" style={{ marginBottom: '1rem' }}>
+                        <h3 className="coach-setup-heading">Role Assignments</h3>
+                        <table className="dash-standings-table coach-setup-table">
                             <thead><tr><th>Role</th><th>Student</th></tr></thead>
                             <tbody>
                                 {roleRows.map(r => (
@@ -291,7 +291,7 @@ export default function RosterPage() {
             }
             {students.length > 0 && <p className="org-header-sub">{students.length} student{students.length !== 1 ? 's' : ''}</p>}
 
-            <div style={{ display: 'flex', gap: '0.75rem', marginTop: '1.5rem', flexWrap: 'wrap' }}>
+            <div className="coach-roster-actions">
                 <button className="org-new-btn" onClick={() => setOpenSide('p')}>
                     Set {prosecutionLabel} Call Order &amp; Assignments
                 </button>

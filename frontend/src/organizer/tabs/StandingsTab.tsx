@@ -6,6 +6,7 @@ import { extractStandingsConfig, parseColumnsFromXml } from '../blockly/standing
 import { standingsBlockDefs } from '../blockly/standingsBlocks'
 import { tiebreakerBlockDefs } from '../blockly/tiebreakerBlocks'
 import type { IStandingsTeam, IIndividualAwardCategory } from '@mock-scores/shared'
+import '../styles/standings.css'
 
 interface NominationRow {
     award_category_id: string
@@ -185,13 +186,13 @@ export default function StandingsTab({ tournamentId }: { tournamentId: string })
     return (
         <div className="dash-section">
             {/* Round filter checkboxes */}
-            <div style={{ marginBottom: '1rem' }}>
-                <strong style={{ display: 'block', marginBottom: '0.4rem' }}>Filter by round</strong>
+            <div className="st-section">
+                <strong className="st-filter-label">Filter by round</strong>
                 {rounds.length === 0
                     ? <p className="coach-empty">No rounds found.</p>
                     : (
-                        <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.5rem', alignItems: 'center' }}>
-                            <label style={{ display: 'flex', alignItems: 'center', gap: '0.3rem', cursor: 'pointer', fontSize: '0.875rem' }}>
+                        <div className="st-checkbox-row">
+                            <label className="st-checkbox">
                                 <input
                                     type="checkbox"
                                     checked={selected.size === rounds.length}
@@ -201,7 +202,7 @@ export default function StandingsTab({ tournamentId }: { tournamentId: string })
                                 All
                             </label>
                             {rounds.map(r => (
-                                <label key={r.round_id} style={{ display: 'flex', alignItems: 'center', gap: '0.3rem', cursor: 'pointer', fontSize: '0.875rem' }}>
+                                <label key={r.round_id} className="st-checkbox">
                                     <input
                                         type="checkbox"
                                         checked={selected.has(r.round_id)}
@@ -221,7 +222,7 @@ export default function StandingsTab({ tournamentId }: { tournamentId: string })
 
             {/* Export buttons */}
             {payload.ballots.length > 0 && (
-                <div style={{ marginBottom: '1rem', display: 'flex', gap: '0.5rem' }}>
+                <div className="st-export-row">
                     <button
                         className="org-new-btn"
                         disabled={!result}
@@ -257,7 +258,7 @@ export default function StandingsTab({ tournamentId }: { tournamentId: string })
                             <tbody>
                                 {result.rows.length === 0 && (
                                     <tr>
-                                        <td colSpan={3 + result.cols.length} style={{ textAlign: 'center', color: 'var(--text-muted)' }}>
+                                        <td colSpan={3 + result.cols.length} className="st-empty-cell">
                                             No ballots submitted yet for the selected rounds.
                                         </td>
                                     </tr>
@@ -279,7 +280,7 @@ export default function StandingsTab({ tournamentId }: { tournamentId: string })
                     </div>
 
                     <Suspense fallback={null}>
-                        <div style={{ marginTop: '1.5rem' }}>
+                        <div className="st-tiebreaker-wrap">
                             <TiebreakerViewer standingsXml={payload.config!.standingsXml} />
                         </div>
                     </Suspense>
@@ -372,18 +373,18 @@ function AwardsSummary({ data, selectedRounds, sideConstrained, onToggleSideCons
     if (grouped.length === 0) return null
 
     return (
-        <div style={{ marginTop: '2rem' }}>
-            <div style={{ display: 'flex', alignItems: 'center', gap: '1rem', marginBottom: '0.75rem' }}>
-                <strong style={{ fontSize: '1.1rem' }}>Individual Award Summary</strong>
-                <label style={{ display: 'flex', alignItems: 'center', gap: '0.3rem', cursor: 'pointer', fontSize: '0.875rem' }}>
+        <div className="st-section st-section--lg">
+            <div className="st-awards-header">
+                <strong className="st-awards-title">Individual Award Summary</strong>
+                <label className="st-checkbox">
                     <input type="checkbox" checked={sideConstrained} onChange={onToggleSideConstrained} />
                     Side constrain awards
                 </label>
             </div>
 
             {grouped.map(cat => (
-                <div key={cat.categoryId} style={{ marginBottom: '1.5rem' }}>
-                    <strong style={{ display: 'block', marginBottom: '0.4rem', fontSize: '1rem' }}>
+                <div key={cat.categoryId} className="st-award-group">
+                    <strong className="st-award-group-title">
                         {cat.categoryName}
                     </strong>
                     <div className="dash-table-scroll">

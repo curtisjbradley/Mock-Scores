@@ -36,7 +36,7 @@ function ConflictCheck({ details, onProceed }: ConflictCheckProps) {
             <div className="conflict-check">
                 <div className="conflict-card">
                     <h1 className="conflict-title">Conflict Reported</h1>
-                    <p style={{ color: "var(--text-muted)", lineHeight: 1.6 }}>
+                    <p className="conflict-message">
                         The tournament organizer has been notified. Please do not score this round.
                         You may close this tab.
                     </p>

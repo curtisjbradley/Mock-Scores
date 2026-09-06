@@ -73,7 +73,7 @@ export default function TeamsTab({ tournamentId }: { tournamentId: string }) {
         <Section title="Teams" description="Manage invited teams">
             <div className="tab-actions">
                 <AddButton onClick={() => setShowModal(true)}>+ Add team</AddButton>
-                <button className="org-new-btn" onClick={() => setShowImport(true)} style={{ marginLeft: 8 }}>Import CSV</button>
+                <button className="org-new-btn tab-actions-import" onClick={() => setShowImport(true)}>Import CSV</button>
             </div>
 
             <div className="dash-table-scroll">
@@ -98,7 +98,7 @@ export default function TeamsTab({ tournamentId }: { tournamentId: string }) {
                                         : <span className="dash-judge-name">
                                             {team.coach_email}
                                             {bouncedEmails.has(team.coach_email.toLowerCase()) && (
-                                                <span title="Email delivery failed" style={{ marginLeft: 6, background: '#dc2626', color: '#fff', fontSize: '0.65rem', fontWeight: 700, padding: '1px 5px', borderRadius: 3, verticalAlign: 'middle' }}>⚠ BOUNCED</span>
+                                                <span title="Email delivery failed" className="dash-bounced-badge">⚠ BOUNCED</span>
                                             )}
                                           </span>
                                     }

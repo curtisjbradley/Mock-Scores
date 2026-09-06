@@ -2,6 +2,7 @@ import { useNavigate } from 'react-router-dom'
 import type { ICoachScheduleRound } from '@mock-scores/shared'
 import { formatDate } from '../../utils/format'
 import { useCoachContext } from '../CoachContext'
+import AddButton from "../../shared/components/AddButton.tsx";
 
 /** A round is "upcoming" when it has a time in the future, or no time set yet. */
 function findNextRound(schedule: ICoachScheduleRound[]): ICoachScheduleRound | null {
@@ -19,7 +20,7 @@ function findNextRound(schedule: ICoachScheduleRound[]): ICoachScheduleRound | n
  * information with quick links into the detailed sections.
  */
 export default function OverviewPage() {
-    const { tournament, schedule, results, base } = useCoachContext()
+    const { tournament, schedule, base } = useCoachContext()
     const navigate = useNavigate()
 
     const nextRound = findNextRound(schedule)
@@ -28,23 +29,6 @@ export default function OverviewPage() {
         return count + round.pairings.filter(p => !p.has_assignments || !p.has_call_order).length
     }, 0)
 
-    const code = tournament.team_code
-    let wins = 0
-    let losses = 0
-    let ties = 0
-    for (const round of results) {
-        for (const p of round.pairings) {
-            const isProsecution = p.p_team_code === code
-            const isDefense = p.d_team_code === code
-            if (!isProsecution && !isDefense) continue
-            const own = isProsecution ? p.p_points : p.d_points
-            const opp = isProsecution ? p.d_points : p.p_points
-            if (own > opp) wins++
-            else if (own < opp) losses++
-            else ties++
-        }
-    }
-    const hasResults = wins + losses + ties > 0
 
     return (
         <div className="dash-overview">
@@ -60,7 +44,7 @@ export default function OverviewPage() {
                                 {nextRound.pairings.length} pairing{nextRound.pairings.length === 1 ? '' : 's'}
                             </p>
                             <button className="dash-stat-link" onClick={() => navigate(`${base}/schedule`)}>
-                                View schedule →
+                                <AddButton  onClick={() => navigate(`${base}/schedule`)}>View Schedule</AddButton>
                             </button>
                         </>
                     ) : (
@@ -71,17 +55,14 @@ export default function OverviewPage() {
                 <section className="dash-stat-card">
                     <h2 className="dash-stat-label">Teams Registered</h2>
                     <p className="dash-stat-value">{tournament.num_teams}</p>
-                    <button className="dash-stat-link" onClick={() => navigate(`${base}/field`)}>
-                        View field →
-                    </button>
+
+                    <AddButton  onClick={() => navigate(`${base}/field`)}>View Field</AddButton>
                 </section>
 
                 <section className="dash-stat-card">
                     <h2 className="dash-stat-label">Total Rounds</h2>
                     <p className="dash-stat-value">{tournament.num_rounds}</p>
-                    <button className="dash-stat-link" onClick={() => navigate(`${base}/standings`)}>
-                        View standings →
-                    </button>
+                    <AddButton  onClick={() => navigate(`${base}/standings`)}>View Standings</AddButton>
                 </section>
 
                 <section className={`dash-stat-card${pendingTasks > 0 ? ' dash-stat-card--alert' : ''}`}>
@@ -93,26 +74,8 @@ export default function OverviewPage() {
                             : `Pairing${pendingTasks === 1 ? '' : 's'} need roles or call order`}
                     </p>
                     {pendingTasks > 0 && (
-                        <button className="dash-stat-link" onClick={() => navigate(`${base}/schedule`)}>
-                            Complete prep →
-                        </button>
-                    )}
-                </section>
+                        <AddButton className={"dash-button"}  onClick={() => navigate(`${base}/schedule`)}>Complete Prep</AddButton>
 
-                <section className="dash-stat-card">
-                    <h2 className="dash-stat-label">Ballot Record</h2>
-                    {hasResults ? (
-                        <>
-                            <p className="dash-stat-value">
-                                {wins}–{losses}{ties > 0 ? `–${ties}` : ''}
-                            </p>
-                            <p className="dash-stat-sub">Win–Loss{ties > 0 ? '–Tie' : ''} across scored ballots</p>
-                            <button className="dash-stat-link" onClick={() => navigate(`${base}/results`)}>
-                                View results →
-                            </button>
-                        </>
-                    ) : (
-                        <p className="dash-stat-sub">No results published yet.</p>
                     )}
                 </section>
             </div>

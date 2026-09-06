@@ -64,7 +64,7 @@ export function Account() {
                 </div>
 
                 <form onSubmit={handleSubmit} noValidate>
-                    <h2 style={{ fontSize: '1.1rem', margin: '0 0 0.75rem' }}>Change password</h2>
+                    <h2 className="account-section-heading">Change password</h2>
                     {pwError && <p className="account-form-error">{pwError}</p>}
                     {pwSuccess && <p className="account-form-success">{pwSuccess}</p>}
                     <div className="account-field">
@@ -103,16 +103,16 @@ export function Account() {
         {showDeleteModal && (
             <ModalBackdrop onClose={() => setShowDeleteModal(false)} dismissible={!deleting}>
                 <div className="confirm-modal" role="dialog" aria-modal="true" aria-labelledby="delete-account-title">
-                    <h2 id="delete-account-title" style={{ margin: '0 0 0.75rem', color: '#d32f2f' }}>Delete Account</h2>
-                    <p style={{ margin: '0 0 0.5rem', lineHeight: 1.6 }}>
+                    <h2 id="delete-account-title" className="account-delete-title">Delete Account</h2>
+                    <p className="account-delete-lead">
                         Are you sure you want to permanently delete your account?
                     </p>
-                    <p style={{ margin: '0 0 1rem', fontSize: '0.85rem', color: 'var(--text-muted)' }}>
+                    <p className="account-delete-note">
                         All your data including tournaments, teams, and scoring history will be permanently removed. This action cannot be undone.
                     </p>
                     <div className="confirm-actions">
                         <button onClick={() => setShowDeleteModal(false)} disabled={deleting}>Cancel</button>
-                        <button onClick={handleDeleteAccount} disabled={deleting} style={{ backgroundColor: '#d32f2f', color: '#fff' }}>
+                        <button onClick={handleDeleteAccount} disabled={deleting} className="account-delete-confirm">
                             {deleting ? 'Deleting…' : 'Permanently Delete'}
                         </button>
                     </div>

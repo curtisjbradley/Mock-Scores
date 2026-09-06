@@ -287,17 +287,17 @@ export default function PairingCard({ pairing, teams, courtrooms, scorers, assig
                                 Presider{s.presider_only_tiebreaker ? ' (tiebreaker only)' : ''}
                             </span>
                         )}
-                        <span style={{ flex: 1, fontSize: '0.875rem' }}>
+                        <span className="pc-scorer-name">
                             {s.name}
                             {s.type === 'paper'
                                 ? <span className="pc-scorer-type pc-scorer-type--paper">Paper</span>
                                 : <span className="pc-scorer-type pc-scorer-type--online">Online</span>
                             }
                             {hasConflict && (
-                                <span style={{ marginLeft: 6, background: 'red', color: '#fff', fontSize: '0.7rem', fontWeight: 700, padding: '1px 5px', borderRadius: 3 }}>CONFLICT</span>
+                                <span className="pc-conflict-badge">CONFLICT</span>
                             )}
                             {s.conflict_reported && (
-                                <span style={{ marginLeft: 6, background: '#c05000', color: '#fff', fontSize: '0.7rem', fontWeight: 700, padding: '1px 5px', borderRadius: 3 }}>CONFLICT REPORTED</span>
+                                <span className="pc-conflict-reported-badge">CONFLICT REPORTED</span>
                             )}
                             {isOnlineScorer && !hasSubmitted && (sentLinks.has(s.assignment_id) ?<span className={"pc-link-sent"}> Link Sent </span> :  <button className={'pc-send-link'} onClick={() => sendLink(s.assignment_id)}>
                                 Send Scoring Link
@@ -326,8 +326,8 @@ export default function PairingCard({ pairing, teams, courtrooms, scorers, assig
         {showScorerAdd && (
             <ModalBackdrop onClose={() => setShowScorerAdd(false)}>
                 <div className="confirm-modal" role="dialog" aria-modal="true" aria-labelledby="add-scorer-title">
-                    <h2 id="add-scorer-title" style={{ margin: '0 0 0.75rem' }}>Add Scorer</h2>
-                    <label className="rv-field-label" style={{ display: 'block', marginBottom: '0.75rem' }}>
+                    <h2 id="add-scorer-title" className="pc-modal-title">Add Scorer</h2>
+                    <label className="rv-field-label pc-modal-field">
                         Scorer
                         <div className="pc-scorer-typeahead">
                             <input
@@ -390,8 +390,8 @@ export default function PairingCard({ pairing, teams, courtrooms, scorers, assig
         {showPresiderModal && (
             <ModalBackdrop onClose={() => setShowPresiderModal(false)}>
                 <div className="confirm-modal" role="dialog" aria-modal="true" aria-labelledby="presider-title">
-                    <h2 id="presider-title" style={{ margin: '0 0 0.75rem' }}>Change Presider</h2>
-                    <label className="rv-field-label" style={{ display: 'block', marginBottom: '0.75rem' }}>
+                    <h2 id="presider-title" className="pc-modal-title">Change Presider</h2>
+                    <label className="rv-field-label pc-modal-field">
                         Presider
                         <select className="rv-select" value={presiderDraft} onChange={e => setPresiderDraft(e.target.value)}>
                             <option value="">Select presider…</option>
@@ -415,11 +415,11 @@ export default function PairingCard({ pairing, teams, courtrooms, scorers, assig
         {manualEntryScorer && (
             <ModalBackdrop onClose={() => setManualEntryScorer(null)}>
                 <div className="confirm-modal" role="dialog" aria-modal="true" aria-labelledby="manual-entry-title">
-                    <h2 id="manual-entry-title" style={{ margin: '0 0 0.75rem' }}>Manually Enter Scores</h2>
-                    <p style={{ margin: '0 0 0.5rem', lineHeight: 1.6 }}>
+                    <h2 id="manual-entry-title" className="pc-modal-title">Manually Enter Scores</h2>
+                    <p className="pc-modal-text--tight">
                         You are about to manually enter scores for <strong>{manualEntryScorer.name}</strong>.
                     </p>
-                    <p style={{ margin: '0 0 1rem', fontSize: '0.85rem', color: 'var(--text-muted)' }}>
+                    <p className="pc-modal-text--muted">
                         This will open the scoring form. Once submitted, the scorer's original link will be permanently invalidated and they will no longer be able to submit online.
                     </p>
                     <div className="confirm-actions">
@@ -436,13 +436,13 @@ export default function PairingCard({ pairing, teams, courtrooms, scorers, assig
         {removeScorerTarget && (
             <ModalBackdrop onClose={() => setRemoveScorerTarget(null)}>
                 <div className="confirm-modal" role="dialog" aria-modal="true" aria-labelledby="remove-scorer-title">
-                    <h2 id="remove-scorer-title" style={{ margin: '0 0 0.75rem' }}>Remove Scorer</h2>
-                    <p style={{ margin: '0 0 1rem', lineHeight: 1.6 }}>
+                    <h2 id="remove-scorer-title" className="pc-modal-title">Remove Scorer</h2>
+                    <p className="pc-modal-text">
                         Remove <strong>{removeScorerTarget.name}</strong> from this pairing?
                     </p>
                     <div className="confirm-actions">
                         <button onClick={() => setRemoveScorerTarget(null)}>Cancel</button>
-                        <button onClick={() => { removeScorer(removeScorerTarget.assignmentId); setRemoveScorerTarget(null) }} style={{ backgroundColor: '#d32f2f', color: '#fff' }}>
+                        <button onClick={() => { removeScorer(removeScorerTarget.assignmentId); setRemoveScorerTarget(null) }} className="pc-modal-remove-btn">
                             Remove
                         </button>
                     </div>

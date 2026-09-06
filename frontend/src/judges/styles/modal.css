@@ -294,6 +294,11 @@
     margin-top: 0.25rem;
 }
 
+.modal-label-optional {
+    font-weight: normal;
+    opacity: 0.6;
+}
+
 .modal-input {
     height: 2.75rem;
     padding: 0 0.75rem;

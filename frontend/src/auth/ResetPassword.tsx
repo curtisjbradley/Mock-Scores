@@ -20,7 +20,7 @@ const ResetPassword = () => {
             <main className="auth-main">
                 <div className="auth-card">
                     <h1>Invalid reset link</h1>
-                    <p style={{ lineHeight: 1.6, margin: '0.5rem 0 1.5rem' }}>
+                    <p className="auth-message">
                         This password reset link is invalid or has already been used.
                     </p>
                     <Link to="/forgot-password">Request a new reset link</Link>
@@ -59,7 +59,7 @@ const ResetPassword = () => {
             <main className="auth-main">
                 <div className="auth-card">
                     <h1>Password reset</h1>
-                    <p style={{ lineHeight: 1.6, margin: '0.5rem 0 1.5rem' }}>
+                    <p className="auth-message">
                         Your password has been successfully reset. You can now sign in with your new password.
                     </p>
                     <Link to="/login" className="auth-link-back">Go to sign in</Link>

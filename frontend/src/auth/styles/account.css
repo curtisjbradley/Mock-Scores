@@ -143,3 +143,29 @@
     margin: 0;
 }
 
+.account-section-heading {
+    font-size: 1.1rem;
+    margin: 0 0 0.75rem;
+}
+
+.account-delete-title {
+    margin: 0 0 0.75rem;
+    color: var(--danger);
+}
+
+.account-delete-lead {
+    margin: 0 0 0.5rem;
+    line-height: 1.6;
+}
+
+.account-delete-note {
+    margin: 0 0 1rem;
+    font-size: 0.85rem;
+    color: var(--text-muted);
+}
+
+.account-delete-confirm {
+    background-color: var(--danger);
+    color: var(--white);
+}
+

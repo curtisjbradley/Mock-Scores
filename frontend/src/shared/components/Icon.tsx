@@ -1,4 +1,5 @@
 import './styles/icon.css'
+import type { CSSProperties } from 'react'
 
 interface IconProps {
     /** SVG name (without extension) in `public/icons/`, e.g. "Overview". */
@@ -27,17 +28,20 @@ export default function Icon({ name, size, className, label }: IconProps) {
     const dimension = typeof size === 'number' ? `${size}rem` : size
     const maskUrl = `url(/icons/${name}.svg)`
 
+    // Dynamic per-icon values (mask asset + optional size) are passed to the
+    // `.app-icon` rule via CSS custom properties rather than static styling.
+    const iconVars = {
+        '--icon-mask': maskUrl,
+        ...(dimension ? { '--icon-size': dimension } : {}),
+    } as CSSProperties
+
     return (
         <span
             className={`app-icon${className ? ` ${className}` : ''}`}
             role={label ? 'img' : undefined}
             aria-label={label}
             aria-hidden={label ? undefined : true}
-            style={{
-                maskImage: maskUrl,
-                WebkitMaskImage: maskUrl,
-                ...(dimension ? { width: dimension, height: dimension } : {}),
-            }}
+            style={iconVars}
         />
     )
 }

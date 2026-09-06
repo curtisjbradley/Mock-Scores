@@ -178,10 +178,10 @@ const ScorecardViewer = () => {
                 <button className="org-back-btn" onClick={() => navigate(-1)}>← Back to tournament</button>
 
                 <div className="coach-section">
-                    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '0.5rem' }}>
-                        <h2 style={{ margin: 0 }}>Scorecard{sheet.scorer.firstName ? ` — ${sheet.scorer.firstName} ${sheet.scorer.lastName}` : ''}</h2>
+                    <div className="sv-header">
+                        <h2>Scorecard{sheet.scorer.firstName ? ` — ${sheet.scorer.firstName} ${sheet.scorer.lastName}` : ''}</h2>
                         {ballot && (
-                            <div style={{ display: 'flex', gap: '0.5rem' }}>
+                            <div className="sv-header-actions">
                                 <button className="pc-cancel-btn" onClick={() => {
                                     if (!sheet || !ballot) return
                                     const rows: string[][] = [['Category', 'Field', 'Side', 'Score', 'Student']]
@@ -216,26 +216,26 @@ const ScorecardViewer = () => {
                     </div>
 
                     {!isCoachView && editLog.length > 0 && (
-                        <div style={{ marginBottom: '1rem' }}>
+                        <div className="sv-editlog-section">
                             <button
                                 onClick={() => setShowEditLog(!showEditLog)}
                                 aria-expanded={showEditLog}
-                                style={{ background: 'none', border: 'none', padding: 0, cursor: 'pointer', color: 'var(--primary)', fontSize: '0.875rem', fontWeight: 600, textDecoration: 'underline' }}
+                                className="sv-editlog-toggle"
                             >
                                 Ballot contains {editLog.length} edit{editLog.length !== 1 ? 's' : ''}
                             </button>
                             {showEditLog && (
-                                <div style={{ marginTop: '0.75rem', border: '1px solid var(--border)', borderRadius: '0.75rem', overflow: 'hidden' }}>
+                                <div className="sv-editlog-list">
                                     {editLog.map((entry, i) => (
-                                        <div key={i} style={{ padding: '0.75rem 1rem', borderBottom: i < editLog.length - 1 ? '1px solid var(--border)' : 'none', fontSize: '0.85rem' }}>
-                                            <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '0.25rem' }}>
+                                        <div key={i} className="sv-editlog-entry">
+                                            <div className="sv-editlog-entry-head">
                                                 <strong>{entry.editor_email}</strong>
-                                                <span style={{ color: 'var(--text-muted)', fontSize: '0.8rem' }}>{new Date(entry.edited_at).toLocaleString()}</span>
+                                                <span className="sv-editlog-time">{new Date(entry.edited_at).toLocaleString()}</span>
                                             </div>
-                                            <div style={{ color: 'var(--text-muted)', marginBottom: '0.25rem' }}>
+                                            <div className="sv-editlog-diff">
                                                 P: {entry.p_points_before} → {entry.p_points_after} | D: {entry.d_points_before} → {entry.d_points_after}
                                             </div>
-                                            <div style={{ fontStyle: 'italic' }}>{entry.reason}</div>
+                                            <div className="sv-editlog-reason">{entry.reason}</div>
                                         </div>
                                     ))}
                                 </div>
@@ -244,7 +244,7 @@ const ScorecardViewer = () => {
                     )}
 
                     {!isCoachView && ballot && (
-                        <div style={{ display: 'flex', gap: '0.5rem', marginBottom: '1rem', flexWrap: 'wrap' }}>
+                        <div className="sv-edit-actions">
                             {!editing ? (
                                 <button className="pc-save-btn" onClick={startEditing}>Edit Scores</button>
                             ) : (
@@ -254,8 +254,7 @@ const ScorecardViewer = () => {
                                 </>
                             )}
                             <button
-                                className="org-back-btn"
-                                style={{ backgroundColor: '#d32f2f', color: '#fff', borderColor: '#d32f2f' }}
+                                className="org-back-btn sv-delete-btn"
                                 onClick={() => setShowDeleteModal(true)}
                                 disabled={deleting}
                                 aria-label="Delete ballot permanently"
@@ -266,12 +265,12 @@ const ScorecardViewer = () => {
                     )}
 
                     {/* Trial info */}
-                    <div className="trial-info-card" style={{ marginBottom: '1rem' }}>
+                    <div className="trial-info-card sv-trial-info">
                         <div className="trial-info-meta">
                             <span className="trial-info-courtroom">Courtroom {sheet.courtroomNumber}</span>
                             <span className="trial-info-presider">{sheet.presiderName}</span>
                         </div>
-                        <p className="case-name" style={{ margin: 0 }}>{sheet.caseName}</p>
+                        <p className="case-name sv-case-name">{sheet.caseName}</p>
                         <div className="team-labels">
                             <div className="team-label team-label--prosecution">
                                 <span className="team-code">{sheet.prosecutionCode}</span>
@@ -285,7 +284,7 @@ const ScorecardViewer = () => {
                     </div>
 
                     {ballot === null && (
-                        <p className="coach-empty" style={{ fontStyle: 'italic' }}>
+                        <p className="coach-empty sv-empty-italic">
                             No ballot has been submitted yet.
                         </p>
                     )}
@@ -330,14 +329,13 @@ const ScorecardViewer = () => {
                                                                             <input
                                                                                 type="number"
                                                                                 inputMode="numeric"
-                                                                                className="score-input"
-                                                                                style={{ width: '4rem', textAlign: 'center', fontWeight: 'bold' }}
+                                                                                className="score-input sv-score-input-edit"
                                                                                 aria-label={`${prosecutionLabel} score for ${a.assignmentName}`}
                                                                                 value={editedScores[`${a.assignmentKey}:P`] ?? ''}
                                                                                 onChange={e => setEditedScores(prev => ({ ...prev, [`${a.assignmentKey}:P`]: Number(e.target.value) }))}
                                                                             />
                                                                         ) : (
-                                                                            <span className="score-input" style={{ display: 'inline-block', minWidth: '2.5rem', textAlign: 'center', fontWeight: 'bold' }}>
+                                                                            <span className="score-input sv-score-input-view">
                                                                                 {pScore ?? '—'}
                                                                             </span>
                                                                         )}
@@ -345,7 +343,7 @@ const ScorecardViewer = () => {
                                                                             <p className="student-name">
                                                                                 {pStudent.name}
                                                                                 {pStudent.pronouns && <span className="student-pronouns"> ({pStudent.pronouns})</span>}
-                                                                                {pNominated && <span style={{ marginLeft: 4, fontSize: '0.75rem', color: 'var(--color-accent, #e07b00)' }}>★ Nominated</span>}
+                                                                                {pNominated && <span className="sv-nominated">★ Nominated</span>}
                                                                             </p>
                                                                         )}
                                                                     </div>
@@ -358,14 +356,13 @@ const ScorecardViewer = () => {
                                                                             <input
                                                                                 type="number"
                                                                                 inputMode="numeric"
-                                                                                className="score-input"
-                                                                                style={{ width: '4rem', textAlign: 'center', fontWeight: 'bold' }}
+                                                                                className="score-input sv-score-input-edit"
                                                                                 aria-label={`Defense score for ${a.assignmentName}`}
                                                                                 value={editedScores[`${a.assignmentKey}:D`] ?? ''}
                                                                                 onChange={e => setEditedScores(prev => ({ ...prev, [`${a.assignmentKey}:D`]: Number(e.target.value) }))}
                                                                             />
                                                                         ) : (
-                                                                            <span className="score-input" style={{ display: 'inline-block', minWidth: '2.5rem', textAlign: 'center', fontWeight: 'bold' }}>
+                                                                            <span className="score-input sv-score-input-view">
                                                                                 {dScore ?? '—'}
                                                                             </span>
                                                                         )}
@@ -373,7 +370,7 @@ const ScorecardViewer = () => {
                                                                             <p className="student-name">
                                                                                 {dStudent.name}
                                                                                 {dStudent.pronouns && <span className="student-pronouns"> ({dStudent.pronouns})</span>}
-                                                                                {dNominated && <span style={{ marginLeft: 4, fontSize: '0.75rem', color: 'var(--color-accent, #e07b00)' }}>★ Nominated</span>}
+                                                                                {dNominated && <span className="sv-nominated">★ Nominated</span>}
                                                                             </p>
                                                                         )}
                                                                     </div>
@@ -390,9 +387,9 @@ const ScorecardViewer = () => {
 
                             {/* Nominations with ranks */}
                             {ballot.nominations.length > 0 && (
-                                <div style={{ marginTop: '1.5rem' }}>
+                                <div className="sv-section">
                                     <h3>Nominations</h3>
-                                    <ul style={{ paddingLeft: '1.25rem' }}>
+                                    <ul className="sv-nominations-list">
                                         {ballot.nominations.map((n) => {
                                             const s = sheet.students[n.studentId]
                                             return (
@@ -407,7 +404,7 @@ const ScorecardViewer = () => {
 
                             {/* Tiebreaker */}
                             {ballot.tiebreaker && (
-                                <div style={{ marginTop: '1rem' }}>
+                                <div className="sv-section--sm">
                                     <h3>Tiebreaker Selection</h3>
                                     <p>
                                         <strong>{ballot.tiebreaker}</strong>
@@ -418,7 +415,7 @@ const ScorecardViewer = () => {
                             )}
 
                             {/* Totals */}
-                            <div style={{ marginTop: '1rem', display: 'flex', gap: '2rem' }}>
+                            <div className="sv-totals">
                                 <div>
                                     <strong>{sheet.prosecutionCode} ({prosecutionLabel}) Total:</strong>{' '}
                                     {ballot.scores.filter(s => s.side === 'P').reduce((sum, s) => sum + s.score, 0)}
@@ -437,16 +434,16 @@ const ScorecardViewer = () => {
         {showDeleteModal && (
             <ModalBackdrop onClose={() => setShowDeleteModal(false)} dismissible={!deleting}>
                 <div className="confirm-modal" role="dialog" aria-modal="true" aria-labelledby="delete-modal-title">
-                    <h2 id="delete-modal-title" style={{ margin: '0 0 0.75rem', color: '#d32f2f' }}>Delete Ballot</h2>
-                    <p style={{ margin: '0 0 0.5rem', lineHeight: 1.6 }}>
+                    <h2 id="delete-modal-title" className="sv-modal-title--danger">Delete Ballot</h2>
+                    <p className="sv-modal-text">
                         Are you sure you want to delete this ballot? This action cannot be undone.
                     </p>
-                    <p style={{ margin: '0 0 1rem', fontSize: '0.85rem', color: 'var(--text-muted)' }}>
+                    <p className="sv-modal-text--muted">
                         The scorer will need to resubmit their scores. Any standings or results that include this ballot will be recalculated.
                     </p>
                     <div className="confirm-actions">
                         <button onClick={() => setShowDeleteModal(false)} disabled={deleting}>Cancel</button>
-                        <button onClick={handleDeleteBallot} disabled={deleting} style={{ backgroundColor: '#d32f2f' }}>
+                        <button onClick={handleDeleteBallot} disabled={deleting} className="sv-modal-confirm-danger">
                             {deleting ? 'Deleting…' : 'Confirm Delete'}
                         </button>
                     </div>
@@ -457,21 +454,20 @@ const ScorecardViewer = () => {
         {showSaveModal && (
             <ModalBackdrop onClose={() => setShowSaveModal(false)} dismissible={!saving}>
                 <div className="confirm-modal" role="dialog" aria-modal="true" aria-labelledby="save-modal-title">
-                    <h2 id="save-modal-title" style={{ margin: '0 0 0.75rem' }}>Save Ballot Edits</h2>
-                    <p style={{ margin: '0 0 1rem', lineHeight: 1.6, fontSize: '0.9rem' }}>
+                    <h2 id="save-modal-title" className="sv-modal-title">Save Ballot Edits</h2>
+                    <p className="sv-modal-text--intro">
                         Please provide a reason for this edit. This will be logged for audit purposes.
                     </p>
-                    <label htmlFor="edit-reason" style={{ display: 'block', marginBottom: '0.4rem', fontSize: '0.85rem', fontWeight: 600 }}>Reason for edit</label>
+                    <label htmlFor="edit-reason" className="sv-reason-label">Reason for edit</label>
                     <textarea
                         id="edit-reason"
                         ref={reasonRef}
-                        className="modal-input"
-                        style={{ width: '100%', minHeight: '5rem', resize: 'vertical', padding: '0.5rem 0.75rem', fontFamily: 'inherit', fontSize: '0.9rem' }}
+                        className="modal-input sv-reason-textarea"
                         value={editReason}
                         onChange={e => setEditReason(e.target.value)}
                         placeholder="e.g., Scorer reported incorrect score for witness #2"
                     />
-                    <div className="confirm-actions" style={{ marginTop: '1rem' }}>
+                    <div className="confirm-actions sv-modal-actions-spaced">
                         <button onClick={() => { setShowSaveModal(false); setEditReason('') }} disabled={saving}>Cancel</button>
                         <button onClick={handleSaveEdit} disabled={saving || !editReason.trim()}>
                             {saving ? 'Saving…' : 'Confirm Edit'}

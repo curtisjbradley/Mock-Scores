@@ -111,7 +111,7 @@ export default function AwardCategoriesTab({ tournamentId }: Props) {
                     </thead>
                     <tbody>
                         {categories.length === 0 && (
-                            <tr><td colSpan={4} style={{ textAlign: 'center', padding: '1.5rem', color: 'var(--text-muted)' }}>No award categories yet.</td></tr>
+                            <tr><td colSpan={4} className="dash-empty-cell">No award categories yet.</td></tr>
                         )}
                         {categories.map(cat => (
                             <tr key={cat.id}>
@@ -141,13 +141,13 @@ export default function AwardCategoriesTab({ tournamentId }: Props) {
                                 <input id="ac-name" type="text" className="tc-input" required
                                     value={name} onChange={e => setName(e.target.value)} placeholder="e.g. Best Attorney" />
                             </div>
-                            <div className="tc-field" style={{ display: 'flex', gap: '1rem' }}>
-                                <div style={{ flex: 1 }}>
+                            <div className="tc-field tc-field--row">
+                                <div className="tc-field-col">
                                     <label className="tc-label" htmlFor="ac-min">Min Nominees</label>
                                     <input id="ac-min" type="number" className="tc-input" min={0}
                                         value={minNominees} onChange={e => setMinNominees(+e.target.value)} />
                                 </div>
-                                <div style={{ flex: 1 }}>
+                                <div className="tc-field-col">
                                     <label className="tc-label" htmlFor="ac-max">Max Nominees</label>
                                     <input id="ac-max" type="number" className="tc-input" min={1}
                                         value={maxNominees} onChange={e => setMaxNominees(+e.target.value)} />

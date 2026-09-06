@@ -1,5 +1,6 @@
 import { useMemo } from 'react'
 import * as Blockly from 'blockly'
+import '../styles/standings.css'
 
 interface Props {
     standingsXml: string
@@ -37,8 +38,8 @@ export default function TiebreakerViewer({ standingsXml, onClose }: Props) {
                 {onClose && <button className="sb-expand-btn" onClick={onClose}>✕ Close</button>}
             </div>
             {tiebreakers.length === 0
-                ? <p style={{ fontSize: '13px', color: 'var(--text-muted)' }}>No tiebreakers configured.</p>
-                : <ol style={{ margin: '8px 0 0', paddingLeft: '20px', fontSize: '13px', lineHeight: '1.8' }}>
+                ? <p className="sb-tb-empty">No tiebreakers configured.</p>
+                : <ol className="sb-tb-list">
                     {tiebreakers.map((t, i) => (
                         <li key={i}>
                             {t.type === 'standings_h2h_conditional'
@@ -55,7 +56,7 @@ export default function TiebreakerViewer({ standingsXml, onClose }: Props) {
     if (onClose) {
         return (
             <div className="sb-fullscreen-overlay">
-                <div style={{ padding: '16px' }}>{content}</div>
+                <div className="sb-tb-overlay-body">{content}</div>
             </div>
         )
     }

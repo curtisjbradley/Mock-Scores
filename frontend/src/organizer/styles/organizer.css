@@ -312,6 +312,206 @@
     font-style: italic;
 }
 
+/* ── Scorecard viewer ───────────────────────────────────────────────────── */
+.sv-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    flex-wrap: wrap;
+    gap: 0.5rem;
+}
+
+.sv-header h2 {
+    margin: 0;
+}
+
+.sv-header-actions {
+    display: flex;
+    gap: 0.5rem;
+}
+
+.sv-editlog-section {
+    margin-bottom: 1rem;
+}
+
+.sv-editlog-toggle {
+    background: none;
+    border: none;
+    padding: 0;
+    cursor: pointer;
+    color: var(--primary);
+    font-size: 0.875rem;
+    font-weight: 600;
+    text-decoration: underline;
+}
+
+.sv-editlog-list {
+    margin-top: 0.75rem;
+    border: 1px solid var(--border);
+    border-radius: 0.75rem;
+    overflow: hidden;
+}
+
+.sv-editlog-entry {
+    padding: 0.75rem 1rem;
+    border-bottom: 1px solid var(--border);
+    font-size: 0.85rem;
+}
+
+.sv-editlog-entry:last-child {
+    border-bottom: none;
+}
+
+.sv-editlog-entry-head {
+    display: flex;
+    justify-content: space-between;
+    margin-bottom: 0.25rem;
+}
+
+.sv-editlog-time {
+    color: var(--text-muted);
+    font-size: 0.8rem;
+}
+
+.sv-editlog-diff {
+    color: var(--text-muted);
+    margin-bottom: 0.25rem;
+}
+
+.sv-editlog-reason {
+    font-style: italic;
+}
+
+.sv-edit-actions {
+    display: flex;
+    gap: 0.5rem;
+    margin-bottom: 1rem;
+    flex-wrap: wrap;
+}
+
+.sv-delete-btn {
+    background: var(--danger);
+    color: var(--white);
+    border-color: var(--danger);
+}
+
+.sv-trial-info {
+    margin-bottom: 1rem;
+}
+
+.sv-case-name {
+    margin: 0;
+}
+
+.sv-empty-italic {
+    font-style: italic;
+}
+
+.sv-score-input-edit {
+    width: 4rem;
+    text-align: center;
+    font-weight: bold;
+}
+
+.sv-score-input-view {
+    display: inline-block;
+    min-width: 2.5rem;
+    text-align: center;
+    font-weight: bold;
+}
+
+.sv-nominated {
+    margin-left: 0.25rem;
+    font-size: 0.75rem;
+    color: var(--color-accent, #e07b00);
+}
+
+.sv-section {
+    margin-top: 1.5rem;
+}
+
+.sv-section--sm {
+    margin-top: 1rem;
+}
+
+.sv-nominations-list {
+    padding-left: 1.25rem;
+}
+
+.sv-totals {
+    margin-top: 1rem;
+    display: flex;
+    gap: 2rem;
+}
+
+.sv-modal-title {
+    margin: 0 0 0.75rem;
+}
+
+.sv-modal-title--danger {
+    margin: 0 0 0.75rem;
+    color: var(--danger);
+}
+
+.sv-modal-text {
+    margin: 0 0 0.5rem;
+    line-height: 1.6;
+}
+
+.sv-modal-text--muted {
+    margin: 0 0 1rem;
+    font-size: 0.85rem;
+    color: var(--text-muted);
+}
+
+.sv-modal-text--intro {
+    margin: 0 0 1rem;
+    line-height: 1.6;
+    font-size: 0.9rem;
+}
+
+.sv-modal-confirm-danger {
+    background: var(--danger);
+}
+
+.sv-reason-label {
+    display: block;
+    margin-bottom: 0.4rem;
+    font-size: 0.85rem;
+    font-weight: 600;
+}
+
+.sv-reason-textarea {
+    width: 100%;
+    min-height: 5rem;
+    resize: vertical;
+    padding: 0.5rem 0.75rem;
+    font-family: inherit;
+    font-size: 0.9rem;
+}
+
+.sv-modal-actions-spaced {
+    margin-top: 1rem;
+}
+
+.org-empty-state {
+    opacity: 0.6;
+    text-align: center;
+    padding: 24px 0;
+}
+
+.rv-toolbar {
+    display: flex;
+    gap: 0.5rem;
+    align-items: center;
+    flex-wrap: wrap;
+}
+
+.rv-send-msg {
+    font-size: 0.82rem;
+    color: var(--text-muted);
+}
+
 /* ── Roster tab ─────────────────────────────────────────────────────────────── */
 .roster-tab {
     display: flex;

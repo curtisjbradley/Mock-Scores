@@ -3,6 +3,7 @@ import * as Blockly from 'blockly';
 import { tiebreakerBlockDefs } from './tiebreakerBlocks';
 import { workspaceToTiebreakerRules, type TiebreakerRule } from './tiebreakerGenerator';
 import { getTheme, watchTheme } from './blocklyTheme';
+import '../styles/standings.css';
 
 Blockly.common.defineBlocks(tiebreakerBlockDefs);
 
@@ -52,12 +53,12 @@ export default function TiebreakerBuilder({ onChange }: Props) {
 
   return (
     <div>
-      <div ref={divRef} style={{ height: 400, width: '100%', border: '1px solid #ccc' }} />
-      <details style={{ marginTop: 8 }}>
-        <summary style={{ cursor: 'pointer', fontSize: 13, color: '#666' }}>
+      <div ref={divRef} className="sb-tb-canvas" />
+      <details className="sb-tb-details">
+        <summary className="sb-tb-summary">
           Generated tiebreaker rules ({rules.length})
         </summary>
-        <pre style={{ fontSize: 12, background: '#f5f5f5', padding: 8, borderRadius: 4 }}>
+        <pre className="sb-tb-pre">
           {JSON.stringify(rules, null, 2)}
         </pre>
       </details>

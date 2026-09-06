@@ -135,3 +135,15 @@
 
 .pw-req--met  { color: var(--text-muted); }
 .pw-req--unmet { color: var(--danger); }
+
+/* Message / intro text on status and reset pages */
+.auth-message {
+    line-height: 1.6;
+    margin: 0.5rem 0 1.5rem;
+}
+
+.auth-intro {
+    line-height: 1.6;
+    margin: 0 0 1rem;
+    color: var(--text-muted);
+}

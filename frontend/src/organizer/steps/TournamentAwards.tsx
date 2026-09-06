@@ -4,6 +4,7 @@ import { makeAwardCategory } from '../types/tournament'
 import DangerButton from '../../shared/components/DangerButton'
 import AddButton from '../../shared/components/AddButton'
 import '../styles/organizer.css'
+import '../styles/tournament-create.css'
 
 interface Props {
     awardCategories: AwardCategory[]
@@ -53,7 +54,7 @@ export default function TournamentAwards({ awardCategories, onChange, onNext, on
             </p>
 
             {awardCategories.map((ac, i) => (
-                <div key={ac.id} className="tc-card" style={{ padding: '1rem' }}>
+                <div key={ac.id} className="tc-card tc-card--compact">
                     <div className="tc-field">
                         <label className="tc-label" htmlFor={`ac-name-${ac.id}`}>Category name</label>
                         <input
@@ -65,8 +66,8 @@ export default function TournamentAwards({ awardCategories, onChange, onNext, on
                             onChange={e => update(ac.id, { name: e.target.value })}
                         />
                     </div>
-                    <div className="tc-field" style={{ display: 'flex', gap: '1rem' }}>
-                        <div style={{ flex: 1 }}>
+                    <div className="tc-field tc-field--row">
+                        <div className="tc-field-col">
                             <label className="tc-label" htmlFor={`ac-min-${ac.id}`}>Min nominees</label>
                             <input
                                 id={`ac-min-${ac.id}`}
@@ -77,7 +78,7 @@ export default function TournamentAwards({ awardCategories, onChange, onNext, on
                                 onChange={e => update(ac.id, { minNominees: Number(e.target.value) })}
                             />
                         </div>
-                        <div style={{ flex: 1 }}>
+                        <div className="tc-field-col">
                             <label className="tc-label" htmlFor={`ac-max-${ac.id}`}>Max nominees</label>
                             <input
                                 id={`ac-max-${ac.id}`}

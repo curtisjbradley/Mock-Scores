@@ -35,7 +35,7 @@ const VerifyEmail = () => {
                 {status === 'loading' && (
                     <>
                         <h1>Verifying your email…</h1>
-                        <p style={{ lineHeight: 1.6, margin: '0.5rem 0 1.5rem' }}>
+                        <p className="auth-message">
                             Please wait while we verify your email address.
                         </p>
                     </>
@@ -43,7 +43,7 @@ const VerifyEmail = () => {
                 {status === 'success' && (
                     <>
                         <h1>Email verified!</h1>
-                        <p style={{ lineHeight: 1.6, margin: '0.5rem 0 1.5rem' }}>
+                        <p className="auth-message">
                             {message}
                         </p>
                         <Link to="/login" className="auth-link-back">Go to sign in</Link>
@@ -52,7 +52,7 @@ const VerifyEmail = () => {
                 {status === 'error' && (
                     <>
                         <h1>Verification failed</h1>
-                        <p style={{ lineHeight: 1.6, margin: '0.5rem 0 1.5rem' }}>
+                        <p className="auth-message">
                             {message}
                         </p>
                         <Link to="/login" className="auth-link-back">Go to sign in</Link>

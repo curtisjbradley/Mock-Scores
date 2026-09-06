@@ -206,7 +206,6 @@
 /* The feature card spans the full row on wider layouts. */
 .dash-stat-card--feature {
     grid-column: 1 / -1;
-    background: linear-gradient(135deg, var(--primary-subtle), var(--surface) 70%);
     border-color: var(--primary);
 }
 
@@ -274,6 +273,7 @@
 
 .dash-stat-progress-fill {
     height: 100%;
+    width: var(--fill, 100%);
     border-radius: 999px;
     background: var(--primary);
     transition: width 200ms ease;
