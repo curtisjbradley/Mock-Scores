@@ -88,15 +88,14 @@
     height: 2rem;
     display: grid;
     place-items: center;
-    border: 1px solid var(--border);
+    border: 0;
     border-radius: 0.6rem;
-    background: var(--surface-muted);
     color: var(--text-muted);
     font-size: 1rem;
     line-height: 1;
     font-family: inherit;
     cursor: pointer;
-    transition: background 120ms ease, color 120ms ease, border-color 120ms ease;
+    background-color: transparent;
 }
 
 .dash-sidebar-toggle:hover {
