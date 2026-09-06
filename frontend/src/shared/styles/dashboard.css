@@ -10,21 +10,18 @@
     display: flex;
     align-items: flex-start;
     gap: 1.5rem;
+    height: 100%;
+    flex: 1;
 }
 
 /* ── Sidebar ─────────────────────────────────────────────────────────────── */
-.org-main {
-    padding: 0;
-}
 .site-header {
     border-bottom: 0;
 }
 .dash-sidebar {
-    flex-shrink: 0;
     position: sticky;
     /* Cap to the viewport (matching the 1.5rem top offset top and bottom) so a
        long nav list scrolls inside the sidebar rather than extending past it. */
-    height: 100%;
     width: 12rem;
     display: flex;
     flex-direction: column;
@@ -32,6 +29,8 @@
     background: var(--surface);
     transition: width 160ms ease;
     padding-left: 1rem;
+    align-self: stretch;
+    height: auto;
 }
 
 .site-footer {
