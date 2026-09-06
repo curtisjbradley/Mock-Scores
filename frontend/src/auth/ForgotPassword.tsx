@@ -22,7 +22,7 @@ const ForgotPassword = () => {
             <main className="auth-main">
                 <div className="auth-card">
                     <h1>Check your email</h1>
-                    <p style={{ lineHeight: 1.6, margin: '0.5rem 0 1.5rem' }}>
+                    <p className="auth-message">
                         If an account exists for <strong>{email}</strong>, we've sent a password reset link.
                         Please check your inbox (and spam folder).
                     </p>
@@ -36,7 +36,7 @@ const ForgotPassword = () => {
         <main className="auth-main">
             <div className="auth-card">
                 <h1>Reset your password</h1>
-                <p style={{ lineHeight: 1.6, margin: '0 0 1rem', color: '#555' }}>
+                <p className="auth-intro">
                     Enter your email address and we'll send you a link to reset your password.
                 </p>
                 <form className="auth-form" onSubmit={handleSubmit} noValidate>

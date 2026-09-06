@@ -101,7 +101,7 @@ const OrganizerHome = () => {
                         </div>
                     ))}
                     {filteredTournaments.length === 0 && tournaments.length > 0 && (
-                        <p style={{ opacity: 0.6, textAlign: 'center', padding: '24px 0' }}>
+                        <p className="org-empty-state">
                             No {statusFilter} tournaments.
                         </p>
                     )}

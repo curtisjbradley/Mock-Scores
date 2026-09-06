@@ -7,6 +7,7 @@ import '../../organizer/styles/organizer.css'
 import '../../organizer/styles/tabs.css'
 import '../../organizer/styles/round-view.css'
 import '../../organizer/styles/standings.css'
+import '../styles/coach-pages.css'
 
 interface Witness { id: string; name: string; side: string }
 
@@ -108,7 +109,7 @@ export default function AssignRoles() {
             <div className="org-container">
                 <button className="org-back-btn" onClick={() => navigate(-1)}>← Back to schedule</button>
                 <h1>Assign Roles</h1>
-                <p className="coach-empty" style={{ marginBottom: 16 }}>
+                <p className="coach-empty coach-assign-note">
                     Assigning roles for <strong>{isP ? 'Prosecution' : 'Defense'}</strong> side.
                 </p>
                 {rows.length === 0
@@ -138,7 +139,7 @@ export default function AssignRoles() {
                         </table>
                     )
                 }
-                <div className="tab-actions" style={{ marginTop: 16 }}>
+                <div className="tab-actions coach-tab-actions">
                     <button className="btn-confirm" onClick={handleSave} disabled={saving}>Save</button>
                     <button className="btn-cancel" onClick={() => navigate(-1)} disabled={saving}>Cancel</button>
                 </div>

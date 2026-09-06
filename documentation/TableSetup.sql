@@ -314,6 +314,7 @@ create table team_coaches
         references teams
             on delete cascade,
     is_owner boolean default false not null,
+    notifications boolean default true not null,
     primary key (coach_id, team_id)
 );
 

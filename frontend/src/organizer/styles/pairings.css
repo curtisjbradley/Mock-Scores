@@ -936,3 +936,60 @@ button.pc-matchup-col:hover {
 button.pc-matchup-col:hover .pc-col-edit-hint {
     opacity: 1;
 }
+
+/* ── Scorer row name + status badges ─────────────────────────────────────── */
+.pc-scorer-name {
+    flex: 1;
+    font-size: 0.875rem;
+}
+
+.pc-conflict-badge {
+    margin-left: 0.375rem;
+    background: var(--danger);
+    color: var(--white);
+    font-size: 0.7rem;
+    font-weight: 700;
+    padding: 1px 5px;
+    border-radius: 3px;
+}
+
+.pc-conflict-reported-badge {
+    margin-left: 0.375rem;
+    background: #c05000;
+    color: var(--white);
+    font-size: 0.7rem;
+    font-weight: 700;
+    padding: 1px 5px;
+    border-radius: 3px;
+}
+
+/* ── Modal helpers (Add scorer / presider / manual entry / remove) ───────── */
+.pc-modal-title {
+    margin: 0 0 0.75rem;
+}
+
+.pc-modal-field {
+    display: block;
+    margin-bottom: 0.75rem;
+}
+
+.pc-modal-text {
+    margin: 0 0 1rem;
+    line-height: 1.6;
+}
+
+.pc-modal-text--tight {
+    margin: 0 0 0.5rem;
+    line-height: 1.6;
+}
+
+.pc-modal-text--muted {
+    margin: 0 0 1rem;
+    font-size: 0.85rem;
+    color: var(--text-muted);
+}
+
+.pc-modal-remove-btn {
+    background: var(--danger);
+    color: var(--white);
+}

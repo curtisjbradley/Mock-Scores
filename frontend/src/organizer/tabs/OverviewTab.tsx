@@ -120,7 +120,7 @@ export default function OverviewTab({ tournamentId, tournament, onNavigate }: Pr
                         <>
                             <p className="dash-stat-value">{ballotPct}%</p>
                             <div className="dash-stat-progress">
-                                <div className="dash-stat-progress-fill" style={{ width: `${ballotPct}%` }} />
+                                <div className="dash-stat-progress-fill" style={{ '--fill': `${ballotPct}%` } as React.CSSProperties} />
                             </div>
                             <p className="dash-stat-sub">{ballots.submitted} of {ballots.total} ballots submitted</p>
                         </>

@@ -49,9 +49,9 @@ function ManageConflictsModal({ scorer, tournamentId, onClose }: {
             <div className="confirm-modal" role="dialog" aria-modal="true" aria-labelledby="conflicts-title">
                 <h2 id="conflicts-title">Conflicts — {scorer.first_name} {scorer.last_name}</h2>
                 {conflicts.length > 0 && (
-                    <ul style={{ listStyle: 'none', padding: 0, margin: '0 0 12px' }}>
+                    <ul className="sc-conflict-list">
                         {conflicts.map(c => (
-                            <li key={c.team_id} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '4px 0' }}>
+                            <li key={c.team_id} className="sc-conflict-item">
                                 <span>{c.team_name}</span>
                                 <DangerButton onClick={() => removeConflict(c)}>Remove</DangerButton>
                             </li>
@@ -70,7 +70,7 @@ function ManageConflictsModal({ scorer, tournamentId, onClose }: {
                         </select>
                     </div>
                 ) : (
-                    <p style={{ opacity: 0.6, fontSize: '0.9em' }}>
+                    <p className="sc-conflict-empty">
                         {teams.length === 0 ? 'No teams in this tournament yet.' : 'All teams are already listed as conflicts.'}
                     </p>
                 )}
@@ -144,7 +144,7 @@ export default function ScorersTab({ tournamentId }: { tournamentId: string }) {
         <Section title="Scorers" description="Manage available scorers">
             <div className="tab-actions">
                 <AddButton onClick={openAddModal}>+ Add scorer</AddButton>
-                <button className="org-new-btn" onClick={() => setShowImport(true)} style={{ marginLeft: 8 }}>Import CSV</button>
+                <button className="org-new-btn tab-actions-import" onClick={() => setShowImport(true)}>Import CSV</button>
             </div>
 
             <div className="dash-table-scroll">
@@ -157,7 +157,7 @@ export default function ScorersTab({ tournamentId }: { tournamentId: string }) {
                                 <td className="dash-judge-name">
                                     {scorer.email ?? '—'}
                                     {scorer.email && bouncedEmails.has(scorer.email.toLowerCase()) && (
-                                        <span title="Email delivery failed" style={{ marginLeft: 6, background: '#dc2626', color: '#fff', fontSize: '0.65rem', fontWeight: 700, padding: '1px 5px', borderRadius: 3, verticalAlign: 'middle' }}>⚠ BOUNCED</span>
+                                        <span title="Email delivery failed" className="dash-bounced-badge">⚠ BOUNCED</span>
                                     )}
                                 </td>
                                 <td>

@@ -1,0 +1,83 @@
+/* Styles for CsvImportModal. Reuses the shared `.confirm-modal` /
+   `.confirm-actions` and `.tc-*` field primitives; these rules cover the
+   modal's descriptive text, upload controls, preview table, and result view. */
+
+.csv-import-description {
+    margin: 0 0 12px;
+    font-size: 0.9em;
+    color: var(--text-muted);
+}
+
+.csv-import-columns {
+    margin: 0 0 12px;
+    font-size: 0.85em;
+    color: var(--text-muted);
+}
+
+.csv-import-example {
+    background: var(--surface-muted);
+    padding: 2px 4px;
+    border-radius: 3px;
+}
+
+.csv-import-upload-label {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.35rem;
+}
+
+.csv-import-file {
+    font-size: 0.9em;
+}
+
+.csv-import-textarea {
+    font-family: monospace;
+    font-size: 0.85em;
+}
+
+.csv-import-preview {
+    margin: 8px 0 12px;
+    overflow-x: auto;
+}
+
+.csv-import-preview-label {
+    font-size: 0.85em;
+}
+
+.csv-import-preview-table {
+    font-size: 0.8em;
+    margin-top: 4px;
+}
+
+.csv-import-empty {
+    opacity: 0.4;
+}
+
+.csv-import-result {
+    margin: 12px 0;
+}
+
+.csv-import-success {
+    color: var(--green-text-alt);
+    font-weight: 600;
+}
+
+.csv-import-error-heading {
+    color: var(--danger);
+    font-weight: 600;
+    margin-bottom: 4px;
+}
+
+.csv-import-error-list {
+    list-style: none;
+    padding: 0;
+    margin: 0;
+    font-size: 0.85em;
+    max-height: 150px;
+    overflow-y: auto;
+}
+
+.csv-import-error-item {
+    color: var(--danger);
+    padding: 2px 0;
+}

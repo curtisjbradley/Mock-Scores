@@ -2,6 +2,7 @@ import { useMemo } from 'react';
 import { dummyTeams } from './dummyTeams';
 import { computeStandings } from './standingsEngine';
 import type { StandingsConfig } from './standingsGenerator';
+import '../styles/standings.css';
 
 interface Props {
   config: StandingsConfig;
@@ -12,10 +13,10 @@ export default function StandingsPreview({ config }: Props) {
   const cols = config.columns;
 
   return (
-    <div style={{ marginBottom: 24 }}>
-      <h4 style={{ margin: '0 0 8px', fontSize: 14 }}>Live Preview (dummy data)</h4>
+    <div className="sb-preview">
+      <h4 className="sb-preview-title">Live Preview (dummy data)</h4>
       {cols.length === 0 ? (
-        <p style={{ fontSize: 13, color: '#888' }}>
+        <p className="sb-preview-empty">
           Add "show column" blocks under "Define Visible Stats" to see standings.
         </p>
       ) : (

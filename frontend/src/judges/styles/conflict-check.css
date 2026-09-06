@@ -23,6 +23,15 @@
     color: var(--text);
 }
 
+.conflict-message {
+    color: var(--text-muted);
+    line-height: 1.6;
+}
+
+.conflict-message--tight {
+    color: var(--text-muted);
+}
+
 .conflict-info {
     margin: 0 0 1.25rem;
     padding: 0;

@@ -181,6 +181,12 @@ html {
     margin-top: 1.5rem;
 }
 
+.scoresheet-footer--tiebreaker {
+    flex-direction: column;
+    align-items: center;
+    gap: 1rem;
+}
+
 #score-submit-desktop {
     padding: 0.85rem 3rem;
     min-height: 2.75rem;

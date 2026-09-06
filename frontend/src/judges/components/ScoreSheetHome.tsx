@@ -7,6 +7,7 @@ import { useParams } from 'react-router-dom';
 import NotFound from "../../error/NotFound.tsx";
 import LoadingPage from "../../layout/LoadingPage.tsx";
 import type { IScoreSheetFormat } from "@mock-scores/shared";
+import "../styles/conflict-check.css";
 
 const ScoreSheetHome = () => {
     const { scorerID } = useParams<{ scorerID: string }>();
@@ -40,7 +41,7 @@ const ScoreSheetHome = () => {
             <div className="conflict-check">
                 <div className="conflict-card">
                     <h1 className="conflict-title">Link No Longer Valid</h1>
-                    <p style={{ color: "var(--text-muted)", lineHeight: 1.6 }}>
+                    <p className="conflict-message">
                         A ballot has already been submitted using this link.
                         If you believe this is an error, please contact the tournament organizer.
                     </p>
@@ -54,7 +55,7 @@ const ScoreSheetHome = () => {
             <div className="conflict-check">
                 <div className="conflict-card">
                     <h1 className="conflict-title">Conflict Reported</h1>
-                    <p style={{ color: "var(--text-muted)", lineHeight: 1.6 }}>
+                    <p className="conflict-message">
                         You have reported a conflict of interest for this assignment.
                         The organizer has been notified. Please do not score this round.
                     </p>
@@ -70,7 +71,7 @@ const ScoreSheetHome = () => {
             <div className="conflict-check">
                 <div className="conflict-card">
                     <h1 className="conflict-title">Something Went Wrong</h1>
-                    <p style={{ color: "var(--text-muted)", lineHeight: 1.6 }}>
+                    <p className="conflict-message">
                         We couldn't load your scoresheet. Please check your link and try again.
                         If the problem continues, contact the tournament organizer.
                     </p>
@@ -88,7 +89,7 @@ const ScoreSheetHome = () => {
             <div className="conflict-check">
                 <div className="conflict-card">
                     <h1 className="conflict-title">Submitted</h1>
-                    <p style={{ color: "var(--text-muted)" }}>Your scoresheet has been recorded. Thank you!</p>
+                    <p className="conflict-message--tight">Your scoresheet has been recorded. Thank you!</p>
                 </div>
             </div>
         );

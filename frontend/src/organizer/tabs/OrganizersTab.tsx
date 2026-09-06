@@ -71,7 +71,7 @@ export default function OrganizersTab({ tournamentId }: { tournamentId: string }
                                         : <span className="dash-judge-name">
                                             {org.email}
                                             {bouncedEmails.has(org.email.toLowerCase()) && (
-                                                <span title="Email delivery failed" style={{ marginLeft: 6, background: '#dc2626', color: '#fff', fontSize: '0.65rem', fontWeight: 700, padding: '1px 5px', borderRadius: 3, verticalAlign: 'middle' }}>⚠ BOUNCED</span>
+                                                <span title="Email delivery failed" className="dash-bounced-badge">⚠ BOUNCED</span>
                                             )}
                                           </span>
                                     }

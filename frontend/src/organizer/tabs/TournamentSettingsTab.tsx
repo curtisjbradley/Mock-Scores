@@ -149,10 +149,10 @@ export default function TournamentSettingsTab({ tournamentId }: { tournamentId: 
             {isOwner && (
                 <div className="tc-status-section">
                     <h3>Tournament status</h3>
-                    <p style={{ fontSize: '0.9em', color: '#666', marginBottom: 12 }}>
+                    <p className="tc-status-current">
                         Current status: <strong>{currentStatus}</strong>
                     </p>
-                    <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
+                    <div className="tc-status-actions">
                         {currentStatus !== 'active' && (
                             <button type="button" className="org-new-btn" disabled={statusSaving}
                                 onClick={() => handleStatusChange('active')}>
@@ -166,8 +166,7 @@ export default function TournamentSettingsTab({ tournamentId }: { tournamentId: 
                             </button>
                         )}
                         {currentStatus !== 'archived' && (
-                            <button type="button" className="org-new-btn" disabled={statusSaving}
-                                style={{ background: '#6b7280' }}
+                            <button type="button" className="org-new-btn org-new-btn--archive" disabled={statusSaving}
                                 onClick={() => handleStatusChange('archived')}>
                                 Archive
                             </button>

@@ -6,6 +6,7 @@ import { extractStandingsConfig, parseColumnsFromXml } from '../../organizer/blo
 import { standingsBlockDefs } from '../../organizer/blockly/standingsBlocks'
 import { tiebreakerBlockDefs } from '../../organizer/blockly/tiebreakerBlocks'
 import { type StandingsApiPayload, useCoachContext } from '../CoachContext'
+import '../styles/coach-pages.css'
 
 const TiebreakerViewer = lazy(() => import('../../organizer/blockly/TiebreakerViewer'))
 
@@ -104,7 +105,7 @@ export default function StandingsPage() {
                 ))}</tbody>
             </table>
             {standingsXml && (
-                <div style={{ marginTop: '24px' }}>
+                <div className="coach-tiebreaker-viewer">
                     <TiebreakerViewer standingsXml={standingsXml} />
                 </div>
             )}

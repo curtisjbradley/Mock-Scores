@@ -2,14 +2,7 @@ import { useNavigate } from 'react-router-dom'
 import { formatDate } from '../../utils/format'
 import EmptyState from '../../shared/components/EmptyState'
 import { useCoachContext } from '../CoachContext'
-
-const submittedStyle: React.CSSProperties = {
-    background: 'var(--surface)',
-    border: '1px solid var(--border)',
-    color: 'var(--text-muted)',
-    cursor: 'default',
-    fontWeight: 500,
-}
+import '../styles/coach-pages.css'
 
 /**
  * Schedule page. Reads the tournament and schedule from the shared
@@ -39,9 +32,9 @@ export default function SchedulePage() {
     return (
         <>
             {schedule.map(round => (
-                <div key={round.round_id} style={{ marginBottom: 16 }}>
-                    <h3 style={{ margin: '8px 0 6px' }}>
-                        {round.name}{round.round_time ? ` — ${formatDate(round.round_time)}` : ' (Time TBD)'}
+                <div key={round.round_id} className="coach-round-group">
+                    <h3 className="coach-round-heading">
+                        {round.name}{round.round_time ? ` - ${formatDate(round.round_time)}` : ' (Time TBD)'}
                     </h3>
                     <table className="dash-standings-table">
                         <thead>
@@ -57,19 +50,19 @@ export default function SchedulePage() {
                                 const side: 'p' | 'd' = teamId && p.d_team_id === teamId ? 'd' : 'p'
                                 return (
                                     <tr key={p.pairing_id}>
-                                        <td>{p.p_team_code} — {p.p_team_name}</td>
-                                        <td>{p.d_team_code} — {p.d_team_name}</td>
+                                        <td>{p.p_team_code} - {p.p_team_name}</td>
+                                        <td>{p.d_team_code} - {p.d_team_name}</td>
                                         <td>{p.courtroom_name ?? 'TBD'}</td>
-                                        <td style={{ display: 'flex', gap: '0.5rem', flexWrap: 'wrap' }}>
+                                        <td className="coach-schedule-actions">
                                             {p.has_assignments
-                                                ? <button className="org-new-btn" style={submittedStyle} disabled>
+                                                ? <button className="org-new-btn coach-btn-submitted" disabled>
                                                     ✓ Roles assigned
                                                   </button>
                                                 : <button className="org-new-btn" onClick={() => onAssignRoles(p.pairing_id, side)}>
                                                     Assign Roles
                                                   </button>}
                                             {p.has_call_order
-                                                ? <button className="org-new-btn" style={submittedStyle} disabled>
+                                                ? <button className="org-new-btn coach-btn-submitted" disabled>
                                                     ✓ Call order set
                                                   </button>
                                                 : <button className="org-new-btn" onClick={() => onWitnessOrder(p.pairing_id)}>

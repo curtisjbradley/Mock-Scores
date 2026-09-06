@@ -93,7 +93,7 @@ export function EditTeamModal({ team, existingNames, onClose, onSave }: {
                     <input id="edit-team-name" type="text" required ref={nameRef}
                         className={`modal-input${isDuplicate ? ' modal-input--invalid' : ''}`}
                         value={name} onChange={e => setName(e.target.value)} />
-                    <label htmlFor="edit-team-code" className="modal-label">Team code <span style={{ fontWeight: 'normal', opacity: 0.6 }}>(optional)</span></label>
+                    <label htmlFor="edit-team-code" className="modal-label">Team code <span className="modal-label-optional">(optional)</span></label>
                     <input id="edit-team-code" type="text"
                         className="modal-input"
                         value={code} onChange={e => setCode(e.target.value)}

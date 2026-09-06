@@ -1,0 +1,138 @@
+/* ─────────────────────────────────────────────────────────────────────────
+   Coach page styles — extracted from inline styles on the coach dashboard
+   pages (Results, Schedule, Standings, Roster) and the standalone
+   assign-roles / witness-call-order flows. Relies on the shared theme
+   variables defined in styles/globals.css.
+   ───────────────────────────────────────────────────────────────────────── */
+
+/* Round grouping used on the Results and Schedule tables. */
+.coach-round-group {
+    margin-bottom: 16px;
+}
+
+.coach-round-heading {
+    margin: 8px 0 6px;
+}
+
+/* Results: clickable pairing row + win/loss diff cell. */
+.coach-pairing-row {
+    cursor: pointer;
+}
+
+.coach-diff-cell {
+    font-size: 0.8rem;
+    font-weight: 700;
+}
+
+.coach-diff-cell--pos { color: var(--green-text); }
+.coach-diff-cell--neg { color: var(--red-text); }
+.coach-diff-cell--tie { color: var(--text-muted); }
+
+/* Results: expanded ballot-detail cell. */
+.coach-ballot-cell {
+    padding: 0.5rem 1rem;
+    background: var(--surface-muted);
+}
+
+.coach-ballot-status {
+    font-size: 0.85rem;
+    color: var(--text-muted);
+}
+
+.coach-ballot-status--empty {
+    font-style: italic;
+}
+
+.coach-ballot-link-row {
+    margin-bottom: 0.5rem;
+}
+
+.coach-ballot-table {
+    width: 100%;
+    font-size: 0.85rem;
+    border-collapse: collapse;
+}
+
+.coach-ballot-table tr {
+    border-bottom: 1px solid var(--border);
+}
+
+.coach-ballot-table th,
+.coach-ballot-table td {
+    padding: 0.35rem 0.5rem;
+}
+
+.coach-ballot-table th {
+    padding: 0.25rem 0.5rem;
+}
+
+.coach-ballot-table .coach-ballot-col-label {
+    text-align: left;
+}
+
+.coach-ballot-table .coach-ballot-col-center {
+    text-align: center;
+}
+
+.coach-ballot-table .coach-ballot-result {
+    text-align: center;
+    font-weight: 700;
+}
+
+/* Schedule: action-button cell + submitted (disabled) button state. */
+.coach-schedule-actions {
+    display: flex;
+    gap: 0.5rem;
+    flex-wrap: wrap;
+}
+
+.coach-btn-submitted {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    color: var(--text-muted);
+    cursor: default;
+    font-weight: 500;
+}
+
+/* Standings: spacing above the tiebreaker viewer. */
+.coach-tiebreaker-viewer {
+    margin-top: 24px;
+}
+
+/* Roster: default-setup action button row. */
+.coach-roster-actions {
+    display: flex;
+    gap: 0.75rem;
+    margin-top: 1.5rem;
+    flex-wrap: wrap;
+}
+
+/* Roster: side-setup modal dialog + inner spacing. */
+.coach-setup-modal {
+    max-width: 36rem;
+    width: 100%;
+    max-height: 80vh;
+    overflow-y: auto;
+}
+
+.coach-setup-modal h2 {
+    margin-top: 0;
+}
+
+.coach-setup-heading {
+    margin: 0 0 0.5rem;
+}
+
+.coach-setup-table {
+    margin-bottom: 1rem;
+}
+
+/* Assign-roles: side note above the roles table. */
+.coach-assign-note {
+    margin-bottom: 16px;
+}
+
+/* Witness-call-order / assign-roles: save/cancel action bar spacing. */
+.coach-tab-actions {
+    margin-top: 16px;
+}

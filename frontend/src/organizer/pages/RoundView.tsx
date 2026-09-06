@@ -95,11 +95,11 @@ const RoundView = () => {
                             </div>
                         )}
                     </div>
-                    <div style={{ display: 'flex', gap: '0.5rem', alignItems: 'center', flexWrap: 'wrap' }}>
+                    <div className="rv-toolbar">
                         <button className="org-new-btn" onClick={handleSendScoringLinks} disabled={sending}>
                             {sending ? 'Sending…' : 'Send scoring links'}
                         </button>
-                        {sendMsg && <span style={{ fontSize: '0.82rem', color: 'var(--text-muted)' }}>{sendMsg}</span>}
+                        {sendMsg && <span className="rv-send-msg">{sendMsg}</span>}
 
                     </div>
                 </div>

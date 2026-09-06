@@ -218,7 +218,7 @@ export default function CoachLayout({ isOrganizerView = false }: Props) {
     }
 
     return (
-        <main className="org-main">
+
             <div className="dash-shell">
                 <DashboardSidebar
                     items={NAV_ITEMS}
@@ -229,7 +229,7 @@ export default function CoachLayout({ isOrganizerView = false }: Props) {
                     ariaLabel="Coach dashboard sections"
                 />
 
-                <div className="dash-content">
+                <main className="dash-content">
                     <button
                         className="org-back-btn"
                         onClick={() => navigate(isOrganizerView ? `/organizer/${tournamentId}?page=teams` : '/coach')}
@@ -238,8 +238,6 @@ export default function CoachLayout({ isOrganizerView = false }: Props) {
                     </button>
 
                     <Outlet context={contextValue} />
-                </div>
-            </div>
-        </main>
-    )
+                </main>
+            </div>)
 }

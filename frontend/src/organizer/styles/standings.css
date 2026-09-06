@@ -99,3 +99,66 @@
 .tb-unsaved { font-size: 0.8rem; color: var(--text-muted); margin-left: auto; }
 
 .tb-description { font-size: 0.8rem; color: var(--text-muted); margin-bottom: 1rem; }
+
+/* ── StandingsPreview ─────────────────────────────────────────────────────── */
+.sb-preview { margin-bottom: 1.5rem; }
+.sb-preview-title { margin: 0 0 0.5rem; font-size: 0.875rem; }
+.sb-preview-empty { font-size: 0.8125rem; color: var(--text-muted); }
+
+/* ── TiebreakerViewer ─────────────────────────────────────────────────────── */
+.sb-tb-empty { font-size: 0.8125rem; color: var(--text-muted); }
+.sb-tb-list { margin: 0.5rem 0 0; padding-left: 1.25rem; font-size: 0.8125rem; line-height: 1.8; }
+.sb-tb-overlay-body { padding: 1rem; }
+
+/* ── TiebreakerBuilder ────────────────────────────────────────────────────── */
+.sb-tb-canvas { height: 25rem; width: 100%; border: 1px solid var(--border); }
+.sb-tb-details { margin-top: 0.5rem; }
+.sb-tb-summary { cursor: pointer; font-size: 0.8125rem; color: var(--text-muted); }
+.sb-tb-pre {
+    font-size: 0.75rem;
+    background: var(--surface-muted);
+    color: var(--text);
+    padding: 0.5rem;
+    border-radius: 0.25rem;
+}
+
+/* ── StandingsTab ─────────────────────────────────────────────────────────── */
+.st-section { margin-bottom: 1rem; }
+.st-section--lg { margin-top: 2rem; }
+.st-filter-label { display: block; margin-bottom: 0.4rem; }
+.st-checkbox-row {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.5rem;
+    align-items: center;
+}
+.st-checkbox {
+    display: flex;
+    align-items: center;
+    gap: 0.3rem;
+    cursor: pointer;
+    font-size: 0.875rem;
+}
+.st-export-row {
+    margin-bottom: 1rem;
+    display: flex;
+    gap: 0.5rem;
+}
+.st-empty-cell {
+    text-align: center;
+    color: var(--text-muted);
+}
+.st-tiebreaker-wrap { margin-top: 1.5rem; }
+.st-awards-header {
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+    margin-bottom: 0.75rem;
+}
+.st-awards-title { font-size: 1.1rem; }
+.st-award-group { margin-bottom: 1.5rem; }
+.st-award-group-title {
+    display: block;
+    margin-bottom: 0.4rem;
+    font-size: 1rem;
+}

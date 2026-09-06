@@ -85,7 +85,6 @@ export default function TournamentDashboard() {
     const activeNav: OrganizerScreen = STRUCTURE_TABS.has(screen as OrganizerTab) ? 'structure' : screen
 
     return (
-        <main className="org-main">
             <div className="dash-shell">
                 <DashboardSidebar
                     items={NAV_ITEMS}
@@ -96,7 +95,7 @@ export default function TournamentDashboard() {
                     ariaLabel="Tournament dashboard sections"
                 />
 
-                <div className="dash-content">
+                <main className="dash-content">
 
                     {screen === 'overview' && (
                         <OverviewTab tournamentId={id} tournament={tournament} onNavigate={onNavSelect} />
@@ -123,8 +122,7 @@ export default function TournamentDashboard() {
                     {visitedTabs.has('standings')  && <div hidden={activeTab !== 'standings'}><StandingsTab tournamentId={id} /></div>}
                     {visitedTabs.has('tiebreakers')&& <div hidden={activeTab !== 'tiebreakers'}><TiebreakersTab tournamentId={id} /></div>}
                     {visitedTabs.has('awards')     && <div hidden={activeTab !== 'awards'}><AwardCategoriesTab tournamentId={id} /></div>}
-                </div>
+                </main>
             </div>
-        </main>
     )
 }

@@ -1,6 +1,7 @@
 import { useState, useRef } from 'react'
 import ModalBackdrop from './ModalBackdrop'
 import Icon from './Icon'
+import './styles/csv-import-modal.css'
 
 interface CsvImportModalProps {
     title: string
@@ -77,18 +78,18 @@ export default function CsvImportModal({ title, description, columns, exampleRow
         <ModalBackdrop onClose={onClose}>
             <div className="confirm-modal csv-import-modal" role="dialog" aria-modal="true" aria-labelledby="csv-import-title">
                 <h2 id="csv-import-title">{title}</h2>
-                <p style={{ margin: '0 0 12px', fontSize: '0.9em', color: '#666' }}>{description}</p>
+                <p className="csv-import-description">{description}</p>
 
                 {!result ? (
                     <>
-                        <div style={{ margin: '0 0 12px', fontSize: '0.85em', color: '#555' }}>
+                        <div className="csv-import-columns">
                             <strong>Expected columns:</strong> {columns.join(', ')}
                             <br />
-                            <strong>Example:</strong> <code style={{ background: '#f3f4f6', padding: '2px 4px', borderRadius: 3 }}>{exampleRow}</code>
+                            <strong>Example:</strong> <code className="csv-import-example">{exampleRow}</code>
                         </div>
 
                         <div className="tc-field">
-                            <label className="tc-label" htmlFor="csv-file-upload" style={{ display: 'inline-flex', alignItems: 'center', gap: '0.35rem' }}>
+                            <label className="tc-label csv-import-upload-label" htmlFor="csv-file-upload">
                                 <Icon name="Upload" size={0.9} />
                                 Upload CSV file
                             </label>
@@ -98,7 +99,7 @@ export default function CsvImportModal({ title, description, columns, exampleRow
                                 type="file"
                                 accept=".csv,text/csv"
                                 onChange={handleFileChange}
-                                style={{ fontSize: '0.9em' }}
+                                className="csv-import-file"
                             />
                         </div>
 
@@ -106,23 +107,22 @@ export default function CsvImportModal({ title, description, columns, exampleRow
                             <label className="tc-label" htmlFor="csv-text-paste">Or paste CSV text</label>
                             <textarea
                                 id="csv-text-paste"
-                                className="tc-input"
+                                className="tc-input csv-import-textarea"
                                 rows={5}
                                 placeholder={`${columns.join(',')}\n${exampleRow}`}
                                 value={csvText}
                                 onChange={e => handleTextChange(e.target.value)}
-                                style={{ fontFamily: 'monospace', fontSize: '0.85em' }}
                             />
                         </div>
 
                         {preview && preview.length > 0 && (
-                            <div style={{ margin: '8px 0 12px', overflowX: 'auto' }}>
-                                <strong style={{ fontSize: '0.85em' }}>Preview ({preview.length} row{preview.length > 1 ? 's' : ''} shown):</strong>
-                                <table className="dash-standings-table" style={{ fontSize: '0.8em', marginTop: 4 }}>
+                            <div className="csv-import-preview">
+                                <strong className="csv-import-preview-label">Preview ({preview.length} row{preview.length > 1 ? 's' : ''} shown):</strong>
+                                <table className="dash-standings-table csv-import-preview-table">
                                     <tbody>
                                         {preview.map((row, i) => (
                                             <tr key={i}>
-                                                {row.map((cell, j) => <td key={j}>{cell || <span style={{ opacity: 0.4 }}>—</span>}</td>)}
+                                                {row.map((cell, j) => <td key={j}>{cell || <span className="csv-import-empty">—</span>}</td>)}
                                             </tr>
                                         ))}
                                     </tbody>
@@ -139,20 +139,20 @@ export default function CsvImportModal({ title, description, columns, exampleRow
                     </>
                 ) : (
                     <>
-                        <div style={{ margin: '12px 0' }}>
+                        <div className="csv-import-result">
                             {result.created > 0 && (
-                                <p style={{ color: '#16a34a', fontWeight: 600 }}>
+                                <p className="csv-import-success">
                                     ✓ Successfully imported {result.created} record{result.created !== 1 ? 's' : ''}.
                                 </p>
                             )}
                             {result.errors.length > 0 && (
                                 <div>
-                                    <p style={{ color: '#dc2626', fontWeight: 600, marginBottom: 4 }}>
+                                    <p className="csv-import-error-heading">
                                         {result.errors.length} error{result.errors.length !== 1 ? 's' : ''}:
                                     </p>
-                                    <ul style={{ listStyle: 'none', padding: 0, margin: 0, fontSize: '0.85em', maxHeight: 150, overflowY: 'auto' }}>
+                                    <ul className="csv-import-error-list">
                                         {result.errors.map((err, i) => (
-                                            <li key={i} style={{ color: '#dc2626', padding: '2px 0' }}>
+                                            <li key={i} className="csv-import-error-item">
                                                 {err.row > 0 ? `Row ${err.row}: ` : ''}{err.message}
                                             </li>
                                         ))}

@@ -1,6 +1,7 @@
 import { API_BASE } from '../../config';
 import "../styles/modal.css";
 import "../styles/scoresheet.css";
+import "../styles/conflict-check.css";
 import { useState } from "react";
 import type { IScoreSheetFormat } from "@mock-scores/shared";
 
@@ -74,7 +75,7 @@ function TiebreakerOnly({ details, storageKey, onSubmitSuccess }: TiebreakerOnly
             <div className="conflict-check">
                 <div className="conflict-card">
                     <h1 className="conflict-title">Error</h1>
-                    <p style={{ color: "var(--text-muted)" }}>{submitError}</p>
+                    <p className="conflict-message--tight">{submitError}</p>
                     <div className="conflict-actions">
                         <button type="button" className="conflict-btn-proceed" onClick={() => setSubmitError(null)}>
                             Try Again
@@ -155,7 +156,7 @@ function TiebreakerOnly({ details, storageKey, onSubmitSuccess }: TiebreakerOnly
                 </table>
             </div>
 
-            <div className="scoresheet-footer" style={{ flexDirection: "column", alignItems: "center", gap: "1rem" }}>
+            <div className="scoresheet-footer scoresheet-footer--tiebreaker">
                 <div className="tiebreaker-options">
                     <label className={`tiebreaker-option${tiebreaker === details.prosecutionCode ? " tiebreaker-option--selected" : ""}`}>
                         <input type="radio" name="tiebreaker" value={details.prosecutionCode} checked={tiebreaker === details.prosecutionCode} onChange={(e) => setTiebreaker(e.target.value)} />
