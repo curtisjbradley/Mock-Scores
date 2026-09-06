@@ -104,16 +104,10 @@
     border-color: var(--primary);
 }
 
-.dash-sidebar-toggle-icon {
+.app-icon.dash-sidebar-toggle-icon {
     width: 1rem;
     height: 1rem;
-    background-color: currentColor;
-    mask-repeat: no-repeat;
-    -webkit-mask-repeat: no-repeat;
-    mask-position: center;
-    -webkit-mask-position: center;
-    mask-size: contain;
-    -webkit-mask-size: contain;
+    background-color: var(--text);
 }
 
 .dash-sidebar-nav {
@@ -162,17 +156,12 @@
     color: var(--primary);
 }
 
-.dash-nav-icon {
-    flex-shrink: 0;
+/* `.app-icon` (from <Icon>) provides the mask. Nav labels are muted/active-
+   colored, but the icons themselves are always var(--text) per design. */
+.app-icon.dash-nav-icon {
     width: 1.25rem;
     height: 1.25rem;
     background-color: var(--text);
-    mask-repeat: no-repeat;
-    -webkit-mask-repeat: no-repeat;
-    mask-position: center;
-    -webkit-mask-position: center;
-    mask-size: contain;
-    -webkit-mask-size: contain;
 }
 
 .dash-nav-label {
@@ -337,4 +326,36 @@
     .dash-sidebar--collapsed .dash-nav-label {
         display: inline;
     }
+}
+
+/* ── Coach notification toggle ───────────────────────────────────────────── */
+.coach-notif-toggle {
+    display: inline-grid;
+    place-items: center;
+    width: 2rem;
+    height: 2rem;
+    padding: 0;
+    border-radius: 0.5rem;
+    cursor: pointer;
+    border: none;
+    background-color: transparent;
+    transition: background 120ms ease, border-color 120ms ease;
+}
+.notif-cell {
+    display:grid;
+    justify-content: center;
+}
+
+.coach-notif-toggle:hover {
+    background: var(--primary-subtle);
+    border-color: var(--primary);
+}
+
+.coach-notif-toggle .app-icon {
+    background-color: var(--text);
+}
+
+/* Dim the icon when notifications are off. */
+.coach-notif-toggle[aria-pressed="false"] .app-icon {
+    opacity: 0.45;
 }

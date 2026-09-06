@@ -1,5 +1,6 @@
 import { useState, useRef } from 'react'
 import ModalBackdrop from './ModalBackdrop'
+import Icon from './Icon'
 
 interface CsvImportModalProps {
     title: string
@@ -88,7 +89,7 @@ export default function CsvImportModal({ title, description, columns, exampleRow
 
                         <div className="tc-field">
                             <label className="tc-label" htmlFor="csv-file-upload" style={{ display: 'inline-flex', alignItems: 'center', gap: '0.35rem' }}>
-                                <img src="/icons/Upload.svg" alt="" aria-hidden="true" style={{ width: '0.9rem', height: '0.9rem', objectFit: 'contain' }} />
+                                <Icon name="Upload" size={0.9} />
                                 Upload CSV file
                             </label>
                             <input

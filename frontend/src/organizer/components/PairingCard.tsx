@@ -4,6 +4,7 @@ import type { IBallotStatus, ICourtroom, IPairing, IPairingScorer, IRound, IScor
 import { apiFetch } from '../../auth/auth'
 import TeamSelectOptions from '../../shared/components/TeamSelectOptions'
 import DangerButton from '../../shared/components/DangerButton'
+import Icon from '../../shared/components/Icon'
 import ModalBackdrop from '../../shared/components/ModalBackdrop'
 import { useAutoFocus } from '../../shared/hooks/useAutoFocus'
 
@@ -164,7 +165,7 @@ export default function PairingCard({ pairing, teams, courtrooms, scorers, assig
             <div className="dash-pairing-topbar">
                 <div className="pc-topbar-actions">
                     <button className="pc-download-ballot-btn" onClick={openBallot}>
-                        <img src="/icons/Download.svg" alt="" aria-hidden="true" className="pc-btn-icon" />
+                        <Icon name="Download" size={0.9} />
                         Download ballot
                     </button>
                     {!assignedScorers.some(s => s.is_presider) && (

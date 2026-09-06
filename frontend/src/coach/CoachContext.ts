@@ -71,6 +71,8 @@ export interface CoachContextValue {
     addCoach: (email: string) => Promise<void>
     removeCoach: (coachId: string) => Promise<void>
     makeOwner: (coachId: string) => Promise<void>
+    /** Toggles a coach's email-notification preference. */
+    toggleNotifications: (coachId: string) => Promise<void>
 
     // ── Student mutations ─────────────────────────────────────────────────────
     addStudent: (studentName: string, pronouns: string | null) => Promise<void>

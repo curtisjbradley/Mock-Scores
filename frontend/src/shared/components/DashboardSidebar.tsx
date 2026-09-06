@@ -1,11 +1,12 @@
 import {useState} from "react";
+import Icon from "./Icon";
 
 export interface DashboardNavItem<T extends string> {
     key: T
     label: string
     /**
      * Icon name (without extension) of a designed SVG in `public/icons/`.
-     * The sidebar renders it as `<img src="/icons/{icon}.svg">`.
+     * Rendered via the shared `<Icon>` component (a `var(--text)` CSS mask).
      */
     icon: string
 }
@@ -74,14 +75,7 @@ export default function DashboardSidebar<T extends string>({
                     aria-expanded={!collapsed}
                     title={collapsed ? 'Expand navigation' : 'Collapse navigation'}
                 >
-                    <span
-                        className="dash-sidebar-toggle-icon"
-                        aria-hidden="true"
-                        style={{
-                            maskImage: `url(/icons/${collapsed ? 'Expand' : 'Shrink'}.svg)`,
-                            WebkitMaskImage: `url(/icons/${collapsed ? 'Expand' : 'Shrink'}.svg)`,
-                        }}
-                    />
+                    <Icon name={collapsed ? 'Expand' : 'Shrink'} className="dash-sidebar-toggle-icon" size={1} />
                 </button>
             </div>
 
@@ -95,14 +89,7 @@ export default function DashboardSidebar<T extends string>({
                         aria-current={active === item.key ? 'page' : undefined}
                         title={collapsed ? item.label : undefined}
                     >
-                        <span
-                            className="dash-nav-icon"
-                            aria-hidden="true"
-                            style={{
-                                maskImage: `url(/icons/${item.icon}.svg)`,
-                                WebkitMaskImage: `url(/icons/${item.icon}.svg)`,
-                            }}
-                        />
+                        <Icon name={item.icon} className="dash-nav-icon" />
                         {!collapsed && <span className="dash-nav-label">{item.label}</span>}
                     </button>
                 ))}

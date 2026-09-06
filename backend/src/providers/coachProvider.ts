@@ -126,13 +126,13 @@ export async function getResults(tournamentId: string): Promise<ICoachResultRoun
 
 export async function getCoaches(teamId: string): Promise<ICoach[]> {
     const joined = (await dbQuery<ICoach>(
-        `SELECT tc.coach_id, a.first_name || ' ' || a.last_name AS name, a.email, tc.is_owner, true AS has_joined
+        `SELECT tc.coach_id, a.first_name || ' ' || a.last_name AS name, a.email, tc.is_owner, true AS has_joined, notifications as  notifications_enabled
          FROM team_coaches tc JOIN auth a ON a.user_id = tc.coach_id
          WHERE tc.team_id = $1`,
         [teamId]
     ))?.rows ?? [];
     const invited = (await dbQuery<ICoach>(
-        `SELECT ti.id AS coach_id, ti.invite_email AS name, ti.invite_email AS email, false AS is_owner, false AS has_joined
+        `SELECT ti.id AS coach_id, ti.invite_email AS name, ti.invite_email AS email, false AS is_owner, false AS has_joined, true as notifications_enabled
          FROM team_invites ti WHERE ti.team_id = $1`,
         [teamId]
     ))?.rows ?? [];
@@ -148,13 +148,29 @@ export async function addCoach(teamId: string, email: string): Promise<ICoach> {
             `INSERT INTO team_coaches (coach_id, team_id, is_owner) VALUES ($1,$2,false) ON CONFLICT DO NOTHING`,
             [user.user_id, teamId]
         );
-        return { coach_id: user.user_id, name: `${user.first_name} ${user.last_name}`, email: user.email, is_owner: false, has_joined: true };
+        return { coach_id: user.user_id, name: `${user.first_name} ${user.last_name}`, email: user.email, is_owner: false, has_joined: true, notifications_enabled: true };
     }
     const row = (await dbQuery<{ id: string }>(
         `INSERT INTO team_invites (team_id, invite_email) VALUES ($1,$2) ON CONFLICT DO NOTHING RETURNING id`,
         [teamId, email]
     ))?.rows[0];
-    return { coach_id: row?.id ?? '', name: email, email, is_owner: false, has_joined: false };
+    return { coach_id: row?.id ?? '', name: email, email, is_owner: false, has_joined: false, notifications_enabled: true };
+}
+
+export async function toggleNotifications(teamId: string, coach_id : string) : Promise<ICoach | null> {
+    return (await dbQuery<ICoach>(
+        `UPDATE team_coaches tc
+         SET notifications = NOT notifications
+         FROM auth a
+         WHERE tc.coach_id = $1 AND tc.team_id = $2 AND a.user_id = tc.coach_id
+         RETURNING tc.coach_id,
+                   a.first_name || ' ' || a.last_name AS name,
+                   a.email,
+                   tc.is_owner,
+                   true AS has_joined,
+                   tc.notifications AS notifications_enabled`,
+        [coach_id, teamId]
+    ))?.rows[0] ?? null;
 }
 
 export async function removeCoach(teamId: string, coachId: string): Promise<void> {

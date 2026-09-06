@@ -848,13 +848,6 @@
     gap: 0.35rem;
 }
 
-.pc-btn-icon {
-    width: 0.9rem;
-    height: 0.9rem;
-    object-fit: contain;
-    display: block;
-}
-
 .pc-download-ballot-btn:hover:not(:disabled) {
     background: var(--surface-muted);
     border-color: var(--primary);

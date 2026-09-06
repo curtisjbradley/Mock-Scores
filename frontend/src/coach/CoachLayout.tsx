@@ -143,6 +143,17 @@ export default function CoachLayout({ isOrganizerView = false }: Props) {
         if (r.ok) setCoaches(prev => prev.map(c => ({ ...c, is_owner: c.coach_id === coachId })))
     }, [tournamentId, teamId])
 
+    const toggleNotifications = useCallback(async (coachId: string) => {
+        const r = await apiFetch(`${teamBase}/coaches/${coachId}/toggle-notifications`, { method: 'POST' })
+        if (!r.ok) return
+        const updated: ICoach | null = await r.json().catch(() => null)
+        if (updated) {
+            setCoaches(prev => prev.map(c => c.coach_id === coachId
+                ? { ...c, notifications_enabled: updated.notifications_enabled }
+                : c))
+        }
+    }, [teamBase])
+
     // ── Student mutations ─────────────────────────────────────────────────────
     const addStudent = useCallback(async (studentName: string, pronouns: string | null) => {
         const r = await apiFetch(`${teamBase}/students`, {
@@ -200,6 +211,7 @@ export default function CoachLayout({ isOrganizerView = false }: Props) {
         addCoach,
         removeCoach,
         makeOwner,
+        toggleNotifications,
         addStudent,
         removeStudent,
         loadBallots,

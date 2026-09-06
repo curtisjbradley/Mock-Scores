@@ -728,7 +728,7 @@ export async function getRoundResultsPublicContext(roundID: string): Promise<{
         `SELECT DISTINCT a.email FROM team_coaches tc
          JOIN teams t ON t.id = tc.team_id
          JOIN auth a  ON a.user_id = tc.coach_id
-         WHERE t.tournament_id = $1`,
+         WHERE t.tournament_id = $1 AND tc.notifications`,
         [roundRow.tournament_id],
     ))?.rows ?? [];
 

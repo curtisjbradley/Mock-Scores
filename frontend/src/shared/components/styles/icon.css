@@ -1,0 +1,17 @@
+/* Shared masked-icon primitive. The mask-image + size are set inline per icon;
+   this rule provides the fill and mask defaults. The fill is `currentColor`, so
+   an icon inherits its parent's `color` — which is `var(--text)` app-wide by
+   default, and follows contextual colors (e.g. button hover) where set. */
+.app-icon {
+    display: inline-block;
+    flex-shrink: 0;
+    width: 1.25rem;
+    height: 1.25rem;
+    background-color: currentColor;
+    mask-repeat: no-repeat;
+    -webkit-mask-repeat: no-repeat;
+    mask-position: center;
+    -webkit-mask-position: center;
+    mask-size: contain;
+    -webkit-mask-size: contain;
+}

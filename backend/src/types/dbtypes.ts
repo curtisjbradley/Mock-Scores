@@ -128,6 +128,7 @@ export interface ITeamCoachRow {
     coach_id: string;
     team_id: string;
     is_owner: boolean;
+    notifications: boolean;
 }
 
 export interface IRoundRow {
