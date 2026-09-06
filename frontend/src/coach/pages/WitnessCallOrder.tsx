@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react'
 import { useNavigate, useParams } from 'react-router-dom'
 import { apiFetch } from '../../auth/auth'
 import type { IWitnessCallOrder } from '@mock-scores/shared'
+import { resolveCoachTournament } from '../coachApi'
 import '../../organizer/styles/organizer.css'
 import '../../organizer/styles/tabs.css'
 import '../../organizer/styles/round-view.css'
@@ -10,7 +11,7 @@ import '../../organizer/styles/standings.css'
 interface Witness { id: string; name: string; side: string }
 
 export default function WitnessCallOrder() {
-    const { id: tournamentId, teamId, pairingId } = useParams<{ id: string; teamId: string; pairingId: string }>()
+    const { teamId, pairingId } = useParams<{ teamId: string; pairingId: string }>()
     const navigate = useNavigate()
 
     const [witnesses, setWitnesses] = useState<Witness[]>([])
@@ -18,23 +19,31 @@ export default function WitnessCallOrder() {
     const [saving, setSaving] = useState(false)
 
     useEffect(() => {
-        if (!tournamentId || !teamId || !pairingId) return
+        if (!teamId || !pairingId) return
+        let active = true
         const urlSide = (new URLSearchParams(window.location.search).get('side') ?? 'p') as 'p' | 'd'
 
-        Promise.all([
-            apiFetch(`/coach/tournaments/${tournamentId}/witnesses`).then(r => r.ok ? r.json() : []),
-            apiFetch(`/coach/tournaments/${tournamentId}/format`).then(r => r.ok ? r.json() : null),
-            apiFetch(`/coach/teams/${teamId}/pairings/${pairingId}/witness-order`).then(r => r.ok ? r.json() : []),
-        ]).then(([wits, fmt, saved]: [Witness[], { p_witnesses_called: number; d_witnesses_called: number } | null, IWitnessCallOrder[]]) => {
-            const relevant = wits.filter(w => w.side === (urlSide === 'p' ? 'P' : 'D') || w.side === 'S')
-            setWitnesses(relevant)
-            const count = fmt ? (urlSide === 'p' ? fmt.p_witnesses_called : fmt.d_witnesses_called) : 0
-            // Pre-fill slots from saved order, pad with empty strings up to count
-            const savedIds = saved.map(w => w.witness_id)
-            const initial = Array.from({ length: count }, (_, i) => savedIds[i] ?? '')
-            setSlots(initial)
+        // Tournament-scoped endpoints query by tournament id; resolve it from the team.
+        resolveCoachTournament(teamId, false, undefined).then(info => {
+            if (!active || !info) return
+            const tid = info.tournamentId
+            return Promise.all([
+                apiFetch(`/coach/tournaments/${tid}/witnesses`).then(r => r.ok ? r.json() : []),
+                apiFetch(`/coach/tournaments/${tid}/format`).then(r => r.ok ? r.json() : null),
+                apiFetch(`/coach/teams/${teamId}/pairings/${pairingId}/witness-order`).then(r => r.ok ? r.json() : []),
+            ]).then(([wits, fmt, saved]: [Witness[], { p_witnesses_called: number; d_witnesses_called: number } | null, IWitnessCallOrder[]]) => {
+                if (!active) return
+                const relevant = wits.filter(w => w.side === (urlSide === 'p' ? 'P' : 'D') || w.side === 'S')
+                setWitnesses(relevant)
+                const count = fmt ? (urlSide === 'p' ? fmt.p_witnesses_called : fmt.d_witnesses_called) : 0
+                // Pre-fill slots from saved order, pad with empty strings up to count
+                const savedIds = saved.map(w => w.witness_id)
+                const initial = Array.from({ length: count }, (_, i) => savedIds[i] ?? '')
+                setSlots(initial)
+            })
         }).catch(() => {})
-    }, [tournamentId, teamId, pairingId])
+        return () => { active = false }
+    }, [teamId, pairingId])
 
     function setSlot(index: number, witnessId: string) {
         setSlots(prev => {

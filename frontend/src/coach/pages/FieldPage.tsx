@@ -1,7 +1,14 @@
-import type { ICompetitionTeam } from '@mock-scores/shared'
+import { useCoachContext } from '../CoachContext'
 
-export default function FieldTab({ field }: { field: ICompetitionTeam[] }) {
+/**
+ * Field page. Reads the tournament's competing teams from the shared
+ * `CoachLayout` context.
+ */
+export default function FieldPage() {
+    const { field } = useCoachContext()
+
     if (field.length === 0) return <p className="coach-empty">No teams yet.</p>
+
     return (
         <table className="dash-standings-table">
             <thead><tr><th>Code</th><th>Team</th></tr></thead>

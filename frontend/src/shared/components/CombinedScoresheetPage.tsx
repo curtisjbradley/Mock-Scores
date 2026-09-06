@@ -4,6 +4,7 @@ import { apiFetch } from '../../auth/auth'
 import type { IScoreSheetFormat, ScorecardPayload, IPairingScorer, BallotLayoutSegment } from '@mock-scores/shared'
 import CombinedScoresheet, { type CombinedBallot, type SegmentRow } from './CombinedScoresheet'
 import { downloadCombinedXlsx } from './combinedScoresheetXls'
+import { resolveCoachTournament } from '../../coach/coachApi'
 import './combined-scoresheet.css'
 
 type BallotDetail = { sheet: IScoreSheetFormat | null; ballot: ScorecardPayload | null }
@@ -134,18 +135,23 @@ function mapBallot(rows: SegmentRow[], ballot: ScorecardPayload): Map<string, nu
  * Fetches every submitted ballot for a pairing and renders the combined
  * scoresheet (see {@link CombinedScoresheet}). Works for both roles:
  *
- * - Coach route `/coach/:id/pairing/:pairingId/scoresheet` — uses the coach
- *   ballots endpoints. Scorer identities are redacted server-side, so columns
- *   are labelled "Scorer 1..N".
+ * - Coach route `/coach/:teamId/pairing/:pairingId/scoresheet` — resolves the
+ *   tournament from the team, then uses the coach ballots endpoints. Scorer
+ *   identities are redacted server-side, so columns are labelled "Scorer 1..N".
  * - Organizer route `/organizer/:id/round/:round/pairing/:pairingId/scoresheet`
  *   — uses the round scorers list + per-assignment scoresheet endpoint, so
  *   columns are labelled with the real scorer names.
  */
 export default function CombinedScoresheetPage() {
-    const { id, round, pairingId } = useParams<{ id: string; round?: string; pairingId: string }>()
+    // Organizer routes use `:id` (tournament id); coach routes use `:teamId`.
+    const { id, teamId, round, pairingId } = useParams<{ id: string; teamId: string; round?: string; pairingId: string }>()
     const navigate = useNavigate()
     const [params] = useSearchParams()
     const isCoachView = window.location.pathname.includes('/coach/')
+
+    // The route id that identifies the fetch scope: organizer tournament id, or
+    // the coach team id (resolved to a tournament id below).
+    const routeId = isCoachView ? (teamId ?? '') : (id ?? '')
 
     const roundLabel = params.get('roundName') || null
     const dateLabel = formatRoundTime(params.get('roundTime'))
@@ -155,15 +161,19 @@ export default function CombinedScoresheetPage() {
     const [error, setError] = useState<string | null>(null)
 
     useEffect(() => {
-        if (!id || !pairingId) return
+        if (!routeId || !pairingId) return
         let cancelled = false
 
         const loadCoach = async (): Promise<LoadedData | null> => {
-            const listRes = await apiFetch(`/coach/tournaments/${id}/pairings/${pairingId}/ballots`)
+            // Coach ballots endpoints query by tournament id; resolve it from the team.
+            const info = await resolveCoachTournament(routeId, false, undefined)
+            const tid = info?.tournamentId
+            if (!tid) throw new Error('Failed to resolve tournament')
+            const listRes = await apiFetch(`/coach/tournaments/${tid}/pairings/${pairingId}/ballots`)
             if (!listRes.ok) throw new Error('Failed to load ballots')
             const list = await listRes.json() as { assignment_id: string }[]
             const details = await Promise.all(list.map(b =>
-                apiFetch(`/coach/tournaments/${id}/pairings/${pairingId}/ballots/${b.assignment_id}`)
+                apiFetch(`/coach/tournaments/${tid}/pairings/${pairingId}/ballots/${b.assignment_id}`)
                     .then(r => r.ok ? r.json() as Promise<BallotDetail> : null)
             ))
             return buildData(details, (_d, i) => `Scorer ${i + 1}`)
@@ -171,13 +181,13 @@ export default function CombinedScoresheetPage() {
 
         const loadOrganizer = async (): Promise<LoadedData | null> => {
             if (!round) throw new Error('Missing round')
-            const scorersRes = await apiFetch(`/organizer/tournament/${id}/rounds/${round}/pairings/${pairingId}/scorers`)
+            const scorersRes = await apiFetch(`/organizer/tournament/${routeId}/rounds/${round}/pairings/${pairingId}/scorers`)
             if (!scorersRes.ok) throw new Error('Failed to load scorers')
             const scorers = await scorersRes.json() as IPairingScorer[]
             // Only scorers who have actually submitted a ballot contribute columns.
             const submitted = scorers.filter(s => s.p_points != null || s.d_points != null)
             const details = await Promise.all(submitted.map(s =>
-                apiFetch(`/organizer/tournament/${id}/pairings/${pairingId}/scoresheets/${s.assignment_id}`)
+                apiFetch(`/organizer/tournament/${routeId}/pairings/${pairingId}/scoresheets/${s.assignment_id}`)
                     .then(r => r.ok ? r.json() as Promise<BallotDetail> : null)
             ))
             return buildData(details, (_d, i) => submitted[i]?.name || `Scorer ${i + 1}`)
@@ -204,7 +214,7 @@ export default function CombinedScoresheetPage() {
         void run()
 
         return () => { cancelled = true }
-    }, [id, round, pairingId, isCoachView])
+    }, [routeId, round, pairingId, isCoachView])
 
     if (loading) {
         return (

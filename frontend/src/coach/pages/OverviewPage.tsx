@@ -1,14 +1,7 @@
-import type { ICoachTournament, ICoachScheduleRound, ICoachResultRound } from '@mock-scores/shared'
+import { useNavigate } from 'react-router-dom'
+import type { ICoachScheduleRound } from '@mock-scores/shared'
 import { formatDate } from '../../utils/format'
-import type { CoachTab } from '../constants'
-
-interface Props {
-    tournament: ICoachTournament
-    schedule: ICoachScheduleRound[]
-    results: ICoachResultRound[]
-    /** Navigate to another dashboard section (used by the quick-link cards). */
-    onNavigate: (tab: CoachTab) => void
-}
+import { useCoachContext } from '../CoachContext'
 
 /** A round is "upcoming" when it has a time in the future, or no time set yet. */
 function findNextRound(schedule: ICoachScheduleRound[]): ICoachScheduleRound | null {
@@ -17,24 +10,24 @@ function findNextRound(schedule: ICoachScheduleRound[]): ICoachScheduleRound | n
         .filter(r => r.round_time && new Date(r.round_time).getTime() >= now)
         .sort((a, b) => new Date(a.round_time!).getTime() - new Date(b.round_time!).getTime())
     if (timed.length > 0) return timed[0]
-    // Fall back to the first round without a scheduled time, if any.
     return schedule.find(r => !r.round_time) ?? null
 }
 
 /**
- * Landing page for the coach dashboard. Surfaces at-a-glance information:
- * the next upcoming round, team/round counts, roles-to-assign, and a short
- * results record — with quick links into the detailed sections.
+ * Landing page for the coach dashboard. Reads the tournament, schedule and
+ * results from the shared `CoachLayout` context and surfaces at-a-glance
+ * information with quick links into the detailed sections.
  */
-export default function OverviewTab({ tournament, schedule, results, onNavigate }: Props) {
+export default function OverviewPage() {
+    const { tournament, schedule, results, base } = useCoachContext()
+    const navigate = useNavigate()
+
     const nextRound = findNextRound(schedule)
 
-    // Count pairings still needing role assignments or witness call order.
     const pendingTasks = schedule.reduce((count, round) => {
         return count + round.pairings.filter(p => !p.has_assignments || !p.has_call_order).length
     }, 0)
 
-    // Compute the team's ballot record from completed results.
     const code = tournament.team_code
     let wins = 0
     let losses = 0
@@ -56,7 +49,6 @@ export default function OverviewTab({ tournament, schedule, results, onNavigate 
     return (
         <div className="dash-overview">
             <div className="dash-overview-grid">
-                {/* Next round — spans full width as the primary highlight */}
                 <section className="dash-stat-card dash-stat-card--feature">
                     <h2 className="dash-stat-label">Next Round</h2>
                     {nextRound ? (
@@ -67,7 +59,7 @@ export default function OverviewTab({ tournament, schedule, results, onNavigate 
                                 {' · '}
                                 {nextRound.pairings.length} pairing{nextRound.pairings.length === 1 ? '' : 's'}
                             </p>
-                            <button className="dash-stat-link" onClick={() => onNavigate('schedule')}>
+                            <button className="dash-stat-link" onClick={() => navigate(`${base}/schedule`)}>
                                 View schedule →
                             </button>
                         </>
@@ -79,7 +71,7 @@ export default function OverviewTab({ tournament, schedule, results, onNavigate 
                 <section className="dash-stat-card">
                     <h2 className="dash-stat-label">Teams Registered</h2>
                     <p className="dash-stat-value">{tournament.num_teams}</p>
-                    <button className="dash-stat-link" onClick={() => onNavigate('field')}>
+                    <button className="dash-stat-link" onClick={() => navigate(`${base}/field`)}>
                         View field →
                     </button>
                 </section>
@@ -87,7 +79,7 @@ export default function OverviewTab({ tournament, schedule, results, onNavigate 
                 <section className="dash-stat-card">
                     <h2 className="dash-stat-label">Total Rounds</h2>
                     <p className="dash-stat-value">{tournament.num_rounds}</p>
-                    <button className="dash-stat-link" onClick={() => onNavigate('standings')}>
+                    <button className="dash-stat-link" onClick={() => navigate(`${base}/standings`)}>
                         View standings →
                     </button>
                 </section>
@@ -101,7 +93,7 @@ export default function OverviewTab({ tournament, schedule, results, onNavigate 
                             : `Pairing${pendingTasks === 1 ? '' : 's'} need roles or call order`}
                     </p>
                     {pendingTasks > 0 && (
-                        <button className="dash-stat-link" onClick={() => onNavigate('schedule')}>
+                        <button className="dash-stat-link" onClick={() => navigate(`${base}/schedule`)}>
                             Complete prep →
                         </button>
                     )}
@@ -115,7 +107,7 @@ export default function OverviewTab({ tournament, schedule, results, onNavigate 
                                 {wins}–{losses}{ties > 0 ? `–${ties}` : ''}
                             </p>
                             <p className="dash-stat-sub">Win–Loss{ties > 0 ? '–Tie' : ''} across scored ballots</p>
-                            <button className="dash-stat-link" onClick={() => onNavigate('results')}>
+                            <button className="dash-stat-link" onClick={() => navigate(`${base}/results`)}>
                                 View results →
                             </button>
                         </>

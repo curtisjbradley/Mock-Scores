@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react'
 import { useNavigate, useParams } from 'react-router-dom'
 import { apiFetch } from '../../auth/auth'
 import type { IScoringCategory, IStudent, IStudentAssignment } from '@mock-scores/shared'
+import { resolveCoachTournament } from '../coachApi'
 import '../../organizer/styles/organizer.css'
 import '../../organizer/styles/tabs.css'
 import '../../organizer/styles/round-view.css'
@@ -18,8 +19,8 @@ interface RoleRow {
 }
 
 export default function AssignRoles() {
-    const { id: tournamentId, teamId, pairingId, side } = useParams<{
-        id: string; teamId: string; pairingId: string; side: 'p' | 'd'
+    const { teamId, pairingId, side } = useParams<{
+        teamId: string; pairingId: string; side: 'p' | 'd'
     }>()
     const navigate = useNavigate()
 
@@ -30,31 +31,39 @@ export default function AssignRoles() {
     const [saving, setSaving] = useState(false)
 
     useEffect(() => {
-        if (!tournamentId || !teamId || !pairingId) return
-        Promise.all([
-            apiFetch(`/coach/tournaments/${tournamentId}/scoring-categories`).then(r => r.ok ? r.json() : []),
-            apiFetch(`/coach/tournaments/${tournamentId}/witnesses`).then(r => r.ok ? r.json() : []),
-            apiFetch(`/coach/teams/${teamId}/students`).then(r => r.ok ? r.json() : []),
-            apiFetch(`/coach/teams/${teamId}/pairings/${pairingId}/assignments`).then(r => r.ok ? r.json() : []),
-            apiFetch(`/coach/teams/${teamId}/default-assignments`).then(r => r.ok ? r.json() : []),
-        ]).then(([cats, wits, studs, assigns, defaults]: [IScoringCategory[], Witness[], IStudent[], IStudentAssignment[], IStudentAssignment[]]) => {
-            setCategories(cats)
-            setWitnesses(wits)
-            setStudents(studs)
+        if (!teamId || !pairingId) return
+        let active = true
+        // Tournament-scoped endpoints query by tournament id; resolve it from the team.
+        resolveCoachTournament(teamId, false, undefined).then(info => {
+            if (!active || !info) return
+            const tid = info.tournamentId
+            return Promise.all([
+                apiFetch(`/coach/tournaments/${tid}/scoring-categories`).then(r => r.ok ? r.json() : []),
+                apiFetch(`/coach/tournaments/${tid}/witnesses`).then(r => r.ok ? r.json() : []),
+                apiFetch(`/coach/teams/${teamId}/students`).then(r => r.ok ? r.json() : []),
+                apiFetch(`/coach/teams/${teamId}/pairings/${pairingId}/assignments`).then(r => r.ok ? r.json() : []),
+                apiFetch(`/coach/teams/${teamId}/default-assignments`).then(r => r.ok ? r.json() : []),
+            ]).then(([cats, wits, studs, assigns, defaults]: [IScoringCategory[], Witness[], IStudent[], IStudentAssignment[], IStudentAssignment[]]) => {
+                if (!active) return
+                setCategories(cats)
+                setWitnesses(wits)
+                setStudents(studs)
 
-            // Build default map first, then overlay pairing-specific assignments
-            const map = new Map<string, string>()
-            for (const a of defaults) {
-                const key = a.witness_id ? `${a.field_id}:${a.witness_id}` : a.field_id
-                map.set(key, a.student_id)
-            }
-            for (const a of assigns) {
-                const key = a.witness_id ? `${a.field_id}:${a.witness_id}` : a.field_id
-                map.set(key, a.student_id)
-            }
-            setPending(map)
+                // Build default map first, then overlay pairing-specific assignments
+                const map = new Map<string, string>()
+                for (const a of defaults) {
+                    const key = a.witness_id ? `${a.field_id}:${a.witness_id}` : a.field_id
+                    map.set(key, a.student_id)
+                }
+                for (const a of assigns) {
+                    const key = a.witness_id ? `${a.field_id}:${a.witness_id}` : a.field_id
+                    map.set(key, a.student_id)
+                }
+                setPending(map)
+            })
         }).catch(() => {})
-    }, [tournamentId, teamId, pairingId])
+        return () => { active = false }
+    }, [teamId, pairingId])
 
     const isP = side === 'p'
 

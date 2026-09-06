@@ -5,16 +5,16 @@ import { useConfirmRemove } from '../../shared/hooks/useConfirmRemove.ts'
 import StatusChip from '../../shared/components/StatusChip'
 import DangerButton from '../../shared/components/DangerButton'
 import AddButton from '../../shared/components/AddButton'
+import { useCoachContext } from '../CoachContext'
 
-interface Props {
-    coaches: ICoach[]
-    isOrganizerView: boolean
-    onAdd: (email: string) => void
-    onRemove: (coachId: string) => void
-    onMakeOwner: (coachId: string) => void
-}
+/**
+ * Coaches page. Reads the team's coaches from the shared `CoachLayout` context
+ * and delegates the add/remove/make-owner mutations to it. Keeps only its own
+ * modal UI state locally.
+ */
+export default function CoachesPage() {
+    const { coaches, isOrganizerView, addCoach, removeCoach, makeOwner } = useCoachContext()
 
-export default function CoachesTab({ coaches, isOrganizerView, onAdd, onRemove, onMakeOwner }: Props) {
     const [showAdd, setShowAdd] = useState(false)
     const confirmRemove = useConfirmRemove<ICoach>()
     const confirmOwner = useConfirmRemove<ICoach>()
@@ -49,7 +49,7 @@ export default function CoachesTab({ coaches, isOrganizerView, onAdd, onRemove, 
             {showAdd && (
                 <AddOrganizerModal
                     onClose={() => setShowAdd(false)}
-                    onAdd={(_, email) => { onAdd(email); setShowAdd(false) }}
+                    onAdd={(_, email) => { addCoach(email); setShowAdd(false) }}
                     title="Add coach"
                     description="They must already have an account. They will be added as a co-coach for this team."
                     submitLabel="Add coach"
@@ -59,14 +59,14 @@ export default function CoachesTab({ coaches, isOrganizerView, onAdd, onRemove, 
                 <ConfirmRemoveModal
                     message={`Remove ${confirmRemove.pending.name} as a coach?`}
                     onCancel={confirmRemove.clear}
-                    onConfirm={() => { onRemove(confirmRemove.pending!.coach_id); confirmRemove.clear() }}
+                    onConfirm={() => { removeCoach(confirmRemove.pending!.coach_id); confirmRemove.clear() }}
                 />
             )}
             {confirmOwner.pending && (
                 <ConfirmRemoveModal
                     message={`Make ${confirmOwner.pending.name} the new team owner? The current owner will become a regular coach.`}
                     onCancel={confirmOwner.clear}
-                    onConfirm={() => { onMakeOwner(confirmOwner.pending!.coach_id); confirmOwner.clear() }}
+                    onConfirm={() => { makeOwner(confirmOwner.pending!.coach_id); confirmOwner.clear() }}
                     confirmLabel="Confirm"
                 />
             )}

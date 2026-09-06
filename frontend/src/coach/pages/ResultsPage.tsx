@@ -1,15 +1,15 @@
 import { Fragment, useState } from 'react'
 import { Link } from 'react-router-dom'
-import type { ICoachResultRound } from '@mock-scores/shared'
-import { apiFetch } from '../../auth/auth'
+import { type BallotDetail, useCoachContext } from '../CoachContext'
 
-interface BallotDetail {
-    p_points: number
-    d_points: number
-    assignment_id: string
-}
+/**
+ * Results page. Reads published results from the shared `CoachLayout` context
+ * and lazily loads per-pairing ballot detail (via the context loader) on
+ * expand. Keeps only its own expand/loading UI state locally.
+ */
+export default function ResultsPage() {
+    const { teamId, results, loadBallots } = useCoachContext()
 
-export default function ResultsTab({ results, tournamentId }: { results: ICoachResultRound[]; tournamentId: string }) {
     const [expanded, setExpanded] = useState<string | null>(null)
     const [ballots, setBallots] = useState<Record<string, BallotDetail[]>>({})
     const [loadingId, setLoadingId] = useState<string | null>(null)
@@ -20,17 +20,15 @@ export default function ResultsTab({ results, tournamentId }: { results: ICoachR
         if (ballots[pairingId]) return // already loaded
         setLoadingId(pairingId)
         try {
-            const res = await apiFetch(`/coach/tournaments/${tournamentId}/pairings/${pairingId}/ballots`)
-            if (res.ok) {
-                const data: BallotDetail[] = await res.json()
-                setBallots(prev => ({ ...prev, [pairingId]: data }))
-            }
+            const data = await loadBallots(pairingId)
+            setBallots(prev => ({ ...prev, [pairingId]: data }))
         } finally {
             setLoadingId(null)
         }
     }
 
     if (results.length === 0) return <p className="coach-empty">No results published yet.</p>
+
     return (
         <>
             {results.map(round => (
@@ -59,7 +57,7 @@ export default function ResultsTab({ results, tournamentId }: { results: ICoachR
                                             {pairingBallots && pairingBallots.length > 0 && (
                                                 <>
                                                 <div style={{ marginBottom: '0.5rem' }}>
-                                                    <Link to={`/coach/${tournamentId}/pairing/${p.pairing_id}/scoresheet?roundName=${encodeURIComponent(round.name)}${round.round_time ? `&roundTime=${encodeURIComponent(round.round_time)}` : ''}`} className="pc-view-btn">View combined scoresheet</Link>
+                                                    <Link to={`/coach/${teamId}/pairing/${p.pairing_id}/scoresheet?roundName=${encodeURIComponent(round.name)}${round.round_time ? `&roundTime=${encodeURIComponent(round.round_time)}` : ''}`} className="pc-view-btn">View combined scoresheet</Link>
                                                 </div>
                                                 <table style={{ width: '100%', fontSize: '0.85rem', borderCollapse: 'collapse' }}>
                                                     <thead><tr style={{ borderBottom: '1px solid var(--border)' }}>
@@ -80,9 +78,8 @@ export default function ResultsTab({ results, tournamentId }: { results: ICoachR
                                                                     {bd > 0 ? `+${bd} P Win` : bd < 0 ? `${bd} D Win` : 'Tie'}
                                                                 </td>
                                                                 <td style={{ padding: '0.35rem 0.5rem' }}>
-                                                                    <Link to={`/coach/${tournamentId}/ballot/${p.pairing_id}/${b.assignment_id}`} className="pc-view-btn">View ballot</Link>
+                                                                    <Link to={`/coach/${teamId}/ballot/${p.pairing_id}/${b.assignment_id}`} className="pc-view-btn">View ballot</Link>
                                                                 </td>
-
                                                             </tr>
                                                         )
                                                     })}</tbody>

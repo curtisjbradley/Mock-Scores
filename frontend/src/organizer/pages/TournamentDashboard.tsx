@@ -46,8 +46,6 @@ const STRUCTURE_CARDS: { label: string; tab: OrganizerTab }[] = [
 
 const STRUCTURE_TABS = new Set<OrganizerTab>(['tournament', 'scoring', 'witnesses', 'tiebreakers', 'awards'])
 
-const SIDEBAR_STORAGE_KEY = 'organizer-sidebar-collapsed'
-
 export default function TournamentDashboard() {
     const { id } = useParams<{ id: string }>()
     const navigate = useNavigate()
@@ -57,21 +55,6 @@ export default function TournamentDashboard() {
         if (screen !== 'overview' && screen !== 'structure') return new Set([screen as OrganizerTab])
         return new Set()
     })
-
-    const [collapsed, setCollapsed] = useState<boolean>(() => {
-        try {
-            return localStorage.getItem(SIDEBAR_STORAGE_KEY) === 'true'
-        } catch {
-            return false
-        }
-    })
-    const toggleCollapsed = () => {
-        setCollapsed(prev => {
-            const next = !prev
-            try { localStorage.setItem(SIDEBAR_STORAGE_KEY, String(next)) } catch { /* ignore */ }
-            return next
-        })
-    }
 
     useEffect(() => {
         if (!id) { navigate('/organizer', { replace: true }); return }
@@ -108,8 +91,6 @@ export default function TournamentDashboard() {
                     items={NAV_ITEMS}
                     active={activeNav}
                     onChange={onNavSelect}
-                    collapsed={collapsed}
-                    onToggleCollapse={toggleCollapsed}
                     title={tournament?.name ?? 'Tournament'}
                     subtitle={tournament?.location ?? undefined}
                     ariaLabel="Tournament dashboard sections"
