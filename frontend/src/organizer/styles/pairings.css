@@ -843,6 +843,16 @@
     padding: 0.2rem 0.6rem;
     border-radius: 0.4rem;
     transition: background 120ms ease, border-color 120ms ease;
+    display: inline-flex;
+    align-items: center;
+    gap: 0.35rem;
+}
+
+.pc-btn-icon {
+    width: 0.9rem;
+    height: 0.9rem;
+    object-fit: contain;
+    display: block;
 }
 
 .pc-download-ballot-btn:hover:not(:disabled) {

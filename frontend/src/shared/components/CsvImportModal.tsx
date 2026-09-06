@@ -87,7 +87,10 @@ export default function CsvImportModal({ title, description, columns, exampleRow
                         </div>
 
                         <div className="tc-field">
-                            <label className="tc-label" htmlFor="csv-file-upload">Upload CSV file</label>
+                            <label className="tc-label" htmlFor="csv-file-upload" style={{ display: 'inline-flex', alignItems: 'center', gap: '0.35rem' }}>
+                                <img src="/icons/Upload.svg" alt="" aria-hidden="true" style={{ width: '0.9rem', height: '0.9rem', objectFit: 'contain' }} />
+                                Upload CSV file
+                            </label>
                             <input
                                 id="csv-file-upload"
                                 ref={fileRef}

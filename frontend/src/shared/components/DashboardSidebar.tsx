@@ -3,7 +3,7 @@ import {useState} from "react";
 export interface DashboardNavItem<T extends string> {
     key: T
     label: string
-    /** Placeholder icon glyph or node — can be swapped for designed icons later. */
+    /** Icon node — typically an `<img>` of a designed SVG from `/icons/`. */
     icon: React.ReactNode
 }
 
@@ -25,9 +25,9 @@ interface Props<T extends string> {
  * Expanded: fixed-width column with an icon + text label per item.
  * Collapsed: narrow rail showing only icons (labels available via title attr).
  *
- * Icons are intentionally simple placeholders — they can be swapped for
- * designed icons later without touching the layout. Styling lives in the
- * shared `styles/dashboard.css` (`.dash-sidebar*` / `.dash-nav-*` classes).
+ * Icons are designed SVGs served from `/icons/` (passed in as `<img>` nodes by
+ * each dashboard). Styling lives in the shared `styles/dashboard.css`
+ * (`.dash-sidebar*` / `.dash-nav-*` classes).
  */
 
 const SIDEBAR_STORAGE_KEY = 'sidebar-storage-state'
@@ -71,7 +71,11 @@ export default function DashboardSidebar<T extends string>({
                     aria-expanded={!collapsed}
                     title={collapsed ? 'Expand navigation' : 'Collapse navigation'}
                 >
-                    <span aria-hidden="true">{collapsed ? '»' : '«'}</span>
+                    <img
+                        src={collapsed ? '/icons/Expand.svg' : '/icons/Shrink.svg'}
+                        alt=""
+                        aria-hidden="true"
+                    />
                 </button>
             </div>
 

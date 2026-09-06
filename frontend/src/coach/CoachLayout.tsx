@@ -20,15 +20,16 @@ import { resolveCoachTournament } from './coachApi'
 import type { BallotDetail, CoachContextValue, StandingsApiPayload } from './CoachContext'
 import NotFound from "../error/NotFound.tsx";
 
-// Placeholder icon glyphs — swap for designed icons later without touching layout.
+// Designed SVG icons served from `/icons/`. Field reuses Teams; Coaches has no
+// dedicated asset yet, so it keeps a placeholder glyph (see docs/icons-todo.md).
 const NAV_ITEMS: DashboardNavItem<CoachTab>[] = [
-    { key: 'overview',  label: 'Overview',  icon: '▦' },
-    { key: 'schedule',  label: 'Schedule',  icon: '▤' },
-    { key: 'results',   label: 'Results',   icon: '◈' },
-    { key: 'coaches',   label: 'Coaches',   icon: '◎' },
-    { key: 'roster',    label: 'Roster',    icon: '☰' },
-    { key: 'field',     label: 'Field',     icon: '⬡' },
-    { key: 'standings', label: 'Standings', icon: '▲' },
+    { key: 'overview',  label: 'Overview',  icon: <img src="/icons/Overview.svg" alt="" aria-hidden="true" /> },
+    { key: 'schedule',  label: 'Schedule',  icon: <img src="/icons/Schedule.svg" alt="" aria-hidden="true" /> },
+    { key: 'results',   label: 'Results',   icon: <img src="/icons/Results.svg" alt="" aria-hidden="true" /> },
+    { key: 'coaches',   label: 'Coaches',   icon: <img src="/icons/Organizers.svg" alt="" aria-hidden="true" /> },
+    { key: 'roster',    label: 'Roster',    icon: <img src="/icons/Roster.svg" alt="" aria-hidden="true" /> },
+    { key: 'field',     label: 'Field',     icon: <img src="/icons/Teams.svg" alt="" aria-hidden="true" /> },
+    { key: 'standings', label: 'Standings', icon: <img src="/icons/Standings.svg" alt="" aria-hidden="true" /> },
 ]
 
 const VALID_TABS = new Set<CoachTab>(NAV_ITEMS.map(t => t.key))
