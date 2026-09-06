@@ -23,22 +23,22 @@ router.get("/tournaments", authedHandler(async (req, res) => {
 
 /**
  * @swagger
- * /coach/tournaments/{tournamentId}/schedule:
+ * /coach/tournaments/{teamId}/schedule:
  *   get:
  *     summary: Get tournament schedule
  *     tags: [Coach]
  *     parameters:
  *       - in: path
- *         name: tournamentId
+ *         name: teamId
  *         required: true
  *         schema: { type: string, format: uuid }
  *     responses:
  *       200: { description: Schedule data }
- *       400: { description: Invalid tournament ID }
+ *       400: { description: Invalid team ID }
  */
-router.get("/tournaments/:tournamentId/schedule", authedHandler(async (req, res) => {
-    const id = req.params.tournamentId as string;
-    if (!uuidRegex.test(id)) return res.status(400).json({ message: "Invalid tournament ID" });
+router.get("/tournaments/:teamId/schedule", authedHandler(async (req, res) => {
+    const id = req.params.teamId as string;
+    if (!uuidRegex.test(id)) return res.status(400).json({ message: "Invalid team ID" });
 
     // Accept an explicit teamId query param (used by organizer preview view).
     // Fall back to deriving it from the session for regular coach access.
@@ -52,127 +52,127 @@ router.get("/tournaments/:tournamentId/schedule", authedHandler(async (req, res)
 
 /**
  * @swagger
- * /coach/tournaments/{tournamentId}/results:
+ * /coach/tournaments/{teamId}/results:
  *   get:
  *     summary: Get tournament results
  *     tags: [Coach]
  *     parameters:
  *       - in: path
- *         name: tournamentId
+ *         name: teamId
  *         required: true
  *         schema: { type: string, format: uuid }
  *     responses:
  *       200: { description: Results data }
- *       400: { description: Invalid tournament ID }
+ *       400: { description: Invalid team ID }
  */
-router.get("/tournaments/:tournamentId/results", authedHandler(async (req, res) => {
-    const id = req.params.tournamentId as string;
-    if (!uuidRegex.test(id)) return res.status(400).json({ message: "Invalid tournament ID" });
+router.get("/tournaments/:teamId/results", authedHandler(async (req, res) => {
+    const id = req.params.teamId as string;
+    if (!uuidRegex.test(id)) return res.status(400).json({ message: "Invalid team ID" });
     return res.status(200).json(await coach.getResults(id));
 }));
 
 /**
  * @swagger
- * /coach/tournaments/{tournamentId}/field:
+ * /coach/tournaments/{teamId}/field:
  *   get:
  *     summary: Get competition field (all teams in the tournament)
  *     tags: [Coach]
  *     parameters:
  *       - in: path
- *         name: tournamentId
+ *         name: teamId
  *         required: true
  *         schema: { type: string, format: uuid }
  *     responses:
  *       200: { description: Competition field }
- *       400: { description: Invalid tournament ID }
+ *       400: { description: Invalid team ID }
  */
-router.get("/tournaments/:tournamentId/field", authedHandler(async (req, res) => {
-    const id = req.params.tournamentId as string;
-    if (!uuidRegex.test(id)) return res.status(400).json({ message: "Invalid tournament ID" });
+router.get("/tournaments/:teamId/field", authedHandler(async (req, res) => {
+    const id = req.params.teamId as string;
+    if (!uuidRegex.test(id)) return res.status(400).json({ message: "Invalid team ID" });
     return res.status(200).json(await coach.getCompetitionField(id));
 }));
 
 /**
  * @swagger
- * /coach/tournaments/{tournamentId}/standings:
+ * /coach/tournaments/{teamId}/standings:
  *   get:
  *     summary: Get standings data for a tournament
  *     tags: [Coach]
  *     parameters:
  *       - in: path
- *         name: tournamentId
+ *         name: teamId
  *         required: true
  *         schema: { type: string, format: uuid }
  *     responses:
  *       200: { description: Standings data }
- *       400: { description: Invalid tournament ID }
+ *       400: { description: Invalid team ID }
  */
-router.get("/tournaments/:tournamentId/standings", authedHandler(async (req, res) => {
-    const id = req.params.tournamentId as string;
-    if (!uuidRegex.test(id)) return res.status(400).json({ message: "Invalid tournament ID" });
+router.get("/tournaments/:teamId/standings", authedHandler(async (req, res) => {
+    const id = req.params.teamId as string;
+    if (!uuidRegex.test(id)) return res.status(400).json({ message: "Invalid team ID" });
     return res.status(200).json(await coach.getStandingsData(id));
 }));
 
 /**
  * @swagger
- * /coach/tournaments/{tournamentId}/scoring-categories:
+ * /coach/tournaments/{teamId}/scoring-categories:
  *   get:
  *     summary: Get scoring categories for a tournament
  *     tags: [Coach]
  *     parameters:
  *       - in: path
- *         name: tournamentId
+ *         name: teamId
  *         required: true
  *         schema: { type: string, format: uuid }
  *     responses:
  *       200: { description: Scoring categories }
- *       400: { description: Invalid tournament ID }
+ *       400: { description: Invalid team ID }
  */
-router.get("/tournaments/:tournamentId/scoring-categories", authedHandler(async (req, res) => {
-    const id = req.params.tournamentId as string;
-    if (!uuidRegex.test(id)) return res.status(400).json({ message: "Invalid tournament ID" });
+router.get("/tournaments/:teamId/scoring-categories", authedHandler(async (req, res) => {
+    const id = req.params.teamId as string;
+    if (!uuidRegex.test(id)) return res.status(400).json({ message: "Invalid team ID" });
     return res.status(200).json(await getScoringCategories(id));
 }));
 
 /**
  * @swagger
- * /coach/tournaments/{tournamentId}/witnesses:
+ * /coach/tournaments/{teamId}/witnesses:
  *   get:
  *     summary: Get witnesses for a tournament
  *     tags: [Coach]
  *     parameters:
  *       - in: path
- *         name: tournamentId
+ *         name: teamId
  *         required: true
  *         schema: { type: string, format: uuid }
  *     responses:
  *       200: { description: Witnesses }
- *       400: { description: Invalid tournament ID }
+ *       400: { description: Invalid team ID }
  */
-router.get("/tournaments/:tournamentId/witnesses", authedHandler(async (req, res) => {
-    const id = req.params.tournamentId as string;
-    if (!uuidRegex.test(id)) return res.status(400).json({ message: "Invalid tournament ID" });
+router.get("/tournaments/:teamId/witnesses", authedHandler(async (req, res) => {
+    const id = req.params.teamId as string;
+    if (!uuidRegex.test(id)) return res.status(400).json({ message: "Invalid team ID" });
     return res.status(200).json(await coach.getWitnessesForTournament(id));
 }));
 
 /**
  * @swagger
- * /coach/tournaments/{tournamentId}/format:
+ * /coach/tournaments/{teamId}/format:
  *   get:
  *     summary: Get case format for a tournament
  *     tags: [Coach]
  *     parameters:
  *       - in: path
- *         name: tournamentId
+ *         name: teamId
  *         required: true
  *         schema: { type: string, format: uuid }
  *     responses:
  *       200: { description: Case format }
- *       400: { description: Invalid tournament ID }
+ *       400: { description: Invalid team ID }
  */
-router.get("/tournaments/:tournamentId/format", authedHandler(async (req, res) => {
-    const id = req.params.tournamentId as string;
-    if (!uuidRegex.test(id)) return res.status(400).json({ message: "Invalid tournament ID" });
+router.get("/tournaments/:teamId/format", authedHandler(async (req, res) => {
+    const id = req.params.teamId as string;
+    if (!uuidRegex.test(id)) return res.status(400).json({ message: "Invalid team ID" });
     return res.status(200).json(await coach.getFormatForTournament(id));
 }));
 
@@ -180,13 +180,13 @@ router.use("/teams/:teamId", teamRoutes);
 
 /**
  * @swagger
- * /coach/tournaments/{tournamentId}/pairings/{pairingId}/ballots:
+ * /coach/tournaments/{teamId}/pairings/{pairingId}/ballots:
  *   get:
  *     summary: Get individual ballot breakdowns for a pairing (only if results are published)
  *     tags: [Coach]
  *     parameters:
  *       - in: path
- *         name: tournamentId
+ *         name: teamId
  *         required: true
  *         schema: { type: string, format: uuid }
  *       - in: path
@@ -198,25 +198,25 @@ router.use("/teams/:teamId", teamRoutes);
  *       400: { description: Invalid ID }
  *       403: { description: Results not published }
  */
-router.get("/tournaments/:tournamentId/pairings/:pairingId/ballots", authedHandler(async (req, res) => {
-    const tournamentId = req.params.tournamentId as string;
+router.get("/tournaments/:teamId/pairings/:pairingId/ballots", authedHandler(async (req, res) => {
+    const teamId = req.params.teamId as string;
     const pairingId = req.params.pairingId as string;
-    if (!uuidRegex.test(tournamentId)) return res.status(400).json({ message: "Invalid tournament ID" });
+    if (!uuidRegex.test(teamId)) return res.status(400).json({ message: "Invalid team ID" });
     if (!uuidRegex.test(pairingId)) return res.status(400).json({ message: "Invalid pairing ID" });
-    if (!await coach.canViewPairingResults(tournamentId, pairingId)) return res.status(404).json({ message: "Pairing not found" });
-    return res.status(200).json(await coach.getPairingBallots(tournamentId, pairingId));
+    if (!await coach.canViewPairingResults(teamId, pairingId)) return res.status(404).json({ message: "Pairing not found" });
+    return res.status(200).json(await coach.getPairingBallots(teamId, pairingId));
 }));
 
 
 /**
  * @swagger
- * /coach/tournaments/{tournamentId}/pairings/{pairingId}/ballots/{assignmentId}:
+ * /coach/tournaments/{teamId}/pairings/{pairingId}/ballots/{assignmentId}:
  *   get:
  *     summary: Get full ballot detail (scoresheet format + scores) for a specific ballot
  *     tags: [Coach]
  *     parameters:
  *       - in: path
- *         name: tournamentId
+ *         name: teamId
  *         required: true
  *         schema: { type: string, format: uuid }
  *       - in: path
@@ -232,15 +232,15 @@ router.get("/tournaments/:tournamentId/pairings/:pairingId/ballots", authedHandl
  *       400: { description: Invalid ID }
  *       404: { description: Ballot not found }
  */
-router.get("/tournaments/:tournamentId/pairings/:pairingId/ballots/:assignmentId", authedHandler(async (req, res) => {
-    const tournamentId = req.params.tournamentId as string;
+router.get("/tournaments/:teamId/pairings/:pairingId/ballots/:assignmentId", authedHandler(async (req, res) => {
+    const teamId = req.params.teamId as string;
     const pairingId = req.params.pairingId as string;
     const assignmentId = req.params.assignmentId as string;
-    if (!uuidRegex.test(tournamentId)) return res.status(400).json({ message: "Invalid tournament ID" });
+    if (!uuidRegex.test(teamId)) return res.status(400).json({ message: "Invalid team ID" });
     if (!uuidRegex.test(pairingId)) return res.status(400).json({ message: "Invalid pairing ID" });
     if (!uuidRegex.test(assignmentId)) return res.status(400).json({ message: "Invalid assignment ID" });
 
-    if (!await coach.isAssignmentInPairingWithPublicResults(tournamentId, pairingId, assignmentId))
+    if (!await coach.isAssignmentInPairingWithPublicResults(teamId, pairingId, assignmentId))
         return res.status(404).json({ message: "Ballot not found" });
 
     const sheet = await getScoreSheet(assignmentId, { skipGuards: true }).catch(() => null);
@@ -256,7 +256,7 @@ router.get("/tournaments/:tournamentId/pairings/:pairingId/ballots/:assignmentId
 
     // When the tournament does not share individual rankings, coaches must not
     // see award nominations on the ballot.
-    if (ballot && !await coach.sharesIndividualRankings(tournamentId)) {
+    if (ballot && !await coach.sharesIndividualRankings(teamId)) {
         ballot.nominations = [];
     }
 

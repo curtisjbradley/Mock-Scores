@@ -26,7 +26,7 @@ const CoachHome = () => {
                         <button
                             key={t.team_id}
                             className="org-tournament-card"
-                            onClick={() => navigate(`/coach/${t.id}`)}
+                            onClick={() => navigate(`/coach/${t.team_id}`)}
                         >
                             <div className="org-tournament-info">
                                 <span className="org-tournament-name">{t.team_name} - {t.name}</span>

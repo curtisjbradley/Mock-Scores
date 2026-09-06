@@ -109,6 +109,39 @@ router.post("/coaches", authedHandler(async (req, res) => {
  */
 router.delete("/coaches/:coachId", removeCoachHandler);
 
+
+/**
+ * @swagger
+ * /coach/teams/{teamId}/coaches/{coachId}/toggle-notifications:
+ *   post:
+ *     summary: Toggle email notifications for a coach
+ *     tags: [Coach - Team]
+ *     parameters:
+ *       - in: path
+ *         name: teamId
+ *         required: true
+ *         schema: { type: string, format: uuid }
+ *       - in: path
+ *         name: coachId
+ *         required: true
+ *         schema: { type: string, format: uuid }
+ *     responses:
+ *       202: { description: Updated }
+ *       404: { description: Not found }
+ */
+router.post("/coaches/:coachId/toggle-notifications", authedHandler(async (req, res) => {
+    const teamId = req.params.teamId as string;
+    const coachId = req.params.coachId as string;
+    if (!uuidRegex.test(teamId)) return res.status(400).json({ message: "Invalid team ID" });
+    if (!uuidRegex.test(coachId)) return res.status(400).json({ message: "Invalid coach ID" });
+
+    const updated = await coach.toggleNotifications(teamId, coachId);
+    if (!updated) {
+        return res.status(404).json({message: "Coach not found."})
+    }
+    return res.status(202).json(updated);
+}));
+
 /**
  * @swagger
  * /coach/teams/{teamId}/students:

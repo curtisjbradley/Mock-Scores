@@ -1,6 +1,6 @@
 import './styles/globals.css'
 
-import { BrowserRouter, Route, Routes } from "react-router-dom";
+import { BrowserRouter, Navigate, Route, Routes } from "react-router-dom";
 import { lazy } from 'react';
 import Layout from "./layout/Layout.tsx";
 import ProtectedRoute from "./layout/ProtectedRoute.tsx";
@@ -16,7 +16,14 @@ const RoundView = lazy(() => import('./organizer/pages/RoundView.tsx'));
 const BallotPage = lazy(() => import('./organizer/pages/BallotPage.tsx'));
 const CombinedScoresheetPage = lazy(() => import('./shared/components/CombinedScoresheetPage.tsx'));
 const CoachHome = lazy(() => import('./coach/CoachHome.tsx'));
-const CoachDashboard = lazy(() => import('./coach/CoachDashboard.tsx'));
+const CoachLayout = lazy(() => import('./coach/CoachLayout'));
+const OverviewPage = lazy(() => import('./coach/pages/OverviewPage.tsx'));
+const SchedulePage = lazy(() => import('./coach/pages/SchedulePage.tsx'));
+const ResultsPage = lazy(() => import('./coach/pages/ResultsPage.tsx'));
+const CoachesPage = lazy(() => import('./coach/pages/CoachesPage.tsx'));
+const RosterPage = lazy(() => import('./coach/pages/RosterPage.tsx'));
+const FieldPage = lazy(() => import('./coach/pages/FieldPage.tsx'));
+const StandingsPage = lazy(() => import('./coach/pages/StandingsPage.tsx'));
 const AssignRoles = lazy(() => import('./coach/pages/AssignRoles.tsx'));
 const WitnessCallOrder = lazy(() => import('./coach/pages/WitnessCallOrder.tsx'));
 const Account = lazy(() => import('./auth/Account.tsx').then(m => ({ default: m.Account })));
@@ -49,7 +56,16 @@ function App() {
                   <Route path="new" element={<TournamentNew />} />
                   <Route path=":id" element={<TournamentDashboard />} />
                   <Route path=":id/round/:round" element={<RoundView />} />
-                  <Route path=":id/school/:schoolId" element={<CoachDashboard isOrganizerView />} />
+                  <Route path=":id/school/:schoolId" element={<CoachLayout isOrganizerView />}>
+                      <Route index element={<Navigate to="overview" replace />} />
+                      <Route path="overview" element={<OverviewPage />} />
+                      <Route path="schedule" element={<SchedulePage />} />
+                      <Route path="results" element={<ResultsPage />} />
+                      <Route path="coaches" element={<CoachesPage />} />
+                      <Route path="roster" element={<RosterPage />} />
+                      <Route path="field" element={<FieldPage />} />
+                      <Route path="standings" element={<StandingsPage />} />
+                  </Route>
                   <Route path=":id/school/:teamId/assign-roles/:pairingId/:side" element={<AssignRoles />} />
                   <Route path=":id/school/:teamId/witness-order/:pairingId" element={<WitnessCallOrder />} />
                   <Route path=":id/scoresheet/:pairingId/:judgeId" element={<ScorecardViewer />} />
@@ -60,13 +76,21 @@ function App() {
 
               <Route path="coach" element={<ProtectedRoute />}>
                 <Route index element={<CoachHome />} />
-                <Route path=":id" element={<CoachDashboard />} />
-                <Route path=":id/assign-roles/:teamId/:pairingId/:side" element={<AssignRoles />} />
-                <Route path=":id/witness-order/:teamId/:pairingId" element={<WitnessCallOrder />} />
-                <Route path=":id/ballot/:pairingId/:assignmentId" element={<ScorecardViewer />} />
-                <Route path=":id/pairing/:pairingId/scoresheet" element={<CombinedScoresheetPage />} />
-                <Route path=":id/:tab" element={<CoachDashboard />} />
-                  <Route path=":id/*" element={<NotFound />} />
+                <Route path=":teamId/assign-roles/:pairingId/:side" element={<AssignRoles />} />
+                <Route path=":teamId/witness-order/:pairingId" element={<WitnessCallOrder />} />
+                <Route path=":teamId/ballot/:pairingId/:assignmentId" element={<ScorecardViewer />} />
+                <Route path=":teamId/pairing/:pairingId/scoresheet" element={<CombinedScoresheetPage />} />
+                <Route path=":teamId" element={<CoachLayout />}>
+                    <Route index element={<Navigate to="overview" replace />} />
+                    <Route path="overview" element={<OverviewPage />} />
+                    <Route path="schedule" element={<SchedulePage />} />
+                    <Route path="results" element={<ResultsPage />} />
+                    <Route path="coaches" element={<CoachesPage />} />
+                    <Route path="roster" element={<RosterPage />} />
+                    <Route path="field" element={<FieldPage />} />
+                    <Route path="standings" element={<StandingsPage />} />
+                </Route>
+                  <Route path=":teamId/*" element={<NotFound />} />
               </Route>
 
                 <Route path={"help"} element={<ProtectedRoute/>} >

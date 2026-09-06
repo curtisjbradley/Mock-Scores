@@ -7,6 +7,7 @@ import EmptyState from '../../shared/components/EmptyState'
 import ModalBackdrop from '../../shared/components/ModalBackdrop'
 import DangerButton from '../../shared/components/DangerButton'
 import AddButton from '../../shared/components/AddButton'
+import { useCoachContext } from '../CoachContext'
 import '../../organizer/styles/organizer.css'
 import '../../organizer/styles/tabs.css'
 import '../../organizer/styles/round-view.css'
@@ -21,14 +22,6 @@ const PRONOUN_OPTIONS = [
 interface Witness { id: string; name: string; side: string }
 interface DefaultCallOrderRow { witness_id: string; witness_name: string; position: number }
 interface Format { p_witnesses_called: number; d_witnesses_called: number; criminal_case?: boolean }
-
-interface Props {
-    students: IStudent[]
-    tournamentId: string
-    teamId: string
-    onAdd: (name: string, pronouns: string | null) => void
-    onRemove: (studentId: string) => void
-}
 
 // ── Side setup modal ──────────────────────────────────────────────────────────
 
@@ -77,7 +70,6 @@ function SideSetupModal({
             }
             setAssignments(map)
         }).catch(() => {})
-     
     }, [tournamentId, teamId, side])
 
     // ── Call order ────────────────────────────────────────────────────────────
@@ -103,7 +95,6 @@ function SideSetupModal({
                 if (!cat.witnessCategory) {
                     return [{ key: f.id, label: `${cat.name} — ${f.label}`, fieldId: f.id, witnessId: null as string | null }]
                 }
-                // calling fields use own-side witnesses; crossing fields use opponent witnesses
                 const applicable = f.crossing ? oppSideWitnesses : ownSideWitnesses
                 return applicable.map(w => ({
                     key: `${f.id}:${w.id}`,
@@ -147,7 +138,6 @@ function SideSetupModal({
                 style={{ maxWidth: '36rem', width: '100%', maxHeight: '80vh', overflowY: 'auto' }}>
                 <h2 style={{ marginTop: 0 }}>{sideLabel} — Default Setup</h2>
 
-                {/* Call order */}
                 {callOrderSlots.length > 0 && (
                     <>
                         <h3 style={{ margin: '0 0 0.5rem' }}>Witness Call Order</h3>
@@ -176,7 +166,6 @@ function SideSetupModal({
                     </>
                 )}
 
-                {/* Role assignments */}
                 {roleRows.length > 0 && students.length > 0 && (
                     <>
                         <h3 style={{ margin: '0 0 0.5rem' }}>Role Assignments</h3>
@@ -223,9 +212,16 @@ function SideSetupModal({
     )
 }
 
-// ── RosterTab ─────────────────────────────────────────────────────────────────
+// ── RosterPage ────────────────────────────────────────────────────────────────
 
-export default function RosterTab({ students, tournamentId, teamId, onAdd, onRemove }: Props) {
+/**
+ * Roster page. Reads the roster and case format from the shared `CoachLayout`
+ * context and delegates the add/remove student mutations to it. Keeps only its
+ * own form and per-side default-setup modal UI state locally.
+ */
+export default function RosterPage() {
+    const { tournamentId, teamId, students, isCriminal, addStudent, removeStudent } = useCoachContext()
+
     const [name, setName] = useState('')
     const [pronounSelect, setPronounSelect] = useState('')
     const [customPronouns, setCustomPronouns] = useState('')
@@ -233,15 +229,6 @@ export default function RosterTab({ students, tournamentId, teamId, onAdd, onRem
     const [submitted, setSubmitted] = useState(false)
     const confirmRemove = useConfirmRemove<IStudent>()
     const [openSide, setOpenSide] = useState<'p' | 'd' | null>(null)
-    const [isCriminal, setIsCriminal] = useState(true)
-
-    useEffect(() => {
-        if (!tournamentId) return
-        apiFetch(`/coach/tournaments/${tournamentId}/format`)
-            .then(r => r.ok ? r.json() : null)
-            .then((fmt: Format | null) => { if (fmt?.criminal_case != null) setIsCriminal(fmt.criminal_case) })
-            .catch(() => {})
-    }, [tournamentId])
 
     const submit = () => {
         setSubmitted(true)
@@ -251,7 +238,7 @@ export default function RosterTab({ students, tournamentId, teamId, onAdd, onRem
         setFormError('')
         setSubmitted(false)
         const pronouns = pronounSelect === 'other' ? customPronouns.trim() : pronounSelect
-        onAdd(name.trim(), pronouns)
+        addStudent(name.trim(), pronouns)
         setName(''); setPronounSelect(''); setCustomPronouns('')
     }
 
@@ -259,7 +246,6 @@ export default function RosterTab({ students, tournamentId, teamId, onAdd, onRem
 
     return (
         <div className="roster-tab">
-            {/* Add student */}
             <form className="roster-add-form" onSubmit={e => { e.preventDefault(); submit() }}>
                 <input
                     className={`dash-edit-input ${submitted && !name.trim() ? 'dash-edit-input--invalid' : 'dash-edit-input--valid'}`}
@@ -305,7 +291,6 @@ export default function RosterTab({ students, tournamentId, teamId, onAdd, onRem
             }
             {students.length > 0 && <p className="org-header-sub">{students.length} student{students.length !== 1 ? 's' : ''}</p>}
 
-            {/* Side setup buttons */}
             <div style={{ display: 'flex', gap: '0.75rem', marginTop: '1.5rem', flexWrap: 'wrap' }}>
                 <button className="org-new-btn" onClick={() => setOpenSide('p')}>
                     Set {prosecutionLabel} Call Order &amp; Assignments
@@ -330,7 +315,7 @@ export default function RosterTab({ students, tournamentId, teamId, onAdd, onRem
                 <ConfirmRemoveModal
                     message={`Remove ${confirmRemove.pending.student_name} from the roster?`}
                     onCancel={confirmRemove.clear}
-                    onConfirm={() => { onRemove(confirmRemove.pending!.student_id); confirmRemove.clear() }}
+                    onConfirm={() => { removeStudent(confirmRemove.pending!.student_id); confirmRemove.clear() }}
                 />
             )}
         </div>

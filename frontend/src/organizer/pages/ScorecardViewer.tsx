@@ -4,6 +4,7 @@ import { apiFetch } from '../../auth/auth'
 import type { IScoreSheetFormat, ScorecardPayload } from '@mock-scores/shared'
 import ModalBackdrop from '../../shared/components/ModalBackdrop'
 import { useAutoFocus } from '../../shared/hooks/useAutoFocus'
+import { resolveCoachTournament } from '../../coach/coachApi'
 import '../styles/organizer.css'
 import '../../judges/styles/scoresheet.css'
 import '../../judges/styles/modal.css'
@@ -14,7 +15,7 @@ import '../../judges/styles/modal.css'
  * and the submitted ballot (organizer endpoint, JWT-required) and renders them together.
  */
 const ScorecardViewer = () => {
-    const { id, pairingId, judgeId, assignmentId } = useParams<{ id: string; pairingId: string; judgeId?: string; assignmentId?: string }>()
+    const { id, teamId, pairingId, judgeId, assignmentId } = useParams<{ id: string; teamId: string; pairingId: string; judgeId?: string; assignmentId?: string }>()
     const navigate = useNavigate()
     const location = window.location.pathname
     const isCoachView = location.includes('/coach/')
@@ -100,15 +101,23 @@ const ScorecardViewer = () => {
     }
 
     useEffect(() => {
-        if (!id || !pairingId || !ballotAssignmentId) return
+        // Organizer view identifies scope by `id` (tournament); coach view by
+        // `teamId`, which we resolve to a tournament id for the ballots endpoint.
+        const scopeId = isCoachView ? teamId : id
+        if (!scopeId || !pairingId || !ballotAssignmentId) return
 
         const fetchData = async () => {
             setLoading(true)
             setError(null)
             try {
-                const url = isCoachView
-                    ? `/coach/tournaments/${id}/pairings/${pairingId}/ballots/${ballotAssignmentId}`
-                    : `/organizer/tournament/${id}/pairings/${pairingId}/scoresheets/${ballotAssignmentId}`
+                let url: string
+                if (isCoachView) {
+                    const info = await resolveCoachTournament(scopeId, false, undefined)
+                    if (!info?.tournamentId) throw new Error('Failed to resolve tournament')
+                    url = `/coach/tournaments/${info.tournamentId}/pairings/${pairingId}/ballots/${ballotAssignmentId}`
+                } else {
+                    url = `/organizer/tournament/${id}/pairings/${pairingId}/scoresheets/${ballotAssignmentId}`
+                }
                 const res = await apiFetch(url)
                 if (!res.ok) throw new Error('Failed to load scorecard')
                 const data = await res.json() as { sheet: IScoreSheetFormat | null; ballot: ScorecardPayload | null; editLog?: { editor_email: string; edited_at: string; reason: string; p_points_before: number; p_points_after: number; d_points_before: number; d_points_after: number }[] }
@@ -123,7 +132,7 @@ const ScorecardViewer = () => {
         }
 
         fetchData()
-    }, [id, pairingId, ballotAssignmentId, isCoachView])
+    }, [id, teamId, pairingId, ballotAssignmentId, isCoachView])
 
     if (loading) {
         return (

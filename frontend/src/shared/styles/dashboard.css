@@ -6,30 +6,36 @@
 
 /* Layout shell: sidebar + content, centered within the page like other views. */
 .dash-shell {
-    width: min(100%, 78rem);
+    width: 100%;
     display: flex;
     align-items: flex-start;
     gap: 1.5rem;
 }
 
 /* ── Sidebar ─────────────────────────────────────────────────────────────── */
+.org-main {
+    padding: 0;
+}
+.site-header {
+    border-bottom: 0;
+}
 .dash-sidebar {
     flex-shrink: 0;
     position: sticky;
-    top: 1.5rem;
     /* Cap to the viewport (matching the 1.5rem top offset top and bottom) so a
        long nav list scrolls inside the sidebar rather than extending past it. */
-    max-height: calc(100vh - 3rem);
-    width: 15rem;
+    height: 100%;
+    width: 12rem;
     display: flex;
     flex-direction: column;
     gap: 0.75rem;
-    padding: 1rem 0.75rem;
-    border: 1px solid var(--border);
-    border-radius: var(--radius);
     background: var(--surface);
-    box-shadow: var(--shadow);
     transition: width 160ms ease;
+    padding-left: 1rem;
+}
+
+.site-footer {
+    border: 0;
 }
 
 .dash-sidebar--collapsed {
@@ -82,21 +88,26 @@
     height: 2rem;
     display: grid;
     place-items: center;
-    border: 1px solid var(--border);
+    border: 0;
     border-radius: 0.6rem;
-    background: var(--surface-muted);
     color: var(--text-muted);
     font-size: 1rem;
     line-height: 1;
     font-family: inherit;
     cursor: pointer;
-    transition: background 120ms ease, color 120ms ease, border-color 120ms ease;
+    background-color: transparent;
 }
 
 .dash-sidebar-toggle:hover {
     background: var(--primary-subtle);
     color: var(--primary);
     border-color: var(--primary);
+}
+
+.app-icon.dash-sidebar-toggle-icon {
+    width: 1rem;
+    height: 1rem;
+    background-color: var(--text);
 }
 
 .dash-sidebar-nav {
@@ -145,14 +156,12 @@
     color: var(--primary);
 }
 
-.dash-nav-icon {
-    flex-shrink: 0;
+/* `.app-icon` (from <Icon>) provides the mask. Nav labels are muted/active-
+   colored, but the icons themselves are always var(--text) per design. */
+.app-icon.dash-nav-icon {
     width: 1.25rem;
     height: 1.25rem;
-    display: grid;
-    place-items: center;
-    font-size: 1rem;
-    line-height: 1;
+    background-color: var(--text);
 }
 
 .dash-nav-label {
@@ -169,6 +178,7 @@
     display: flex;
     flex-direction: column;
     gap: 1.25rem;
+    padding: 1rem;
 }
 
 /* ── Overview / dashboard landing ────────────────────────────────────────── */
@@ -192,7 +202,6 @@
     border: 1px solid var(--border);
     border-radius: var(--radius);
     background: var(--surface);
-    box-shadow: var(--shadow);
 }
 
 /* The feature card spans the full row on wider layouts. */
@@ -277,13 +286,23 @@
         flex-direction: column;
         gap: 1rem;
     }
-
+    .org-main {
+        padding-right: 0;
+    }
+    .site-header{
+        border-bottom: 1px solid var(--border);
+    }
     .dash-sidebar,
     .dash-sidebar--collapsed {
         position: static;
         width: 100%;
         max-height: none;
         padding: 0.75rem;
+        height: auto;
+        margin: .5rem 0;
+        border-radius: var(--radius);
+        transition: none;
+
     }
 
     .dash-sidebar-nav {
@@ -307,4 +326,36 @@
     .dash-sidebar--collapsed .dash-nav-label {
         display: inline;
     }
+}
+
+/* ── Coach notification toggle ───────────────────────────────────────────── */
+.coach-notif-toggle {
+    display: inline-grid;
+    place-items: center;
+    width: 2rem;
+    height: 2rem;
+    padding: 0;
+    border-radius: 0.5rem;
+    cursor: pointer;
+    border: none;
+    background-color: transparent;
+    transition: background 120ms ease, border-color 120ms ease;
+}
+.notif-cell {
+    display:grid;
+    justify-content: center;
+}
+
+.coach-notif-toggle:hover {
+    background: var(--primary-subtle);
+    border-color: var(--primary);
+}
+
+.coach-notif-toggle .app-icon {
+    background-color: var(--text);
+}
+
+/* Dim the icon when notifications are off. */
+.coach-notif-toggle[aria-pressed="false"] .app-icon {
+    opacity: 0.45;
 }

@@ -54,6 +54,7 @@ export interface ICoach {
     email: string;
     is_owner: boolean;
     has_joined: boolean;
+    notifications_enabled: boolean;
 }
 
 export interface IStudent {

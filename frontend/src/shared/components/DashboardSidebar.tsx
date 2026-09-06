@@ -1,17 +1,20 @@
+import {useState} from "react";
+import Icon from "./Icon";
+
 export interface DashboardNavItem<T extends string> {
     key: T
     label: string
-    /** Placeholder icon glyph or node — can be swapped for designed icons later. */
-    icon: React.ReactNode
+    /**
+     * Icon name (without extension) of a designed SVG in `public/icons/`.
+     * Rendered via the shared `<Icon>` component (a `var(--text)` CSS mask).
+     */
+    icon: string
 }
 
 interface Props<T extends string> {
     items: DashboardNavItem<T>[]
     active: T
     onChange: (key: T) => void
-    /** When true, the sidebar is collapsed to an icon rail. */
-    collapsed: boolean
-    onToggleCollapse: () => void
     /** Title shown at the top of the sidebar (e.g. team code or tournament name). */
     title: string
     subtitle?: string
@@ -26,14 +29,35 @@ interface Props<T extends string> {
  * Expanded: fixed-width column with an icon + text label per item.
  * Collapsed: narrow rail showing only icons (labels available via title attr).
  *
- * Icons are intentionally simple placeholders — they can be swapped for
- * designed icons later without touching the layout. Styling lives in the
- * shared `styles/dashboard.css` (`.dash-sidebar*` / `.dash-nav-*` classes).
+ * Icons are designed SVGs from `public/icons/`, passed in by name and rendered
+ * as CSS masks so they take the current text color (`var(--text)`). Styling
+ * lives in the shared `styles/dashboard.css` (`.dash-sidebar*` / `.dash-nav-*`).
  */
+
+const SIDEBAR_STORAGE_KEY = 'sidebar-storage-state'
+
+
+
 export default function DashboardSidebar<T extends string>({
-    items, active, onChange, collapsed, onToggleCollapse, title, subtitle,
+    items, active, onChange, title, subtitle,
     ariaLabel = 'Dashboard sections',
 }: Props<T>) {
+
+    const [collapsed, setCollapsed] = useState<boolean>(() => {
+        try {
+            return localStorage.getItem(SIDEBAR_STORAGE_KEY) === 'true'
+        } catch {
+            return false
+        }
+    })
+    const toggleCollapsed = () => {
+        setCollapsed(prev => {
+            const next = !prev
+            try { localStorage.setItem(SIDEBAR_STORAGE_KEY, String(next)) } catch { /* ignore */ }
+            return next
+        })
+    }
+
     return (
         <aside className={`dash-sidebar${collapsed ? ' dash-sidebar--collapsed' : ''}`}>
             <div className="dash-sidebar-head">
@@ -46,12 +70,12 @@ export default function DashboardSidebar<T extends string>({
                 <button
                     type="button"
                     className="dash-sidebar-toggle"
-                    onClick={onToggleCollapse}
+                    onClick={toggleCollapsed}
                     aria-label={collapsed ? 'Expand navigation' : 'Collapse navigation'}
                     aria-expanded={!collapsed}
                     title={collapsed ? 'Expand navigation' : 'Collapse navigation'}
                 >
-                    <span aria-hidden="true">{collapsed ? '»' : '«'}</span>
+                    <Icon name={collapsed ? 'Expand' : 'Shrink'} className="dash-sidebar-toggle-icon" size={1} />
                 </button>
             </div>
 
@@ -65,7 +89,7 @@ export default function DashboardSidebar<T extends string>({
                         aria-current={active === item.key ? 'page' : undefined}
                         title={collapsed ? item.label : undefined}
                     >
-                        <span className="dash-nav-icon" aria-hidden="true">{item.icon}</span>
+                        <Icon name={item.icon} className="dash-nav-icon" />
                         {!collapsed && <span className="dash-nav-label">{item.label}</span>}
                     </button>
                 ))}

@@ -24,16 +24,16 @@ import TournamentSettingsTab from '../tabs/TournamentSettingsTab'
 import TiebreakersTab from '../tabs/TiebreakersTab'
 import AwardCategoriesTab from '../tabs/AwardCategoriesTab'
 
-// Primary navigation — placeholder icon glyphs, swap for designed icons later.
+// Primary navigation — icon names map to SVGs in `public/icons/`.
 const NAV_ITEMS: DashboardNavItem<OrganizerScreen>[] = [
-    { key: 'overview',   label: 'Overview',   icon: '▦' },
-    { key: 'rounds',     label: 'Rounds',     icon: '▤' },
-    { key: 'standings',  label: 'Standings',  icon: '▲' },
-    { key: 'teams',      label: 'Teams',      icon: '⬡' },
-    { key: 'scorers',    label: 'Scorers',    icon: '◈' },
-    { key: 'courtrooms', label: 'Courtrooms', icon: '◫' },
-    { key: 'organizers', label: 'Organizers', icon: '◎' },
-    { key: 'structure',  label: 'Structure',  icon: '☰' },
+    { key: 'overview',   label: 'Overview',   icon: 'Overview' },
+    { key: 'rounds',     label: 'Rounds',     icon: 'Rounds' },
+    { key: 'standings',  label: 'Standings',  icon: 'Standings' },
+    { key: 'teams',      label: 'Teams',      icon: 'Teams' },
+    { key: 'scorers',    label: 'Scorers',    icon: 'Scorers' },
+    { key: 'courtrooms', label: 'Courtrooms', icon: 'Courtrooms' },
+    { key: 'organizers', label: 'Organizers', icon: 'Organizers' },
+    { key: 'structure',  label: 'Structure',  icon: 'Settings' },
 ]
 
 const STRUCTURE_CARDS: { label: string; tab: OrganizerTab }[] = [
@@ -46,8 +46,6 @@ const STRUCTURE_CARDS: { label: string; tab: OrganizerTab }[] = [
 
 const STRUCTURE_TABS = new Set<OrganizerTab>(['tournament', 'scoring', 'witnesses', 'tiebreakers', 'awards'])
 
-const SIDEBAR_STORAGE_KEY = 'organizer-sidebar-collapsed'
-
 export default function TournamentDashboard() {
     const { id } = useParams<{ id: string }>()
     const navigate = useNavigate()
@@ -57,21 +55,6 @@ export default function TournamentDashboard() {
         if (screen !== 'overview' && screen !== 'structure') return new Set([screen as OrganizerTab])
         return new Set()
     })
-
-    const [collapsed, setCollapsed] = useState<boolean>(() => {
-        try {
-            return localStorage.getItem(SIDEBAR_STORAGE_KEY) === 'true'
-        } catch {
-            return false
-        }
-    })
-    const toggleCollapsed = () => {
-        setCollapsed(prev => {
-            const next = !prev
-            try { localStorage.setItem(SIDEBAR_STORAGE_KEY, String(next)) } catch { /* ignore */ }
-            return next
-        })
-    }
 
     useEffect(() => {
         if (!id) { navigate('/organizer', { replace: true }); return }
@@ -108,8 +91,6 @@ export default function TournamentDashboard() {
                     items={NAV_ITEMS}
                     active={activeNav}
                     onChange={onNavSelect}
-                    collapsed={collapsed}
-                    onToggleCollapse={toggleCollapsed}
                     title={tournament?.name ?? 'Tournament'}
                     subtitle={tournament?.location ?? undefined}
                     ariaLabel="Tournament dashboard sections"
@@ -118,7 +99,7 @@ export default function TournamentDashboard() {
                 <div className="dash-content">
 
                     {screen === 'overview' && (
-                        <OverviewTab tournamentId={id} tournament={tournament} onNavigate={setScreen} />
+                        <OverviewTab tournamentId={id} tournament={tournament} onNavigate={onNavSelect} />
                     )}
 
                     {screen === 'structure' && (
