@@ -2073,7 +2073,7 @@ router.get('/awards', tournamentHandler(async (req, res) => {
              JOIN ballots b ON b.ballot_id = n.ballot_id
              WHERE b.tournament_id = $1
              GROUP BY n.award_category_id, n.student_id
-             ORDER BY n.award_category_id, COUNT(*) DESC, AVG(n.rank) ASC`,
+             ORDER BY n.award_category_id, COUNT(*) DESC, AVG(n.rank)`,
             [req.tournament]
         );
 
@@ -2325,4 +2325,116 @@ router.delete('/pairings/:pairingId/scoresheets/:assignmentId', tournamentHandle
     }
 }));
 
+/**
+ * @swagger
+ * /organizer/tournament/{tournamentId}/summary:
+ *   get:
+ *     summary: Get tournament summary
+ *     tags: [Organizer - Tournament]
+ *     parameters:
+ *       - in: path
+ *         name: tournamentId
+ *         required: true
+ *         schema: { type: string, format: uuid }
+ *     responses:
+ *       200:
+ *         description: Tournament summary retrieved successfully
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 teams:
+ *                   type: object
+ *                   properties:
+ *                     total: { type: integer, minimum: 0 }
+ *                     withRosters: { type: integer, minimum: 0 }
+ *                     withoutRosters: { type: integer, minimum: 0 }
+ *                     withDefaultAssignments: { type: integer, minimum: 0 }
+ *                     withoutDefaultAssignments: { type: integer, minimum: 0 }
+ *                     withDefaultCallOrders: { type: integer, minimum: 0 }
+ *                     withoutDefaultCallOrders: { type: integer, minimum: 0 }
+ *                     withCoaches: { type: integer, minimum: 0 }
+ *                     withoutCoaches: { type: integer, minimum: 0 }
+ *                 rounds:
+ *                   type: object
+ *                   properties:
+ *                     total: { type: integer, minimum: 0 }
+ *                     withPairings: { type: integer, minimum: 0 }
+ *                     withoutPairings: { type: integer, minimum: 0 }
+ *                 pairings:
+ *                   type: object
+ *                   properties:
+ *                     total: { type: integer, minimum: 0 }
+ *                     withScorers: { type: integer, minimum: 0 }
+ *                     withoutScorers: { type: integer, minimum: 0 }
+ *                     withPresiders: { type: integer, minimum: 0 }
+ *                     withoutPresiders: { type: integer, minimum: 0 }
+ *                     withCourtrooms: { type: integer, minimum: 0 }
+ *                     withoutCourtrooms: { type: integer, minimum: 0 }
+ *                     courtroomsDoubleBooked:
+ *                       type: integer
+ *                       minimum: 0
+ *                       description: Number of courtroom/round combinations assigned to more than one pairing
+ *                     pairingsInDoubleBookedCourtrooms:
+ *                       type: integer
+ *                       minimum: 0
+ *                       description: Number of pairings affected by double-booked courtrooms
+ *                 ballots:
+ *                   type: object
+ *                   properties:
+ *                     submitted: { type: integer, minimum: 0 }
+ *                     paperAwaitingInput: { type: integer, minimum: 0 }
+ *                 scorers:
+ *                   type: object
+ *                   properties:
+ *                     total: { type: integer, minimum: 0 }
+ *                     withConflicts: { type: integer, minimum: 0 }
+ *             example:
+ *               teams:
+ *                 total: 42
+ *                 withRosters: 39
+ *                 withoutRosters: 3
+ *                 withDefaultAssignments: 40
+ *                 withoutDefaultAssignments: 2
+ *                 withDefaultCallOrders: 38
+ *                 withoutDefaultCallOrders: 4
+ *                 withCoaches: 35
+ *                 withoutCoaches: 7
+ *               rounds:
+ *                 total: 8
+ *                 withPairings: 6
+ *                 withoutPairings: 2
+ *               pairings:
+ *                 total: 96
+ *                 withScorers: 90
+ *                 withoutScorers: 6
+ *                 withPresiders: 84
+ *                 withoutPresiders: 12
+ *                 withCourtrooms: 92
+ *                 withoutCourtrooms: 4
+ *                 courtroomsDoubleBooked: 2
+ *                 pairingsInDoubleBookedCourtrooms: 5
+ *               ballots:
+ *                 submitted: 180
+ *                 paperAwaitingInput: 6
+ *               scorers:
+ *                 total: 24
+ *                 withConflicts: 8
+ *       400: { description: Invalid tournament ID }
+ *       404: { description: Tournament not found }
+ *       500: { description: Database error }
+ */
+router.get('/overview', tournamentHandler(async (req, res) => {
+    const tournamentId = req.tournament as string;
+    if (!uuidRegex.test(tournamentId)) return res.status(400).json({ message: 'Invalid tournament ID' });
+    try {
+        const summary = await organizer.getTournamentSummary(tournamentId);
+        return res.status(200).json(summary);
+    } catch (e) {
+        if (e instanceof NotFoundError) return res.status(404).json({ message: e.message });
+        if (e instanceof DbError) return res.status(500).json({ message: 'Unable to get overview' });
+        throw e;
+    }
+}));
 export default router;

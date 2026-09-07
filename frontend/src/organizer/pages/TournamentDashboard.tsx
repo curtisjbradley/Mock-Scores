@@ -98,7 +98,7 @@ export default function TournamentDashboard() {
                 <main className="dash-content">
 
                     {screen === 'overview' && (
-                        <OverviewTab tournamentId={id} tournament={tournament} onNavigate={onNavSelect} />
+                        <OverviewTab tournamentId={id} onNavigate={onNavSelect} />
                     )}
 
                     {screen === 'structure' && (

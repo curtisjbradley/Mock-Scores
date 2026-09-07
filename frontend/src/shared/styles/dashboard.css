@@ -193,15 +193,7 @@
     gap: 1rem;
 }
 
-.dash-stat-card {
-    display: flex;
-    flex-direction: column;
-    gap: 0.4rem;
-    padding: 1.25rem;
-    border: 1px solid var(--border);
-    border-radius: var(--radius);
-    background: var(--surface);
-}
+
 
 /* The feature card spans the full row on wider layouts. */
 .dash-stat-card--feature {
@@ -213,14 +205,7 @@
     border-color: var(--danger);
 }
 
-.dash-stat-label {
-    margin: 0;
-    font-size: 0.75rem;
-    font-weight: 700;
-    text-transform: uppercase;
-    letter-spacing: 0.06em;
-    color: var(--text-muted);
-}
+
 
 .dash-stat-value {
     margin: 0;
@@ -234,50 +219,6 @@
     color: var(--primary);
 }
 
-.dash-stat-card--alert .dash-stat-value {
-    color: var(--danger);
-}
-
-.dash-stat-sub {
-    margin: 0;
-    font-size: 0.85rem;
-    color: var(--text-muted);
-}
-
-.dash-stat-link {
-    align-self: flex-start;
-    margin-top: 0.35rem;
-    padding: 0;
-    border: none;
-    background: none;
-    color: var(--primary);
-    font-family: inherit;
-    font-size: 0.85rem;
-    font-weight: 600;
-    cursor: pointer;
-    transition: color 120ms ease;
-}
-
-.dash-stat-link:hover {
-    color: var(--primary-dark);
-    text-decoration: underline;
-}
-
-/* Simple progress bar for completion-style stats (e.g. ballots submitted). */
-.dash-stat-progress {
-    height: 0.5rem;
-    border-radius: 999px;
-    background: var(--surface-muted);
-    overflow: hidden;
-}
-
-.dash-stat-progress-fill {
-    height: 100%;
-    width: var(--fill, 100%);
-    border-radius: 999px;
-    background: var(--primary);
-    transition: width 200ms ease;
-}
 
 /* ── Responsive: stack the sidebar on top as a horizontal rail on mobile ──── */
 @media (max-width: 48rem) {

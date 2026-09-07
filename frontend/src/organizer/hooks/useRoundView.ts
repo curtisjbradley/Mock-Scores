@@ -85,8 +85,24 @@ export function useRoundView(id: string | undefined, roundId: string | undefined
         }).catch((e: Error) => setError(e.message))
     }
 
-    const updatePairing = (updated: IPairing) =>
+    const updatePairing = (updated: IPairing) => {
         setPairings(prev => prev.map(p => p.pairing_id === updated.pairing_id ? updated : p))
+        apiFetch(`/organizer/tournament/${id}/rounds/${roundId}/pairings/${updated.pairing_id}`, {
+            method: 'PUT',
+            body: JSON.stringify({
+                prosectionID: updated.p_team,
+                defenseID: updated.d_team,
+                courtroomID: updated.courtroom,
+            }),
+        }).then(async r => {
+            if (!r.ok) {
+                const data = await r.json().catch(() => ({}))
+                throw new Error(data.message ?? 'Failed to update pairing.')
+            }
+            const saved = await r.json() as IPairing
+            setPairings(prev => prev.map(p => p.pairing_id === saved.pairing_id ? saved : p))
+        }).catch((e: Error) => setError(e.message))
+    }
 
     const removePairing = (pairing: IPairing) => {
         apiFetch(`/organizer/tournament/${id}/rounds/${roundId}/pairings/${pairing.pairing_id}`, { method: 'DELETE' })
