@@ -175,3 +175,36 @@ export interface ITeamRosteredStudentRow {
     team_id: string;
     student_name: string;
 }
+
+export interface ITournamentSummaryRow {
+    teams_total: number;
+    teams_with_rosters: number;
+    teams_without_rosters: number;
+    teams_with_default_assignments: number;
+    teams_without_default_assignments: number;
+    teams_with_default_call_orders: number;
+    teams_without_default_call_orders: number;
+    teams_with_coaches: number;
+    teams_without_coaches: number;
+
+    rounds_total: number;
+    rounds_with_pairings: number;
+    rounds_without_pairings: number;
+
+    pairings_total: number;
+    pairings_with_scorers: number;
+    pairings_without_scorers: number;
+    pairings_with_presiders: number;
+    pairings_without_presiders: number;
+    pairings_with_courtrooms: number;
+    pairings_without_courtrooms: number;
+
+    courtrooms_double_booked: number;
+    pairings_in_double_booked_courtrooms: number;
+
+    ballots_submitted: number;
+    paper_ballots_awaiting_input: number;
+
+    scorers_total: number;
+    scorers_with_conflicts: number;
+}

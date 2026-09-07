@@ -1,0 +1,19 @@
+/* ─────────────────────────────────────────────────────────────────────────
+   Coach Schedule page — action-button cell + submitted (disabled) button
+   state. Relies on the shared theme variables defined in styles/globals.css.
+   The round-group wrapper is provided by the shared <RoundGroup> component.
+   ───────────────────────────────────────────────────────────────────────── */
+
+.coach-schedule-actions {
+    display: flex;
+    gap: 0.5rem;
+    flex-wrap: wrap;
+}
+
+.coach-btn-submitted {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    color: var(--text-muted);
+    cursor: default;
+    font-weight: 500;
+}

@@ -1,0 +1,8 @@
+/* ─────────────────────────────────────────────────────────────────────────
+   Coach Standings page — spacing above the tiebreaker viewer.
+   Relies on the shared theme variables defined in styles/globals.css.
+   ───────────────────────────────────────────────────────────────────────── */
+
+.coach-tiebreaker-viewer {
+    margin-top: 24px;
+}

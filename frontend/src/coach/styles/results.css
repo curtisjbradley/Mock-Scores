@@ -1,0 +1,71 @@
+/* ─────────────────────────────────────────────────────────────────────────
+   Coach Results page — clickable pairing rows, win/loss diff cell, and the
+   expanded ballot-detail cell. Relies on the shared theme variables defined
+   in styles/globals.css. The round-group wrapper is provided by the shared
+   <RoundGroup> component.
+   ───────────────────────────────────────────────────────────────────────── */
+
+/* Clickable pairing row + win/loss diff cell. */
+.coach-pairing-row {
+    cursor: pointer;
+}
+
+.coach-diff-cell {
+    font-size: 0.8rem;
+    font-weight: 700;
+}
+
+.coach-diff-cell--pos { color: var(--green-text); }
+.coach-diff-cell--neg { color: var(--red-text); }
+.coach-diff-cell--tie { color: var(--text-muted); }
+
+/* Expanded ballot-detail cell. */
+.coach-ballot-cell {
+    padding: 0.5rem 1rem;
+    background: var(--surface-muted);
+}
+
+.coach-ballot-status {
+    font-size: 0.85rem;
+    color: var(--text-muted);
+}
+
+.coach-ballot-status--empty {
+    font-style: italic;
+}
+
+.coach-ballot-link-row {
+    margin-bottom: 0.5rem;
+}
+
+.coach-ballot-table {
+    width: 100%;
+    font-size: 0.85rem;
+    border-collapse: collapse;
+}
+
+.coach-ballot-table tr {
+    border-bottom: 1px solid var(--border);
+}
+
+.coach-ballot-table th,
+.coach-ballot-table td {
+    padding: 0.35rem 0.5rem;
+}
+
+.coach-ballot-table th {
+    padding: 0.25rem 0.5rem;
+}
+
+.coach-ballot-table .coach-ballot-col-label {
+    text-align: left;
+}
+
+.coach-ballot-table .coach-ballot-col-center {
+    text-align: center;
+}
+
+.coach-ballot-table .coach-ballot-result {
+    text-align: center;
+    font-weight: 700;
+}

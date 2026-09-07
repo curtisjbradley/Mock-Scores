@@ -205,6 +205,61 @@ router.post('/pairings', roundHandler(async (req, res) => {
 /**
  * @swagger
  * /organizer/tournament/{tournamentId}/rounds/{round}/pairings/{pairing}:
+ *   put:
+ *     summary: Update a pairing's teams and/or courtroom
+ *     tags: [Organizer - Rounds]
+ *     parameters:
+ *       - in: path
+ *         name: tournamentId
+ *         required: true
+ *         schema: { type: string, format: uuid }
+ *       - in: path
+ *         name: round
+ *         required: true
+ *         schema: { type: string, format: uuid }
+ *       - in: path
+ *         name: pairing
+ *         required: true
+ *         schema: { type: string, format: uuid }
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             required: [prosectionID, defenseID]
+ *             properties:
+ *               prosectionID: { type: string, format: uuid }
+ *               defenseID: { type: string, format: uuid }
+ *               courtroomID: { type: string | null, format: uuid }
+ *     responses:
+ *       200: { description: Updated pairing }
+ *       400: { description: Missing fields or duplicate teams }
+ *       404: { description: Pairing not found }
+ *       409: { description: Team already assigned this round }
+ *       500: { description: Database error }
+ */
+router.put('/pairings/:pairing', async (req: Request, res: Response) => {
+    const pairing = req.params.pairing as string;
+    if (!uuidRegex.test(pairing)) return res.status(400).json({ message: 'Invalid pairing ID' });
+    const { prosectionID, defenseID, courtroomID }: IPairingCreationPayload = req.body;
+    if (!prosectionID || !defenseID) return res.status(400).json({ message: "Missing required fields" });
+    if (prosectionID === defenseID) return res.status(400).json({ message: "Prosecution and defense teams must differ" });
+    try {
+        return res.status(200).json(await organizer.updatePairing(pairing, prosectionID, defenseID, courtroomID));
+    } catch (e: unknown) {
+        const detail: string = (e as { detail?: string })?.detail ?? '';
+        if (detail.includes('p_team')) return res.status(409).json({ message: "That team is already assigned as prosecution this round" });
+        if (detail.includes('d_team')) return res.status(409).json({ message: "That team is already assigned as defense this round" });
+        if (e instanceof NotFoundError) return res.status(404).json({ message: e.message });
+        if (e instanceof DbError) return res.status(500).json({ message: 'Unable to update pairing' });
+        throw e;
+    }
+});
+
+/**
+ * @swagger
+ * /organizer/tournament/{tournamentId}/rounds/{round}/pairings/{pairing}:
  *   delete:
  *     summary: Delete a pairing
  *     tags: [Organizer - Rounds]

@@ -20,3 +20,44 @@ export interface ITeam {
     coach_email: string;
     has_joined: boolean;
 }
+export interface ITournamentSummary {
+    teams: {
+        total: number;
+        withRosters: number;
+        withoutRosters: number;
+        withDefaultAssignments: number;
+        withoutDefaultAssignments: number;
+        withDefaultCallOrders: number;
+        withoutDefaultCallOrders: number;
+        withCoaches: number;
+        withoutCoaches: number;
+    };
+
+    rounds: {
+        total: number;
+        withPairings: number;
+        withoutPairings: number;
+    };
+
+    pairings: {
+        total: number;
+        withScorers: number;
+        withoutScorers: number;
+        withPresiders: number;
+        withoutPresiders: number;
+        withCourtrooms: number;
+        withoutCourtrooms: number;
+        courtroomsDoubleBooked: number;
+        pairingsInDoubleBookedCourtrooms: number;
+    };
+
+    ballots: {
+        submitted: number;
+        paperAwaitingInput: number;
+    };
+
+    scorers: {
+        total: number;
+        withConflicts: number;
+    };
+}

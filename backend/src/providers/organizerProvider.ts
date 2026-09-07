@@ -12,7 +12,8 @@ import type {
     ITeam,
     ITournament,
     IWitnesses,
-    TournamentPayload
+    TournamentPayload,
+    ITournamentSummary
 } from '@mock-scores/shared';
 import type {
     IAuthRow,
@@ -26,7 +27,8 @@ import type {
     ITeamRow,
     ITournamentDelegateInviteRow,
     ITournamentFormatRow,
-    ITournamentOwnerRow
+    ITournamentOwnerRow,
+    ITournamentSummaryRow
 } from '../types/dbtypes';
 import {randomUUID} from 'node:crypto';
 import {AlreadyExistsError, DbError, NotFoundError, OrganizerAlreadyJoinedError} from '../errors';
@@ -332,7 +334,7 @@ export async function copyScoringTemplateToTournament(templateID: string, tourna
 }
 
 export async function deleteTournament(tournamentID: string): Promise<void> {
-    const row = (await dbQuery('DELETE FROM tournaments WHERE id=$1 RETURNING id', [tournamentID]))?.rows[0];
+    const row = (await dbQuery('DELETE FROM tournaments  WHERE id=$1 RETURNING id', [tournamentID]))?.rows[0];
     if (!row) throw new NotFoundError('tournament');
 }
 
@@ -657,6 +659,17 @@ export async function getPairings(roundID: string): Promise<IPairingRow[]> {
     const result = await dbQuery<IPairingRow>('SELECT * FROM pairings WHERE round_id=$1', [roundID]);
     if (!result) throw new DbError('getPairings');
     return result.rows;
+}
+
+export async function updatePairing(pairingID: string, prosecution: string, defense: string, courtroomID: string | null): Promise<IPairingRow> {
+    const result = await dbQuery<IPairingRow>(
+        'UPDATE pairings SET p_team=$1, d_team=$2, courtroom=$3 WHERE pairing_id=$4 RETURNING *',
+        [prosecution, defense, courtroomID, pairingID]
+    );
+    if (!result) throw new DbError('updatePairing');
+    const row = result.rows[0];
+    if (!row) throw new NotFoundError('pairing');
+    return row;
 }
 
 export async function getBallotStatus(roundID: string): Promise<IBallotStatus[]> {
@@ -1109,4 +1122,259 @@ export async function updateAwardCategory(
 export async function deleteAwardCategory(categoryId: string): Promise<void> {
     const row = (await dbQuery('DELETE FROM individual_award_categories WHERE id = $1 RETURNING id', [categoryId]))?.rows[0];
     if (!row) throw new NotFoundError('award category');
+}
+
+export async function getTournamentSummary(tournamentId: string) : Promise<ITournamentSummary> {
+    const row = (await dbQuery<ITournamentSummaryRow>(`
+        WITH params AS (SELECT $1::uuid AS tournament_id),
+
+-- ============================================================
+-- Teams
+-- ============================================================
+
+             tournament_teams AS (SELECT t.id AS team_id
+                                  FROM teams t
+                                           JOIN params p
+                                                ON t.tournament_id = p.tournament_id),
+
+             teams_with_rosters AS (SELECT DISTINCT trs.team_id
+                                    FROM team_rostered_students trs
+                                             JOIN tournament_teams tt
+                                                  ON tt.team_id = trs.team_id),
+
+             teams_with_default_assignments AS (SELECT DISTINCT dsa.team_id
+                                                FROM default_student_assignments dsa
+                                                         JOIN tournament_teams tt
+                                                              ON tt.team_id = dsa.team_id),
+
+             teams_with_default_call_orders AS (SELECT DISTINCT dwco.team_id
+                                                FROM default_witness_call_order dwco
+                                                         JOIN tournament_teams tt
+                                                              ON tt.team_id = dwco.team_id),
+
+             teams_with_coaches AS (SELECT DISTINCT tc.team_id
+                                    FROM team_coaches tc
+                                             JOIN tournament_teams tt
+                                                  ON tt.team_id = tc.team_id),
+
+-- ============================================================
+-- Rounds
+-- ============================================================
+
+             tournament_rounds AS (SELECT r.round_id
+                                   FROM rounds r
+                                            JOIN params p
+                                                 ON r.tournament_id = p.tournament_id),
+
+             rounds_with_pairings AS (SELECT DISTINCT p.round_id
+                                      FROM pairings p
+                                               JOIN tournament_rounds tr
+                                                    ON tr.round_id = p.round_id),
+
+-- ============================================================
+-- Pairings
+-- ============================================================
+
+             tournament_pairings AS (SELECT p.pairing_id,
+                                            p.round_id,
+                                            p.courtroom
+                                     FROM pairings p
+                                              JOIN tournament_rounds tr
+                                                   ON tr.round_id = p.round_id),
+
+             pairings_with_scorers AS (SELECT DISTINCT spa.pairing_id
+                                       FROM scorer_pairing_assignments spa
+                                                JOIN tournament_pairings tp
+                                                     ON tp.pairing_id = spa.pairing_id),
+
+             pairings_with_presiders AS (SELECT DISTINCT spa.pairing_id
+                                         FROM scorer_presider_assignment spa
+                                                  JOIN tournament_pairings tp
+                                                       ON tp.pairing_id = spa.pairing_id),
+
+-- Same courtroom assigned to multiple pairings in same round
+             double_booked_courtrooms AS (SELECT tp.round_id,
+                                                 tp.courtroom,
+                                                 COUNT(*) AS pairing_count
+                                          FROM tournament_pairings tp
+                                          WHERE tp.courtroom IS NOT NULL
+                                          GROUP BY tp.round_id,
+                                                   tp.courtroom
+                                          HAVING COUNT(*) > 1),
+
+-- ============================================================
+-- Paper ballots awaiting input
+-- ============================================================
+
+             paper_ballots_awaiting_input AS (SELECT DISTINCT spa.assignment_id
+                                              FROM scorer_pairing_assignments spa
+                                                       JOIN tournament_pairings tp
+                                                            ON tp.pairing_id = spa.pairing_id
+                                              WHERE spa.paper_scorer_id IS NOT NULL
+                                                AND NOT EXISTS (SELECT 1
+                                                                FROM ballots b
+                                                                WHERE b.scorer_assignment_id = spa.assignment_id)),
+
+-- ============================================================
+-- Scorers
+-- ============================================================
+
+             tournament_scorers AS (SELECT s.scorer_id
+                                    FROM scorers s
+                                             JOIN params p
+                                                  ON s.tournament_id = p.tournament_id),
+
+             scorers_with_conflicts AS (SELECT DISTINCT sc.scorer_id
+                                        FROM scorer_conflicts sc
+                                                 JOIN tournament_scorers ts
+                                                      ON ts.scorer_id = sc.scorer_id)
+
+        -- ============================================================
+-- Single-row result
+-- ============================================================
+
+        SELECT
+
+            -- Teams
+            (SELECT COUNT(*) FROM tournament_teams)
+                                                                 AS teams_total,
+
+            (SELECT COUNT(*) FROM teams_with_rosters)
+                                                                 AS teams_with_rosters,
+
+            (SELECT COUNT(*) FROM tournament_teams)
+                - (SELECT COUNT(*) FROM teams_with_rosters)
+                                                                 AS teams_without_rosters,
+
+            (SELECT COUNT(*) FROM teams_with_default_assignments)
+                                                                 AS teams_with_default_assignments,
+
+            (SELECT COUNT(*) FROM tournament_teams)
+                - (SELECT COUNT(*) FROM teams_with_default_assignments)
+                                                                 AS teams_without_default_assignments,
+
+            (SELECT COUNT(*) FROM teams_with_default_call_orders)
+                                                                 AS teams_with_default_call_orders,
+
+            (SELECT COUNT(*) FROM tournament_teams)
+                - (SELECT COUNT(*) FROM teams_with_default_call_orders)
+                                                                 AS teams_without_default_call_orders,
+
+            (SELECT COUNT(*) FROM teams_with_coaches)
+                                                                 AS teams_with_coaches,
+
+            (SELECT COUNT(*) FROM tournament_teams)
+                - (SELECT COUNT(*) FROM teams_with_coaches)
+                                                                 AS teams_without_coaches,
+
+
+            -- Rounds
+            (SELECT COUNT(*) FROM tournament_rounds)
+                                                                 AS rounds_total,
+
+            (SELECT COUNT(*) FROM rounds_with_pairings)
+                                                                 AS rounds_with_pairings,
+
+            (SELECT COUNT(*) FROM tournament_rounds)
+                - (SELECT COUNT(*) FROM rounds_with_pairings)
+                                                                 AS rounds_without_pairings,
+
+
+            -- Pairings
+            (SELECT COUNT(*) FROM tournament_pairings)
+                                                                 AS pairings_total,
+
+            (SELECT COUNT(*) FROM pairings_with_scorers)
+                                                                 AS pairings_with_scorers,
+
+            (SELECT COUNT(*) FROM tournament_pairings)
+                - (SELECT COUNT(*) FROM pairings_with_scorers)
+                                                                 AS pairings_without_scorers,
+
+            (SELECT COUNT(*) FROM pairings_with_presiders)
+                                                                 AS pairings_with_presiders,
+
+            (SELECT COUNT(*) FROM tournament_pairings)
+                - (SELECT COUNT(*) FROM pairings_with_presiders)
+                                                                 AS pairings_without_presiders,
+
+            (SELECT COUNT(*)
+             FROM tournament_pairings
+             WHERE courtroom IS NOT NULL)                        AS pairings_with_courtrooms,
+
+            (SELECT COUNT(*)
+             FROM tournament_pairings
+             WHERE courtroom IS NULL)                            AS pairings_without_courtrooms,
+
+
+            -- Courtroom conflicts
+            (SELECT COUNT(*)
+             FROM double_booked_courtrooms)                      AS courtrooms_double_booked,
+
+            (SELECT COALESCE(SUM(pairing_count), 0)
+             FROM double_booked_courtrooms)                      AS pairings_in_double_booked_courtrooms,
+
+
+            -- Ballots
+            (SELECT COUNT(*)
+             FROM ballots b
+                      JOIN params p
+                           ON b.tournament_id = p.tournament_id) AS ballots_submitted,
+
+            (SELECT COUNT(*)
+             FROM paper_ballots_awaiting_input)                  AS paper_ballots_awaiting_input,
+
+
+            -- Scorers
+            (SELECT COUNT(*)
+             FROM tournament_scorers)                            AS scorers_total,
+
+            (SELECT COUNT(*)
+             FROM scorers_with_conflicts)                        AS scorers_with_conflicts;`, [tournamentId]))?.rows[0] ?? null;
+
+    if (!row) {
+        throw new NotFoundError();
+    }
+    return {
+        teams: {
+            total: row.teams_total,
+            withRosters: row.teams_with_rosters,
+            withoutRosters: row.teams_without_rosters,
+            withDefaultAssignments: row.teams_with_default_assignments,
+            withoutDefaultAssignments: row.teams_without_default_assignments,
+            withDefaultCallOrders: row.teams_with_default_call_orders,
+            withoutDefaultCallOrders: row.teams_without_default_call_orders,
+            withCoaches: row.teams_with_coaches,
+            withoutCoaches: row.teams_without_coaches,
+        },
+
+        rounds: {
+            total: row.rounds_total,
+            withPairings: row.rounds_with_pairings,
+            withoutPairings: row.rounds_without_pairings,
+        },
+
+        pairings: {
+            total: row.pairings_total,
+            withScorers: row.pairings_with_scorers,
+            withoutScorers: row.pairings_without_scorers,
+            withPresiders: row.pairings_with_presiders,
+            withoutPresiders: row.pairings_without_presiders,
+            withCourtrooms: row.pairings_with_courtrooms,
+            withoutCourtrooms: row.pairings_without_courtrooms,
+            courtroomsDoubleBooked: row.courtrooms_double_booked,
+            pairingsInDoubleBookedCourtrooms:
+            row.pairings_in_double_booked_courtrooms,
+        },
+
+        ballots: {
+            submitted: row.ballots_submitted,
+            paperAwaitingInput: row.paper_ballots_awaiting_input,
+        },
+
+        scorers: {
+            total: row.scorers_total,
+            withConflicts: row.scorers_with_conflicts,
+        },
+    };
 }

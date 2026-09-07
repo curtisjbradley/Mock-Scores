@@ -1,0 +1,32 @@
+/* ─────────────────────────────────────────────────────────────────────────
+   Coach Roster page — default-setup action row + side-setup modal dialog.
+   Relies on the shared theme variables defined in styles/globals.css.
+   ───────────────────────────────────────────────────────────────────────── */
+
+/* Default-setup action button row. */
+.coach-roster-actions {
+    display: flex;
+    gap: 0.75rem;
+    margin-top: 1.5rem;
+    flex-wrap: wrap;
+}
+
+/* Side-setup modal dialog + inner spacing. */
+.coach-setup-modal {
+    max-width: 36rem;
+    width: 100%;
+    max-height: 80vh;
+    overflow-y: auto;
+}
+
+.coach-setup-modal h2 {
+    margin-top: 0;
+}
+
+.coach-setup-heading {
+    margin: 0 0 0.5rem;
+}
+
+.coach-setup-table {
+    margin-bottom: 1rem;
+}

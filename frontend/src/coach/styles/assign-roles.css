@@ -1,0 +1,10 @@
+/* ─────────────────────────────────────────────────────────────────────────
+   Coach Assign-Roles page — side note above the roles table.
+   Relies on the shared theme variables defined in styles/globals.css. The
+   save/cancel action bar is provided by the shared <SaveCancelActions>
+   component.
+   ───────────────────────────────────────────────────────────────────────── */
+
+.coach-assign-note {
+    margin-bottom: 16px;
+}

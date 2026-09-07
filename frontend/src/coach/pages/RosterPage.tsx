@@ -11,7 +11,7 @@ import { useCoachContext } from '../CoachContext'
 import '../../organizer/styles/organizer.css'
 import '../../organizer/styles/tabs.css'
 import '../../organizer/styles/round-view.css'
-import '../styles/coach-pages.css'
+import '../styles/roster.css'
 
 const PRONOUN_OPTIONS = [
     { value: 'he/him',    label: 'he/him (Mr)' },

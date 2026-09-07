@@ -1,20 +1,19 @@
-import { useEffect, useState } from 'react'
-import type { ITournament, IRound, IBallotStatus } from '@mock-scores/shared'
+import {useEffect, useState} from 'react'
+import type {IRound, ITournamentSummary} from '@mock-scores/shared'
 import { apiFetch } from '../../auth/auth'
-import { formatDate } from '../../utils/format'
 import type { OrganizerScreen } from '../constants'
-
+import LoadingPage from "../../layout/LoadingPage.tsx";
+import AddButton from "../../shared/components/AddButton.tsx";
+import {DashboardStatusCard} from "../components/DashboardStatusCard.tsx";
+import {formatDate} from "../../utils/format.ts";
+import {useNavigate} from "react-router-dom";
 interface Props {
     tournamentId: string
-    tournament: ITournament | null
     /** Navigate to another dashboard section (used by the quick-link cards). */
     onNavigate: (screen: OrganizerScreen) => void
 }
 
-interface BallotTotals {
-    total: number
-    submitted: number
-}
+
 
 /** A round is "upcoming" when it has a time in the future, or no time set yet. */
 function findNextRound(rounds: IRound[]): IRound | null {
@@ -32,117 +31,126 @@ function findNextRound(rounds: IRound[]): IRound | null {
  * operational information — teams, rounds, publish progress, ballot completion,
  * and the next round — with quick links into the detailed management sections.
  */
-export default function OverviewTab({ tournamentId, tournament, onNavigate }: Props) {
+export default function OverviewTab({ tournamentId, onNavigate }: Props) {
+    const [loading, setLoading] = useState<boolean>(true);
     const [rounds, setRounds] = useState<IRound[]>([])
-    const [ballots, setBallots] = useState<BallotTotals>({ total: 0, submitted: 0 })
+    const [overview, setOverview] = useState<ITournamentSummary | null>(null);
 
     useEffect(() => {
-        let cancelled = false
-        apiFetch(`/organizer/tournament/${tournamentId}/rounds`)
-            .then(r => r.ok ? r.json() : [])
-            .then(async (data: IRound[]) => {
-                if (cancelled) return
-                setRounds(data)
-                // Aggregate ballot completion across every round.
-                const statuses = await Promise.all(
-                    data.map(r =>
-                        apiFetch(`/organizer/tournament/${tournamentId}/rounds/${r.round_id}/ballot-status`)
-                            .then(res => res.ok ? res.json() : [])
-                            .then((s: IBallotStatus[]) => ({
-                                total: s.reduce((sum, x) => sum + x.total_scorers, 0),
-                                submitted: s.reduce((sum, x) => sum + x.submitted, 0),
-                            })),
-                    ),
-                )
-                if (cancelled) return
-                setBallots(statuses.reduce(
-                    (acc, s) => ({ total: acc.total + s.total, submitted: acc.submitted + s.submitted }),
-                    { total: 0, submitted: 0 },
-                ))
-            })
-            .catch(() => { /* overview is best-effort; leave stats empty */ })
-        return () => { cancelled = true }
-    }, [tournamentId])
+        let cancelled = false;
+        Promise.all([
+            apiFetch(`/organizer/tournament/${tournamentId}/rounds`)
+                .then(r => r.ok ? r.json() : [])
+                .catch(() => []),
+            apiFetch(`/organizer/tournament/${tournamentId}/overview`)
+                .then(r => r.ok ? r.json() : null)
+                .catch(() => null)
+        ])
+            .then(([roundsData, overviewData]: [IRound[], ITournamentSummary | null]) => {
+                if (cancelled) return;
+                setRounds(roundsData);
+                setOverview(overviewData);
+            }).finally(() => setLoading(false));
+
+        return () => {
+            cancelled = true;
+        };
+    }, [tournamentId]);
 
     const nextRound = findNextRound(rounds)
-    const publishedResults = rounds.filter(r => r.results_public).length
-    const publishedPairings = rounds.filter(r => r.teams_public).length
-    const ballotPct = ballots.total > 0 ? Math.round((ballots.submitted / ballots.total) * 100) : 0
+    const navigate=  useNavigate()
+
+    if (loading && rounds.length == 0) {
+        return (<LoadingPage loadingText={"Getting tournament information..."}/>)
+    }
 
     return (
         <div className="dash-overview">
             <div className="dash-overview-grid">
-                {/* Next round — spans full width as the primary highlight */}
-                <section className="dash-stat-card dash-stat-card--feature">
-                    <h2 className="dash-stat-label">Next Round</h2>
-                    {nextRound ? (
+                <DashboardStatusCard title={"Next Round"}
+                button ={
+                    nextRound?.round_id ?<AddButton onClick={() => {navigate(`/organizer/${tournamentId}/round/${nextRound?.round_id}`)}}> Manage Round</AddButton>
+                        : <AddButton onClick={() => onNavigate('rounds')}>Manage Rounds</AddButton>
+
+                }>
+                    {nextRound ?
                         <>
-                            <p className="dash-stat-value">{nextRound.name}</p>
-                            <p className="dash-stat-sub">
-                                {nextRound.round_time ? formatDate(nextRound.round_time) : 'Time TBD'}
-                                {' · '}
-                                {nextRound.teams_public ? 'Pairings published' : 'Pairings not yet published'}
-                            </p>
-                            <button className="dash-stat-link" onClick={() => onNavigate('rounds')}>
-                                Manage rounds →
-                            </button>
+                        <h3>{nextRound.name}</h3>
+                        {nextRound.round_time && <h4>{formatDate(nextRound?.round_time)} @ {new Date(nextRound.round_time).toLocaleTimeString()}</h4>}
                         </>
-                    ) : (
-                        <p className="dash-stat-sub">
-                            No rounds yet.{' '}
-                            <button className="dash-stat-link" onClick={() => onNavigate('rounds')}>Add a round →</button>
+                     :
+                        <p>
+                            No upcoming rounds
                         </p>
-                    )}
-                </section>
 
-                <section className="dash-stat-card">
-                    <h2 className="dash-stat-label">Teams Registered</h2>
-                    <p className="dash-stat-value">{tournament?.num_teams ?? 0}</p>
-                    <button className="dash-stat-link" onClick={() => onNavigate('teams')}>
-                        Manage teams →
-                    </button>
-                </section>
+                    }
+                </DashboardStatusCard>
 
-                <section className="dash-stat-card">
-                    <h2 className="dash-stat-label">Rounds</h2>
-                    <p className="dash-stat-value">{rounds.length || (tournament?.num_rounds ?? 0)}</p>
-                    <p className="dash-stat-sub">
-                        {publishedPairings} with pairings · {publishedResults} with results published
-                    </p>
-                    <button className="dash-stat-link" onClick={() => onNavigate('rounds')}>
-                        Manage rounds →
-                    </button>
-                </section>
+                {overview &&
+                    <>
+                {(overview.rounds.withoutPairings > 0) &&
+                <DashboardStatusCard title={"Rounds Without Pairings"} button = {<AddButton onClick={() => onNavigate('rounds')}>Manage Rounds</AddButton>}>
+                    <span className={"dash-stat-alert-value"}>{overview.rounds.withoutPairings}</span>
+                    <span className={"dash-stat-alert-sub"}>Rounds</span>
+                </DashboardStatusCard>}
+                        {(overview.teams.withoutRosters > 0) &&
+                            <DashboardStatusCard title={"Teams Without Rosters"} button = {<AddButton onClick={() => onNavigate('teams')}>Manage Teams</AddButton>}>
+                                <span className={"dash-stat-alert-value"}>{overview.teams.withoutRosters}</span>
+                                {/*TODO: Add a page listing all these teams */}
+                                <span className={"dash-stat-alert-sub"}>Teams</span>
+                            </DashboardStatusCard>}
+                        {(overview.teams.withoutDefaultAssignments > 0) &&
+                            <DashboardStatusCard title={"Teams Without Default Assignments"} button = {<AddButton onClick={() => onNavigate('teams')}>Manage Teams</AddButton>}>
+                                <span className={"dash-stat-alert-value"}>{overview.teams.withoutDefaultAssignments}</span>
+                                {/*TODO: Add a page listing all these teams */}
+                                <span className={"dash-stat-alert-sub"}>Teams</span>
+                            </DashboardStatusCard>}
+                        {(overview.teams.withoutCoaches > 0) &&
+                            <DashboardStatusCard title={"Unregistered Coaches"} button = {<AddButton onClick={() => onNavigate('teams')}>Manage Coaches</AddButton>}>
+                                <span className={"dash-stat-alert-value"}>{overview.teams.withoutCoaches}</span>
+                                {/*TODO: Add a page listing all these teams */}
+                                <span className={"dash-stat-alert-sub"}>Coaches</span>
+                            </DashboardStatusCard>}
+                        {(overview.teams.withoutDefaultCallOrders > 0) &&
+                            <DashboardStatusCard title={"Teams without call orders"} button = {<AddButton onClick={() => onNavigate('teams')}>Manage Teams</AddButton>}>
+                                <span className={"dash-stat-alert-value"}>{overview.teams.withoutDefaultCallOrders}</span>
+                                {/*TODO: Add a page listing all these teams */}
+                                <span className={"dash-stat-alert-sub"}>Teams</span>
+                            </DashboardStatusCard>}
+                        {(overview.ballots.paperAwaitingInput > 0) &&
+                            <DashboardStatusCard title={"Paper Ballots Awaiting Scores"} button = {<AddButton onClick={() => onNavigate('rounds')}>Manage Rounds</AddButton>}>
+                                <span className={"dash-stat-alert-value"}>{overview.ballots.paperAwaitingInput}</span>
+                                {/*TODO: Add a page listing all these teams */}
+                                <span className={"dash-stat-alert-sub"}>Teams</span>
+                            </DashboardStatusCard>}
+                        {(overview.pairings.withoutCourtrooms > 0) &&
+                            <DashboardStatusCard title={"Pairings without Courtrooms"} button = {<AddButton onClick={() => onNavigate('rounds')}>Manage Rounds</AddButton>}>
+                                <span className={"dash-stat-alert-value"}>{overview.pairings.withoutCourtrooms}</span>
+                                {/*TODO: Add a page listing all these teams */}
+                                <span className={"dash-stat-alert-sub"}>Pairings</span>
+                            </DashboardStatusCard>}
+                        {(overview.pairings.withoutScorers > 0) &&
+                            <DashboardStatusCard title={"Pairings without Scorers"} button = {<AddButton onClick={() => onNavigate('rounds')}>Manage Rounds</AddButton>}>
+                                <span className={"dash-stat-alert-value"}>{overview.pairings.withoutScorers}</span>
+                                {/*TODO: Add a page listing all these teams */}
+                                <span className={"dash-stat-alert-sub"}>Pairings</span>
+                            </DashboardStatusCard>}
+                        {(overview.pairings.withoutPresiders > 0) &&
+                            <DashboardStatusCard title={"Pairings without Presiders"} button = {<AddButton onClick={() => onNavigate('rounds')}>Manage Rounds</AddButton>}>
+                                <span className={"dash-stat-alert-value"}>{overview.pairings.withoutPresiders}</span>
+                                {/*TODO: Add a page listing all these teams */}
+                                <span className={"dash-stat-alert-sub"}>Pairings</span>
+                            </DashboardStatusCard>}
+                        {(overview.scorers.withConflicts > 0) &&
+                            <DashboardStatusCard title={"Scorers assigned to conflicts"} button = {<AddButton onClick={() => onNavigate('rounds')}>Manage Rounds</AddButton>}>
+                                <span className={"dash-stat-alert-value"}>{overview.scorers.withConflicts}</span>
+                                {/*TODO: Add a page listing all these teams */}
+                                <span className={"dash-stat-alert-sub"}>Scorers</span>
+                            </DashboardStatusCard>}
+                    </>
+                }
 
-                <section className="dash-stat-card">
-                    <h2 className="dash-stat-label">Ballot Completion</h2>
-                    {ballots.total > 0 ? (
-                        <>
-                            <p className="dash-stat-value">{ballotPct}%</p>
-                            <div className="dash-stat-progress">
-                                <div className="dash-stat-progress-fill" style={{ '--fill': `${ballotPct}%` } as React.CSSProperties} />
-                            </div>
-                            <p className="dash-stat-sub">{ballots.submitted} of {ballots.total} ballots submitted</p>
-                        </>
-                    ) : (
-                        <p className="dash-stat-sub">No scorers assigned yet.</p>
-                    )}
-                    <button className="dash-stat-link" onClick={() => onNavigate('scorers')}>
-                        Manage scorers →
-                    </button>
-                </section>
 
-                <section className="dash-stat-card">
-                    <h2 className="dash-stat-label">Standings</h2>
-                    <p className="dash-stat-sub">
-                        {publishedResults > 0
-                            ? `${publishedResults} round${publishedResults === 1 ? '' : 's'} scored`
-                            : 'No results published yet'}
-                    </p>
-                    <button className="dash-stat-link" onClick={() => onNavigate('standings')}>
-                        View standings →
-                    </button>
-                </section>
             </div>
         </div>
     )

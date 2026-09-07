@@ -1,0 +1,10 @@
+/* ─────────────────────────────────────────────────────────────────────────
+   SaveCancelActions — save/cancel action bar used by the coach Assign-Roles
+   and Witness-Call-Order flows. Relies on `.tab-actions` (organizer/tabs.css)
+   for layout and `.btn-confirm`/`.btn-cancel` (styles/globals.css) for the
+   buttons; adds only the top spacing.
+   ───────────────────────────────────────────────────────────────────────── */
+
+.coach-tab-actions {
+    margin-top: 16px;
+}

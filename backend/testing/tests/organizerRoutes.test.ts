@@ -770,6 +770,62 @@ describe('POST /api/organizer/tournament/:tournamentId/rounds/:round/pairings', 
     });
 });
 
+describe('PUT /api/organizer/tournament/:tournamentId/rounds/:round/pairings/:pairing', () => {
+    const PAIRING_URL = `${PAIRINGS_URL}/${PAIRING_ID}`;
+
+    it('returns 400 for invalid pairing UUID', async () => {
+        mockRoundAccess(ROUND_BASE);
+        const res = await request(app).put(`${PAIRINGS_URL}/bad-uuid`).set(auth()).send({ prosectionID: TEAM_A, defenseID: TEAM_B, courtroomID: COURTROOM_ID });
+        expect(res.status).toBe(400);
+    });
+
+    it('returns 400 when fields missing', async () => {
+        mockRoundAccess(ROUND_BASE);
+        const res = await request(app).put(PAIRING_URL).set(auth()).send({ prosectionID: TEAM_A });
+        expect(res.status).toBe(400);
+    });
+
+    it('returns 400 when prosecution and defense are the same team', async () => {
+        mockRoundAccess(ROUND_BASE);
+        const res = await request(app).put(PAIRING_URL).set(auth()).send({ prosectionID: TEAM_A, defenseID: TEAM_A, courtroomID: COURTROOM_ID });
+        expect(res.status).toBe(400);
+    });
+
+    it('returns 200 with the updated pairing on success', async () => {
+        mockRoundAccess(ROUND_BASE);
+        const pairing = { pairing_id: PAIRING_ID, round_id: ROUND_ID, p_team: TEAM_A, d_team: TEAM_B, courtroom: COURTROOM_ID };
+        mockDbQuery.mockResolvedValueOnce({ rows: [pairing], rowCount: 1 } as any);
+        const res = await request(app).put(PAIRING_URL).set(auth()).send({ prosectionID: TEAM_A, defenseID: TEAM_B, courtroomID: COURTROOM_ID });
+        expect(res.status).toBe(200);
+        expect(res.body).toEqual(pairing);
+    });
+
+    it('returns 404 when the pairing does not exist', async () => {
+        mockRoundAccess(ROUND_BASE);
+        mockDbQuery.mockResolvedValueOnce({ rows: [], rowCount: 0 } as any);
+        const res = await request(app).put(PAIRING_URL).set(auth()).send({ prosectionID: TEAM_A, defenseID: TEAM_B, courtroomID: null });
+        expect(res.status).toBe(404);
+    });
+
+    it('returns 409 when prosecution team already assigned this round', async () => {
+        mockRoundAccess(ROUND_BASE);
+        const err = Object.assign(new Error(), { detail: 'Key (round_id, p_team)=(r1, team1) already exists.' });
+        mockDbQuery.mockRejectedValueOnce(err);
+        const res = await request(app).put(PAIRING_URL).set(auth()).send({ prosectionID: TEAM_A, defenseID: TEAM_B, courtroomID: COURTROOM_ID });
+        expect(res.status).toBe(409);
+        expect(res.body.message).toMatch(/prosecution/i);
+    });
+
+    it('returns 409 when defense team already assigned this round', async () => {
+        mockRoundAccess(ROUND_BASE);
+        const err = Object.assign(new Error(), { detail: 'Key (round_id, d_team)=(r1, team2) already exists.' });
+        mockDbQuery.mockRejectedValueOnce(err);
+        const res = await request(app).put(PAIRING_URL).set(auth()).send({ prosectionID: TEAM_A, defenseID: TEAM_B, courtroomID: COURTROOM_ID });
+        expect(res.status).toBe(409);
+        expect(res.body.message).toMatch(/defense/i);
+    });
+});
+
 describe('DELETE /api/organizer/tournament/:tournamentId/rounds/:round/pairings/:pairing', () => {
     it('returns 400 for invalid pairing UUID', async () => {
         mockRoundAccess(ROUND_BASE);

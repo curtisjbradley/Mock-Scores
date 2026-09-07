@@ -1,7 +1,8 @@
 import { Fragment, useState } from 'react'
 import { Link } from 'react-router-dom'
 import { type BallotDetail, useCoachContext } from '../CoachContext'
-import '../styles/coach-pages.css'
+import RoundGroup from '../components/RoundGroup'
+import '../styles/results.css'
 
 /** Maps a point differential to the win/loss/tie diff-cell modifier class. */
 function diffClass(diff: number): string {
@@ -38,8 +39,7 @@ export default function ResultsPage() {
     return (
         <>
             {results.map(round => (
-                <div key={round.round_id} className="coach-round-group">
-                    <h3 className="coach-round-heading">{round.name}</h3>
+                <RoundGroup key={round.round_id} heading={round.name}>
                     <table className="dash-standings-table">
                         <thead><tr><th>Prosecution</th><th>P Pts</th><th>Defense</th><th>D Pts</th><th></th></tr></thead>
                         <tbody>{round.pairings.map(p => {
@@ -99,7 +99,7 @@ export default function ResultsPage() {
                             )
                         })}</tbody>
                     </table>
-                </div>
+                </RoundGroup>
             ))}
         </>
     )

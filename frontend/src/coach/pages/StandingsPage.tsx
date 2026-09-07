@@ -6,7 +6,7 @@ import { extractStandingsConfig, parseColumnsFromXml } from '../../organizer/blo
 import { standingsBlockDefs } from '../../organizer/blockly/standingsBlocks'
 import { tiebreakerBlockDefs } from '../../organizer/blockly/tiebreakerBlocks'
 import { type StandingsApiPayload, useCoachContext } from '../CoachContext'
-import '../styles/coach-pages.css'
+import '../styles/standings.css'
 
 const TiebreakerViewer = lazy(() => import('../../organizer/blockly/TiebreakerViewer'))
 

@@ -473,6 +473,22 @@ describe('getPairings', () => {
     });
 });
 
+describe('updatePairing', () => {
+    it('returns the updated pairing', async () => {
+        const row = { pairing_id: 'p1', round_id: 'r1', p_team: 'tm1', d_team: 'tm2', courtroom: 'c1' };
+        mockDbQuery.mockResolvedValueOnce(ok([row]));
+        expect(await provider.updatePairing('p1', 'tm1', 'tm2', 'c1')).toEqual(row);
+    });
+    it('throws DbError when query fails', async () => {
+        mockDbQuery.mockResolvedValueOnce(null);
+        await expect(provider.updatePairing('p1', 'tm1', 'tm2', 'c1')).rejects.toThrow(DbError);
+    });
+    it('throws NotFoundError when pairing does not exist', async () => {
+        mockDbQuery.mockResolvedValueOnce(ok([]));
+        await expect(provider.updatePairing('p1', 'tm1', 'tm2', null)).rejects.toThrow(NotFoundError);
+    });
+});
+
 describe('deletePairing', () => {
     it('resolves when deleted', async () => {
         mockDbQuery.mockResolvedValueOnce(ok([{ pairing_id: 'p1' }]));
