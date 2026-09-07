@@ -326,35 +326,3 @@
         display: inline;
     }
 }
-
-/* ── Coach notification toggle ───────────────────────────────────────────── */
-.coach-notif-toggle {
-    display: inline-grid;
-    place-items: center;
-    width: 2rem;
-    height: 2rem;
-    padding: 0;
-    border-radius: 0.5rem;
-    cursor: pointer;
-    border: none;
-    background-color: transparent;
-    transition: background 120ms ease, border-color 120ms ease;
-}
-.notif-cell {
-    display:grid;
-    justify-content: center;
-}
-
-.coach-notif-toggle:hover {
-    background: var(--primary-subtle);
-    border-color: var(--primary);
-}
-
-.coach-notif-toggle .app-icon {
-    background-color: var(--text);
-}
-
-/* Dim the icon when notifications are off. */
-.coach-notif-toggle[aria-pressed="false"] .app-icon {
-    opacity: 0.45;
-}

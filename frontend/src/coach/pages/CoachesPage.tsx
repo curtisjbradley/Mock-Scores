@@ -7,6 +7,7 @@ import Icon from '../../shared/components/Icon'
 import DangerButton from '../../shared/components/DangerButton'
 import AddButton from '../../shared/components/AddButton'
 import { useCoachContext } from '../CoachContext'
+import '../styles/coaches.css'
 
 /**
  * Coaches page. Reads the team's coaches from the shared `CoachLayout` context

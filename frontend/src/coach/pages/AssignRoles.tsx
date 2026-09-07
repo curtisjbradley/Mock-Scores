@@ -3,11 +3,12 @@ import { useNavigate, useParams } from 'react-router-dom'
 import { apiFetch } from '../../auth/auth'
 import type { IScoringCategory, IStudent, IStudentAssignment } from '@mock-scores/shared'
 import { resolveCoachTournament } from '../coachApi'
+import SaveCancelActions from '../components/SaveCancelActions'
 import '../../organizer/styles/organizer.css'
 import '../../organizer/styles/tabs.css'
 import '../../organizer/styles/round-view.css'
 import '../../organizer/styles/standings.css'
-import '../styles/coach-pages.css'
+import '../styles/assign-roles.css'
 
 interface Witness { id: string; name: string; side: string }
 
@@ -139,10 +140,7 @@ export default function AssignRoles() {
                         </table>
                     )
                 }
-                <div className="tab-actions coach-tab-actions">
-                    <button className="btn-confirm" onClick={handleSave} disabled={saving}>Save</button>
-                    <button className="btn-cancel" onClick={() => navigate(-1)} disabled={saving}>Cancel</button>
-                </div>
+                <SaveCancelActions onSave={handleSave} onCancel={() => navigate(-1)} saving={saving} />
             </div>
         </main>
     )

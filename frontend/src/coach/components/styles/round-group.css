@@ -1,0 +1,12 @@
+/* ─────────────────────────────────────────────────────────────────────────
+   RoundGroup — round-titled wrapper around a coach round table (Results,
+   Schedule). Relies on the shared theme variables in styles/globals.css.
+   ───────────────────────────────────────────────────────────────────────── */
+
+.coach-round-group {
+    margin-bottom: 16px;
+}
+
+.coach-round-heading {
+    margin: 8px 0 6px;
+}

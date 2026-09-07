@@ -2,7 +2,8 @@ import { useNavigate } from 'react-router-dom'
 import { formatDate } from '../../utils/format'
 import EmptyState from '../../shared/components/EmptyState'
 import { useCoachContext } from '../CoachContext'
-import '../styles/coach-pages.css'
+import RoundGroup from '../components/RoundGroup'
+import '../styles/schedule.css'
 
 /**
  * Schedule page. Reads the tournament and schedule from the shared
@@ -32,10 +33,10 @@ export default function SchedulePage() {
     return (
         <>
             {schedule.map(round => (
-                <div key={round.round_id} className="coach-round-group">
-                    <h3 className="coach-round-heading">
-                        {round.name}{round.round_time ? ` - ${formatDate(round.round_time)}` : ' (Time TBD)'}
-                    </h3>
+                <RoundGroup
+                    key={round.round_id}
+                    heading={`${round.name}${round.round_time ? ` - ${formatDate(round.round_time)}` : ' (Time TBD)'}`}
+                >
                     <table className="dash-standings-table">
                         <thead>
                             <tr>
@@ -74,7 +75,7 @@ export default function SchedulePage() {
                             })}
                         </tbody>
                     </table>
-                </div>
+                </RoundGroup>
             ))}
         </>
     )
