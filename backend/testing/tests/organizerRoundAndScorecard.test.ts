@@ -56,7 +56,11 @@ describe('GET .../rounds/:round/ballot-status', () => {
 // ─── POST .../rounds/:round/send-scoring-links ────────────────────────────────
 describe('POST .../rounds/:round/send-scoring-links', () => {
     it('returns sent=0 when no scorers have emails', async () => {
-        mockRoundAccess();
+        // Round must be locked before scoring links can be sent.
+        mockRoundAccess({ ...ROUND_BASE, locked: true });
+        // hasSentScoringLinksForRound → not yet sent
+        mockDbQuery.mockResolvedValueOnce({ rows: [{ exists: false }], rowCount: 1 } as never);
+        // getScorerInviteContextsForRound → no scorers
         mockDbQuery.mockResolvedValueOnce({ rows: [], rowCount: 0 } as never);
 
         const res = await request(app).post(`${ROUND_URL}/send-scoring-links`).set(auth());
@@ -99,7 +103,8 @@ describe('PATCH .../rounds/:round — one-way flags', () => {
 
     it('returns 200 on successful update', async () => {
         mockRoundAccess();
-        // updateRound returns the updated round
+        // updateRound: SELECT `locked FOR UPDATE`, then UPDATE returning the row.
+        mockDbQuery.mockResolvedValueOnce({ rows: [{ locked: false }], rowCount: 1 } as never);
         mockDbQuery.mockResolvedValueOnce({
             rows: [{ ...ROUND_BASE, name: 'Updated' }],
             rowCount: 1,

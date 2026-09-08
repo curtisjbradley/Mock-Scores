@@ -13,11 +13,12 @@ jest.mock('../../src/email', () => jest.requireActual('../mocks/email'));
 import request from 'supertest';
 import app from '../../src/appService';
 import { dbQuery } from '../../src/db';
-import { sendEmail } from '../../src/email';
+import { sendEmail, sendTrackedEmail } from '../../src/email';
 import { setupAuth, makeAuth, makeMockAccess } from '../helpers/auth';
 
 const mockDbQuery = dbQuery as jest.MockedFunction<typeof dbQuery>;
 const mockSendEmail = sendEmail as jest.MockedFunction<typeof sendEmail>;
+const mockSendTrackedEmail = sendTrackedEmail as jest.MockedFunction<typeof sendTrackedEmail>;
 
 /** Flush pending microtasks so fire-and-forget email promises resolve. */
 const flushAsync = () => new Promise(resolve => setImmediate(resolve));
@@ -165,9 +166,9 @@ describe('POST /api/organizer/tournament/:id/import/teams', () => {
 
         // Coach invitation emails are dispatched (fire-and-forget) for each created team
         await flushAsync();
-        expect(mockSendEmail).toHaveBeenCalledTimes(2);
-        expect(mockSendEmail).toHaveBeenCalledWith('coach@test.com', expect.any(String), expect.any(String), expect.any(String));
-        expect(mockSendEmail).toHaveBeenCalledWith('coach2@test.com', expect.any(String), expect.any(String), expect.any(String));
+        expect(mockSendTrackedEmail).toHaveBeenCalledTimes(2);
+        expect(mockSendTrackedEmail).toHaveBeenCalledWith('coach@test.com', expect.any(String), expect.any(String), expect.any(String), expect.any(Object));
+        expect(mockSendTrackedEmail).toHaveBeenCalledWith('coach2@test.com', expect.any(String), expect.any(String), expect.any(String), expect.any(Object));
     });
 
     it('imports teams without header row', async () => {

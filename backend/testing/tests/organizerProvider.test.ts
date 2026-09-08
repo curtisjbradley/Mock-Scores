@@ -384,10 +384,13 @@ describe('deleteRound', () => {
 describe('updateRound', () => {
     it('returns updated round', async () => {
         const row = { round_id: 'r1', name: 'Round 1' };
+        // updateRound first SELECTs `locked FOR UPDATE`, then UPDATEs the row.
+        mockDbQuery.mockResolvedValueOnce(ok([{ locked: false }]));
         mockDbQuery.mockResolvedValueOnce(ok([row]));
         expect(await provider.updateRound('r1', { name: 'Round 1' } as any)).toEqual(row);
     });
     it('throws NotFoundError when not found', async () => {
+        // SELECT `locked FOR UPDATE` returns no row → round does not exist.
         mockDbQuery.mockResolvedValueOnce(ok([]));
         await expect(provider.updateRound('r1', {} as any)).rejects.toThrow(NotFoundError);
     });

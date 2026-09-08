@@ -700,6 +700,8 @@ describe('PATCH /api/organizer/tournament/:tournamentId/rounds/:round', () => {
 
     it('returns 200 on success', async () => {
         mockRoundAccess(ROUND_BASE);
+        // updateRound: SELECT `locked FOR UPDATE`, then UPDATE returning the row.
+        mockDbQuery.mockResolvedValueOnce({ rows: [{ locked: false }], rowCount: 1 } as any);
         mockDbQuery.mockResolvedValueOnce({ rows: [ROUND_BASE], rowCount: 1 } as any);
         const res = await request(app).patch(ROUND_URL).set(auth()).send({ name: 'R1', results_public: false, teams_public: false });
         expect(res.status).toBe(200);
