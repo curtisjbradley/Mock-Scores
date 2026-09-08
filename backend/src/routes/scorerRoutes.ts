@@ -1,7 +1,7 @@
 import express from 'express';
 import { Request, Response } from 'express';
 import * as scorer from '../providers/scorerProvider';
-import { AlreadySubmittedError, ConflictReportedError, NotFoundError } from '../errors';
+import { AlreadySubmittedError, ConflictReportedError, NotFoundError, RoundNotLockedError } from '../errors';
 import { uuidRegex } from '../authUtils';
 import type { ScorecardPayload } from '@mock-scores/shared';
 import { conflictReportEmail, sendEmail } from '../email';
@@ -49,6 +49,7 @@ router.post('/:assignmentId/ballot', async (req: Request, res: Response) => {
         return res.status(201).json({ message: 'Ballot submitted' });
     } catch (e) {
         if (e instanceof NotFoundError) return res.status(404).json({ message: e.message });
+        if (e instanceof RoundNotLockedError) return res.status(409).json({ message: 'Scoring is not open for this round yet.' });
         // Unique constraint on scorer_assignment_id means already submitted
         const detail = (e as { detail?: string })?.detail ?? '';
         const code = (e as { code?: string })?.code ?? '';

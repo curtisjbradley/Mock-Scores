@@ -9,7 +9,7 @@ import { uuidRegex } from "../../authUtils";
 import { transferOwnership } from "../../providers/coachProvider";
 import { TournamentRequest } from "../../types/express";
 import { tournamentHandler, scorerHandler, organizerHandler, teamHandler } from "../../types/handlers";
-import {EmailTemplate, isValidEmail, organizerAddedEmail, sendEmail, teamAddedEmail} from "../../email";
+import {EmailTemplate, isValidEmail, organizerAddedEmail, sendTrackedEmail, teamAddedEmail} from "../../email";
 import { removeCoachHandler, addStudentHandler, updateStudentCustomDataHandler } from "../teamHandlers";
 import { dbQuery } from "../../db";
 
@@ -782,7 +782,8 @@ router.post("/organizers", verifyOrganizerPayload, organizerHandler(async (req, 
 
        getTournament(req.tournament).then((tournament) => {
            const message : EmailTemplate = organizerAddedEmail(newOrganizer.name, tournament.name)
-           sendEmail(newOrganizer.email, message.subject, message.html, message.text);
+           sendTrackedEmail(newOrganizer.email, message.subject, message.html, message.text,
+               { type: 'organizer_invite', id: req.tournament });
        })
 
 
@@ -1084,7 +1085,8 @@ router.post('/teams', verifyTeamPayload, teamHandler(async (req, res) => {
 
         getTournament(req.tournament).then(tournament => {
             const template = teamAddedEmail(name, tournament.name, newTeam.id)
-            sendEmail(coach_email, template.subject, template.html, template.text)
+            sendTrackedEmail(coach_email, template.subject, template.html, template.text,
+                { type: 'coach_invite', id: newTeam.id })
         }).catch(e => console.error(e))
 
         return res.status(201).json(newTeam);
@@ -1838,7 +1840,8 @@ router.post('/import/teams', tournamentHandler(async (req, res) => {
         getTournament(req.tournament).then(tournament => {
             for (const invite of invites) {
                 const template = teamAddedEmail(invite.teamName, tournament.name, invite.teamId);
-                sendEmail(invite.email, template.subject, template.html, template.text);
+                sendTrackedEmail(invite.email, template.subject, template.html, template.text,
+                    { type: 'coach_invite', id: invite.teamId });
             }
         }).catch(e => console.error(e));
     }

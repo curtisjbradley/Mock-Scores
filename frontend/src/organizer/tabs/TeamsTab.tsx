@@ -11,6 +11,7 @@ import InlineEmailEdit from '../../shared/components/InlineEmailEdit'
 import DangerButton from '../../shared/components/DangerButton'
 import AddButton from '../../shared/components/AddButton'
 import StatusChip from '../../shared/components/StatusChip'
+import EmailStatusBadge from '../../shared/components/EmailStatusBadge'
 
 
 export default function TeamsTab({ tournamentId }: { tournamentId: string }) {
@@ -20,7 +21,6 @@ export default function TeamsTab({ tournamentId }: { tournamentId: string }) {
     const [editingTeam, setEditingTeam] = useState<ITeam | null>(null)
     const [editingEmailId, setEditingEmailId] = useState<string | null>(null)
     const [editEmail, setEditEmail] = useState('')
-    const [bouncedEmails, setBouncedEmails] = useState<Set<string>>(new Set())
     const [showImport, setShowImport] = useState(false)
 
     useEffect(() => {
@@ -28,10 +28,6 @@ export default function TeamsTab({ tournamentId }: { tournamentId: string }) {
             .then(r => r.json())
             .then(setTeams)
             .catch(console.error)
-        apiFetch(`/organizer/tournament/${tournamentId}/bounced-emails`)
-            .then(r => r.ok ? r.json() : [])
-            .then((emails: string[]) => setBouncedEmails(new Set(emails.map(e => e.toLowerCase()))))
-            .catch(() => {})
     }, [tournamentId])
 
     const putTeam = async (team: ITeam, patch: Partial<ITeam>): Promise<boolean> => {
@@ -110,9 +106,7 @@ export default function TeamsTab({ tournamentId }: { tournamentId: string }) {
                                           />
                                         : <span className="dash-judge-name">
                                             {team.coach_email}
-                                            {bouncedEmails.has(team.coach_email.toLowerCase()) && (
-                                                <span title="Email delivery failed" className="dash-bounced-badge">⚠ BOUNCED</span>
-                                            )}
+                                            <EmailStatusBadge status={team.email_status} />
                                           </span>
                                     }
                                 </td>

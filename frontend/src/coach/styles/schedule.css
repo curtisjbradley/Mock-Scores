@@ -18,10 +18,22 @@
     font-weight: 500;
 }
 
+/* Editable action whose value has already been set (round still unlocked). Stays
+   clickable so coaches can revise it until the round locks, but reads as "done". */
+.coach-btn-set {
+    border-color: var(--success, #2e7d32);
+    color: var(--success, #2e7d32);
+    font-weight: 600;
+}
+
 /* "Locked" badge shown in the round heading when a round is locked. */
 .coach-round-locked {
     font-size: 0.8rem;
     font-weight: 600;
     color: var(--text-muted);
     margin-left: 0.5rem;
+}
+
+.ss-chip {
+    margin-left: 1rem;
 }

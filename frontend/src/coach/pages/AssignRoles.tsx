@@ -73,23 +73,52 @@ export default function AssignRoles() {
     const ownSideWitnesses   = witnesses.filter(w => w.side === (isP ? 'P' : 'D') || w.side === 'S')
     const oppSideWitnesses   = witnesses.filter(w => w.side === (isP ? 'D' : 'P') || w.side === 'S')
 
-    const rows: RoleRow[] = categories.flatMap(cat =>
-        cat.fields.filter(f => f.assignable && (
+    // Roles are ordered to match the judge's scorecard (see ScoreSheet.tsx /
+    // scorerProvider.buildScoreSheetForPairing): categories in `position` order, and
+    // within a witness category the scorecard is witness-major — each witness is its own
+    // block with its fields listed underneath, own-side (called) witnesses before
+    // opposing-side (crossed) witnesses. We mirror that grouping here rather than the
+    // previous field-major layout so the two screens read in the same order.
+    const rows: RoleRow[] = categories.flatMap(cat => {
+        const assignableFields = cat.fields.filter(f => f.assignable && (
             cat.witnessCategory || (isP ? f.prosecution : f.defense)
-        )).flatMap((f): RoleRow[] => {
-            if (!cat.witnessCategory) {
-                return [{ key: f.id, label: f.label, fieldId: f.id, witnessId: null, categoryName: cat.name }]
-            }
-            const applicableWitnesses = f.crossing ? oppSideWitnesses : ownSideWitnesses
-            return applicableWitnesses.map(w => ({
-                key: `${f.id}:${w.id}`,
-                label: `${w.name} - ${f.label}`,
-                fieldId: f.id,
-                witnessId: w.id,
-                categoryName: cat.name,
+        ))
+
+        if (!cat.witnessCategory) {
+            return assignableFields.map((f): RoleRow => ({
+                key: f.id, label: f.label, fieldId: f.id, witnessId: null, categoryName: cat.name,
             }))
-        })
-    )
+        }
+
+        // Witness-major ordering to match the scorecard: own-side (called) witnesses
+        // first, then opposing-side (crossed) witnesses; swing witnesses appear once, in
+        // the own-side group. Each (field, witness) pair emitted here is exactly the set
+        // the previous field-major layout produced — only the grouping/order changes.
+        // A field applies to a witness on this side iff: crossing fields target the
+        // opposing-side witness list, all other assignable fields target the own-side list
+        // (swings are in both lists, so they receive both calling and crossing fields).
+        const seen = new Set<string>()
+        const orderedWitnesses: Witness[] = []
+        for (const w of [...ownSideWitnesses, ...oppSideWitnesses]) {
+            if (seen.has(w.id)) continue
+            seen.add(w.id)
+            orderedWitnesses.push(w)
+        }
+        const ownIds = new Set(ownSideWitnesses.map(w => w.id))
+        const oppIds = new Set(oppSideWitnesses.map(w => w.id))
+
+        return orderedWitnesses.flatMap(witness =>
+            assignableFields
+                .filter(f => (f.crossing ? oppIds : ownIds).has(witness.id))
+                .map((f): RoleRow => ({
+                    key: `${f.id}:${witness.id}`,
+                    label: `${witness.name} - ${f.label}`,
+                    fieldId: f.id,
+                    witnessId: witness.id,
+                    categoryName: cat.name,
+                }))
+        )
+    })
 
     async function handleSave() {
         if (!teamId || !pairingId) return

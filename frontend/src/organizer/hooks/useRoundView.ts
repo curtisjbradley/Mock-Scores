@@ -91,12 +91,14 @@ export function useRoundView(id: string | undefined, roundId: string | undefined
     }
 
     /**
-     * Locks or unlocks the round. While locked, coaches can no longer edit their
-     * witness call orders or student role assignments for its pairings.
+     * Locks the round (one-way). Locking opens scoring, permanently stops coaches
+     * from editing witness call orders / role assignments for its pairings, and the
+     * backend copies each team's defaults into any pairing it left unset. Rounds
+     * cannot be unlocked, so this is only ever called with `locked = true`.
      */
     const setRoundLocked = (locked: boolean) => {
-        if (!round || round.locked === locked) return
-        patchRound({ locked }, `Failed to ${locked ? 'lock' : 'unlock'} round.`)
+        if (!round || round.locked === locked || !locked) return
+        patchRound({ locked }, 'Failed to lock round.')
     }
 
     /** Publishes the round's pairings so teams can see who they are facing. */

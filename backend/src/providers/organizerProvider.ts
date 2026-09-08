@@ -1,4 +1,5 @@
-import {dbQuery} from '../db';
+import {dbQuery, withTransaction} from '../db';
+import type { PoolClient } from 'pg';
 import type {
     IBallotStatus,
     ICourtroom,
@@ -13,7 +14,7 @@ import type {
     ITournament,
     IWitnesses,
     TournamentPayload,
-    ITournamentSummary, ICustomRosterColumn
+    ITournamentSummary, ICustomRosterColumn, EmailStatus
 } from '@mock-scores/shared';
 import type {
     IAuthRow,
@@ -455,14 +456,27 @@ export async function getOrganizers(tournamentID: string): Promise<IOrganizer[]>
     const [active, invited] = await Promise.all([
         dbQuery<IOrganizer>(
             `SELECT tournament_owners.delegate_id AS id, auth.first_name || ' ' || auth.last_name AS name,
-                    auth.email, tournament_owners.role, true AS has_joined
+                    auth.email, tournament_owners.role, true AS has_joined,
+                    em.status AS email_status
              FROM tournament_owners JOIN auth ON tournament_owners.delegate_id = auth.user_id
+             LEFT JOIN LATERAL (
+                 SELECT status FROM email_messages
+                 WHERE context_type = 'organizer_invite' AND context_id = $1 AND recipient = auth.email
+                 ORDER BY sent_at DESC LIMIT 1
+             ) em ON true
              WHERE tournament_id = $1`,
             [tournamentID]
         ),
         dbQuery<IOrganizer>(
-            `SELECT id, name, email, 'delegate' AS role, false AS has_joined
-             FROM tournament_delegate_invites WHERE tournament_id = $1`,
+            `SELECT id, name, email, 'delegate' AS role, false AS has_joined,
+                    em.status AS email_status
+             FROM tournament_delegate_invites tdi
+             LEFT JOIN LATERAL (
+                 SELECT status FROM email_messages
+                 WHERE context_type = 'organizer_invite' AND context_id = $1 AND recipient = tdi.email
+                 ORDER BY sent_at DESC LIMIT 1
+             ) em ON true
+             WHERE tournament_id = $1`,
             [tournamentID]
         ),
     ]);
@@ -573,29 +587,119 @@ export async function deleteRound(roundID: string): Promise<IRoundRow> {
     return row;
 }
 
+/**
+ * Updates a round's editable fields.
+ *
+ * Locking is one-way: once a round is locked it can never be unlocked, so a
+ * request can only ever transition `locked` from false → true (a request that
+ * omits `locked`, or sets it false, leaves the current value untouched).
+ *
+ * On the transition into the locked state, any team that never set a
+ * pairing-specific witness call order or role assignment inherits its team
+ * defaults: the default witness call order and default student assignments are
+ * copied into the per-pairing tables for every pairing in the round. This runs
+ * atomically with the lock so a round is never observed as locked without its
+ * inherited assignments in place.
+ */
 export async function updateRound(roundID: string, roundData: IRound): Promise<IRound> {
-    const row = (await dbQuery<IRound>(
-        `UPDATE rounds
-         SET round_time=$1, name=$2, teams_public=$3, results_public=$4, locked=COALESCE($5, locked)
-         WHERE round_id=$6 RETURNING *`,
-        [roundData.round_time, roundData.name, roundData.teams_public, roundData.results_public, roundData.locked ?? null, roundID]
-    ))?.rows[0];
-    if (!row) throw new NotFoundError('round');
-    return row;
+    return await withTransaction(async (client) => {
+        const current = (await client.query<{ locked: boolean }>(
+            'SELECT locked FROM rounds WHERE round_id=$1 FOR UPDATE',
+            [roundID],
+        )).rows[0];
+        if (!current) throw new NotFoundError('round');
+
+        // One-way lock: never transition true → false.
+        const willLock = current.locked || roundData.locked === true;
+        const isLockingNow = !current.locked && willLock;
+
+        const row = (await client.query<IRound>(
+            `UPDATE rounds
+             SET round_time=$1, name=$2, teams_public=$3, results_public=$4, locked=$5
+             WHERE round_id=$6 RETURNING *`,
+            [roundData.round_time, roundData.name, roundData.teams_public, roundData.results_public, willLock, roundID],
+        )).rows[0];
+        if (!row) throw new NotFoundError('round');
+
+        if (isLockingNow) {
+            await copyDefaultsForRound(client, roundID);
+        }
+        return row;
+    });
+}
+
+/**
+ * For every pairing in the round, for each of the two competing teams, copy the
+ * team's default witness call order and default role assignments into the
+ * per-pairing tables — but only when that team has NOT already set a
+ * pairing-specific value. Coach-entered pairing data is therefore preserved,
+ * and teams that only maintained defaults still get concrete assignments.
+ *
+ * `ON CONFLICT DO NOTHING` guards the unique constraints as an extra safety net;
+ * the `NOT EXISTS` clause is what actually implements "only if the coach set none".
+ */
+async function copyDefaultsForRound(client: PoolClient, roundID: string): Promise<void> {
+    // Witness call order: copy per (pairing, team) where that team has no call order yet.
+    await client.query(
+        `INSERT INTO witness_call_order (pairing_id, team_id, witness_id, position)
+         SELECT pt.pairing_id, pt.team_id, d.witness_id, d.position
+         FROM (
+             SELECT pairing_id, p_team AS team_id FROM pairings WHERE round_id = $1
+             UNION ALL
+             SELECT pairing_id, d_team AS team_id FROM pairings WHERE round_id = $1
+         ) pt
+         JOIN default_witness_call_order d ON d.team_id = pt.team_id
+         WHERE NOT EXISTS (
+             SELECT 1 FROM witness_call_order w
+             WHERE w.pairing_id = pt.pairing_id AND w.team_id = pt.team_id
+         )
+         ON CONFLICT (pairing_id, team_id, position) DO NOTHING`,
+        [roundID],
+    );
+
+    // Role assignments: copy per (pairing, team) where that team has no assignments yet.
+    await client.query(
+        `INSERT INTO student_assignments (pairing_id, team_id, field_id, witness_id, student_id)
+         SELECT pt.pairing_id, pt.team_id, d.field_id, d.witness_id, d.student_id
+         FROM (
+             SELECT pairing_id, p_team AS team_id FROM pairings WHERE round_id = $1
+             UNION ALL
+             SELECT pairing_id, d_team AS team_id FROM pairings WHERE round_id = $1
+         ) pt
+         JOIN default_student_assignments d ON d.team_id = pt.team_id
+         WHERE NOT EXISTS (
+             SELECT 1 FROM student_assignments s
+             WHERE s.pairing_id = pt.pairing_id AND s.team_id = pt.team_id
+         )
+         ON CONFLICT ON CONSTRAINT student_assignments_pairing_team_field_witness_key DO NOTHING`,
+        [roundID],
+    );
 }
 
 export async function getTeams(tournamentID: string): Promise<ITeam[]> {
     const joined = (await dbQuery<ITeam>(
-        `SELECT t.id, t.tournament_id, t.name, t.code, a.email AS coach_email, true AS has_joined
+        `SELECT t.id, t.tournament_id, t.name, t.code, a.email AS coach_email, true AS has_joined,
+                em.status AS email_status
          FROM teams t
          JOIN team_coaches tc ON tc.team_id = t.id AND tc.is_owner = true
          JOIN auth a ON a.user_id = tc.coach_id
+         LEFT JOIN LATERAL (
+             SELECT status FROM email_messages
+             WHERE context_type = 'coach_invite' AND context_id = t.id AND recipient = a.email
+             ORDER BY sent_at DESC LIMIT 1
+         ) em ON true
          WHERE t.tournament_id = $1`,
         [tournamentID]
     ))?.rows ?? [];
     const invited = (await dbQuery<ITeam>(
-        `SELECT t.id, t.tournament_id, t.name, t.code, ti.invite_email AS coach_email, false AS has_joined
+        `SELECT t.id, t.tournament_id, t.name, t.code, ti.invite_email AS coach_email, false AS has_joined,
+                em.status AS email_status
          FROM teams t JOIN team_invites ti ON ti.team_id = t.id
+         LEFT JOIN LATERAL (
+             SELECT status FROM email_messages
+             WHERE context_type = 'coach_invite' AND context_id = t.id AND recipient = ti.invite_email
+             ORDER BY sent_at DESC LIMIT 1
+         ) em ON true
          WHERE t.tournament_id = $1
            AND NOT EXISTS (SELECT 1 FROM team_coaches tc WHERE tc.team_id = t.id AND tc.is_owner = true)`,
         [tournamentID]
@@ -695,16 +799,21 @@ export async function deletePairing(pairingID: string): Promise<void> {
     if (!row) throw new NotFoundError('pairing');
 }
 
-export async function getPairingScorers(pairingID: string): Promise<{ assignment_id: string; type: 'registered' | 'paper'; scorer_id: string; name: string; is_presider: boolean; presider_only_tiebreaker: boolean; conflict_reported: boolean; p_points: number | null; d_points: number | null }[]> {
+export async function getPairingScorers(pairingID: string): Promise<{ assignment_id: string; type: 'registered' | 'paper'; scorer_id: string; name: string; is_presider: boolean; presider_only_tiebreaker: boolean; conflict_reported: boolean; p_points: number | null; d_points: number | null; email_status: EmailStatus | null }[]> {
     const presiderRow = (await dbQuery<{ scorer_assignment_id: string; show_scores: boolean }>('SELECT scorer_assignment_id, show_scores FROM scorer_presider_assignment WHERE pairing_id=$1', [pairingID]))?.rows[0];
     const presiderAssignmentId = presiderRow?.scorer_assignment_id ?? null;
     const presiderOnlyTiebreaker = presiderRow ? presiderRow.show_scores === false : false;
-    const registered = (await dbQuery<{ assignment_id: string; scorer_id: string; first_name: string; last_name: string; conflict_reported: boolean; p_points: number | null; d_points: number | null }>(
+    const registered = (await dbQuery<{ assignment_id: string; scorer_id: string; first_name: string; last_name: string; conflict_reported: boolean; p_points: number | null; d_points: number | null; email_status: EmailStatus | null }>(
         `SELECT spa.assignment_id, s.scorer_id, s.first_name, s.last_name, spa.conflict_reported,
-                b.p_points, b.d_points
+                b.p_points, b.d_points, em.status AS email_status
          FROM scorer_pairing_assignments spa
          JOIN scorers s ON spa.registered_scorer_id = s.scorer_id
          LEFT JOIN ballots b ON b.scorer_assignment_id = spa.assignment_id
+         LEFT JOIN LATERAL (
+             SELECT status FROM email_messages
+             WHERE context_type = 'scoring_link' AND context_id = spa.assignment_id
+             ORDER BY sent_at DESC LIMIT 1
+         ) em ON true
          WHERE spa.pairing_id=$1 AND spa.registered_scorer_id IS NOT NULL`,
         [pairingID]
     ))?.rows ?? [];
@@ -718,8 +827,8 @@ export async function getPairingScorers(pairingID: string): Promise<{ assignment
         [pairingID]
     ))?.rows ?? [];
     return [
-        ...registered.map(r => ({ assignment_id: r.assignment_id, type: 'registered' as const, scorer_id: r.scorer_id, name: `${r.first_name} ${r.last_name}`, is_presider: r.assignment_id === presiderAssignmentId, presider_only_tiebreaker: r.assignment_id === presiderAssignmentId && presiderOnlyTiebreaker, conflict_reported: r.conflict_reported, p_points: r.p_points, d_points: r.d_points })),
-        ...paper.map(p => ({ assignment_id: p.assignment_id, type: 'paper' as const, scorer_id: p.scorer_id, name: p.name, is_presider: p.assignment_id === presiderAssignmentId, presider_only_tiebreaker: p.assignment_id === presiderAssignmentId && presiderOnlyTiebreaker, conflict_reported: p.conflict_reported, p_points: p.p_points, d_points: p.d_points })),
+        ...registered.map(r => ({ assignment_id: r.assignment_id, type: 'registered' as const, scorer_id: r.scorer_id, name: `${r.first_name} ${r.last_name}`, is_presider: r.assignment_id === presiderAssignmentId, presider_only_tiebreaker: r.assignment_id === presiderAssignmentId && presiderOnlyTiebreaker, conflict_reported: r.conflict_reported, p_points: r.p_points, d_points: r.d_points, email_status: r.email_status })),
+        ...paper.map(p => ({ assignment_id: p.assignment_id, type: 'paper' as const, scorer_id: p.scorer_id, name: p.name, is_presider: p.assignment_id === presiderAssignmentId, presider_only_tiebreaker: p.assignment_id === presiderAssignmentId && presiderOnlyTiebreaker, conflict_reported: p.conflict_reported, p_points: p.p_points, d_points: p.d_points, email_status: null })),
     ];
 }
 
@@ -787,6 +896,25 @@ export async function getScorerInviteContextsForRound(roundId: string): Promise<
         tournamentName: r.tournament_name,
         assignmentId: r.assignment_id,
     }));
+}
+
+/**
+ * True when at least one scoring-link email has already been recorded for any of
+ * the round's scorer assignments. Used to make the bulk "send scoring links"
+ * action one-time per round (individual resends use their own endpoint).
+ */
+export async function hasSentScoringLinksForRound(roundId: string): Promise<boolean> {
+    const row = (await dbQuery<{ exists: boolean }>(`
+        SELECT EXISTS (
+            SELECT 1
+            FROM email_messages em
+            JOIN scorer_pairing_assignments spa ON spa.assignment_id = em.context_id
+            JOIN pairings p ON p.pairing_id = spa.pairing_id
+            WHERE em.context_type = 'scoring_link'
+              AND p.round_id = $1
+        ) AS exists
+    `, [roundId]))?.rows[0];
+    return row?.exists ?? false;
 }
 
 

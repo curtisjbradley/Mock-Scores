@@ -1,6 +1,6 @@
 import { dbQuery, withTransaction } from '../db';
 import type { IScoreSheetFormat, ScorecardPayload } from '@mock-scores/shared';
-import { DbError, NotFoundError, AlreadySubmittedError, ConflictReportedError } from '../errors';
+import { DbError, NotFoundError, AlreadySubmittedError, ConflictReportedError, RoundNotLockedError } from '../errors';
 
 // ─── Shared format builder ───────────────────────────────────────────────────
 
@@ -299,6 +299,9 @@ async function buildScoreSheetForPairing(ctx: PairingFormatContext): Promise<ISc
         scoringCategories,
         categoryOrder,
         awardCategories,
+        // This builder serves already-submitted ballots (combined view / export), where
+        // the round is necessarily past the scoring gate; scoring is never entered here.
+        roundLocked: true,
     };
 }
 
@@ -393,6 +396,7 @@ export async function getScoreSheet(assignmentId: string, options?: { skipGuards
         presider_scorer_assignment_id: string | null;
         show_scores: boolean | null;
         conflict_reported: boolean;
+        locked: boolean;
     }>(`
         SELECT
             spa.pairing_id,
@@ -402,6 +406,7 @@ export async function getScoreSheet(assignmentId: string, options?: { skipGuards
             p.d_team,
             cr.name                          AS courtroom_name,
             r.tournament_id,
+            r.locked,
             spa2.scorer_assignment_id        AS presider_scorer_assignment_id,
             spa2.show_scores,
             spa.conflict_reported
@@ -747,6 +752,7 @@ export async function getScoreSheet(assignmentId: string, options?: { skipGuards
         scoringCategories,
         categoryOrder,
         awardCategories,
+        roundLocked: asg.locked,
     };
 }
 
@@ -764,8 +770,9 @@ export async function submitBallot(assignmentId: string, payload: ScorecardPaylo
         p_team: string;
         d_team: string;
         is_presider: boolean;
+        locked: boolean;
     }>(`
-        SELECT spa.pairing_id, r.tournament_id, p.p_team, p.d_team,
+        SELECT spa.pairing_id, r.tournament_id, p.p_team, p.d_team, r.locked,
                (pres.scorer_assignment_id = spa.assignment_id) AS is_presider
         FROM scorer_pairing_assignments spa
         JOIN pairings p ON p.pairing_id = spa.pairing_id
@@ -775,6 +782,10 @@ export async function submitBallot(assignmentId: string, payload: ScorecardPaylo
     `, [assignmentId]))?.rows[0];
 
     if (!asg) throw new NotFoundError('Assignment not found');
+
+    // Scoring only opens once the organizer has locked the round (i.e. finalized
+    // pairings, rosters, and call orders). Reject ballots for unlocked rounds.
+    if (!asg.locked) throw new RoundNotLockedError();
 
     const pPoints = payload.scores.filter(s => s.side === 'P').reduce((sum, s) => sum + s.score, 0);
     const dPoints = payload.scores.filter(s => s.side === 'D').reduce((sum, s) => sum + s.score, 0);

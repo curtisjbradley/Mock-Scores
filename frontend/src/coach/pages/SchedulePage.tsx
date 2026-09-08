@@ -4,7 +4,8 @@ import EmptyState from '../../shared/components/EmptyState'
 import { useCoachContext } from '../CoachContext'
 import RoundGroup from '../components/RoundGroup'
 import '../styles/schedule.css'
-
+import StatusChip from "../../shared/components/StatusChip.tsx";
+import Tooltip from "../../shared/components/Tooltip.tsx"
 /**
  * Schedule page. Reads the tournament and schedule from the shared
  * `CoachLayout` context, and links out to role-assignment and
@@ -38,7 +39,7 @@ export default function SchedulePage() {
                     heading={
                         <>
                             {round.name}{round.round_time ? ` - ${formatDate(round.round_time)}` : ' (Time TBD)'}
-                            {round.locked && <span className="coach-round-locked" title="This round is locked; call order and roles can no longer be edited."> 🔒 Locked</span>}
+                            {round.locked && <Tooltip content={"This round is locked. Role assignments and call orders can no longer be edited."}><StatusChip variant={"submitted"} label={"Locked"} /></Tooltip> }
                         </>
                     }
                 >
@@ -63,28 +64,29 @@ export default function SchedulePage() {
                                             {round.locked ? (
                                                 <>
                                                     <button className="org-new-btn coach-btn-submitted" disabled>
-                                                        {p.has_assignments ? '✓ Roles assigned' : 'Roles not set'}
+                                                        {p.has_assignments ? 'Roles Assigned' : 'Copied Default Roles'}
                                                     </button>
                                                     <button className="org-new-btn coach-btn-submitted" disabled>
-                                                        {p.has_call_order ? '✓ Call order set' : 'Call order not set'}
+                                                        {p.has_call_order ? 'Call Order Set' : 'Copied Default Call Order'}
                                                     </button>
                                                 </>
                                             ) : (
+                                                // Until the round is locked, coaches can freely (re-)edit both
+                                                // their role assignments and witness call order, so these stay
+                                                // clickable even after an initial entry has been saved.
                                                 <>
-                                                    {p.has_assignments
-                                                        ? <button className="org-new-btn coach-btn-submitted" disabled>
-                                                            ✓ Roles assigned
-                                                          </button>
-                                                        : <button className="org-new-btn" onClick={() => onAssignRoles(p.pairing_id, side)}>
-                                                            Assign Roles
-                                                          </button>}
-                                                    {p.has_call_order
-                                                        ? <button className="org-new-btn coach-btn-submitted" disabled>
-                                                            ✓ Call order set
-                                                          </button>
-                                                        : <button className="org-new-btn" onClick={() => onWitnessOrder(p.pairing_id)}>
-                                                            Witness Call Order
-                                                          </button>}
+                                                    <button
+                                                        className={`org-new-btn${p.has_assignments ? ' coach-btn-set' : ''}`}
+                                                        onClick={() => onAssignRoles(p.pairing_id, side)}
+                                                    >
+                                                        {p.has_assignments ? 'Edit roles' : 'Assign Roles'}
+                                                    </button>
+                                                    <button
+                                                        className={`org-new-btn${p.has_call_order ? ' coach-btn-set' : ''}`}
+                                                        onClick={() => onWitnessOrder(p.pairing_id)}
+                                                    >
+                                                        {p.has_call_order ? 'Edit call order' : 'Assign Call Order'}
+                                                    </button>
                                                 </>
                                             )}
                                         </td>

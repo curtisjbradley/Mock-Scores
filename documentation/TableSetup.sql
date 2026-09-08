@@ -470,6 +470,31 @@ create table email_complaints
     email        text                           not null
 );
 
+-- Per-message email lifecycle tracking. One row per outbound email, keyed by the
+-- Plunk email record id (returned from POST /v1/send and echoed back on every
+-- webhook event as `emailId`). `context_type`/`context_id` associate the message
+-- with the thing it was sent about (a scoring-link assignment, a coach invite by
+-- team, an organizer invite by tournament) so the UI can show per-target status.
+create table email_messages
+(
+    email_id     text primary key,                 -- Plunk emailId (correlation key)
+    message_id   text,                              -- underlying provider (SES) message id, if provided
+    context_type text      not null,               -- 'scoring_link' | 'coach_invite' | 'organizer_invite' | 'other'
+    context_id   uuid,                              -- assignment_id / team_id / tournament_id (nullable for 'other')
+    recipient    text      not null,
+    subject      text,
+    status       text      not null default 'sent', -- sent | delivered | bounced | complained
+    bounce_type  text,                              -- Permanent | Transient (when bounced)
+    sent_at      timestamp not null default now(),
+    delivered_at timestamp,
+    bounced_at   timestamp,
+    complained_at timestamp,
+    updated_at   timestamp not null default now()
+);
+
+create index email_messages_context_idx on email_messages (context_type, context_id);
+create index email_messages_recipient_idx on email_messages (recipient);
+
 create table unsubscribed_emails
 (
     unsub_id uuid default gen_random_uuid() not null

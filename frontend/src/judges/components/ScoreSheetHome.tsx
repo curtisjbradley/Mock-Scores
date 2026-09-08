@@ -82,6 +82,22 @@ const ScoreSheetHome = () => {
 
     if (!data) return <NotFound />;
 
+    // Scoring only opens once the organizer locks the round. Until then, block all
+    // entry paths (conflict check, scoresheet, tiebreaker-only) with a holding screen.
+    if (!data.roundLocked) {
+        return (
+            <div className="conflict-check">
+                <div className="conflict-card">
+                    <h1 className="conflict-title">Scoring Not Open Yet</h1>
+                    <p className="conflict-message">
+                        This round has not been opened for scoring yet. Please wait for the
+                        tournament organizer to start the round, then refresh this page.
+                    </p>
+                </div>
+            </div>
+        );
+    }
+
     const storageKey = `mock-trial-scores-${data.pairingID}-${data.scorer.scorerID}`;
 
     if (submitted) {

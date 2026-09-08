@@ -9,11 +9,14 @@ import RoundNameEditor from '../components/RoundNameEditor'
 import AddMatchupForm from '../components/AddMatchupForm'
 import { ConfirmRemoveModal } from '../components/modals'
 import { useConfirmRemove } from '../../shared/hooks/useConfirmRemove'
+import AddButton from '../../shared/components/AddButton'
+import StatusChip from '../../shared/components/StatusChip'
 import { useRoundView } from '../hooks/useRoundView'
 import { usePairingForm } from '../hooks/usePairingForm'
 import type { IPairing } from '@mock-scores/shared'
 import NotFound from '../../error/NotFound'
 import { apiFetch } from '../../auth/auth'
+import Tooltip from "../../shared/components/Tooltip"
 
 /**
  * Displays all pairings for a single round and allows the organizer to
@@ -39,15 +42,22 @@ const RoundView = () => {
     const confirmRemove = useConfirmRemove<IPairing>()
     const [sending, setSending] = useState(false)
     const [sendMsg, setSendMsg] = useState<string | null>(null)
+    const [linksSent, setLinksSent] = useState(false)
+    const [showLockConfirm, setShowLockConfirm] = useState(false)
 
     const handleSendScoringLinks = () => {
-        if (!id || !roundId || sending) return
+        if (!id || !roundId || sending || linksSent) return
         setSending(true)
         setSendMsg(null)
         apiFetch(`/organizer/tournament/${id}/rounds/${roundId}/send-scoring-links`, { method: 'POST' })
             .then(r => r.ok ? r.json() : null)
             .then((data: { sent: number } | null) => {
-                setSendMsg(data ? `Sent ${data.sent} link${data.sent !== 1 ? 's' : ''}` : 'Failed to send')
+                if (data) {
+                    setLinksSent(true) // one-time bulk send — hide the button afterwards
+                    setSendMsg(`Sent ${data.sent} link${data.sent !== 1 ? 's' : ''}`)
+                } else {
+                    setSendMsg('Failed to send')
+                }
             })
             .catch(() => setSendMsg('Failed to send'))
             .finally(() => setSending(false))
@@ -75,6 +85,12 @@ const RoundView = () => {
         if (seenCourtrooms.has(p.courtroom)) duplicateCourtrooms.add(p.courtroom)
         else seenCourtrooms.add(p.courtroom)
     }
+
+    // Whether the one-time bulk send has already happened — derived from persisted
+    // per-scorer email status so the button stays hidden across reloads/other clients,
+    // OR from the local flag set right after a successful send this session.
+    const linksAlreadySent = linksSent || Object.values(pairingScorers)
+        .some(scorers => scorers.some(s => s.email_status != null))
 
     // Publishing/locking gates:
     // - a round can only be locked once its pairings are published
@@ -107,54 +123,57 @@ const RoundView = () => {
                     </div>
                     <div className="rv-toolbar">
                         {round?.teams_public
-                            ? <span className="dash-publish-label dash-publish-label--active">✓ Pairings published</span>
-                            : <button
-                                className="org-new-btn"
+                            ? <Tooltip content={"Coaches can view matchups and start making role assignments."}> <StatusChip label="Pairings published" variant="submitted" /> </Tooltip>
+                            : <AddButton
                                 disabled={!round || pairings.length === 0}
                                 title={pairings.length === 0 ? 'Add at least one pairing before publishing' : 'Publish pairings so teams can see the matchups'}
                                 onClick={() => setPairingsPublished(true)}
                               >
                                 Publish pairings
-                              </button>
+                              </AddButton>
                         }
 
                         {round && (
-                            <button
-                                className="org-new-btn"
-                                disabled={!round.teams_public}
-                                title={!round.teams_public
-                                    ? 'Publish pairings before locking the round'
-                                    : round.locked
-                                        ? 'Unlock to let coaches edit call orders and role assignments again'
-                                        : 'Lock to prevent coaches from editing call orders and role assignments'}
-                                onClick={() => setRoundLocked(!round.locked)}
-                            >
-                                {round.locked ? '🔒 Unlock round' : 'Lock round'}
-                            </button>
+                            round.locked
+                                ? <Tooltip content={"Coaches can no longer make changes to their roster. Scorers can begin to input scores."}> <StatusChip label="Round Locked" variant="submitted" /> </Tooltip>
+                                : <AddButton
+                                    disabled={!round.teams_public}
+                                    title={!round.teams_public
+                                        ? 'Publish pairings before locking the round'
+                                        : 'Lock the round to open scoring. This is permanent.'}
+                                    onClick={() => setShowLockConfirm(true)}
+                                  >
+                                    Lock round
+                                  </AddButton>
                         )}
 
-                        <button
-                            className="org-new-btn"
-                            onClick={handleSendScoringLinks}
-                            disabled={sending || !round?.locked}
-                            title={!round?.locked ? 'Lock the round before sending scoring links' : 'Email scoring links to assigned judges'}
-                        >
-                            {sending ? 'Sending…' : 'Send scoring links'}
-                        </button>
-                        {sendMsg && <span className="rv-send-msg">{sendMsg}</span>}
+                        {round?.locked && !linksAlreadySent && (
+                            <AddButton
+                                onClick={handleSendScoringLinks}
+                                disabled={sending}
+                                title="Email scoring links to assigned judges. This can only be done once."
+                            >
+                                {sending ? 'Sending…' : 'Send scoring links'}
+                            </AddButton>
+                        )}
+                        {sendMsg && (
+                            <StatusChip
+                                label={sendMsg}
+                                variant={sendMsg.startsWith('Sent') ? 'submitted' : 'danger'}
+                            />
+                        )}
 
                         {round?.results_public
-                            ? <span className="dash-publish-label dash-publish-label--active">✓ Results published</span>
-                            : <button
-                                className="org-new-btn"
-                                disabled={!round || !allBallotsIn}
-                                title={!allBallotsIn
-                                    ? 'All ballots must be submitted before publishing results'
-                                    : 'Publish results so teams can see scores'}
-                                onClick={() => setResultsPublished(true)}
-                              >
-                                Publish results
-                              </button>
+                            ? <StatusChip label="Results published" variant="submitted" />
+                            : allBallotsIn && (
+                                <AddButton
+                                    disabled={!round}
+                                    title="Publish results so teams can see scores"
+                                    onClick={() => setResultsPublished(true)}
+                                >
+                                    Publish results
+                                </AddButton>
+                            )
                         }
                     </div>
                 </div>
@@ -176,6 +195,7 @@ const RoundView = () => {
                             scorers={scorers}
                             assignedScorers={pairingScorers[pairing.pairing_id] ?? []}
                             ballotStatus={ballotStatus[pairing.pairing_id]}
+                            linksSent={linksAlreadySent}
                             tournamentId={id!}
                             roundId={roundId!}
                             round={round}
@@ -204,9 +224,9 @@ const RoundView = () => {
                         onSubmit={handleAddMatchup}
                     />
                 )}
-                <button className="org-new-btn" onClick={toggleForm}>
+                <AddButton onClick={toggleForm}>
                     {showAddForm ? 'Cancel' : '+ Add Pairing'}
-                </button>
+                </AddButton>
 
             </div>
 
@@ -215,6 +235,15 @@ const RoundView = () => {
                     message="Remove this pairing?"
                     onCancel={confirmRemove.clear}
                     onConfirm={() => { removePairing(confirmRemove.pending!); confirmRemove.clear() }}
+                />
+            )}
+
+            {showLockConfirm && (
+                <ConfirmRemoveModal
+                    message="Locking opens scoring for this round and is permanent — the round cannot be unlocked. Coaches can no longer edit call orders or role assignments, and any team that left theirs unset will inherit its saved defaults."
+                    confirmLabel="Lock round"
+                    onCancel={() => setShowLockConfirm(false)}
+                    onConfirm={() => { setRoundLocked(true); setShowLockConfirm(false) }}
                 />
             )}
 

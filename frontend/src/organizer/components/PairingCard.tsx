@@ -5,6 +5,7 @@ import { apiFetch } from '../../auth/auth'
 import TeamSelectOptions from '../../shared/components/TeamSelectOptions'
 import DangerButton from '../../shared/components/DangerButton'
 import Icon from '../../shared/components/Icon'
+import EmailStatusBadge from '../../shared/components/EmailStatusBadge'
 import ModalBackdrop from '../../shared/components/ModalBackdrop'
 import { useAutoFocus } from '../../shared/hooks/useAutoFocus'
 
@@ -15,6 +16,9 @@ interface Props {
     scorers: IScorer[]
     assignedScorers: IPairingScorer[]
     ballotStatus?: IBallotStatus
+    /** True once the round's one-time bulk scoring-link send has happened. Per-scorer
+     *  resend buttons only appear afterwards. */
+    linksSent: boolean
     tournamentId: string
     roundId: string
     round: IRound | null
@@ -32,7 +36,7 @@ interface Props {
  * Supports inline editing of courtroom and team assignments, and manages
  * scorer assignment / presider selection.
  */
-export default function PairingCard({ pairing, teams, courtrooms, scorers, assignedScorers, ballotStatus, tournamentId, roundId, round, conflictSet, courtroomInUse, onRemove, onUpdate, onScorerAssigned, onScorerRemoved, onPresiderChanged }: Props) {
+export default function PairingCard({ pairing, teams, courtrooms, scorers, assignedScorers, ballotStatus, linksSent, tournamentId, roundId, round, conflictSet, courtroomInUse, onRemove, onUpdate, onScorerAssigned, onScorerRemoved, onPresiderChanged }: Props) {
     const [editingCourtroom, setEditingCourtroom] = useState(false)
     const [courtroomDraft, setCourtroomDraft] = useState(pairing.courtroom ?? '')
 
@@ -156,7 +160,7 @@ export default function PairingCard({ pairing, teams, courtrooms, scorers, assig
 
     const sendLink = (assignmentId : string)=> {
         apiFetch(`/organizer/tournament/${tournamentId}/rounds/${roundId}/send-scoring-links/${assignmentId}`, {method: 'POST'})
-        setSentLinks(new Set<string>(...sentLinks, [assignmentId]))
+        setSentLinks(new Set(sentLinks).add(assignmentId))
     }
 
     return (
@@ -299,9 +303,16 @@ export default function PairingCard({ pairing, teams, courtrooms, scorers, assig
                             {s.conflict_reported && (
                                 <span className="pc-conflict-reported-badge">CONFLICT REPORTED</span>
                             )}
-                            {isOnlineScorer && !hasSubmitted && (sentLinks.has(s.assignment_id) ?<span className={"pc-link-sent"}> Link Sent </span> :  <button className={'pc-send-link'} onClick={() => sendLink(s.assignment_id)}>
-                                Send Scoring Link
-                            </button>) }
+                            {isOnlineScorer && !hasSubmitted && round?.locked && linksSent && (
+                                <button
+                                    className={'pc-send-link'}
+                                    onClick={() => sendLink(s.assignment_id)}
+                                    title="Email this scorer their scoring link. Can be sent multiple times."
+                                >
+                                    {sentLinks.has(s.assignment_id) ? 'Resend link' : 'Send Scoring Link'}
+                                </button>
+                            ) }
+                            {isOnlineScorer && <EmailStatusBadge status={s.email_status} />}
                         </span>
 
                         {diffLabel && <span className={`pc-diff ${diffClass}`}>{diffLabel}</span>}

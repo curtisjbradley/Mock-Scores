@@ -1,17 +1,20 @@
-import { createTransport } from 'nodemailer'
+// Email is sent via Plunk's HTTP API using the global fetch (Node 18+).
+import { dbQuery } from './db'
 
-const transporter = createTransport({
-    host: process.env.SES_SMTP_HOST,
-    port: Number(process.env.SES_SMTP_PORT || 465),
-    secure: true,
-    auth: {
-        user: process.env.SES_SMTP_USER,
-        pass: process.env.SES_SMTP_PASS,
-    },
-})
+// ── Plunk transactional email API ───────────────────────────────────────────
+// We send through Plunk's HTTP API (POST /v1/send) rather than SMTP so we can
+// capture the Plunk `emailId` from the response. That id is echoed back on every
+// webhook lifecycle event (`emailId`), and is the reliable key for correlating a
+// sent message with its delivery / bounce / complaint events. See webhookRouter.
+const PLUNK_API_URL = process.env.PLUNK_API_URL ?? 'https://api.useplunk.com/v1/send'
+const PLUNK_API_KEY = process.env.PLUNK_API_KEY ?? ''
+const MAIL_FROM_NAME = process.env.MAIL_FROM_NAME ?? 'Mock Scores - Mock Trial Scoring'
+const MAIL_FROM_EMAIL = process.env.MAIL_FROM_EMAIL ?? 'notifications@mockscores.org'
 
-if (process.env.NODE_ENV !== 'test') {
-    transporter.verify().then(() => console.log('SMTP ready')).catch(console.error)
+
+interface PlunkSendResponse {
+    success?: boolean
+    data?: { emails?: { email?: string; contact?: { id?: string; email?: string } }[] }
 }
 
 // Domain label classes exclude '.' so the label and the literal separator cannot overlap.
@@ -73,28 +76,89 @@ const htmlToText = (html: string): string => {
 // working frontend route + POST endpoint, which does not exist yet.
 const UNSUBSCRIBE_EMAIL = process.env.UNSUBSCRIBE_EMAIL ?? 'unsubscribe@mockscores.org'
 
-export async function sendEmail(to: string, subject: string, html: string, text: string): Promise<void> {
+/**
+ * Sends an email via Plunk's HTTP API.
+ *
+ * Returns the Plunk `emailId` (the id echoed back on webhook lifecycle events),
+ * or null when the send failed or no id was returned. Never throws on a send
+ * failure — callers treat email as best-effort — but still validates the
+ * recipient address up front.
+ */
+export async function sendEmail(to: string, subject: string, html: string, text: string): Promise<string | null> {
     if (!EMAIL_RE.test(to)) throw new Error(`Invalid email address: ${to}`)
 
     // Guarantee a non-empty plaintext part so the message is never a
     // multipart/alternative that contains only HTML (a spam signal).
     const plainText = text && text.trim().length > 0 ? text : htmlToText(html)
-
-    await transporter.sendMail({
-        from: process.env.MAIL_FROM,
-        to,
-        subject,
-        html,
-        text: plainText,
-        headers: {
-            'List-Unsubscribe': `<mailto:${UNSUBSCRIBE_EMAIL}?subject=unsubscribe>`,
-        },
-    }).then( info =>
-        console.log(`Email sent to ${to} — MessageId: ${info.messageId}`)
-    ).catch((e) => {
-        console.error("error sending email");
+    try {
+        const resp = await fetch(`${PLUNK_API_URL}/v1/send`, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                Authorization: `Bearer ${PLUNK_API_KEY}`,
+            },
+            body: JSON.stringify({
+                to,
+                subject,
+                body: html,
+                from: {name: MAIL_FROM_NAME, email: MAIL_FROM_EMAIL},
+                text: plainText,
+                headers: {
+                    'List-Unsubscribe': `<mailto:${UNSUBSCRIBE_EMAIL}?subject=unsubscribe>`,
+                },
+            }),
+        })
+        if (!resp.ok) {
+            console.error(`error sending email to ${to}: Plunk responded ${resp.status}`)
+            resp.json().then(err => console.error(JSON.stringify(err)))
+            return null
+        }
+        const data = await resp.json() as PlunkSendResponse
+        const emailId = data.data?.emails?.[0]?.email ?? null
+        console.log(`Email sent to ${to} — Plunk emailId: ${emailId ?? 'unknown'}`)
+        return emailId
+    } catch (e) {
+        console.error('error sending email')
         console.error(e)
-    })
+        return null
+    }
+}
+
+/** Where a tracked email was sent — used to associate lifecycle events to a target. */
+export type EmailContextType = 'scoring_link' | 'coach_invite' | 'organizer_invite' | 'other'
+
+export interface EmailContext {
+    type: EmailContextType
+    /** assignment_id (scoring link), team_id (coach invite), or tournament_id (organizer invite). */
+    id?: string | null
+}
+
+/**
+ * Sends an email and records a row in `email_messages` keyed by the Plunk
+ * `emailId`, so its delivery / bounce / complaint lifecycle can be shown in the
+ * UI. Falls back gracefully: if the send returns no id (failure) nothing is
+ * recorded. Email remains best-effort — recording failures are logged, not thrown.
+ */
+export async function sendTrackedEmail(
+    to: string,
+    subject: string,
+    html: string,
+    text: string,
+    context: EmailContext,
+): Promise<string | null> {
+    const emailId = await sendEmail(to, subject, html, text)
+    if (!emailId) return null
+    try {
+        await dbQuery(
+            `INSERT INTO email_messages (email_id, context_type, context_id, recipient, subject, status)
+             VALUES ($1, $2, $3, $4, $5, 'sent')
+             ON CONFLICT (email_id) DO NOTHING`,
+            [emailId, context.type, context.id ?? null, to, subject],
+        )
+    } catch (e) {
+        console.error('failed to record tracked email', e)
+    }
+    return emailId
 }
 
 // ── Templates ──────────────────────────────────────────────────────────────────

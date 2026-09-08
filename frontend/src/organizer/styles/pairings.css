@@ -160,6 +160,7 @@
 .ss-chip--submitted { background: var(--green-bg); color: var(--green-text); }
 .ss-chip--pending   { background: var(--surface-muted); color: var(--text-muted); }
 .ss-chip--missing   { background: var(--danger-bg); color: var(--danger); border: 1px solid var(--danger); }
+.ss-chip--danger    { background: var(--danger-bg); color: var(--danger); border: 1px solid var(--danger); }
 
 .dash-school-link {
     background: none;

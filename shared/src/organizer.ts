@@ -1,9 +1,13 @@
+import type { EmailStatus } from './email.js'
+
 export interface IOrganizer {
     id: string;
     name: string;
     email: string;
     role: 'owner' | 'delegate';
     has_joined: boolean;
+    /** Delivery status of the most recent invite email to this organizer, if any. */
+    email_status?: EmailStatus | null;
 }
 
 export interface ICourtroom {
@@ -19,6 +23,8 @@ export interface ITeam {
     code: string;
     coach_email: string;
     has_joined: boolean;
+    /** Delivery status of the most recent invite email to this team's coach, if any. */
+    email_status?: EmailStatus | null;
 }
 export interface ITournamentSummary {
     teams: {

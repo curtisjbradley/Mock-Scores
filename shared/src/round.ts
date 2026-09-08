@@ -1,3 +1,5 @@
+import type { EmailStatus } from './email.js'
+
 export interface IRound {
     round_id: string
     results_public: boolean
@@ -28,6 +30,8 @@ export interface IPairingScorer {
     conflict_reported: boolean;
     p_points: number | null;
     d_points: number | null;
+    /** Delivery status of this scorer's most recent scoring-link email, if any. */
+    email_status?: EmailStatus | null;
 }
 
 export interface IBallotStatus {
