@@ -14,7 +14,11 @@ if (process.env.NODE_ENV !== 'test') {
     transporter.verify().then(() => console.log('SMTP ready')).catch(console.error)
 }
 
-const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
+// Domain label classes exclude '.' so the label and the literal separator cannot overlap.
+// This removes the ambiguity that made the previous pattern polynomial-time (ReDoS):
+// each character has exactly one way to match, so matching is linear in input length.
+// (CodeQL: js/polynomial-redos)
+const EMAIL_RE = /^[^\s@]+@[^\s@.]+(?:\.[^\s@.]+)+$/
 
 /** Returns true when the string looks like a valid email address. */
 export function isValidEmail(email: string): boolean {
@@ -22,19 +26,46 @@ export function isValidEmail(email: string): boolean {
 }
 
 /** Strips HTML tags to produce a plaintext fallback when none is supplied. */
-const htmlToText = (html: string): string =>
-    html
-        .replace(/<style[\s\S]*?<\/style>/gi, '')
-        .replace(/<[^>]+>/g, ' ')
+const htmlToText = (html: string): string => {
+    // Repeatedly apply a removal regex until it reaches a fixpoint. A single pass is
+    // unsafe because overlapping or nested constructs can leave a fresh match behind
+    // (e.g. `<sty<style>le>` -> `<style>` after one pass). Looping guarantees no
+    // removable construct survives. (CodeQL: js/incomplete-multi-character-sanitization)
+    const stripUntilStable = (input: string, pattern: RegExp): string => {
+        let current = input;
+        let previous: string;
+        do {
+            previous = current;
+            current = current.replace(pattern, ' ');
+        } while (current !== previous);
+        return current;
+    };
+
+    let out = html;
+    // Remove <style>/<script> element bodies entirely (case-insensitive, across newlines).
+    out = stripUntilStable(out, /<style[\s\S]*?<\/style>/gi);
+    out = stripUntilStable(out, /<script[\s\S]*?<\/script>/gi);
+    // Remove any remaining complete tags.
+    out = stripUntilStable(out, /<[^>]+>/g);
+    // Remove any trailing/dangling incomplete tag fragment (e.g. `<sc` with no closing `>`).
+    out = out.replace(/<[^>]*$/g, ' ');
+
+    return out
         .replace(/&nbsp;/g, ' ')
-        .replace(/&amp;/g, '&')
         .replace(/&lt;/g, '<')
         .replace(/&gt;/g, '>')
         .replace(/&quot;/g, '"')
         .replace(/&#39;/g, "'")
+        // Decode &amp; last so a payload like `&amp;lt;` cannot be turned back into `<`.
+        .replace(/&amp;/g, '&')
+        // This is a plaintext fallback, never rendered as HTML. Any angle bracket that
+        // survived tag stripping (or was produced by entity decoding) is neutralised so
+        // no `<...>`-shaped construct can reach a downstream consumer.
+        .replace(/[<>]/g, ' ')
         .replace(/[ \t]+/g, ' ')
         .replace(/\n\s*\n\s*\n/g, '\n\n')
-        .trim()
+        .trim();
+};
 
 // Address subscribers can use to unsubscribe. Gmail/Yahoo strongly favor a
 // List-Unsubscribe header on automated mail; its absence pushes mail to spam.
