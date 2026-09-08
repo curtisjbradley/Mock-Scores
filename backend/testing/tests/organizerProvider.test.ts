@@ -675,8 +675,8 @@ describe('updateScoringCategories', () => {
 // ─── getStandingsConfig / upsertStandingsConfig / getStandingsTemplates ───────
 describe('getStandingsConfig', () => {
     it('returns config', async () => {
-        mockDbQuery.mockResolvedValueOnce(ok([{ id: 'sc1', stats_xml: '<s/>', standings_xml: '<st/>' }]));
-        expect(await provider.getStandingsConfig('t1')).toEqual({ id: 'sc1', statsXml: '<s/>', standingsXml: '<st/>' });
+        mockDbQuery.mockResolvedValueOnce(ok([{ id: 'sc1', standings_dsl: '(config (columns) (tiebreakers))' }]));
+        expect(await provider.getStandingsConfig('t1')).toEqual({ id: 'sc1', dsl: '(config (columns) (tiebreakers))' });
     });
     it('returns null when not found', async () => {
         mockDbQuery.mockResolvedValueOnce(ok([]));

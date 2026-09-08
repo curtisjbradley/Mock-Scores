@@ -91,15 +91,15 @@ export async function fetchScoringTemplates(): Promise<IScoringTemplate[]> {
     return r.json()
 }
 
-/** Fetches the Blockly standings configuration (statsXml + standingsXml) for a tournament. */
-export async function fetchStandingsConfig(tournamentId: string): Promise<{ id: string; statsXml: string; standingsXml: string } | null> {
+/** Fetches the DSL standings configuration for a tournament. */
+export async function fetchStandingsConfig(tournamentId: string): Promise<{ id: string; dsl: string } | null> {
     const r = await apiFetch(`/organizer/tournament/${tournamentId}/standings-config`)
     if (!r.ok) throw new Error('Failed to load standings config.')
     return r.json()
 }
 
-/** Persists the Blockly standings XML configuration for a tournament. */
-export async function saveStandingsConfig(tournamentId: string, config: { statsXml: string; standingsXml: string }): Promise<void> {
+/** Persists the DSL standings configuration for a tournament. */
+export async function saveStandingsConfig(tournamentId: string, config: { dsl: string }): Promise<void> {
     const r = await apiFetch(`/organizer/tournament/${tournamentId}/standings-config`, { method: 'PATCH', body: JSON.stringify(config) })
     if (!r.ok) throw new Error(r.statusText)
 }

@@ -153,7 +153,7 @@ describe('PATCH /api/organizer/tournament/:id/witnesses', () => {
 describe('GET /api/organizer/tournament/:id/standings-config', () => {
     it('returns 200 with config', async () => {
         mockAccess();
-        mockDbQuery.mockResolvedValueOnce({ rows: [{ stats_xml: '<x/>', standings_xml: '<y/>' }], rowCount: 1 } as any);
+        mockDbQuery.mockResolvedValueOnce({ rows: [{ id: 'sc1', standings_dsl: '(config (columns) (tiebreakers))' }], rowCount: 1 } as any);
         const res = await request(app).get(`/organizer/tournament/${T}/standings-config`).set(auth());
         expect(res.status).toBe(200);
     });
@@ -168,17 +168,10 @@ describe('GET /api/organizer/tournament/:id/standings-config', () => {
 
 // ─── PATCH /:tournamentId/standings-config ────────────────────────────────────
 describe('PATCH /api/organizer/tournament/:id/standings-config', () => {
-    it('returns 400 when missing statsXml', async () => {
+    it('returns 400 when missing dsl', async () => {
         mockAccess();
         const res = await request(app).patch(`/organizer/tournament/${T}/standings-config`).set(auth())
-            .send({ standingsXml: '<y/>' });
-        expect(res.status).toBe(400);
-    });
-
-    it('returns 400 when missing standingsXml', async () => {
-        mockAccess();
-        const res = await request(app).patch(`/organizer/tournament/${T}/standings-config`).set(auth())
-            .send({ statsXml: '<x/>' });
+            .send({});
         expect(res.status).toBe(400);
     });
 
@@ -188,7 +181,7 @@ describe('PATCH /api/organizer/tournament/:id/standings-config', () => {
         mockDbQuery.mockResolvedValueOnce({ rows: [], rowCount: 0 } as any); // no existing row
         mockDbQuery.mockResolvedValueOnce({ rows: [], rowCount: 1 } as any); // insert
         const res = await request(app).patch(`/organizer/tournament/${T}/standings-config`).set(auth())
-            .send({ statsXml: '<x/>', standingsXml: '<y/>' });
+            .send({ dsl: '(config (columns) (tiebreakers))' });
         expect([200, 500]).toContain(res.status);
     });
 
@@ -196,7 +189,7 @@ describe('PATCH /api/organizer/tournament/:id/standings-config', () => {
         mockAccess();
         mockDbQuery.mockResolvedValueOnce(null); // SELECT fails
         const res = await request(app).patch(`/organizer/tournament/${T}/standings-config`).set(auth())
-            .send({ statsXml: '<x/>', standingsXml: '<y/>' });
+            .send({ dsl: '(config (columns) (tiebreakers))' });
         expect(res.status).toBe(500);
     });
 });

@@ -448,13 +448,13 @@ export async function getPairingBallots(tournamentId: string, pairingId: string)
 }
 
 export async function getStandingsData(tournamentId: string): Promise<{
-    config: { statsXml: string; standingsXml: string } | null;
+    config: { dsl: string } | null;
     teams: { id: string; name: string; code: string }[];
     ballots: { p_team_id: string; d_team_id: string; p_points: number; d_points: number; pairing_id: string; tiebreaker: string | null; presider_ballot: boolean }[];
 }> {
     const [configRow, ballotsRows, teamsRows] = await Promise.all([
-        dbQuery<{ stats_xml: string; standings_xml: string }>(
-            `SELECT sc.stats_xml, sc.standings_xml FROM tournaments t
+        dbQuery<{ standings_dsl: string }>(
+            `SELECT sc.standings_dsl FROM tournaments t
              JOIN standings_configs sc ON sc.id = t.standings_config_id WHERE t.id=$1`,
             [tournamentId]
         ),
@@ -473,7 +473,7 @@ export async function getStandingsData(tournamentId: string): Promise<{
     ]);
     const row = configRow?.rows[0];
     return {
-        config: row ? { statsXml: row.stats_xml, standingsXml: row.standings_xml } : null,
+        config: row ? { dsl: row.standings_dsl } : null,
         teams: teamsRows?.rows ?? [],
         ballots: ballotsRows?.rows ?? [],
     };

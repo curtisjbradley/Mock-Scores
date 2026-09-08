@@ -1,10 +1,7 @@
 import { lazy, Suspense, useEffect, useMemo, useState } from 'react'
-import * as Blockly from 'blockly'
 import { apiFetch } from '../../auth/auth'
 import { computeStandings } from '../blockly/standingsEngine'
-import { extractStandingsConfig, parseColumnsFromXml } from '../blockly/standingsGenerator'
-import { standingsBlockDefs } from '../blockly/standingsBlocks'
-import { tiebreakerBlockDefs } from '../blockly/tiebreakerBlocks'
+import { parseDsl } from '../blockly/standingsDsl'
 import type { IStandingsTeam, IIndividualAwardCategory } from '@mock-scores/shared'
 import '../styles/standings.css'
 
@@ -40,7 +37,7 @@ interface Ballot {
 }
 
 interface StandingsApiPayload {
-    config: { statsXml: string; standingsXml: string } | null
+    config: { dsl: string } | null
     teams: { id: string; name: string; code: string }[]
     ballots: Ballot[]
     rounds: Round[]
@@ -49,18 +46,9 @@ interface StandingsApiPayload {
 function computeFromBallots(
     ballots: Ballot[],
     teams: { id: string; name: string; code: string }[],
-    config: { statsXml: string; standingsXml: string },
+    config: { dsl: string },
 ) {
-    try { Blockly.common.defineBlocks(standingsBlockDefs) } catch { /* already defined */ }
-    try { Blockly.common.defineBlocks(tiebreakerBlockDefs) } catch { /* already defined */ }
-
-    const statsWs = new Blockly.Workspace()
-    const standingsWs = new Blockly.Workspace()
-    Blockly.Xml.domToWorkspace(Blockly.utils.xml.textToDom(config.statsXml), statsWs)
-    Blockly.Xml.domToWorkspace(Blockly.utils.xml.textToDom(config.standingsXml), standingsWs)
-    const standingsConfig = extractStandingsConfig(statsWs, standingsWs)
-    statsWs.dispose()
-    standingsWs.dispose()
+    const standingsConfig = parseDsl(config.dsl)
 
     const teamMap = new Map<string, IStandingsTeam>()
     for (const t of teams)
@@ -94,7 +82,7 @@ function computeFromBallots(
 
     return {
         rows: computeStandings([...teamMap.values()], standingsConfig),
-        cols: parseColumnsFromXml(config.statsXml),
+        cols: standingsConfig.columns,
     }
 }
 
@@ -283,7 +271,7 @@ export default function StandingsTab({ tournamentId }: { tournamentId: string })
                                         {result.cols.map(c => {
                                             const val = team[c.stat]
                                             const num = typeof val === 'number' ? val : NaN
-                                            return <td key={c.stat}>{isNaN(num) ? '—' : Number.isInteger(num) ? num : num.toFixed(3)}</td>
+                                            return <td key={c.stat}>{isNaN(num) ? '-' : Number.isInteger(num) ? num : num.toFixed(3)}</td>
                                         })}
                                     </tr>
                                 ))}
@@ -293,7 +281,7 @@ export default function StandingsTab({ tournamentId }: { tournamentId: string })
 
                     <Suspense fallback={null}>
                         <div className="st-tiebreaker-wrap">
-                            <TiebreakerViewer standingsXml={payload.config!.standingsXml} />
+                            <TiebreakerViewer dsl={payload.config!.dsl} />
                         </div>
                     </Suspense>
                 </>

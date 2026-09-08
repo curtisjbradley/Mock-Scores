@@ -345,20 +345,19 @@ router.get("/standings", tournamentHandler(async (req, res) => {
  *         application/json:
  *           schema:
  *             type: object
- *             required: [statsXml, standingsXml]
+ *             required: [dsl]
  *             properties:
- *               statsXml: { type: string }
- *               standingsXml: { type: string }
+ *               dsl: { type: string }
  *     responses:
  *       200: { description: Updated }
- *       400: { description: Missing statsXml or standingsXml }
+ *       400: { description: Missing dsl }
  *       500: { description: Unable to update standings config }
  */
 router.patch("/standings-config", tournamentHandler(async (req, res) => {
-    const { statsXml, standingsXml } = req.body as { statsXml: string; standingsXml: string };
-    if (!statsXml || !standingsXml) return res.status(400).json({ message: 'Missing statsXml or standingsXml' });
+    const { dsl } = req.body as { dsl: string };
+    if (!dsl) return res.status(400).json({ message: 'Missing dsl' });
     try {
-        await organizer.upsertStandingsConfig(req.tournament, statsXml, standingsXml);
+        await organizer.upsertStandingsConfig(req.tournament, dsl);
         return res.status(200).json({ success: true });
     } catch (e) {
         if (e instanceof DbError) return res.status(500).json({ message: 'Unable to update standings config' });

@@ -185,47 +185,47 @@ export async function updateTournamentStatus(tournamentID: string, status: 'acti
     if (result.rowCount === 0) throw new NotFoundError('tournament');
 }
 
-export async function getStandingsConfig(tournamentID: string): Promise<{ id: string; statsXml: string; standingsXml: string } | null> {
-    const r = await dbQuery<{ id: string; stats_xml: string; standings_xml: string }>(
-        `SELECT sc.id, sc.stats_xml, sc.standings_xml
+export async function getStandingsConfig(tournamentID: string): Promise<{ id: string; dsl: string } | null> {
+    const r = await dbQuery<{ id: string; standings_dsl: string }>(
+        `SELECT sc.id, sc.standings_dsl
          FROM tournaments t JOIN standings_configs sc ON sc.id = t.standings_config_id WHERE t.id = $1`,
         [tournamentID]
     );
     if (r === null) throw new DbError('getStandingsConfig');
     if (!r.rows[0]) return null;
-    const { id, stats_xml, standings_xml } = r.rows[0];
-    return { id, statsXml: stats_xml, standingsXml: standings_xml };
+    const { id, standings_dsl } = r.rows[0];
+    return { id, dsl: standings_dsl };
 }
 
-export async function upsertStandingsConfig(tournamentID: string, statsXml: string, standingsXml: string): Promise<void> {
+export async function upsertStandingsConfig(tournamentID: string, dsl: string): Promise<void> {
     const existing = await dbQuery<{ standings_config_id: string | null }>('SELECT standings_config_id FROM tournaments WHERE id=$1', [tournamentID]);
     if (!existing) throw new DbError('upsertStandingsConfig');
     const configId = existing.rows[0]?.standings_config_id;
     if (configId) {
         const isTemplate = !!(await dbQuery<{ id: string }>('SELECT id FROM standings_templates WHERE config_id=$1 LIMIT 1', [configId]))?.rows[0];
         if (isTemplate) {
-            const row = (await dbQuery<{ id: string }>('INSERT INTO standings_configs (stats_xml, standings_xml) VALUES ($1,$2) RETURNING id', [statsXml, standingsXml]))?.rows[0];
+            const row = (await dbQuery<{ id: string }>('INSERT INTO standings_configs (standings_dsl) VALUES ($1) RETURNING id', [dsl]))?.rows[0];
             if (!row) throw new DbError('upsertStandingsConfig insert');
             await dbQuery('UPDATE tournaments SET standings_config_id=$1 WHERE id=$2', [row.id, tournamentID]);
         } else {
-            await dbQuery('UPDATE standings_configs SET stats_xml=$1, standings_xml=$2 WHERE id=$3', [statsXml, standingsXml, configId]);
+            await dbQuery('UPDATE standings_configs SET standings_dsl=$1 WHERE id=$2', [dsl, configId]);
         }
     } else {
-        const row = (await dbQuery<{ id: string }>('INSERT INTO standings_configs (stats_xml, standings_xml) VALUES ($1,$2) RETURNING id', [statsXml, standingsXml]))?.rows[0];
+        const row = (await dbQuery<{ id: string }>('INSERT INTO standings_configs (standings_dsl) VALUES ($1) RETURNING id', [dsl]))?.rows[0];
         if (!row) throw new DbError('upsertStandingsConfig insert');
         await dbQuery('UPDATE tournaments SET standings_config_id=$1 WHERE id=$2', [row.id, tournamentID]);
     }
 }
 
 export async function getOrganizerStandingsData(tournamentID: string): Promise<{
-    config: { statsXml: string; standingsXml: string } | null;
+    config: { dsl: string } | null;
     teams: { id: string; name: string; code: string }[];
     ballots: { p_team_id: string; d_team_id: string; p_points: number; d_points: number; pairing_id: string; round_id: string; tiebreaker: string | null; presider_ballot: boolean }[];
     rounds: { round_id: string; name: string }[];
 }> {
     const [configRow, teamsRows, roundsRows, ballotsRows] = await Promise.all([
-        dbQuery<{ stats_xml: string; standings_xml: string }>(
-            `SELECT sc.stats_xml, sc.standings_xml FROM tournaments t
+        dbQuery<{ standings_dsl: string }>(
+            `SELECT sc.standings_dsl FROM tournaments t
              JOIN standings_configs sc ON sc.id = t.standings_config_id WHERE t.id = $1`,
             [tournamentID],
         ),
@@ -250,7 +250,7 @@ export async function getOrganizerStandingsData(tournamentID: string): Promise<{
 
     const row = configRow.rows[0];
     return {
-        config: row ? { statsXml: row.stats_xml, standingsXml: row.standings_xml } : null,
+        config: row ? { dsl: row.standings_dsl } : null,
         teams: teamsRows.rows,
         ballots: ballotsRows.rows,
         rounds: roundsRows.rows,
@@ -943,8 +943,8 @@ async function duplicateCourtrooms(sourceTournamentID: string, newTournamentID: 
 }
 
 async function duplicateTiebreaker(sourceTournamentID: string, newTournamentID: string): Promise<void> {
-    const sourceConfig = await dbQuery<{ id: string; stats_xml: string; standings_xml: string }>(
-        `SELECT sc.id, sc.stats_xml, sc.standings_xml FROM tournaments t
+    const sourceConfig = await dbQuery<{ id: string; standings_dsl: string }>(
+        `SELECT sc.id, sc.standings_dsl FROM tournaments t
          JOIN standings_configs sc ON sc.id = t.standings_config_id WHERE t.id=$1`,
         [sourceTournamentID]
     );
@@ -954,7 +954,7 @@ async function duplicateTiebreaker(sourceTournamentID: string, newTournamentID: 
     if (isTemplate) {
         await dbQuery('UPDATE tournaments SET standings_config_id=$1 WHERE id=$2', [cfg.id, newTournamentID]);
     } else {
-        const newCfg = (await dbQuery<{ id: string }>('INSERT INTO standings_configs (stats_xml, standings_xml) VALUES ($1,$2) RETURNING id', [cfg.stats_xml, cfg.standings_xml]))?.rows[0];
+        const newCfg = (await dbQuery<{ id: string }>('INSERT INTO standings_configs (standings_dsl) VALUES ($1) RETURNING id', [cfg.standings_dsl]))?.rows[0];
         if (newCfg) await dbQuery('UPDATE tournaments SET standings_config_id=$1 WHERE id=$2', [newCfg.id, newTournamentID]);
     }
 }

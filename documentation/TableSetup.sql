@@ -43,8 +43,7 @@ create table tournament_format
 create table standings_configs
 (
     id            uuid default gen_random_uuid() not null primary key,
-    stats_xml     text                           not null,
-    standings_xml text                           not null
+    standings_dsl text                           not null
 );
 
 create table standings_templates
@@ -627,12 +626,35 @@ CREATE TRIGGER trg_update_num_rounds
 do $$
     declare template_id uuid := gen_random_uuid();
     begin
-        insert into standings_configs (id, stats_xml, standings_xml) values
+        insert into standings_configs (id, standings_dsl) values
             (template_id,
-             '<xml xmlns="https://developers.google.com/blockly/xml"> <block type="define_visible_stats" id="vzM]MMQEaOR7m7db9l6i" deletable="false" movable="false" x="20" y="20"> <next> <block type="standings_column" id="$fk1`_SySSuoaq8kSptF"> <field name="STAT">Ballots</field> <field name="LABEL"></field> <next> <block type="standings_column" id="E?@ZMyVUQEa_LJ{dn#j_"> <field name="STAT">Combined Strength</field> <field name="LABEL">CS</field> <next> <block type="standings_column" id="_6n5vwQ_,3or*@O,y,kZ"> <field name="STAT">Point Differential</field> <field name="LABEL">PD</field> <next> <block type="standings_column" id="BictXFBp5zO+8*k`]:jn"> <field name="STAT">Opponent Combined Strength</field> <field name="LABEL">OCS</field> </block> </next> </block> </next> </block> </next> </block> </next> </block> <block type="stat_hat" id="ZjQilwOMeM{XlIE1*Ekp" x="0" y="183"> <field name="NAME">Ballots</field> <field name="AGG">sum</field> <value name="VALUE"> <block type="math_arithmetic" id="[?I6dNAS-BIzwZVSii.`"> <field name="OP">ADD</field> <value name="A"> <block type="pairing_field" id="O}-.I=^Pj-[4F},2~NvG"> <field name="FIELD">ballots_won</field> </block> </value> <value name="B"> <block type="math_arithmetic" id="l/`wM;;R6ukr*?w$YfIy"> <field name="OP">MULTIPLY</field> <value name="A"> <block type="pairing_field" id="jQ[E`%pAp/9oM43b[2`."> <field name="FIELD">ballots_tied</field> </block> </value> <value name="B"> <block type="math_number" id=")VN1n05^hzrSl(]CSHAN"> <field name="NUM">0.5</field> </block> </value> </block> </value> </block> </value> </block> <block type="stat_hat" id="Y{?f2%^@O$(xy9*/{*tE" x="0" y="256"> <field name="NAME">Combined Strength</field> <field name="AGG">sum</field> <value name="VALUE"> <block type="opponent_stat" id="Tb1l[z+iV7K:tj*9{j@C"> <field name="NAME">Ballots</field> </block> </value> </block> <block type="stat_hat" id="LxA.$0aBn|QSm.ww{iAB" x="0" y="307"> <field name="NAME">Point Differential</field> <field name="AGG">sum</field> <value name="VALUE"> <block type="math_arithmetic" id="o|#.lEExY*f~TeZu8.#,"> <field name="OP">MINUS</field> <value name="A"> <block type="ballot_field" id="HCH@knK%(.uQT5KZfRYm"> <field name="FIELD">ballot_pf</field> </block> </value> <value name="B"> <block type="ballot_field" id="JHx!ZdYKSA7NeDtpclI_"> <field name="FIELD">ballot_pa</field> </block> </value> </block> </value> </block> <block type="stat_hat" id="/OnTau[d.{!Ow6BgxuJ1" x="0" y="369"> <field name="NAME">Opponent Combined Strength</field> <field name="AGG">sum</field> <value name="VALUE"> <block type="opponent_stat" id="2Xm?K%+os,H;Xtq5C+O)"> <field name="NAME">Combined Strength</field> </block> </value> </block> </xml>',
-             '<xml xmlns="https://developers.google.com/blockly/xml"> <block type="tiebreaker_order" id="p3k!?(d`F=m35|M3fRyO" deletable="false" movable="false" x="20" y="20"> <next> <block type="standings_tiebreaker" id="61D@YmQo]JQd$1)Ka(nE"> <field name="STAT">Ballots</field> <field name="ORDER">desc</field> <next> <block type="standings_tiebreaker" id="(HU8.{o6kUrY+M{R-L1X"> <field name="STAT">Combined Strength</field> <field name="ORDER">desc</field> <next> <block type="standings_tiebreaker" id=",`?jn$5?3UwOqAeH`X(n"> <field name="STAT">Point Differential</field> <field name="ORDER">desc</field> <next> <block type="standings_tiebreaker" id="u68YCy!fsCavlob%uC$p"> <field name="STAT">Opponent Combined Strength</field> <field name="ORDER">desc</field> </block> </next> </block> </next> </block> </next> </block> </next> </block> </xml>');
+             '(config
+  (stat "Ballots" sum (+ (pairing ballots_won) (* (pairing ballots_tied) 0.5)))
+  (stat "Combined Strength" sum (opponent "Ballots"))
+  (stat "Point Differential" sum (- (pairing ballot_pf) (pairing ballot_pa)))
+  (stat "Opponent Combined Strength" sum (opponent "Combined Strength"))
+  (columns (column "Ballots" "Ballots") (column "Combined Strength" "CS") (column "Point Differential" "PD") (column "Opponent Combined Strength" "OCS"))
+  (tiebreakers (by "Ballots" desc) (by "Combined Strength" desc) (by "Point Differential" desc) (by "Opponent Combined Strength" desc)))');
         insert into standings_templates (id, label, description, config_id) values
             (gen_random_uuid(), 'AMTA', 'Ballots -> CS -> PD -> OCS', template_id);
+    end;
+$$;
+
+do $$
+    declare template_id uuid := gen_random_uuid();
+    begin
+        insert into standings_configs (id, standings_dsl) values
+            (template_id,
+             '(config
+  (intermediate "Win" sum (if (> (pairing points_for) (pairing points_against)) 1 (if (= (pairing points_for) (pairing points_against)) (pairing won_presider_tb) 0)))
+  (stat "Wins" sum (intermediate "Win"))
+  (stat "Cumulative % Points" sum (/ (pairing points_for) (+ (pairing points_for) (pairing points_against))))
+  (team-stat "Number of Rounds" (team num_pairings))
+  (team-stat "Loses" (- (stat "Number of Rounds") (stat "Wins")))
+  (columns (column "Wins" "Wins") (column "Loses" "Loses") (column "Number of Rounds" "# Of Rounds") (column "Cumulative % Points" "% Points"))
+  (tiebreakers (by "Wins" desc) (h2h "Win" desc) (by "Cumulative % Points" desc)))');
+        insert into standings_templates (id, label, description, config_id) values
+            (gen_random_uuid(), 'SLO County', 'Wins -> Head-to-head -> Cumulative % Points', template_id);
     end;
 $$;
 

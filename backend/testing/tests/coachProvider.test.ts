@@ -199,11 +199,11 @@ describe('getCompetitionField', () => {
 describe('getStandingsData', () => {
     it('returns config, teams, and ballots', async () => {
         mockDbQuery
-            .mockResolvedValueOnce({ rows: [{ stats_xml: '<s/>', standings_xml: '<st/>' }], rowCount: 1 } as any)
+            .mockResolvedValueOnce({ rows: [{ standings_dsl: '(config (columns) (tiebreakers))' }], rowCount: 1 } as any)
             .mockResolvedValueOnce({ rows: [{ p_team_id: 't1', d_team_id: 't2', p_points: 5, d_points: 3, pairing_id: PID }], rowCount: 1 } as any)
             .mockResolvedValueOnce({ rows: [{ id: TEAM, name: 'Team A', code: 'A' }], rowCount: 1 } as any);
         const result = await getStandingsData(TID);
-        expect(result.config).toEqual({ statsXml: '<s/>', standingsXml: '<st/>' });
+        expect(result.config).toEqual({ dsl: '(config (columns) (tiebreakers))' });
         expect(result.teams).toHaveLength(1);
         expect(result.ballots).toHaveLength(1);
     });

@@ -11,10 +11,10 @@ import type {
 
 /**
  * Raw payload returned by `GET /coach/tournaments/:id/standings`.
- * The layout fetches this; StandingsPage runs the Blockly computation on it.
+ * The layout fetches this; StandingsPage runs the DSL-based computation on it.
  */
 export interface StandingsApiPayload {
-    config: { statsXml: string; standingsXml: string }
+    config: { dsl: string }
     teams: { id: string; name: string; code: string }[]
     ballots: { p_team_id: string; d_team_id: string; p_points: number; d_points: number; pairing_id: string; tiebreaker: string | null; presider_ballot: boolean }[]
 }
