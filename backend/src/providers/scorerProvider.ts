@@ -18,6 +18,8 @@ interface PairingFormatContext {
     scorerLastName: string;
     isPaper: boolean;
     fillableScores: boolean;
+    /** Whether to show the tiebreaker selection — true only for the presider's ballot. */
+    showTiebreaker: boolean;
 }
 
 /**
@@ -276,7 +278,7 @@ async function buildScoreSheetForPairing(ctx: PairingFormatContext): Promise<ISc
 
     return {
         isCriminal: tourney.criminal_case,
-        ballotOptions: { fillableScores: ctx.fillableScores },
+        ballotOptions: { fillableScores: ctx.fillableScores, showTiebreaker: ctx.showTiebreaker, },
         pairingID: pairing_id,
         scorer: {
             firstName: ctx.scorerFirstName,
@@ -290,6 +292,8 @@ async function buildScoreSheetForPairing(ctx: PairingFormatContext): Promise<ISc
         tournamentName: tourney.tournament_name,
         prosecutionCode: pTeam?.code ?? '',
         defenseCode: dTeam?.code ?? '',
+        prosecutionId: p_team,
+        defenseId: d_team,
         students: studentsRecord,
         witnesses: witnessesRecord,
         scoringCategories,
@@ -362,6 +366,7 @@ export async function getPairingBallotFormat(pairingId: string): Promise<IScoreS
         scorerLastName: '',
         isPaper: true,
         fillableScores: true,
+        showTiebreaker: false,
     });
 }
 
@@ -721,7 +726,7 @@ export async function getScoreSheet(assignmentId: string, options?: { skipGuards
 
     return {
         isCriminal: tourney.criminal_case,
-        ballotOptions: { fillableScores },
+        ballotOptions: { fillableScores, showTiebreaker: isPresider },
         pairingID: pairing_id,
         scorer: {
             firstName: scorerFirstName,
@@ -735,6 +740,8 @@ export async function getScoreSheet(assignmentId: string, options?: { skipGuards
         tournamentName: tourney.tournament_name,
         prosecutionCode: pTeam?.code ?? '',
         defenseCode: dTeam?.code ?? '',
+        prosecutionId: p_team,
+        defenseId: d_team,
         students: studentsRecord,
         witnesses: witnessesRecord,
         scoringCategories,
