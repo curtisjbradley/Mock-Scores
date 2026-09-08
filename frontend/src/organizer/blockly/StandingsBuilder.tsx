@@ -64,6 +64,7 @@ const STATS_TOOLBOX = {
       kind: 'category', name: 'Pairing Data', colour: 65,
       contents: [
         { kind: 'block', type: 'pairing_field' },
+        { kind: 'block', type: 'team_field' },
         { kind: 'block', type: 'ballot_field' },
       ],
     },

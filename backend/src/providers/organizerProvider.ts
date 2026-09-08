@@ -220,7 +220,7 @@ export async function upsertStandingsConfig(tournamentID: string, statsXml: stri
 export async function getOrganizerStandingsData(tournamentID: string): Promise<{
     config: { statsXml: string; standingsXml: string } | null;
     teams: { id: string; name: string; code: string }[];
-    ballots: { p_team_id: string; d_team_id: string; p_points: number; d_points: number; pairing_id: string; round_id: string }[];
+    ballots: { p_team_id: string; d_team_id: string; p_points: number; d_points: number; pairing_id: string; round_id: string; tiebreaker: string | null; presider_ballot: boolean }[];
     rounds: { round_id: string; name: string }[];
 }> {
     const [configRow, teamsRows, roundsRows, ballotsRows] = await Promise.all([
@@ -237,8 +237,8 @@ export async function getOrganizerStandingsData(tournamentID: string): Promise<{
             'SELECT round_id, name FROM rounds WHERE tournament_id = $1 ORDER BY round_time  NULLS LAST',
             [tournamentID],
         ),
-        dbQuery<{ p_team_id: string; d_team_id: string; p_points: number; d_points: number; pairing_id: string; round_id: string }>(
-            `SELECT b.p_team_id, b.d_team_id, b.p_points, b.d_points, b.pairing_id, p.round_id
+        dbQuery<{ p_team_id: string; d_team_id: string; p_points: number; d_points: number; pairing_id: string; round_id: string; tiebreaker: string | null; presider_ballot: boolean }>(
+            `SELECT b.p_team_id, b.d_team_id, b.p_points, b.d_points, b.pairing_id, p.round_id, b.tiebreaker, b.presider_ballot
              FROM ballots b
              JOIN pairings p ON p.pairing_id = b.pairing_id
              WHERE b.tournament_id = $1`,

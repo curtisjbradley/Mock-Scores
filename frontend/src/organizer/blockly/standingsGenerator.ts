@@ -29,6 +29,9 @@ function blockToExpr(block: Blockly.Block | null): string {
   switch (block.type) {
     case 'pairing_field':
       return `p.${block.getFieldValue('FIELD')}`;
+    case 'team_field':
+      // Team-level builtins live in the stats dict (see computeTeamStats).
+      return `stats['${block.getFieldValue('FIELD')}']`;
     case 'ballot_field':
       return `p.${block.getFieldValue('FIELD')}`;
     case 'stat_ref':

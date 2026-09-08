@@ -450,7 +450,7 @@ export async function getPairingBallots(tournamentId: string, pairingId: string)
 export async function getStandingsData(tournamentId: string): Promise<{
     config: { statsXml: string; standingsXml: string } | null;
     teams: { id: string; name: string; code: string }[];
-    ballots: { p_team_id: string; d_team_id: string; p_points: number; d_points: number; pairing_id: string }[];
+    ballots: { p_team_id: string; d_team_id: string; p_points: number; d_points: number; pairing_id: string; tiebreaker: string | null; presider_ballot: boolean }[];
 }> {
     const [configRow, ballotsRows, teamsRows] = await Promise.all([
         dbQuery<{ stats_xml: string; standings_xml: string }>(
@@ -458,8 +458,8 @@ export async function getStandingsData(tournamentId: string): Promise<{
              JOIN standings_configs sc ON sc.id = t.standings_config_id WHERE t.id=$1`,
             [tournamentId]
         ),
-        dbQuery<{ p_team_id: string; d_team_id: string; p_points: number; d_points: number; pairing_id: string }>(
-            `SELECT b.p_team_id, b.d_team_id, b.p_points, b.d_points, b.pairing_id
+        dbQuery<{ p_team_id: string; d_team_id: string; p_points: number; d_points: number; pairing_id: string; tiebreaker: string | null; presider_ballot: boolean }>(
+            `SELECT b.p_team_id, b.d_team_id, b.p_points, b.d_points, b.pairing_id, b.tiebreaker, b.presider_ballot
              FROM ballots b
              JOIN pairings p ON p.pairing_id = b.pairing_id
              JOIN rounds r   ON r.round_id   = p.round_id

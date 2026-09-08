@@ -16,7 +16,7 @@ import type {
 export interface StandingsApiPayload {
     config: { statsXml: string; standingsXml: string }
     teams: { id: string; name: string; code: string }[]
-    ballots: { p_team_id: string; d_team_id: string; p_points: number; d_points: number; pairing_id: string }[]
+    ballots: { p_team_id: string; d_team_id: string; p_points: number; d_points: number; pairing_id: string; tiebreaker: string | null; presider_ballot: boolean }[]
 }
 
 /** Individual ballot detail for a pairing on the results page. */

@@ -434,7 +434,7 @@ create table ballots
         references teams (id),
     d_points             integer                        not null,
     p_points             integer                        not null,
-    tiebreaker           uuid    default '10db69a9-7596-49e8-9591-b48d0cd28c58' not null,
+    tiebreaker           uuid    default null,
     presider_ballot      boolean default false          not null
 );
 
