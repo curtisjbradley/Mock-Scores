@@ -1,5 +1,5 @@
 import ExcelJS from 'exceljs'
-import type { CombinedBallot, SegmentRow } from './CombinedScoresheet'
+import type { CombinedBallot, CombinedStat, SegmentRow } from './CombinedScoresheet'
 
 /** Inputs for building the Excel export — mirrors what {@link CombinedScoresheet} renders. */
 export interface CombinedExport {
@@ -11,6 +11,8 @@ export interface CombinedExport {
     roundLabel?: string | null
     dateLabel?: string | null
     tiebreaker?: string | null
+    /** Tournament-configured standings stats for this trial, per side. */
+    statSummary?: CombinedStat[] | null
 }
 
 const GRAY = 'FFBFBFBF'
@@ -29,10 +31,10 @@ function fill(color: string): ExcelJS.Fill {
  * and a summary block (percentages, presider tiebreaker, winner).
  */
 export async function buildCombinedWorkbook(data: CombinedExport): Promise<ExcelJS.Buffer> {
-    const { rows, ballots, prosLabel, prosecutionCode, defenseCode, roundLabel, dateLabel, tiebreaker } = data
+    const { rows, ballots, prosLabel, prosecutionCode, defenseCode, roundLabel, dateLabel, tiebreaker, statSummary } = data
     const prosShort = prosLabel === 'Prosecution' ? 'Pros' : 'Pl'
 
-    // Per-scorer column totals + grand totals (same math as the component).
+    // Per-scorer column totals (same math as the component's totals row).
     const scorerTotals = ballots.map(b => {
         let p = 0, d = 0
         for (const r of rows) {
@@ -41,15 +43,6 @@ export async function buildCombinedWorkbook(data: CombinedExport): Promise<Excel
         }
         return { p, d }
     })
-    const totalP = scorerTotals.reduce((a, t) => a + t.p, 0)
-    const totalD = scorerTotals.reduce((a, t) => a + t.d, 0)
-    const combined = totalP + totalD
-    const prosPct = combined ? totalP / combined : 0
-    const defPct = combined ? totalD / combined : 0
-    const winner =
-        totalP > totalD ? `${prosLabel} (${prosecutionCode})`
-        : totalD > totalP ? `Defense (${defenseCode})`
-        : 'Tie'
     const tiebreakerText = tiebreaker
         ? tiebreaker === prosecutionCode ? `${prosLabel} (${prosecutionCode})`
         : tiebreaker === defenseCode ? `Defense (${defenseCode})`
@@ -139,20 +132,58 @@ export async function buildCombinedWorkbook(data: CombinedExport): Promise<Excel
     })
 
     // ── Summary block ─────────────────────────────────────────────────────
-    ws.addRow([])
-    const pRow = ws.addRow([`${prosLabel} (${prosecutionCode})`, totalP, prosPct])
-    pRow.getCell(1).font = { bold: true }
-    pRow.getCell(3).numFmt = '0.00%'
-    const dRow = ws.addRow([`Defense (${defenseCode})`, totalD, defPct])
-    dRow.getCell(1).font = { bold: true }
-    dRow.getCell(3).numFmt = '0.00%'
+    // Mirrors the on-screen sheet: only the presider tiebreaker is shown here.
+    // Raw point percentages and a points-based "winner" are intentionally
+    // omitted — how the trial is won is conveyed by the tournament stats block.
     if (tiebreakerText) {
+        ws.addRow([])
         const tbRow = ws.addRow(['Presider tiebreaker', tiebreakerText])
         tbRow.getCell(1).font = { bold: true }
+        tbRow.getCell(2).font = { bold: true }
     }
-    const winRow = ws.addRow(['Winner', winner])
-    winRow.getCell(1).font = { bold: true }
-    winRow.getCell(2).font = { bold: true }
+
+    // ── Tournament stats (per-trial) block ────────────────────────────────
+    // Mirrors the on-screen block: how the tournament actually tabulates this
+    // trial (ballots won, point differential, custom stats), not just points.
+    if (statSummary && statSummary.length > 0) {
+        ws.addRow([]) // spacer
+        const titleRow = ws.addRow(['Tournament stats - this trial'])
+        titleRow.getCell(1).font = { bold: true }
+
+        const headerRow = ws.addRow(['Stat', `${prosShort} (${prosecutionCode})`, `Def (${defenseCode})`])
+        headerRow.eachCell({ includeEmpty: false }, (cell, colNum) => {
+            if (colNum > 3) return
+            cell.fill = fill(GRAY)
+            cell.font = { bold: true, color: colNum === 3 ? { argb: RED } : undefined }
+            cell.alignment = { horizontal: colNum === 1 ? 'left' : 'center' }
+            cell.border = {
+                top: { style: 'thin' }, bottom: { style: 'thin' },
+                left: { style: 'thin' }, right: { style: 'thin' },
+            }
+        })
+
+        for (const s of statSummary) {
+            const pVal = Number.isNaN(s.prosecution) ? '—' : s.prosecution
+            const dVal = Number.isNaN(s.defense) ? '—' : s.defense
+            const pLead = s.prosecution > s.defense
+            const dLead = s.defense > s.prosecution
+            const statRow = ws.addRow([s.label, pVal, dVal])
+            statRow.getCell(1).font = { bold: true }
+            statRow.getCell(1).alignment = { horizontal: 'left' }
+            const pCell = statRow.getCell(2)
+            pCell.alignment = { horizontal: 'center' }
+            pCell.font = { bold: pLead }
+            const dCell = statRow.getCell(3)
+            dCell.alignment = { horizontal: 'center' }
+            dCell.font = { bold: dLead, color: { argb: RED } }
+            for (const cell of [statRow.getCell(1), pCell, dCell]) {
+                cell.border = {
+                    top: { style: 'thin' }, bottom: { style: 'thin' },
+                    left: { style: 'thin' }, right: { style: 'thin' },
+                }
+            }
+        }
+    }
 
     return wb.xlsx.writeBuffer()
 }

@@ -395,7 +395,20 @@ export async function getFormatForTournament(tournamentId: string): Promise<{ p_
 }
 
 
-export async function canViewPairingResults(tournamentId: string, pairingId: string): Promise<boolean> {
+/**
+ * Whether the requesting coach may view the combined scoresheet for a pairing.
+ *
+ * Requires all of:
+ * - the pairing belongs to the given tournament,
+ * - the round's results have been made public, and
+ * - the coach's own team (`teamId`) actually competed in the pairing
+ *   (as prosecution or defense).
+ *
+ * The last condition scopes coaches to trials their team was part of; a coach
+ * must not be able to read another matchup's scoresheet just because results
+ * for the round are public.
+ */
+export async function canViewPairingResults(tournamentId: string, pairingId: string, teamId: string): Promise<boolean> {
     const row = (await dbQuery<{ pairing_id: string }>(
         `SELECT p.pairing_id
          FROM pairings p
@@ -403,16 +416,24 @@ export async function canViewPairingResults(tournamentId: string, pairingId: str
          WHERE p.pairing_id = $1
            AND r.tournament_id = $2
            AND r.results_public = true
+           AND (p.p_team = $3 OR p.d_team = $3)
          LIMIT 1`,
-        [pairingId, tournamentId],
+        [pairingId, tournamentId, teamId],
     ))?.rows[0];
     return !!row;
 }
 
+/**
+ * Whether a specific ballot (scorer assignment) belongs to a pairing the
+ * requesting coach may view. Same scoping rules as {@link canViewPairingResults}:
+ * the pairing must be in the tournament, its round's results must be public, and
+ * the coach's own team (`teamId`) must have competed in the pairing.
+ */
 export async function isAssignmentInPairingWithPublicResults(
     tournamentId: string,
     pairingId: string,
     assignmentId: string,
+    teamId: string,
 ): Promise<boolean> {
     const row = (await dbQuery<{ assignment_id: string }>(
         `SELECT spa.assignment_id
@@ -423,8 +444,9 @@ export async function isAssignmentInPairingWithPublicResults(
            AND p.pairing_id = $2
            AND r.tournament_id = $3
            AND r.results_public = true
+           AND (p.p_team = $4 OR p.d_team = $4)
          LIMIT 1`,
-        [assignmentId, pairingId, tournamentId],
+        [assignmentId, pairingId, tournamentId, teamId],
     ))?.rows[0];
     return !!row;
 }

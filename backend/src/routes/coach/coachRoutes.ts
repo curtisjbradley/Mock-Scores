@@ -203,7 +203,11 @@ router.get("/tournaments/:teamId/pairings/:pairingId/ballots", authedHandler(asy
     const pairingId = req.params.pairingId as string;
     if (!uuidRegex.test(teamId)) return res.status(400).json({ message: "Invalid team ID" });
     if (!uuidRegex.test(pairingId)) return res.status(400).json({ message: "Invalid pairing ID" });
-    if (!await coach.canViewPairingResults(teamId, pairingId)) return res.status(404).json({ message: "Pairing not found" });
+    // `:teamId` here is the tournament id; resolve the coach's actual competing
+    // team so we only expose scoresheets for pairings their team was part of.
+    const coachTeamId = await coach.getTeamIdForCoach(teamId, req.session.userId);
+    if (!coachTeamId) return res.status(404).json({ message: "Pairing not found" });
+    if (!await coach.canViewPairingResults(teamId, pairingId, coachTeamId)) return res.status(404).json({ message: "Pairing not found" });
     return res.status(200).json(await coach.getPairingBallots(teamId, pairingId));
 }));
 
@@ -240,7 +244,11 @@ router.get("/tournaments/:teamId/pairings/:pairingId/ballots/:assignmentId", aut
     if (!uuidRegex.test(pairingId)) return res.status(400).json({ message: "Invalid pairing ID" });
     if (!uuidRegex.test(assignmentId)) return res.status(400).json({ message: "Invalid assignment ID" });
 
-    if (!await coach.isAssignmentInPairingWithPublicResults(teamId, pairingId, assignmentId))
+    // `:teamId` here is the tournament id; resolve the coach's actual competing
+    // team so we only expose ballots for pairings their team was part of.
+    const coachTeamId = await coach.getTeamIdForCoach(teamId, req.session.userId);
+    if (!coachTeamId) return res.status(404).json({ message: "Ballot not found" });
+    if (!await coach.isAssignmentInPairingWithPublicResults(teamId, pairingId, assignmentId, coachTeamId))
         return res.status(404).json({ message: "Ballot not found" });
 
     const sheet = await getScoreSheet(assignmentId, { skipGuards: true }).catch(() => null);

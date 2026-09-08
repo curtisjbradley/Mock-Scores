@@ -69,3 +69,69 @@
     text-align: center;
     font-weight: 700;
 }
+
+/* ── Stat-driven results layout (two rows per pairing) ──────────────────── */
+
+/* Each pairing is its own <tbody> group holding a P row and a D row (plus an
+   optional expanded ballot-detail row). Grouping by tbody lets the whole
+   pairing share a hover state and a single top separator. */
+
+/* Suppress the inherited per-cell bottom border between the two side-rows of a
+   pairing so the pair reads as one block. */
+.coach-results-table .coach-pairing-row--top > td {
+    border-bottom: none;
+}
+
+/* Separator above every pairing group except the first. */
+.coach-results-table .coach-pairing-group + .coach-pairing-group .coach-pairing-row--top > td {
+    border-top: 1px solid var(--border);
+}
+
+/* Hover highlights the entire pairing group, not a single side-row. */
+.coach-results-table .coach-pairing-group:hover .coach-pairing-row > td {
+    background: var(--surface-muted);
+}
+
+.coach-side-cell {
+    font-weight: 700;
+    white-space: nowrap;
+    color: var(--text-muted);
+    width: 3rem;
+}
+
+.coach-stat-col {
+    text-align: center;
+}
+
+/* Numeric stat cells read better tabularly aligned. */
+.coach-results-table td.coach-stat-col {
+    font-variant-numeric: tabular-nums;
+}
+
+/* Right-side expand affordance, vertically centered across both side-rows. */
+.coach-expand-cell {
+    text-align: center;
+    color: var(--text-muted);
+    font-size: 0.7rem;
+    vertical-align: middle;
+    width: 2rem;
+}
+
+/* The expanded ballot-detail row spans the group; drop its own hover tint. */
+.coach-results-table .coach-ballot-detail-row > td {
+    border-bottom: none;
+}
+
+/* "Won presider tiebreaker" badge shown next to the winning side. */
+.coach-tb-badge {
+    display: inline-block;
+    margin-left: 0.4rem;
+    padding: 0.05rem 0.3rem;
+    border-radius: 0.35rem;
+    background: var(--primary-subtle);
+    color: var(--primary);
+    font-size: 0.6rem;
+    font-weight: 700;
+    letter-spacing: 0.04em;
+    vertical-align: middle;
+}

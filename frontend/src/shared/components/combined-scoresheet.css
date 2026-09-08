@@ -165,6 +165,47 @@ tfoot .cs-seg-col { font-weight: 700; }
 .cs-winner-label { font-weight: 600; color: #444; }
 .cs-winner-value { font-weight: 700; }
 
+/* ── Tournament stats (per-trial) block ─────────────────────────────────── */
+.cs-stats {
+    margin-top: 1rem;
+    border-top: 2px solid #000;
+    padding-top: 0.75rem;
+}
+.cs-stats-title {
+    font-size: 0.8rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+    color: #444;
+    margin-bottom: 0.4rem;
+}
+.cs-stats-table {
+    border-collapse: collapse;
+    width: 100%;
+    max-width: 32rem;
+    font-size: 0.85rem;
+}
+.cs-stats-table th,
+.cs-stats-table td {
+    border: 1px solid #000;
+    padding: 3px 8px;
+    text-align: center;
+    font-variant-numeric: tabular-nums;
+}
+.cs-stats-table thead th {
+    background: #bfbfbf;
+    font-weight: 700;
+    font-size: 0.75rem;
+    text-transform: uppercase;
+    letter-spacing: 0.03em;
+}
+.cs-stats-table .cs-stats-label-col {
+    text-align: left;
+    font-weight: 600;
+}
+/* Bold the leading side for each stat so the tabulation winner is obvious. */
+.cs-stats-table .cs-stat-lead { font-weight: 800; }
+
 /* Print: fill the page, drop chrome, keep the grid crisp. */
 @media print {
     .cs-page { max-width: none; padding: 0; }

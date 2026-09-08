@@ -13,9 +13,14 @@ jest.mock('../../src/email', () => jest.requireActual('../mocks/email'));
 import request from 'supertest';
 import app from '../../src/appService';
 import { dbQuery } from '../../src/db';
+import { sendEmail } from '../../src/email';
 import { setupAuth, makeAuth, makeMockAccess } from '../helpers/auth';
 
 const mockDbQuery = dbQuery as jest.MockedFunction<typeof dbQuery>;
+const mockSendEmail = sendEmail as jest.MockedFunction<typeof sendEmail>;
+
+/** Flush pending microtasks so fire-and-forget email promises resolve. */
+const flushAsync = () => new Promise(resolve => setImmediate(resolve));
 
 const T = 'a1b2c3d4-e5f6-7890-abcd-ef1234567890';
 
@@ -151,10 +156,18 @@ describe('POST /api/organizer/tournament/:id/import/teams', () => {
             .mockResolvedValueOnce({ rows: [{ id: 't2', tournament_id: T, name: 'Hawks', code: 'HWK' }], rowCount: 1 } as any)
             .mockResolvedValueOnce({ rows: [], rowCount: 0 } as any)
             .mockResolvedValueOnce({ rows: [], rowCount: 1 } as any);
+        // getTournament (SELECT tournaments) used when sending invitation emails
+        mockDbQuery.mockResolvedValueOnce({ rows: [{ id: T, name: 'Regionals 2026' }], rowCount: 1 } as any);
         const res = await request(app).post(url).set(auth()).send({ csv });
         expect(res.status).toBe(200);
         expect(res.body.created).toBe(2);
         expect(res.body.errors).toHaveLength(0);
+
+        // Coach invitation emails are dispatched (fire-and-forget) for each created team
+        await flushAsync();
+        expect(mockSendEmail).toHaveBeenCalledTimes(2);
+        expect(mockSendEmail).toHaveBeenCalledWith('coach@test.com', expect.any(String), expect.any(String), expect.any(String));
+        expect(mockSendEmail).toHaveBeenCalledWith('coach2@test.com', expect.any(String), expect.any(String), expect.any(String));
     });
 
     it('imports teams without header row', async () => {
@@ -193,6 +206,9 @@ describe('POST /api/organizer/tournament/:id/import/teams', () => {
         const res = await request(app).post(url).set(auth()).send({ csv });
         expect(res.status).toBe(200);
         expect(res.body.errors[0].message).toMatch(/already exists/i);
+        // No team was created, so no invitation email should be sent
+        await flushAsync();
+        expect(mockSendEmail).not.toHaveBeenCalled();
     });
 
     it('uses team name as code when code column is missing', async () => {

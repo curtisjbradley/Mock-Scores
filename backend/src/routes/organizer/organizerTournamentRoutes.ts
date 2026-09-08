@@ -1800,6 +1800,10 @@ router.post('/import/teams', tournamentHandler(async (req, res) => {
 
     const results: { created: number; errors: { row: number; message: string }[] } = { created: 0, errors: [] };
 
+    // Collect successfully created teams so we can send one invite email per team
+    // after fetching the tournament once (mirrors the single-team POST /teams flow).
+    const invites: { email: string; teamName: string; teamId: string }[] = [];
+
     for (let i = 0; i < dataRows.length; i++) {
         const row = dataRows[i];
         const [name, coachEmail, code] = row;
@@ -1821,11 +1825,22 @@ router.post('/import/teams', tournamentHandler(async (req, res) => {
         }
 
         try {
-            await organizer.addTeam(req.tournament, name.trim(), coachEmail.trim(), code?.trim() || name.trim());
+            const newTeam = await organizer.addTeam(req.tournament, name.trim(), coachEmail.trim(), code?.trim() || name.trim());
+            invites.push({ email: coachEmail.trim(), teamName: name.trim(), teamId: newTeam.id });
             results.created++;
         } catch (e) {
             results.errors.push({ row: rowNum, message: e instanceof Error ? e.message : 'Unknown error' });
         }
+    }
+
+    // Fire off the coach invitation emails without blocking the response.
+    if (invites.length > 0) {
+        getTournament(req.tournament).then(tournament => {
+            for (const invite of invites) {
+                const template = teamAddedEmail(invite.teamName, tournament.name, invite.teamId);
+                sendEmail(invite.email, template.subject, template.html, template.text);
+            }
+        }).catch(e => console.error(e));
     }
 
     return res.status(200).json(results);

@@ -35,4 +35,6 @@
 .roster-table .roster-custom-input {
     width: 100%;
     min-width: 6rem;
+    background-image: none;
+    padding-right: 0.1rem;
 }
