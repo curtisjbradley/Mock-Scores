@@ -46,7 +46,11 @@ describe('GET .../rounds/:round/ballot-status — DbError', () => {
 // ═══════════════════════════════════════════════════════════════════════════════
 describe('POST .../rounds/:round/send-scoring-links — with scorers', () => {
     it('returns sent count matching number of registered scorers', async () => {
-        mockRoundAccess();
+        // Round must be locked before scoring links can be sent.
+        mockRoundAccess({ ...ROUND_BASE, locked: true });
+        // hasSentScoringLinksForRound → not yet sent
+        mockDbQuery.mockResolvedValueOnce({ rows: [{ exists: false }], rowCount: 1 } as any);
+        // getScorerInviteContextsForRound → two registered scorers
         mockDbQuery.mockResolvedValueOnce({
             rows: [
                 { email: 'scorer1@test.com', first_name: 'A', last_name: 'B', tournament_name: 'T', assignment_id: 'a1' },

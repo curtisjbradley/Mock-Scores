@@ -209,7 +209,7 @@ describe('POST /api/score/:assignmentId/ballot', () => {
     it('returns 409 when ballot already submitted (unique constraint)', async () => {
         // submitBallot query 1: assignment lookup
         mockDbQuery.mockResolvedValueOnce({
-            rows: [{ pairing_id: 'p1', tournament_id: 'tour1', p_team: 't1', d_team: 't2' }],
+            rows: [{ pairing_id: 'p1', tournament_id: 'tour1', p_team: 't1', d_team: 't2', locked: true, is_presider: false }],
             rowCount: 1,
         } as never);
         // submitBallot query 2: insert fails with unique constraint
@@ -228,7 +228,7 @@ describe('POST /api/score/:assignmentId/ballot', () => {
     it('returns 201 on successful ballot submission', async () => {
         // submitBallot query 1: assignment lookup
         mockDbQuery.mockResolvedValueOnce({
-            rows: [{ pairing_id: 'p1', tournament_id: 'tour1', p_team: 't1', d_team: 't2' }],
+            rows: [{ pairing_id: 'p1', tournament_id: 'tour1', p_team: 't1', d_team: 't2', locked: true, is_presider: false }],
             rowCount: 1,
         } as never);
         // submitBallot query 2: insert succeeds (RETURNING ballot_id)
@@ -260,7 +260,7 @@ describe('POST /api/score/:assignmentId/ballot', () => {
         };
 
         mockDbQuery.mockResolvedValueOnce({
-            rows: [{ pairing_id: 'p1', tournament_id: 'tour1', p_team: 't1', d_team: 't2' }],
+            rows: [{ pairing_id: 'p1', tournament_id: 'tour1', p_team: 't1', d_team: 't2', locked: true, is_presider: false }],
             rowCount: 1,
         } as never);
         mockDbQuery.mockResolvedValueOnce({ rows: [{ ballot_id: 'b1' }], rowCount: 1 } as never);
@@ -289,7 +289,7 @@ describe('POST /api/score/:assignmentId/ballot', () => {
 
         // Query 1: assignment lookup
         mockDbQuery.mockResolvedValueOnce({
-            rows: [{ pairing_id: 'p1', tournament_id: 'tour1', p_team: 't1', d_team: 't2' }],
+            rows: [{ pairing_id: 'p1', tournament_id: 'tour1', p_team: 't1', d_team: 't2', locked: true, is_presider: false }],
             rowCount: 1,
         } as never);
         // Query 2: ballot insert (RETURNING ballot_id)
@@ -320,7 +320,7 @@ describe('POST /api/score/:assignmentId/ballot', () => {
 
         // Query 1: assignment lookup
         mockDbQuery.mockResolvedValueOnce({
-            rows: [{ pairing_id: 'p1', tournament_id: 'tour1', p_team: 't1', d_team: 't2' }],
+            rows: [{ pairing_id: 'p1', tournament_id: 'tour1', p_team: 't1', d_team: 't2', locked: true, is_presider: false }],
             rowCount: 1,
         } as never);
         // Query 2: ballot insert succeeds
