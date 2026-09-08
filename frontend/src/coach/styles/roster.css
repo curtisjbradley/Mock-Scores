@@ -30,3 +30,9 @@
 .coach-setup-table {
     margin-bottom: 1rem;
 }
+
+/* Roster table with custom columns: keep inline value inputs compact. */
+.roster-table .roster-custom-input {
+    width: 100%;
+    min-width: 6rem;
+}

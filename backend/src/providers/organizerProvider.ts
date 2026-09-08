@@ -13,12 +13,12 @@ import type {
     ITournament,
     IWitnesses,
     TournamentPayload,
-    ITournamentSummary
+    ITournamentSummary, ICustomRosterColumn
 } from '@mock-scores/shared';
 import type {
     IAuthRow,
     ICaseWitnessRow,
-    ICourtroomRow,
+    ICourtroomRow, ICustomRosterColumnRow,
     IPairingRow,
     IRoundRow,
     IScoringCategoryRow,
@@ -1377,4 +1377,78 @@ export async function getTournamentSummary(tournamentId: string) : Promise<ITour
             withConflicts: row.scorers_with_conflicts,
         },
     };
+}
+
+export async function getCustomRosterColumns(tournamentId : string) : Promise<ICustomRosterColumn[]> {
+    const rows = (await dbQuery<ICustomRosterColumnRow>(`SELECT * from custom_roster_column_definitions where tournament_id = $1 ORDER BY position`,[tournamentId]))?.rows;
+    if (rows === undefined) throw new NotFoundError('Could not query columns');
+
+    return rows.map<ICustomRosterColumn>(row => ({field: row.column_name, type: row.type}));
+}
+
+export interface IRosterExportRow {
+    team_name: string;
+    student_name: string;
+    pronouns: string | null;
+    custom_data: { field: string; type: string; value: string | number }[] | null;
+}
+
+/** All rostered students across every team in the tournament, ordered by team then student. */
+export async function getAllRosters(tournamentId: string): Promise<IRosterExportRow[]> {
+    const result = await dbQuery<IRosterExportRow>(
+        `SELECT t.name AS team_name, trs.student_name, trs.pronouns, trs.custom_data
+         FROM teams t
+         JOIN team_rostered_students trs ON trs.team_id = t.id
+         WHERE t.tournament_id = $1
+         ORDER BY t.name, trs.student_name`,
+        [tournamentId]
+    );
+    if (!result) throw new DbError('getAllRosters');
+    return result.rows;
+}
+
+export async function addCustomRosterColumn(tournamentId: string, field: string, type: 'int' | 'string'): Promise<ICustomRosterColumn> {
+    // Reject a duplicate column name within the tournament — student custom_data
+    // is keyed by column name, so names must be unique per tournament.
+    const existing = (await dbQuery<{ column_name: string }>(
+        'SELECT column_name FROM custom_roster_column_definitions WHERE tournament_id=$1 AND LOWER(column_name)=LOWER($2)',
+        [tournamentId, field]
+    ))?.rows[0];
+    if (existing) throw new AlreadyExistsError('A column with that name already exists');
+
+    // Append after the current highest position.
+    const row = (await dbQuery<ICustomRosterColumnRow>(
+        `INSERT INTO custom_roster_column_definitions (tournament_id, position, type, column_name)
+         VALUES ($1, COALESCE((SELECT MAX(position) + 1 FROM custom_roster_column_definitions WHERE tournament_id=$1), 0), $2, $3)
+         RETURNING *`,
+        [tournamentId, type, field]
+    ))?.rows[0];
+    if (!row) throw new DbError('addCustomRosterColumn');
+    return { field: row.column_name, type: row.type };
+}
+
+export async function updateCustomRosterColumn(tournamentId: string, originalField: string, field: string, type: 'int' | 'string'): Promise<ICustomRosterColumn> {
+    // When renaming, ensure the new name does not collide with a different column.
+    if (originalField.toLowerCase() !== field.toLowerCase()) {
+        const clash = (await dbQuery<{ column_name: string }>(
+            'SELECT column_name FROM custom_roster_column_definitions WHERE tournament_id=$1 AND LOWER(column_name)=LOWER($2)',
+            [tournamentId, field]
+        ))?.rows[0];
+        if (clash) throw new AlreadyExistsError('A column with that name already exists');
+    }
+
+    const row = (await dbQuery<ICustomRosterColumnRow>(
+        'UPDATE custom_roster_column_definitions SET column_name=$1, type=$2 WHERE tournament_id=$3 AND column_name=$4 RETURNING *',
+        [field, type, tournamentId, originalField]
+    ))?.rows[0];
+    if (!row) throw new NotFoundError('roster column');
+    return { field: row.column_name, type: row.type };
+}
+
+export async function deleteCustomRosterColumn(tournamentId: string, field: string): Promise<void> {
+    const row = (await dbQuery<{ column_name: string }>(
+        'DELETE FROM custom_roster_column_definitions WHERE tournament_id=$1 AND column_name=$2 RETURNING column_name',
+        [tournamentId, field]
+    ))?.rows[0];
+    if (!row) throw new NotFoundError('roster column');
 }

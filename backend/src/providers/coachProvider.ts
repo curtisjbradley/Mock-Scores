@@ -1,10 +1,10 @@
 import { dbQuery } from '../db';
 import type {
     ICoachTournament, ICoachScheduleRound, ICoachResultRound,
-    ICoach, IStudent, IWitnessCallOrder, IStudentAssignment, ICompetitionTeam, ITournament
+    ICoach, IStudent, IWitnessCallOrder, IStudentAssignment, ICompetitionTeam, ITournament, ICustomRosterColumn
 } from '@mock-scores/shared';
 import { AlreadyExistsError, DbError, NotFoundError } from '../errors';
-import {ITeamRow, ITournamentRow} from "../types/dbtypes";
+import {ICustomRosterColumnRow, ITeamRow, ITournamentRow} from "../types/dbtypes";
 
 
 export async function getTeam(teamId: string): Promise<ICompetitionTeam | null> {
@@ -195,9 +195,39 @@ export async function transferOwnership(teamId: string, newOwnerCoachId: string)
 
 export async function getStudents(teamId: string): Promise<IStudent[]> {
     return (await dbQuery<IStudent>(
-        `SELECT student_id, team_id, student_name, pronouns FROM team_rostered_students WHERE team_id=$1 ORDER BY student_name`,
+        `SELECT student_id, team_id, student_name, pronouns, COALESCE(custom_data, '[]'::jsonb) AS custom_data
+         FROM team_rostered_students WHERE team_id=$1 ORDER BY student_name`,
         [teamId]
     ))?.rows ?? [];
+}
+
+/** Custom roster column definitions for the tournament the given team belongs to. */
+export async function getRosterColumnsByTeam(teamId: string): Promise<ICustomRosterColumn[]> {
+    const rows = (await dbQuery<ICustomRosterColumnRow>(
+        `SELECT crc.tournament_id, crc.position, crc.type, crc.column_name
+         FROM custom_roster_column_definitions crc
+         JOIN teams t ON t.tournament_id = crc.tournament_id
+         WHERE t.id = $1
+         ORDER BY crc.position`,
+        [teamId]
+    ))?.rows;
+    if (rows === undefined) throw new DbError('getRosterColumnsByTeam');
+    return rows.map<ICustomRosterColumn>(row => ({ field: row.column_name, type: row.type }));
+}
+
+/** Overwrites a student's custom_data (values for the tournament's custom roster columns). */
+export async function updateStudentCustomData(
+    studentId: string,
+    customData: NonNullable<IStudent['custom_data']>,
+): Promise<IStudent> {
+    const row = (await dbQuery<IStudent>(
+        `UPDATE team_rostered_students SET custom_data=$1::jsonb
+         WHERE student_id=$2
+         RETURNING student_id, team_id, student_name, pronouns, COALESCE(custom_data, '[]'::jsonb) AS custom_data`,
+        [JSON.stringify(customData), studentId]
+    ))?.rows[0];
+    if (!row) throw new NotFoundError('student');
+    return row;
 }
 
 export async function addStudent(teamId: string, studentName: string, pronouns?: string | null): Promise<IStudent> {
@@ -448,3 +478,4 @@ export async function getStandingsData(tournamentId: string): Promise<{
         ballots: ballotsRows?.rows ?? [],
     };
 }
+

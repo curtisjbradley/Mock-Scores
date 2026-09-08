@@ -5,6 +5,7 @@ import type {
     ICoachScheduleRound,
     ICoachTournament,
     ICompetitionTeam,
+    ICustomRosterColumn,
     IStudent,
 } from '@mock-scores/shared'
 
@@ -62,6 +63,8 @@ export interface CoachContextValue {
     results: ICoachResultRound[]
     coaches: ICoach[]
     students: IStudent[]
+    /** Tournament-defined custom roster columns shown on the roster page. */
+    rosterColumns: ICustomRosterColumn[]
     field: ICompetitionTeam[]
     standings: StandingsApiPayload | null
     /** Whether the case format is criminal (affects prosecution/plaintiff labels). */
@@ -77,6 +80,8 @@ export interface CoachContextValue {
     // ── Student mutations ─────────────────────────────────────────────────────
     addStudent: (studentName: string, pronouns: string | null) => Promise<void>
     removeStudent: (studentId: string) => Promise<void>
+    /** Overwrites a student's custom roster column values and persists them. */
+    setStudentCustomData: (studentId: string, customData: NonNullable<IStudent['custom_data']>) => Promise<void>
 
     // ── Lazy loaders ──────────────────────────────────────────────────────────
     /** Loads (and caches) per-pairing ballot detail for the results page. */

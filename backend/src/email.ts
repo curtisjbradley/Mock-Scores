@@ -129,6 +129,7 @@ export function organizerAddedEmail(firstName: string, tournamentName: string): 
     const html = layout(subject, `
         <p>Hi ${escapeHtml(firstName)},</p>
         <p>You have been added as an organizer for <strong>${escapeHtml(tournamentName)}</strong>.</p>
+        <p>If this is your first time using MockScores, make sure to create an account with this email.</p>
         <a class="btn" href="${BASE_URL}/organizer">Go to Dashboard</a>
     `)
     return { subject, html, text: `Hi ${firstName},\n\nYou have been added as an organizer for ${tournamentName}.\n\nDashboard: ${BASE_URL}/organizer` }
@@ -146,6 +147,7 @@ export function coachAddedToTeam(coachName: string, teamName: string, tournament
         <p>You will receive further updates as the tournament progresses.</p>
         <p>In the meantime, feel free to get comfortable with the dashboard, upload your roster, and add more coaches.</p>
         <p>You can view your team dashboard here: <a href=${dashboardURL}>dashboard.</a></p>
+        <p>If this is your first time using MockScores, make sure to create an account with this email.</p>
     `)
     return { subject, html, text: `Hi,\n\n${teamName} has been registered for ${tournamentName}.\n\nYou will receive further updates as the tournament progresses. You can access the dashboard at ${dashboardURL}` }
 }

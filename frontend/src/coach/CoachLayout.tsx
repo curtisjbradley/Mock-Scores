@@ -12,6 +12,7 @@ import type {
     ICoachScheduleRound,
     ICoachTournament,
     ICompetitionTeam,
+    ICustomRosterColumn,
     IStudent,
 } from '@mock-scores/shared'
 import { apiFetch } from '../auth/auth'
@@ -71,6 +72,7 @@ export default function CoachLayout({ isOrganizerView = false }: Props) {
     const [results, setResults] = useState<ICoachResultRound[]>([])
     const [coaches, setCoaches] = useState<ICoach[]>([])
     const [students, setStudents] = useState<IStudent[]>([])
+    const [rosterColumns, setRosterColumns] = useState<ICustomRosterColumn[]>([])
     const [field, setField] = useState<ICompetitionTeam[]>([])
     const [standings, setStandings] = useState<StandingsApiPayload | null>(null)
     const [isCriminal, setIsCriminal] = useState(true)
@@ -109,6 +111,8 @@ export default function CoachLayout({ isOrganizerView = false }: Props) {
                     .then(r => r.ok ? r.json() : []).then(c => { if (active) setCoaches(c) }).catch(() => {})
                 apiFetch(`${info.teamBase}/students`)
                     .then(r => r.ok ? r.json() : []).then(s => { if (active) setStudents(s) }).catch(() => {})
+                apiFetch(`${info.teamBase}/roster-columns`)
+                    .then(r => r.ok ? r.json() : []).then(c => { if (active) setRosterColumns(c) }).catch(() => {})
                 apiFetch(`/coach/tournaments/${tid}/field`)
                     .then(r => r.ok ? r.json() : []).then(f => { if (active) setField(f) }).catch(() => {})
                 apiFetch(`/coach/tournaments/${tid}/standings`)
@@ -169,6 +173,15 @@ export default function CoachLayout({ isOrganizerView = false }: Props) {
         if (r.ok) setStudents(prev => prev.filter(s => s.student_id !== studentId))
     }, [teamBase])
 
+    const setStudentCustomData = useCallback(async (studentId: string, customData: NonNullable<IStudent['custom_data']>) => {
+        const r = await apiFetch(`${teamBase}/students/${studentId}/custom-data`, {
+            method: 'PUT', body: JSON.stringify({ custom_data: customData }),
+        })
+        if (!r.ok) return
+        const updated: IStudent | null = await r.json().catch(() => null)
+        if (updated) setStudents(prev => prev.map(s => s.student_id === studentId ? updated : s))
+    }, [teamBase])
+
     // ── Lazy loaders ──────────────────────────────────────────────────────────
     const loadBallots = useCallback(async (pairingId: string): Promise<BallotDetail[]> => {
         const cached = ballotCache.current.get(pairingId)
@@ -205,6 +218,7 @@ export default function CoachLayout({ isOrganizerView = false }: Props) {
         results,
         coaches,
         students,
+        rosterColumns,
         field,
         standings,
         isCriminal,
@@ -214,6 +228,7 @@ export default function CoachLayout({ isOrganizerView = false }: Props) {
         toggleNotifications,
         addStudent,
         removeStudent,
+        setStudentCustomData,
         loadBallots,
     }
 

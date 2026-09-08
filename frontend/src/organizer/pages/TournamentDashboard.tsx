@@ -23,6 +23,7 @@ import CourtroomsTab from '../tabs/CourtroomsTab'
 import TournamentSettingsTab from '../tabs/TournamentSettingsTab'
 import TiebreakersTab from '../tabs/TiebreakersTab'
 import AwardCategoriesTab from '../tabs/AwardCategoriesTab'
+import {CustomRosterFields} from "../tabs/CustomRosterFields.tsx";
 
 // Primary navigation — icon names map to SVGs in `public/icons/`.
 const NAV_ITEMS: DashboardNavItem<OrganizerScreen>[] = [
@@ -42,9 +43,9 @@ const STRUCTURE_CARDS: { label: string; tab: OrganizerTab }[] = [
     { label: 'Manage Witnesses',    tab: 'witnesses' },
     { label: 'Manage Awards',       tab: 'awards' },
     { label: 'Manage Tiebreakers',  tab: 'tiebreakers' },
-]
+    { label: 'Custom Roster Fields',  tab: 'custom-roster-fields' },]
 
-const STRUCTURE_TABS = new Set<OrganizerTab>(['tournament', 'scoring', 'witnesses', 'tiebreakers', 'awards'])
+const STRUCTURE_TABS = new Set<OrganizerTab>(['tournament', 'scoring', 'witnesses', 'tiebreakers', 'awards', 'custom-roster-fields'])
 
 export default function TournamentDashboard() {
     const { id } = useParams<{ id: string }>()
@@ -115,6 +116,7 @@ export default function TournamentDashboard() {
                     {visitedTabs.has('teams')      && <div hidden={activeTab !== 'teams'}><TeamsTab tournamentId={id} /></div>}
                     {visitedTabs.has('scorers')    && <div hidden={activeTab !== 'scorers'}><ScorersTab tournamentId={id} /></div>}
                     {visitedTabs.has('courtrooms') && <div hidden={activeTab !== 'courtrooms'}><CourtroomsTab tournamentId={id} /></div>}
+                    {visitedTabs.has('custom-roster-fields') && <div hidden={activeTab !== 'custom-roster-fields'}><CustomRosterFields tournamentId={id} /></div>}
                     {visitedTabs.has('organizers') && <div hidden={activeTab !== 'organizers'}><OrganizersTab tournamentId={id} /></div>}
                     {visitedTabs.has('witnesses')  && <div hidden={activeTab !== 'witnesses'}><WitnessesTab tournamentId={id} /></div>}
                     {visitedTabs.has('scoring')    && <div hidden={activeTab !== 'scoring'}><ScoringTab tournamentId={id} /></div>}

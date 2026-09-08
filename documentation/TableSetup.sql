@@ -411,6 +411,7 @@ create table team_rostered_students
         references teams (id) on delete cascade,
     student_name text                           not null,
     pronouns     text,
+    custom_data jsonb default null,
     unique (team_id, student_name)
 );
 
@@ -835,3 +836,15 @@ DO $$
         INSERT INTO scoring_template_fields (template_category_id, label, min_score, max_score, multiplier, assignable, prosecution, defense, position, visible_to_scorers)
         VALUES (v_cat, 'Deductions', 0, 100, -1, false, true, true, 0, false);
     END $$;
+create type custom_roster_col_data_type as enum ('int', 'string');
+
+CREATE TABLE custom_roster_column_definitions (
+                                                  tournament_id uuid not null references tournaments(id),
+                                                  position integer not null default 0,
+                                                  type custom_roster_col_data_type not null default 'string',
+                                                  column_name text not null
+);
+
+
+create index idx_custom_roster_columns on custom_roster_column_definitions(tournament_id);
+
