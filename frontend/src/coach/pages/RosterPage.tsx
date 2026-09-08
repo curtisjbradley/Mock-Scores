@@ -94,12 +94,12 @@ function SideSetupModal({
             .filter(f => f.assignable && (cat.witnessCategory || (side === 'p' ? f.prosecution : f.defense)))
             .flatMap(f => {
                 if (!cat.witnessCategory) {
-                    return [{ key: f.id, label: `${cat.name} — ${f.label}`, fieldId: f.id, witnessId: null as string | null }]
+                    return [{ key: f.id, label: `${f.label} (${cat.name})`, fieldId: f.id, witnessId: null as string | null }]
                 }
                 const applicable = f.crossing ? oppSideWitnesses : ownSideWitnesses
                 return applicable.map(w => ({
                     key: `${f.id}:${w.id}`,
-                    label: `${cat.name} — ${w.name} — ${f.label}`,
+                    label: `${f.label}: ${w.name}`,
                     fieldId: f.id,
                     witnessId: w.id as string | null,
                 }))
@@ -150,7 +150,7 @@ function SideSetupModal({
                                         <td>
                                             <select className="rv-select" value={val}
                                                 onChange={e => setSlot(i, e.target.value)}>
-                                                <option value="">— select —</option>
+                                                <option value="">- select -</option>
                                                 {ownSideWitnesses.map(w => (
                                                     <option key={w.id} value={w.id}
                                                         disabled={callOrderSlots.includes(w.id) && callOrderSlots[i] !== w.id}>
@@ -184,7 +184,7 @@ function SideSetupModal({
                                                     else next.delete(r.key)
                                                     return next
                                                 })}>
-                                                <option value="">— unassigned —</option>
+                                                <option value="">unassigned</option>
                                                 {students.map(s => (
                                                     <option key={s.student_id} value={s.student_id}>{s.student_name}</option>
                                                 ))}

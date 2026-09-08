@@ -108,7 +108,7 @@ export default function AssignRoles() {
     return (
         <main className="org-main">
             <div className="org-container">
-                <button className="org-back-btn" onClick={() => navigate(-1)}>← Back to schedule</button>
+                <button className="org-back-btn" onClick={() => navigate(-1)}>Back to schedule</button>
                 <h1>Assign Roles</h1>
                 <p className="coach-empty coach-assign-note">
                     Assigning roles for <strong>{isP ? 'Prosecution' : 'Defense'}</strong> side.
@@ -129,7 +129,7 @@ export default function AssignRoles() {
                                             disabled={saving}
                                             onChange={e => setPending(prev => new Map(prev).set(r.key, e.target.value))}
                                         >
-                                            <option value="">— unassigned —</option>
+                                            <option value="">-unassigned-</option>
                                             {students.map(s => (
                                                 <option key={s.student_id} value={s.student_id}>{s.student_name}</option>
                                             ))}
