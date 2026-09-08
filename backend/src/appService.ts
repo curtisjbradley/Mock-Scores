@@ -34,17 +34,55 @@ const authLimiter = RateLimit({ windowMs: 30 * 1000, limit: 20, skip: () => proc
 
 app.use(express.urlencoded({ extended: true }));
 app.use(express.json());
+// cookieParser is needed only to read the HttpOnly refresh-token cookie (`rt`) and the
+// readable CSRF cookie (`csrf_token`) on the /auth/refresh + /auth/logout endpoints.
+//
+// CSRF posture (why there is no global csurf/lusca middleware):
+//  - Every state-changing API route (/organizer, /coach, /help, /auth/change-password,
+//    /auth/account, ...) authenticates via `verifyUser`, which reads ONLY the
+//    `Authorization: Bearer` access token — never a cookie. Browsers do not attach that
+//    header automatically on cross-site requests, so these routes are structurally
+//    immune to CSRF.
+//  - The only cookie-authenticated state-changing route, POST /auth/refresh, enforces a
+//    double-submit CSRF token (csrf_token cookie must equal the X-CSRF-Token header) —
+//    see authRoutes.ts. A cross-origin attacker cannot read the cookie to forge the header.
+//  - POST /auth/logout is cookie-based but only clears the caller's own cookie (idempotent).
+//
+// CodeQL's js/missing-token-validation fires here because cookieParser() coexists with POST
+// handlers; it cannot see that authorization is Bearer-gated. This alert is a false positive
+// and should be dismissed as such rather than "fixed" with a session-CSRF middleware, which
+// would conflict with this stateless-JWT design.
 app.use(cookieParser());
 
-// CORS — allow any mockscores.org subdomain to make credentialed cross-origin requests
+// CORS — allow any mockscores.org subdomain to make credentialed cross-origin requests.
+//
+// Because we set `Access-Control-Allow-Credentials: true`, we must NOT use a wildcard
+// origin and must never reflect an unvalidated, attacker-controlled origin. Each request
+// origin is checked against a strict allowlist; only an origin that exactly matches an
+// entry in `ALLOWED_ORIGINS`, or a single-label `*.mockscores.org` subdomain over HTTPS,
+// is echoed back. The subdomain label is restricted to lowercase alphanumerics and
+// interior hyphens (no leading/trailing/consecutive hyphens), so the trailing `mockscores.org`
+// cannot be spoofed (e.g. `https://mockscores.org.evil.com` and `https://evil.com` are rejected).
+const ALLOWED_ORIGINS = new Set<string>([
+    'https://mockscores.org',
+    'http://localhost:5173',
+]);
+const MOCKSCORES_SUBDOMAIN = /^https:\/\/[a-z0-9]+(?:-[a-z0-9]+)*\.mockscores\.org$/;
+
+function isAllowedOrigin(origin: string): boolean {
+    return ALLOWED_ORIGINS.has(origin) || MOCKSCORES_SUBDOMAIN.test(origin);
+}
+
 app.use((req: Request, res: Response, next: NextFunction) => {
     const origin = req.headers.origin;
-    if (origin && (/^https:\/\/([a-z0-9-]+\.)?mockscores\.org$/.test(origin) || origin === 'http://localhost:5173')) {
+    if (typeof origin === 'string' && isAllowedOrigin(origin)) {
         res.setHeader('Access-Control-Allow-Origin', origin);
         res.setHeader('Access-Control-Allow-Credentials', 'true');
         res.setHeader('Access-Control-Allow-Methods', 'GET,POST,PUT,PATCH,DELETE,OPTIONS');
         res.setHeader('Access-Control-Allow-Headers', 'Content-Type,Authorization,X-CSRF-Token');
     }
+    // The response varies by request Origin, so caches must key on it.
+    res.setHeader('Vary', 'Origin');
     if (req.method === 'OPTIONS') return res.sendStatus(204);
     next();
 });
