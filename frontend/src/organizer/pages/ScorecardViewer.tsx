@@ -407,9 +407,9 @@ const ScorecardViewer = () => {
                                 <div className="sv-section--sm">
                                     <h3>Tiebreaker Selection</h3>
                                     <p>
-                                        <strong>{ballot.tiebreaker}</strong>
-                                        {' — '}
-                                        {ballot.tiebreaker === sheet.prosecutionCode ? prosecutionLabel : 'Defense'}
+                                        <strong>{ballot.tiebreaker === sheet.prosecutionId ? sheet.prosecutionCode : sheet.defenseCode}</strong>
+                                        {' - '}
+                                        {ballot.tiebreaker === sheet.prosecutionId ? prosecutionLabel : 'Defense'}
                                     </p>
                                 </div>
                             )}

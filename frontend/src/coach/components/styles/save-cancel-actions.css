@@ -8,3 +8,11 @@
 .coach-tab-actions {
     margin-top: 16px;
 }
+
+/* Save error (e.g. attempting to edit a locked round) shown beneath the bar. */
+.coach-save-error {
+    margin-top: 0.75rem;
+    color: var(--danger);
+    font-size: 0.9rem;
+    font-weight: 600;
+}

@@ -18,10 +18,7 @@
     transition: background 120ms ease, border-color 120ms ease;
 }
 
-.notif-cell {
-    justify-content: center;
-    text-align: center;
-}
+
 
 .coach-notif-toggle:hover {
     background: var(--primary-subtle);
@@ -35,4 +32,10 @@
 /* Dim the icon when notifications are off. */
 .coach-notif-toggle[aria-pressed="false"] .app-icon {
     opacity: 0.45;
+}
+.notif-cell > * {
+    width: 100%;
+    justify-content: center;
+    display: flex;
+    flex-direction: row;
 }

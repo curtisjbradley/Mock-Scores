@@ -18,6 +18,7 @@ export default function WitnessCallOrder() {
     const [witnesses, setWitnesses] = useState<Witness[]>([])
     const [slots, setSlots] = useState<string[]>([])   // array of witness IDs, one per slot
     const [saving, setSaving] = useState(false)
+    const [error, setError] = useState<string | null>(null)
 
     useEffect(() => {
         if (!teamId || !pairingId) return
@@ -61,11 +62,17 @@ export default function WitnessCallOrder() {
     async function handleSave() {
         if (!teamId || !pairingId) return
         setSaving(true)
-        await apiFetch(`/coach/teams/${teamId}/pairings/${pairingId}/witness-order`, {
+        setError(null)
+        const res = await apiFetch(`/coach/teams/${teamId}/pairings/${pairingId}/witness-order`, {
             method: 'PUT',
             body: JSON.stringify({ witness_ids: slots.filter(Boolean) }),
         })
         setSaving(false)
+        if (!res.ok) {
+            const body = await res.json().catch(() => null) as { message?: string } | null
+            setError(body?.message ?? 'Could not save call order.')
+            return
+        }
         navigate(-1)
     }
 
@@ -104,6 +111,7 @@ export default function WitnessCallOrder() {
                     )
                 }
                 <SaveCancelActions onSave={handleSave} onCancel={() => navigate(-1)} saving={saving} />
+                {error && <p className="coach-save-error" role="alert">{error}</p>}
             </div>
         </main>
     )

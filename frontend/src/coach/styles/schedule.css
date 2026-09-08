@@ -17,3 +17,11 @@
     cursor: default;
     font-weight: 500;
 }
+
+/* "Locked" badge shown in the round heading when a round is locked. */
+.coach-round-locked {
+    font-size: 0.8rem;
+    font-weight: 600;
+    color: var(--text-muted);
+    margin-left: 0.5rem;
+}

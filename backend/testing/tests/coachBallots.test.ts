@@ -406,6 +406,7 @@ describe('POST /api/coach/teams/:teamId/pairings/:pairingId/assignments/bulk', (
 
     it('returns 200 with empty assignments array', async () => {
         mockTeamAccess();
+        mockDbQuery.mockResolvedValueOnce({ rows: [{ locked: false }], rowCount: 1 } as any); // isPairingRoundLocked
         const res = await request(app).post(url).set(auth())
             .send({ assignments: [] });
         expect(res.status).toBe(200);
@@ -414,6 +415,7 @@ describe('POST /api/coach/teams/:teamId/pairings/:pairingId/assignments/bulk', (
 
     it('returns 200 on success with assignments', async () => {
         mockTeamAccess();
+        mockDbQuery.mockResolvedValueOnce({ rows: [{ locked: false }], rowCount: 1 } as any); // isPairingRoundLocked
         mockDbQuery.mockResolvedValueOnce({ rows: [], rowCount: 1 } as any); // UPSERT 1
         mockDbQuery.mockResolvedValueOnce({ rows: [], rowCount: 1 } as any); // UPSERT 2
         const res = await request(app).post(url).set(auth())
@@ -422,6 +424,14 @@ describe('POST /api/coach/teams/:teamId/pairings/:pairingId/assignments/bulk', (
                 { field_id: 'f2', student_id: 's2', witness_id: 'w1' },
             ] });
         expect(res.status).toBe(200);
+    });
+
+    it('returns 409 when the round is locked', async () => {
+        mockTeamAccess();
+        mockDbQuery.mockResolvedValueOnce({ rows: [{ locked: true }], rowCount: 1 } as any); // isPairingRoundLocked
+        const res = await request(app).post(url).set(auth())
+            .send({ assignments: [{ field_id: FID, student_id: SID }] });
+        expect(res.status).toBe(409);
     });
 });
 

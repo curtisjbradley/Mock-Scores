@@ -71,6 +71,46 @@ export function useRoundView(id: string | undefined, roundId: string | undefined
         }).catch(() => setError('Failed to save name.'))
     }
 
+    /**
+     * Optimistically PATCHes the round with the given partial fields, reverting
+     * local state if the request fails.
+     */
+    const patchRound = (fields: Partial<IRound>, failMsg: string) => {
+        if (!round) return
+        const prev = round
+        const updated = { ...round, ...fields }
+        setRound(updated)
+        apiFetch(`/organizer/tournament/${id}/rounds/${roundId}`, {
+            method: 'PATCH', body: JSON.stringify(updated),
+        }).then(r => {
+            if (!r.ok) throw new Error()
+        }).catch(() => {
+            setError(failMsg)
+            setRound(prev) // revert optimistic update on failure
+        })
+    }
+
+    /**
+     * Locks or unlocks the round. While locked, coaches can no longer edit their
+     * witness call orders or student role assignments for its pairings.
+     */
+    const setRoundLocked = (locked: boolean) => {
+        if (!round || round.locked === locked) return
+        patchRound({ locked }, `Failed to ${locked ? 'lock' : 'unlock'} round.`)
+    }
+
+    /** Publishes the round's pairings so teams can see who they are facing. */
+    const setPairingsPublished = (teams_public: boolean) => {
+        if (!round || round.teams_public === teams_public) return
+        patchRound({ teams_public }, 'Failed to publish pairings.')
+    }
+
+    /** Publishes the round's results so teams can see scores/outcomes. */
+    const setResultsPublished = (results_public: boolean) => {
+        if (!round || round.results_public === results_public) return
+        patchRound({ results_public }, 'Failed to publish results.')
+    }
+
     const addMatchup = (pros: string, def: string, courtroomId: string, onSuccess: () => void) => {
         apiFetch(`/organizer/tournament/${id}/rounds/${roundId}/pairings`, {
             method: 'POST',
@@ -130,6 +170,7 @@ export function useRoundView(id: string | undefined, roundId: string | undefined
         round, teams, courtrooms, pairings, scorers, pairingScorers, ballotStatus, conflictSet,
         error, notFound,
         saveName, addMatchup, updatePairing, removePairing, setPairings,
+        setRoundLocked, setPairingsPublished, setResultsPublished,
         onScorerAssigned, onScorerRemoved, onPresiderChanged,
     }
 }

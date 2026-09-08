@@ -575,8 +575,10 @@ export async function deleteRound(roundID: string): Promise<IRoundRow> {
 
 export async function updateRound(roundID: string, roundData: IRound): Promise<IRound> {
     const row = (await dbQuery<IRound>(
-        'UPDATE rounds SET round_time=$1, name=$2, teams_public=$3, results_public=$4 WHERE round_id=$5 RETURNING *',
-        [roundData.round_time, roundData.name, roundData.teams_public, roundData.results_public, roundID]
+        `UPDATE rounds
+         SET round_time=$1, name=$2, teams_public=$3, results_public=$4, locked=COALESCE($5, locked)
+         WHERE round_id=$6 RETURNING *`,
+        [roundData.round_time, roundData.name, roundData.teams_public, roundData.results_public, roundData.locked ?? null, roundID]
     ))?.rows[0];
     if (!row) throw new NotFoundError('round');
     return row;

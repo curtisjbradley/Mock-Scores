@@ -31,7 +31,8 @@ const RoundView = () => {
     const {
         round, teams, courtrooms, pairings, scorers, pairingScorers, ballotStatus, conflictSet,
         error, notFound,
-        saveName, addMatchup, updatePairing, removePairing,
+        saveName, addMatchup, updatePairing, removePairing, setRoundLocked,
+        setPairingsPublished, setResultsPublished,
         onScorerAssigned, onScorerRemoved, onPresiderChanged,
     } = useRoundView(id, roundId)
 
@@ -75,6 +76,15 @@ const RoundView = () => {
         else seenCourtrooms.add(p.courtroom)
     }
 
+    // Publishing/locking gates:
+    // - a round can only be locked once its pairings are published
+    // - scoring links can only be sent once the round is locked
+    // - results can only be published once every expected ballot has been submitted
+    const ballotStatuses = pairings.map(p => ballotStatus[p.pairing_id]).filter(Boolean)
+    const totalScorers = ballotStatuses.reduce((sum, s) => sum + s.total_scorers, 0)
+    const submittedScorers = ballotStatuses.reduce((sum, s) => sum + s.submitted, 0)
+    const allBallotsIn = pairings.length > 0 && totalScorers > 0 && submittedScorers === totalScorers
+
     if (notFound) return <NotFound />
 
     return (
@@ -96,11 +106,56 @@ const RoundView = () => {
                         )}
                     </div>
                     <div className="rv-toolbar">
-                        <button className="org-new-btn" onClick={handleSendScoringLinks} disabled={sending}>
+                        {round?.teams_public
+                            ? <span className="dash-publish-label dash-publish-label--active">✓ Pairings published</span>
+                            : <button
+                                className="org-new-btn"
+                                disabled={!round || pairings.length === 0}
+                                title={pairings.length === 0 ? 'Add at least one pairing before publishing' : 'Publish pairings so teams can see the matchups'}
+                                onClick={() => setPairingsPublished(true)}
+                              >
+                                Publish pairings
+                              </button>
+                        }
+
+                        {round && (
+                            <button
+                                className="org-new-btn"
+                                disabled={!round.teams_public}
+                                title={!round.teams_public
+                                    ? 'Publish pairings before locking the round'
+                                    : round.locked
+                                        ? 'Unlock to let coaches edit call orders and role assignments again'
+                                        : 'Lock to prevent coaches from editing call orders and role assignments'}
+                                onClick={() => setRoundLocked(!round.locked)}
+                            >
+                                {round.locked ? '🔒 Unlock round' : 'Lock round'}
+                            </button>
+                        )}
+
+                        <button
+                            className="org-new-btn"
+                            onClick={handleSendScoringLinks}
+                            disabled={sending || !round?.locked}
+                            title={!round?.locked ? 'Lock the round before sending scoring links' : 'Email scoring links to assigned judges'}
+                        >
                             {sending ? 'Sending…' : 'Send scoring links'}
                         </button>
                         {sendMsg && <span className="rv-send-msg">{sendMsg}</span>}
 
+                        {round?.results_public
+                            ? <span className="dash-publish-label dash-publish-label--active">✓ Results published</span>
+                            : <button
+                                className="org-new-btn"
+                                disabled={!round || !allBallotsIn}
+                                title={!allBallotsIn
+                                    ? 'All ballots must be submitted before publishing results'
+                                    : 'Publish results so teams can see scores'}
+                                onClick={() => setResultsPublished(true)}
+                              >
+                                Publish results
+                              </button>
+                        }
                     </div>
                 </div>
 

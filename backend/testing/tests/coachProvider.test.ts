@@ -402,9 +402,16 @@ describe('PUT /api/coach/teams/:teamId/pairings/:pairingId/witness-order', () =>
     });
     it('returns 200 on success', async () => {
         mockTeamAccess();
+        mockDbQuery.mockResolvedValueOnce({ rows: [{ locked: false }], rowCount: 1 } as any); // isPairingRoundLocked
         mockDbQuery.mockResolvedValueOnce({ rows: [], rowCount: 0 } as any);
         const res = await request(app).put(`/coach/teams/${TEAM}/pairings/${PID}/witness-order`).set(auth()).send({ witness_ids: [] });
         expect(res.status).toBe(200);
+    });
+    it('returns 409 when the round is locked', async () => {
+        mockTeamAccess();
+        mockDbQuery.mockResolvedValueOnce({ rows: [{ locked: true }], rowCount: 1 } as any); // isPairingRoundLocked
+        const res = await request(app).put(`/coach/teams/${TEAM}/pairings/${PID}/witness-order`).set(auth()).send({ witness_ids: [] });
+        expect(res.status).toBe(409);
     });
 });
 
@@ -435,16 +442,24 @@ describe('PUT /api/coach/teams/:teamId/pairings/:pairingId/assignments', () => {
     });
     it('returns 500 when upsert fails', async () => {
         mockTeamAccess();
+        mockDbQuery.mockResolvedValueOnce({ rows: [{ locked: false }], rowCount: 1 } as any); // isPairingRoundLocked
         mockDbQuery.mockResolvedValueOnce({ rows: [], rowCount: 0 } as any);
         const res = await request(app).put(`/coach/teams/${TEAM}/pairings/${PID}/assignments`).set(auth()).send({ field_id: FID, student_id: SID });
         expect(res.status).toBe(500);
     });
     it('returns 200 on success', async () => {
         mockTeamAccess();
+        mockDbQuery.mockResolvedValueOnce({ rows: [{ locked: false }], rowCount: 1 } as any); // isPairingRoundLocked
         const assignment = { id: 'a1', pairing_id: PID, team_id: TEAM, field_id: FID, student_id: SID };
         mockDbQuery.mockResolvedValueOnce({ rows: [assignment], rowCount: 1 } as any);
         const res = await request(app).put(`/coach/teams/${TEAM}/pairings/${PID}/assignments`).set(auth()).send({ field_id: FID, student_id: SID });
         expect(res.status).toBe(200);
+    });
+    it('returns 409 when the round is locked', async () => {
+        mockTeamAccess();
+        mockDbQuery.mockResolvedValueOnce({ rows: [{ locked: true }], rowCount: 1 } as any); // isPairingRoundLocked
+        const res = await request(app).put(`/coach/teams/${TEAM}/pairings/${PID}/assignments`).set(auth()).send({ field_id: FID, student_id: SID });
+        expect(res.status).toBe(409);
     });
 });
 

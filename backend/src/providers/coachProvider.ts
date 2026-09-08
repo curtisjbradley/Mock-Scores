@@ -66,14 +66,15 @@ export async function getTeamIdForCoach(tournamentId: string, userId: string): P
 }
 
 export async function getSchedule(tournamentId: string, teamId: string): Promise<ICoachScheduleRound[]> {
-    const rounds = (await dbQuery<{ round_id: string; name: string; round_time: Date | null }>(
-        `SELECT round_id, name, round_time FROM rounds WHERE tournament_id=$1 AND teams_public=true ORDER BY round_time desc`,
+    const rounds = (await dbQuery<{ round_id: string; name: string; round_time: Date | null; locked: boolean }>(
+        `SELECT round_id, name, round_time, locked FROM rounds WHERE tournament_id=$1 AND teams_public=true ORDER BY round_time desc`,
         [tournamentId]
     ))?.rows ?? [];
     return Promise.all(rounds.map(async r => ({
         round_id: r.round_id,
         name: r.name,
         round_time: r.round_time?.toISOString() ?? null,
+        locked: r.locked,
         pairings: (await dbQuery<{ pairing_id: string; p_team_id: string; p_team_name: string; p_team_code: string; d_team_id: string; d_team_name: string; d_team_code: string; courtroom_name: string | null; has_assignments: boolean; has_call_order: boolean }>(
             `SELECT p.pairing_id,
                     pt.id AS p_team_id, pt.name AS p_team_name, pt.code AS p_team_code,
@@ -244,6 +245,23 @@ export async function removeStudent(studentId: string): Promise<void> {
     const result = await dbQuery(`DELETE FROM team_rostered_students WHERE student_id=$1 RETURNING student_id`, [studentId]);
     if (!result) throw new DbError('removeStudent');
     if (!result.rows[0]) throw new NotFoundError('student');
+}
+
+/**
+ * Whether the round containing a pairing is locked. When locked, coaches may no
+ * longer edit their witness call order or student role assignments for that
+ * pairing. A missing pairing is treated as locked (nothing valid to edit).
+ */
+export async function isPairingRoundLocked(pairingId: string): Promise<boolean> {
+    const row = (await dbQuery<{ locked: boolean }>(
+        `SELECT r.locked
+         FROM pairings p
+         JOIN rounds r ON r.round_id = p.round_id
+         WHERE p.pairing_id = $1
+         LIMIT 1`,
+        [pairingId],
+    ))?.rows[0];
+    return row ? row.locked : true;
 }
 
 export async function getWitnessCallOrder(pairingId: string, teamId: string): Promise<IWitnessCallOrder[]> {

@@ -136,6 +136,7 @@ export interface IRoundRow {
     tournament_id: string;
     results_public: boolean;
     teams_public: boolean;
+    locked: boolean;
     position: number;
     name: string;
     round_time: Date | null;

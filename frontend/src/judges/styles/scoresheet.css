@@ -495,10 +495,6 @@ html {
         width: 100%;
     }
 
-    #score-submit-desktop {
-        display: none;
-    }
-
     .nav-button {
         background: var(--nav-btn-bg);
         color: var(--nav-btn-text);

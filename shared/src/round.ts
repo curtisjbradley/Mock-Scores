@@ -2,6 +2,8 @@ export interface IRound {
     round_id: string
     results_public: boolean
     teams_public: boolean
+    /** When true, coaches can no longer edit call orders or role assignments. */
+    locked: boolean
     position: number
     name: string
     round_time: string | null

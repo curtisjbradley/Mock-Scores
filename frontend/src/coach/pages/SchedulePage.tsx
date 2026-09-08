@@ -35,7 +35,12 @@ export default function SchedulePage() {
             {schedule.map(round => (
                 <RoundGroup
                     key={round.round_id}
-                    heading={`${round.name}${round.round_time ? ` - ${formatDate(round.round_time)}` : ' (Time TBD)'}`}
+                    heading={
+                        <>
+                            {round.name}{round.round_time ? ` - ${formatDate(round.round_time)}` : ' (Time TBD)'}
+                            {round.locked && <span className="coach-round-locked" title="This round is locked; call order and roles can no longer be edited."> 🔒 Locked</span>}
+                        </>
+                    }
                 >
                     <table className="dash-standings-table">
                         <thead>
@@ -55,20 +60,33 @@ export default function SchedulePage() {
                                         <td>{p.d_team_code} - {p.d_team_name}</td>
                                         <td>{p.courtroom_name ?? 'TBD'}</td>
                                         <td className="coach-schedule-actions">
-                                            {p.has_assignments
-                                                ? <button className="org-new-btn coach-btn-submitted" disabled>
-                                                    ✓ Roles assigned
-                                                  </button>
-                                                : <button className="org-new-btn" onClick={() => onAssignRoles(p.pairing_id, side)}>
-                                                    Assign Roles
-                                                  </button>}
-                                            {p.has_call_order
-                                                ? <button className="org-new-btn coach-btn-submitted" disabled>
-                                                    ✓ Call order set
-                                                  </button>
-                                                : <button className="org-new-btn" onClick={() => onWitnessOrder(p.pairing_id)}>
-                                                    Witness Call Order
-                                                  </button>}
+                                            {round.locked ? (
+                                                <>
+                                                    <button className="org-new-btn coach-btn-submitted" disabled>
+                                                        {p.has_assignments ? '✓ Roles assigned' : 'Roles not set'}
+                                                    </button>
+                                                    <button className="org-new-btn coach-btn-submitted" disabled>
+                                                        {p.has_call_order ? '✓ Call order set' : 'Call order not set'}
+                                                    </button>
+                                                </>
+                                            ) : (
+                                                <>
+                                                    {p.has_assignments
+                                                        ? <button className="org-new-btn coach-btn-submitted" disabled>
+                                                            ✓ Roles assigned
+                                                          </button>
+                                                        : <button className="org-new-btn" onClick={() => onAssignRoles(p.pairing_id, side)}>
+                                                            Assign Roles
+                                                          </button>}
+                                                    {p.has_call_order
+                                                        ? <button className="org-new-btn coach-btn-submitted" disabled>
+                                                            ✓ Call order set
+                                                          </button>
+                                                        : <button className="org-new-btn" onClick={() => onWitnessOrder(p.pairing_id)}>
+                                                            Witness Call Order
+                                                          </button>}
+                                                </>
+                                            )}
                                         </td>
                                     </tr>
                                 )
