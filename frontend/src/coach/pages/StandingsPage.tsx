@@ -1,10 +1,7 @@
 import { lazy, useMemo } from 'react'
-import * as Blockly from 'blockly'
 import type { IStandingsTeam } from '@mock-scores/shared'
 import { computeStandings } from '../../organizer/blockly/standingsEngine'
-import { extractStandingsConfig, parseColumnsFromXml } from '../../organizer/blockly/standingsGenerator'
-import { standingsBlockDefs } from '../../organizer/blockly/standingsBlocks'
-import { tiebreakerBlockDefs } from '../../organizer/blockly/tiebreakerBlocks'
+import { parseDsl } from '../../organizer/blockly/standingsDsl'
 import { type StandingsApiPayload, useCoachContext } from '../CoachContext'
 import '../styles/standings.css'
 
@@ -13,53 +10,51 @@ const TiebreakerViewer = lazy(() => import('../../organizer/blockly/TiebreakerVi
 interface ComputedStandings {
     rows: ReturnType<typeof computeStandings>
     cols: { stat: string; label: string }[]
-    standingsXml: string
+    dsl: string
 }
 
 /**
- * Pure computation: parses Blockly XML configs and ballot data from the API
- * payload into standings rows and column definitions.
+ * Pure computation: parses the DSL standings config and ballot data from the
+ * API payload into standings rows and column definitions. No Blockly.
  */
 function computeStandingsFromData(data: StandingsApiPayload): ComputedStandings {
-    try { Blockly.common.defineBlocks(standingsBlockDefs) } catch { /* already defined */ }
-    try { Blockly.common.defineBlocks(tiebreakerBlockDefs) } catch { /* already defined */ }
-
-    const statsWs = new Blockly.Workspace()
-    const standingsWs = new Blockly.Workspace()
-    Blockly.Xml.domToWorkspace(Blockly.utils.xml.textToDom(data.config.statsXml), statsWs)
-    Blockly.Xml.domToWorkspace(Blockly.utils.xml.textToDom(data.config.standingsXml), standingsWs)
-    const config = extractStandingsConfig(statsWs, standingsWs)
-    statsWs.dispose()
-    standingsWs.dispose()
+    const config = parseDsl(data.config.dsl)
 
     const teamMap = new Map<string, IStandingsTeam>()
     for (const t of data.teams)
         teamMap.set(t.id, { name: t.name, code: t.code, pairings: [] })
 
-    const pairingMap = new Map<string, { p: string; d: string; pPts: number; dPts: number }>()
+    const pairingMap = new Map<string, { p: string; d: string; pPts: number; dPts: number; tiebreakerWinner: string | null; scorers: number }>()
     for (const b of data.ballots) {
         const existing = pairingMap.get(b.pairing_id)
         if (existing) {
             existing.pPts += b.p_points
             existing.dPts += b.d_points
+            existing.scorers += 1
+            // The presider ballot carries the pairing's tiebreaker (winning team id).
+            if (b.presider_ballot && b.tiebreaker) existing.tiebreakerWinner = b.tiebreaker
         } else {
-            pairingMap.set(b.pairing_id, { p: b.p_team_id, d: b.d_team_id, pPts: b.p_points, dPts: b.d_points })
+            pairingMap.set(b.pairing_id, {
+                p: b.p_team_id, d: b.d_team_id, pPts: b.p_points, dPts: b.d_points,
+                tiebreakerWinner: b.presider_ballot ? b.tiebreaker : null,
+                scorers: 1,
+            })
         }
     }
 
-    for (const [, { p, d, pPts, dPts }] of pairingMap) {
+    for (const [, { p, d, pPts, dPts, tiebreakerWinner, scorers }] of pairingMap) {
         const pTeam = teamMap.get(p)
         const dTeam = teamMap.get(d)
         if (pTeam && dTeam) {
-            pTeam.pairings.push({ opponent: dTeam.code, ballots: [{ pointsFor: pPts, pointsAgainst: dPts }], won_presider_tiebreaker: false })
-            dTeam.pairings.push({ opponent: pTeam.code, ballots: [{ pointsFor: dPts, pointsAgainst: pPts }], won_presider_tiebreaker: false })
+            pTeam.pairings.push({ opponent: dTeam.code, ballots: [{ pointsFor: pPts, pointsAgainst: dPts }], won_presider_tiebreaker: tiebreakerWinner === p, num_scorers: scorers })
+            dTeam.pairings.push({ opponent: pTeam.code, ballots: [{ pointsFor: dPts, pointsAgainst: pPts }], won_presider_tiebreaker: tiebreakerWinner === d, num_scorers: scorers })
         }
     }
 
     return {
         rows: computeStandings([...teamMap.values()], config),
-        cols: parseColumnsFromXml(data.config.statsXml),
-        standingsXml: data.config.standingsXml,
+        cols: config.columns,
+        dsl: data.config.dsl,
     }
 }
 
@@ -82,7 +77,7 @@ export default function StandingsPage() {
 
     if (!computed || computed.rows.length === 0) return <p className="coach-empty">No standings available yet.</p>
 
-    const { rows, cols, standingsXml } = computed
+    const { rows, cols, dsl } = computed
 
     return (
         <>
@@ -104,9 +99,9 @@ export default function StandingsPage() {
                     </tr>
                 ))}</tbody>
             </table>
-            {standingsXml && (
+            {dsl && (
                 <div className="coach-tiebreaker-viewer">
-                    <TiebreakerViewer standingsXml={standingsXml} />
+                    <TiebreakerViewer dsl={dsl} />
                 </div>
             )}
         </>

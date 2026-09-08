@@ -10,7 +10,7 @@ import { transferOwnership } from "../../providers/coachProvider";
 import { TournamentRequest } from "../../types/express";
 import { tournamentHandler, scorerHandler, organizerHandler, teamHandler } from "../../types/handlers";
 import {EmailTemplate, isValidEmail, organizerAddedEmail, sendEmail, teamAddedEmail} from "../../email";
-import { removeCoachHandler, addStudentHandler } from "../teamHandlers";
+import { removeCoachHandler, addStudentHandler, updateStudentCustomDataHandler } from "../teamHandlers";
 import { dbQuery } from "../../db";
 
 function validateWitnessCounts(format: TournamentPayload['caseFormat'], witnesses: IWitnesses): string | null {
@@ -345,20 +345,19 @@ router.get("/standings", tournamentHandler(async (req, res) => {
  *         application/json:
  *           schema:
  *             type: object
- *             required: [statsXml, standingsXml]
+ *             required: [dsl]
  *             properties:
- *               statsXml: { type: string }
- *               standingsXml: { type: string }
+ *               dsl: { type: string }
  *     responses:
  *       200: { description: Updated }
- *       400: { description: Missing statsXml or standingsXml }
+ *       400: { description: Missing dsl }
  *       500: { description: Unable to update standings config }
  */
 router.patch("/standings-config", tournamentHandler(async (req, res) => {
-    const { statsXml, standingsXml } = req.body as { statsXml: string; standingsXml: string };
-    if (!statsXml || !standingsXml) return res.status(400).json({ message: 'Missing statsXml or standingsXml' });
+    const { dsl } = req.body as { dsl: string };
+    if (!dsl) return res.status(400).json({ message: 'Missing dsl' });
     try {
-        await organizer.upsertStandingsConfig(req.tournament, statsXml, standingsXml);
+        await organizer.upsertStandingsConfig(req.tournament, dsl);
         return res.status(200).json({ success: true });
     } catch (e) {
         if (e instanceof DbError) return res.status(500).json({ message: 'Unable to update standings config' });
@@ -1398,6 +1397,70 @@ router.delete('/teams/:teamId/students/:studentId', async (req: Request, res: Re
 
 /**
  * @swagger
+ * /organizer/tournament/{tournamentId}/teams/{teamId}/roster-columns:
+ *   get:
+ *     summary: List the tournament's custom roster columns (organizer team view)
+ *     tags: [Organizer - Teams]
+ *     parameters:
+ *       - in: path
+ *         name: tournamentId
+ *         required: true
+ *         schema: { type: string, format: uuid }
+ *       - in: path
+ *         name: teamId
+ *         required: true
+ *         schema: { type: string, format: uuid }
+ *     responses:
+ *       200: { description: Array of custom roster columns }
+ */
+router.get('/teams/:teamId/roster-columns', async (req: Request, res: Response) => {
+    return res.status(200).json(await coachProvider.getRosterColumnsByTeam(req.params.teamId as string));
+});
+
+/**
+ * @swagger
+ * /organizer/tournament/{tournamentId}/teams/{teamId}/students/{studentId}/custom-data:
+ *   put:
+ *     summary: Set a student's custom roster column values (organizer team view)
+ *     tags: [Organizer - Teams]
+ *     parameters:
+ *       - in: path
+ *         name: tournamentId
+ *         required: true
+ *         schema: { type: string, format: uuid }
+ *       - in: path
+ *         name: teamId
+ *         required: true
+ *         schema: { type: string, format: uuid }
+ *       - in: path
+ *         name: studentId
+ *         required: true
+ *         schema: { type: string, format: uuid }
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             required: [custom_data]
+ *             properties:
+ *               custom_data:
+ *                 type: array
+ *                 items:
+ *                   type: object
+ *                   properties:
+ *                     field: { type: string }
+ *                     type: { type: string, enum: [int, string] }
+ *                     value: { oneOf: [{ type: string }, { type: number }] }
+ *     responses:
+ *       200: { description: Updated student }
+ *       400: { description: Invalid student ID or custom_data }
+ *       404: { description: Not found }
+ */
+router.put('/teams/:teamId/students/:studentId/custom-data', updateStudentCustomDataHandler);
+
+/**
+ * @swagger
  * /organizer/tournament/{tournamentId}/teams/{teamId}/pairings/{pairingId}/witness-order:
  *   get:
  *     summary: Get witness call order for a team in a pairing
@@ -1830,6 +1893,63 @@ router.get('/export/standings', tournamentHandler(async (req, res) => {
         res.setHeader('Content-Disposition', 'attachment; filename="standings.csv"');
         return res.status(200).send(csv);
     } catch (e) {
+        if (e instanceof DbError) return res.status(500).json({ message: 'Database error' });
+        throw e;
+    }
+}));
+
+/**
+ * @swagger
+ * /organizer/tournament/{tournamentId}/export/rosters:
+ *   get:
+ *     summary: Download all team rosters as CSV
+ *     description: >
+ *       One row per rostered student across every team. Columns are
+ *       School, Name, Pronoun, followed by one column per custom roster field
+ *       defined for the tournament.
+ *     tags: [Organizer - Export]
+ *     parameters:
+ *       - in: path
+ *         name: tournamentId
+ *         required: true
+ *         schema: { type: string, format: uuid }
+ *     responses:
+ *       200: { description: CSV file }
+ *       500: { description: Database error }
+ */
+router.get('/export/rosters', tournamentHandler(async (req, res) => {
+    const tournamentId = req.tournament as string;
+    if (!uuidRegex.test(tournamentId)) return res.status(400).json({ message: 'Invalid tournament ID' });
+    try {
+        const [columns, rosters] = await Promise.all([
+            organizer.getCustomRosterColumns(tournamentId),
+            organizer.getAllRosters(tournamentId),
+        ]);
+
+        const header = ['School', 'Name', 'Pronoun', ...columns.map(c => c.field)]
+            .map(escapeCsvField)
+            .join(',');
+
+        const rows = rosters.map(r => {
+            const byField = new Map((r.custom_data ?? []).map(d => [d.field, d.value]));
+            const cells = [
+                r.team_name,
+                r.student_name,
+                r.pronouns ?? '',
+                ...columns.map(c => {
+                    const v = byField.get(c.field);
+                    return v == null ? '' : String(v);
+                }),
+            ];
+            return cells.map(escapeCsvField).join(',');
+        });
+
+        const csv = [header, ...rows].join('\n');
+        res.setHeader('Content-Type', 'text/csv');
+        res.setHeader('Content-Disposition', 'attachment; filename="rosters.csv"');
+        return res.status(200).send(csv);
+    } catch (e) {
+        if (e instanceof NotFoundError) return res.status(404).json({ message: e.message });
         if (e instanceof DbError) return res.status(500).json({ message: 'Database error' });
         throw e;
     }
@@ -2437,4 +2557,155 @@ router.get('/overview', tournamentHandler(async (req, res) => {
         throw e;
     }
 }));
+
+
+router.get('/roster-columns', tournamentHandler(async (req, res) => {
+    const tournamentId = req.tournament as string;
+    if (!uuidRegex.test(tournamentId)) return res.status(400).json({ message: 'Invalid tournament ID' });
+    try {
+        const cols = await organizer.getCustomRosterColumns(tournamentId);
+        return res.status(200).json(cols);
+    } catch (e) {
+        if (e instanceof NotFoundError) return res.status(404).json({ message: e.message });
+        if (e instanceof DbError) return res.status(500).json({ message: 'Unable to get overview' });
+        throw e;
+    }
+}));
+
+const ROSTER_COLUMN_TYPES = ['int', 'string'] as const;
+type RosterColumnType = typeof ROSTER_COLUMN_TYPES[number];
+const isRosterColumnType = (t: unknown): t is RosterColumnType =>
+    typeof t === 'string' && (ROSTER_COLUMN_TYPES as readonly string[]).includes(t);
+
+/**
+ * @swagger
+ * /organizer/tournament/{tournamentId}/roster-columns:
+ *   post:
+ *     summary: Add a custom roster column
+ *     tags: [Organizer - Roster Columns]
+ *     parameters:
+ *       - in: path
+ *         name: tournamentId
+ *         required: true
+ *         schema: { type: string, format: uuid }
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             required: [field, type]
+ *             properties:
+ *               field: { type: string }
+ *               type: { type: string, enum: [int, string] }
+ *     responses:
+ *       201: { description: Column created }
+ *       400: { description: Missing/invalid field or type }
+ *       409: { description: Column name already exists }
+ *       500: { description: Database error }
+ */
+router.post('/roster-columns', tournamentHandler(async (req, res) => {
+    const tournamentId = req.tournament as string;
+    if (!uuidRegex.test(tournamentId)) return res.status(400).json({ message: 'Invalid tournament ID' });
+    const field = typeof req.body?.field === 'string' ? req.body.field.trim() : '';
+    const { type } = req.body as { type?: unknown };
+    if (!field) return res.status(400).json({ message: 'Missing field name' });
+    if (!isRosterColumnType(type)) return res.status(400).json({ message: 'Invalid column type' });
+    try {
+        return res.status(201).json(await organizer.addCustomRosterColumn(tournamentId, field, type));
+    } catch (e) {
+        if (e instanceof AlreadyExistsError) return res.status(409).json({ message: e.message });
+        if (e instanceof DbError) return res.status(500).json({ message: 'Unable to add roster column' });
+        throw e;
+    }
+}));
+
+/**
+ * @swagger
+ * /organizer/tournament/{tournamentId}/roster-columns:
+ *   put:
+ *     summary: Rename or retype a custom roster column
+ *     tags: [Organizer - Roster Columns]
+ *     parameters:
+ *       - in: path
+ *         name: tournamentId
+ *         required: true
+ *         schema: { type: string, format: uuid }
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             required: [originalField, field, type]
+ *             properties:
+ *               originalField: { type: string }
+ *               field: { type: string }
+ *               type: { type: string, enum: [int, string] }
+ *     responses:
+ *       200: { description: Updated column }
+ *       400: { description: Missing/invalid fields }
+ *       404: { description: Column not found }
+ *       409: { description: Column name already exists }
+ *       500: { description: Database error }
+ */
+router.put('/roster-columns', tournamentHandler(async (req, res) => {
+    const tournamentId = req.tournament as string;
+    if (!uuidRegex.test(tournamentId)) return res.status(400).json({ message: 'Invalid tournament ID' });
+    const originalField = typeof req.body?.originalField === 'string' ? req.body.originalField.trim() : '';
+    const field = typeof req.body?.field === 'string' ? req.body.field.trim() : '';
+    const { type } = req.body as { type?: unknown };
+    if (!originalField || !field) return res.status(400).json({ message: 'Missing field name' });
+    if (!isRosterColumnType(type)) return res.status(400).json({ message: 'Invalid column type' });
+    try {
+        return res.status(200).json(await organizer.updateCustomRosterColumn(tournamentId, originalField, field, type));
+    } catch (e) {
+        if (e instanceof AlreadyExistsError) return res.status(409).json({ message: e.message });
+        if (e instanceof NotFoundError) return res.status(404).json({ message: e.message });
+        if (e instanceof DbError) return res.status(500).json({ message: 'Unable to update roster column' });
+        throw e;
+    }
+}));
+
+/**
+ * @swagger
+ * /organizer/tournament/{tournamentId}/roster-columns:
+ *   delete:
+ *     summary: Delete a custom roster column
+ *     tags: [Organizer - Roster Columns]
+ *     parameters:
+ *       - in: path
+ *         name: tournamentId
+ *         required: true
+ *         schema: { type: string, format: uuid }
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             required: [field]
+ *             properties:
+ *               field: { type: string }
+ *     responses:
+ *       204: { description: Deleted }
+ *       400: { description: Missing field }
+ *       404: { description: Column not found }
+ *       500: { description: Database error }
+ */
+router.delete('/roster-columns', tournamentHandler(async (req, res) => {
+    const tournamentId = req.tournament as string;
+    if (!uuidRegex.test(tournamentId)) return res.status(400).json({ message: 'Invalid tournament ID' });
+    const field = typeof req.body?.field === 'string' ? req.body.field.trim() : '';
+    if (!field) return res.status(400).json({ message: 'Missing field name' });
+    try {
+        await organizer.deleteCustomRosterColumn(tournamentId, field);
+        return res.status(204).send();
+    } catch (e) {
+        if (e instanceof NotFoundError) return res.status(404).json({ message: e.message });
+        if (e instanceof DbError) return res.status(500).json({ message: 'Unable to delete roster column' });
+        throw e;
+    }
+}));
+
 export default router;

@@ -6,14 +6,18 @@ const TOURNAMENT = {
   team_id: 'team-1', team_name: 'Lincoln High', team_code: '101',
 }
 
-// Real XML from documentation/TableSetup.sql default AMTA template
-const STANDINGS_XML = '<xml xmlns="https://developers.google.com/blockly/xml"> <block type="tiebreaker_order" id="p3k!?(d`F=m35|M3fRyO" deletable="false" movable="false" x="20" y="20"> <next> <block type="standings_tiebreaker" id="61D@YmQo]JQd$1)Ka(nE"> <field name="STAT">Ballots</field> <field name="ORDER">desc</field> <next> <block type="standings_tiebreaker" id="(HU8.{o6kUrY+M{R-L1X"> <field name="STAT">Combined Strength</field> <field name="ORDER">desc</field> <next> <block type="standings_tiebreaker" id=",`?jn$5?3UwOqAeH`X(n"> <field name="STAT">Point Differential</field> <field name="ORDER">desc</field> <next> <block type="standings_tiebreaker" id="u68YCy!fsCavlob%uC$p"> <field name="STAT">Opponent Combined Strength</field> <field name="ORDER">desc</field> </block> </next> </block> </next> </block> </next> </block> </next> </block> </xml>'
-
-const STATS_XML = '<xml xmlns="https://developers.google.com/blockly/xml"> <block type="define_visible_stats" id="vzM]MMQEaOR7m7db9l6i" deletable="false" movable="false" x="20" y="20"> <next> <block type="standings_column" id="$fk1`_SySSuoaq8kSptF"> <field name="STAT">Ballots</field> <field name="LABEL"></field> <next> <block type="standings_column" id="E?@ZMyVUQEa_LJ{dn#j_"> <field name="STAT">Combined Strength</field> <field name="LABEL">CS</field> <next> <block type="standings_column" id="_6n5vwQ_,3or*@O,y,kZ"> <field name="STAT">Point Differential</field> <field name="LABEL">PD</field> <next> <block type="standings_column" id="BictXFBp5zO+8*k`]:jn"> <field name="STAT">Opponent Combined Strength</field> <field name="LABEL">OCS</field> </block> </next> </block> </next> </block> </next> </block> </next> </block> <block type="stat_hat" id="ZjQilwOMeM{XlIE1*Ekp" x="0" y="183"> <field name="NAME">Ballots</field> <field name="AGG">sum</field> <value name="VALUE"> <block type="math_arithmetic" id="[?I6dNAS-BIzwZVSii.`"> <field name="OP">ADD</field> <value name="A"> <block type="pairing_field" id="O}-.I=^Pj-[4F},2~NvG"> <field name="FIELD">ballots_won</field> </block> </value> <value name="B"> <block type="math_arithmetic" id="l/`wM;;R6ukr*?w$YfIy"> <field name="OP">MULTIPLY</field> <value name="A"> <block type="pairing_field" id="jQ[E`%pAp/9oM43b[2`."> <field name="FIELD">ballots_tied</field> </block> </value> <value name="B"> <block type="math_number" id=")VN1n05^hzrSl(]CSHAN"> <field name="NUM">0.5</field> </block> </value> </block> </value> </block> </value> </block> <block type="stat_hat" id="Y{?f2%^@O$(xy9*/{*tE" x="0" y="256"> <field name="NAME">Combined Strength</field> <field name="AGG">sum</field> <value name="VALUE"> <block type="opponent_stat" id="Tb1l[z+iV7K:tj*9{j@C"> <field name="NAME">Ballots</field> </block> </value> </block> <block type="stat_hat" id="LxA.$0aBn|QSm.ww{iAB" x="0" y="307"> <field name="NAME">Point Differential</field> <field name="AGG">sum</field> <value name="VALUE"> <block type="math_arithmetic" id="o|#.lEExY*f~TeZu8.#,"> <field name="OP">MINUS</field> <value name="A"> <block type="ballot_field" id="HCH@knK%(.uQT5KZfRYm"> <field name="FIELD">ballot_pf</field> </block> </value> <value name="B"> <block type="ballot_field" id="JHx!ZdYKSA7NeDtpclI_"> <field name="FIELD">ballot_pa</field> </block> </value> </block> </value> </block> <block type="stat_hat" id="/OnTau[d.{!Ow6BgxuJ1" x="0" y="369"> <field name="NAME">Opponent Combined Strength</field> <field name="AGG">sum</field> <value name="VALUE"> <block type="opponent_stat" id="2Xm?K%+os,H;Xtq5C+O)"> <field name="NAME">Combined Strength</field> </block> </value> </block> </xml>'
+// Real DSL from documentation/TableSetup.sql default AMTA template
+const AMTA_DSL = `(config
+  (stat "Ballots" sum (+ (pairing ballots_won) (* (pairing ballots_tied) 0.5)))
+  (stat "Combined Strength" sum (opponent "Ballots"))
+  (stat "Point Differential" sum (- (pairing ballot_pf) (pairing ballot_pa)))
+  (stat "Opponent Combined Strength" sum (opponent "Combined Strength"))
+  (columns (column "Ballots" "Ballots") (column "Combined Strength" "CS") (column "Point Differential" "PD") (column "Opponent Combined Strength" "OCS"))
+  (tiebreakers (by "Ballots" desc) (by "Combined Strength" desc) (by "Point Differential" desc) (by "Opponent Combined Strength" desc)))`
 
 // Two teams with one completed pairing so standings rows are non-empty (required for viewer to render)
 const STANDINGS_RESPONSE = {
-  config: { statsXml: STATS_XML, standingsXml: STANDINGS_XML },
+  config: { dsl: AMTA_DSL },
   teams: [
     { id: 'team-1', name: 'Lincoln High', code: '101' },
     { id: 'team-2', name: 'Jefferson High', code: '102' },
@@ -62,15 +66,15 @@ describe('TiebreakerViewer — via Coach Standings tab', () => {
 })
 
 describe('TiebreakerViewer — no tiebreakers configured', () => {
-  it('shows "No tiebreakers configured" when standingsXml has no rules', () => {
-    const emptyStandingsXml = '<xml xmlns="https://developers.google.com/blockly/xml"><block type="tiebreaker_order" deletable="false" movable="false" x="20" y="20"></block></xml>'
+  it('shows "No tiebreakers configured" when the DSL has no rules', () => {
+    const emptyDsl = '(config (columns) (tiebreakers))'
     cy.loginAs(USER)
     cy.intercept('GET', '/coach/tournaments', { statusCode: 200, body: [TOURNAMENT] }).as('getTournaments')
     cy.intercept('GET', '/coach/tournaments/t-1/schedule', { statusCode: 200, body: [] }).as('getSchedule')
     cy.intercept('GET', '/coach/tournaments/t-1/results', { statusCode: 200, body: [] }).as('getResults')
     cy.intercept('GET', '/coach/tournaments/t-1/standings', {
       statusCode: 200,
-      body: { ...STANDINGS_RESPONSE, config: { ...STANDINGS_RESPONSE.config, standingsXml: emptyStandingsXml } },
+      body: { ...STANDINGS_RESPONSE, config: { dsl: emptyDsl } },
     }).as('getStandings')
     cy.visit('/coach/t-1?page=standings')
     cy.wait('@session')

@@ -23,6 +23,7 @@ interface PairingCtx {
   ballot_pd: number;       // sum of (pf - pa) per ballot
   ballot_raw: number;      // sum of pf per ballot (same as ballot_pf, alias for clarity)
   num_ballots: number;
+  num_scorers: number;     // scorers (submitted ballots) on this pairing
 }
 
 function pairingCtx(p: Pairing): PairingCtx {
@@ -40,7 +41,8 @@ function pairingCtx(p: Pairing): PairingCtx {
     won_presider_tb: p.won_presider_tiebreaker ? 1 : 0,
     ballot_pf: pf, ballot_pa: pa,
     ballot_pd: pd, ballot_raw: pf,
-    num_ballots: nb
+    num_ballots: nb,
+    num_scorers: p.num_scorers,
   };
 }
 
@@ -87,6 +89,9 @@ function computeTeamStats(
     ballot_pa:        ctxs.reduce((s, c) => s + c.ballot_pa, 0),
     ballot_pd:        ctxs.reduce((s, c) => s + c.ballot_pd, 0),
     ballot_raw:       ctxs.reduce((s, c) => s + c.ballot_raw, 0),
+    num_scorers:      ctxs.reduce((s, c) => s + c.num_scorers, 0),
+    // Team-level primitive: how many pairings this team played.
+    num_pairings:     team.pairings.length,
   };
 
   const stats: Record<string, number> = { ...builtins };

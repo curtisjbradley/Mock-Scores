@@ -294,7 +294,7 @@ function ScoreSheet(details: IScoreSheetFormat & { onSubmitSuccess: () => void }
                         {(() => {
                             const cat = scoringCategories[categoryOrder[categoryIndex]];
                             const w = cat.witnessId ? witnesses[cat.witnessId] : null;
-                            return w ? `${cat.categoryName} — ${w.characterName}` : cat.categoryName;
+                            return w ? `${cat.categoryName} - ${w.characterName}` : cat.categoryName;
                         })()}
                     </p>
                     <button type="submit" id="score-submit" className={isLastCategory ? "submit-active" : "submit-inactive"} aria-label="Submit scoresheet">
@@ -314,6 +314,9 @@ function ScoreSheet(details: IScoreSheetFormat & { onSubmitSuccess: () => void }
                     prosecutionLabel={prosecutionLabel}
                     details={details}
                     onSubmitSuccess={details.onSubmitSuccess}
+                    defense_id={details.defenseId}
+                    prosecution_id={details.prosecutionId}
+
                 />
             )}
         </>

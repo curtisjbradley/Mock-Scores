@@ -69,11 +69,24 @@ export default function TeamsTab({ tournamentId }: { tournamentId: string }) {
         confirmRemove.clear()
     }
 
+    const exportRosters = async () => {
+        const res = await apiFetch(`/organizer/tournament/${tournamentId}/export/rosters`)
+        if (!res.ok) return
+        const blob = await res.blob()
+        const url = URL.createObjectURL(blob)
+        const a = document.createElement('a')
+        a.href = url
+        a.download = 'rosters.csv'
+        a.click()
+        URL.revokeObjectURL(url)
+    }
+
     return (
         <Section title="Teams" description="Manage invited teams">
             <div className="tab-actions">
                 <AddButton onClick={() => setShowModal(true)}>+ Add team</AddButton>
                 <button className="org-new-btn tab-actions-import" onClick={() => setShowImport(true)}>Import CSV</button>
+                <button className="org-new-btn tab-actions-import" onClick={() => { void exportRosters() }}>Export All Rosters</button>
             </div>
 
             <div className="dash-table-scroll">

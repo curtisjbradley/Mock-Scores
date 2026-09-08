@@ -208,3 +208,10 @@ export interface ITournamentSummaryRow {
     scorers_total: number;
     scorers_with_conflicts: number;
 }
+
+export interface ICustomRosterColumnRow {
+    tournament_id: string,
+    position: number,
+    type: 'string' | 'int',
+    column_name: string
+}

@@ -1,35 +1,20 @@
 import { useMemo } from 'react'
-import * as Blockly from 'blockly'
+import { parseDsl } from './standingsDsl'
 import '../styles/standings.css'
 
 interface Props {
-    standingsXml: string
+    dsl: string
     onClose?: () => void
 }
 
-export default function TiebreakerViewer({ standingsXml, onClose }: Props) {
+export default function TiebreakerViewer({ dsl, onClose }: Props) {
     const tiebreakers = useMemo(() => {
         try {
-            const dom = Blockly.utils.xml.textToDom(standingsXml)
-            // Walk the linked chain from tiebreaker_order hat
-            const hat = Array.from(dom.querySelectorAll('block[type="tiebreaker_order"]'))[0]
-            if (!hat) return []
-            const rules: { type: string; stat: string; order: string }[] = []
-            let next = hat.querySelector(':scope > next > block')
-            while (next) {
-                const type = next.getAttribute('type')
-                const stat = next.querySelector(':scope > field[name="STAT"]')?.textContent ?? ''
-                const order = next.querySelector(':scope > field[name="ORDER"]')?.textContent ?? 'desc'
-                if (type === 'standings_tiebreaker' || type === 'standings_h2h_conditional') {
-                    rules.push({ type, stat, order })
-                }
-                next = next.querySelector(':scope > next > block')
-            }
-            return rules
+            return parseDsl(dsl).tiebreakers
         } catch {
             return []
         }
-    }, [standingsXml])
+    }, [dsl])
 
     const content = (
         <>
@@ -42,7 +27,7 @@ export default function TiebreakerViewer({ standingsXml, onClose }: Props) {
                 : <ol className="sb-tb-list">
                     {tiebreakers.map((t, i) => (
                         <li key={i}>
-                            {t.type === 'standings_h2h_conditional'
+                            {t.type === 'h2h_conditional'
                                 ? <>If 2-way tie: head-to-head <strong>{t.stat}</strong> ({t.order === 'desc' ? 'higher wins' : 'lower wins'})</>
                                 : <>Break ties by <strong>{t.stat}</strong> ({t.order === 'desc' ? 'highest first' : 'lowest first'})</>
                             }

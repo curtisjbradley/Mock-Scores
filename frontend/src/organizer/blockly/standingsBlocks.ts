@@ -8,7 +8,13 @@ const PAIRING_FIELDS: [string, string][] = [
   ['Points For (sum)',         'points_for'],
   ['Points Against (sum)',     'points_against'],
   ['Number of Ballots', 'num_ballots'],
+  ['Number of Scorers', 'num_scorers'],
   ['Won Presider Tiebreaker',  'won_presider_tb'],  // 1 or 0
+];
+
+// Team-level fields — evaluated once per team (not per pairing)
+const TEAM_FIELDS: [string, string][] = [
+  ['Number of Pairings', 'num_pairings'],
 ];
 
 // Per-ballot fields (aggregated within a pairing via sum)
@@ -35,6 +41,16 @@ const pairingField = {
   output: 'Number',
   colour: 65,
   tooltip: 'A raw value from each pairing (evaluated once per pairing).',
+};
+
+// Raw team-level value — returns Number (evaluated once per team)
+const teamField = {
+  type: 'team_field',
+  message0: 'team: %1',
+  args0: [{ type: 'field_dropdown', name: 'FIELD', options: TEAM_FIELDS }],
+  output: 'Number',
+  colour: 65,
+  tooltip: 'A team-level value (evaluated once per team, e.g. number of pairings played).',
 };
 
 // Raw per-ballot value — returns Number (sum across ballots in the pairing)
@@ -197,6 +213,7 @@ const intermediateRef = {
  */
 export const standingsBlockDefs = Blockly.common.createBlockDefinitionsFromJsonArray([
   pairingField,
+  teamField,
   ballotField,
   statHat,
   teamStatHat,

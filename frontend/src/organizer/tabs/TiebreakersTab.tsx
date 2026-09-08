@@ -12,32 +12,32 @@ interface Props {
 
 export default function TiebreakersTab({ tournamentId, onConfigChange }: Props) {
     const [config, setConfig] = useState<StandingsConfig>({ statDefs: [], columns: [], tiebreakers: [] })
-    const [xmlSnapshot, setXmlSnapshot] = useState<{ statsXml: string; standingsXml: string } | null>(null)
-    const [initialXml, setInitialXml] = useState<{ statsXml: string; standingsXml: string } | null | undefined>(undefined)
+    const [dslSnapshot, setDslSnapshot] = useState<string | null>(null)
+    const [initialDsl, setInitialDsl] = useState<string | null | undefined>(undefined)
     const [dirty, setDirty] = useState(false)
     const [saving, setSaving] = useState(false)
     const [saveMsg, setSaveMsg] = useState<string | null>(null)
 
     useEffect(() => {
         fetchStandingsConfig(tournamentId)
-            .then(cfg => setInitialXml(cfg ?? null))
-            .catch(() => setInitialXml(null))
+            .then(cfg => setInitialDsl(cfg?.dsl ?? null))
+            .catch(() => setInitialDsl(null))
     }, [tournamentId])
 
-    const handleChange = (cfg: StandingsConfig, xml: { statsXml: string; standingsXml: string }) => {
+    const handleChange = (cfg: StandingsConfig, dsl: string) => {
         setConfig(cfg)
-        setXmlSnapshot(xml)
+        setDslSnapshot(dsl)
         setDirty(true)
         setSaveMsg(null)
         onConfigChange?.(cfg)
     }
 
     const handleSave = async () => {
-        if (!xmlSnapshot) return
+        if (dslSnapshot === null) return
         setSaving(true)
         setSaveMsg(null)
         try {
-            await saveStandingsConfig(tournamentId, xmlSnapshot)
+            await saveStandingsConfig(tournamentId, { dsl: dslSnapshot })
             setDirty(false)
             setSaveMsg('Saved!')
         } catch {
@@ -47,7 +47,7 @@ export default function TiebreakersTab({ tournamentId, onConfigChange }: Props) 
         }
     }
 
-    if (initialXml === undefined) return null
+    if (initialDsl === undefined) return null
 
     return (
         <div className="dash-section">
@@ -58,7 +58,7 @@ export default function TiebreakersTab({ tournamentId, onConfigChange }: Props) 
                 Define custom stats from tournament data, then configure which columns appear
                 in the standings table and how ties are broken.
             </p>
-            <StandingsBuilder onChange={handleChange} initialXml={initialXml} />
+            <StandingsBuilder onChange={handleChange} initialDsl={initialDsl} />
 
             <div className="tb-save-bar">
                 <button className="btn-confirm" onClick={handleSave} disabled={saving || !dirty}>

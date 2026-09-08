@@ -218,7 +218,7 @@ describe('GET /api/organizer/tournament/:id/export/standings', () => {
         mockAccess();
         // getOrganizerStandingsData returns config, teams, ballots, rounds
         mockDbQuery
-            .mockResolvedValueOnce({ rows: [{ stats_xml: '<s/>', standings_xml: '<st/>' }], rowCount: 1 } as any) // config
+            .mockResolvedValueOnce({ rows: [{ standings_dsl: '(config (columns) (tiebreakers))' }], rowCount: 1 } as any) // config
             .mockResolvedValueOnce({ rows: [
                 { id: 't1', name: 'Eagles', code: 'EAG' },
                 { id: 't2', name: 'Hawks', code: 'HWK' },
@@ -423,7 +423,7 @@ describe('GET /api/organizer/tournament/:id/standings', () => {
     it('returns 200 with standings data', async () => {
         mockAccess();
         mockDbQuery
-            .mockResolvedValueOnce({ rows: [{ stats_xml: '<s/>', standings_xml: '<st/>' }], rowCount: 1 } as any)
+            .mockResolvedValueOnce({ rows: [{ standings_dsl: '(config (columns) (tiebreakers))' }], rowCount: 1 } as any)
             .mockResolvedValueOnce({ rows: [{ id: 't1', name: 'Eagles', code: 'EAG' }], rowCount: 1 } as any)
             .mockResolvedValueOnce({ rows: [{ round_id: 'r1', name: 'Round 1' }], rowCount: 1 } as any)
             .mockResolvedValueOnce({ rows: [], rowCount: 0 } as any);

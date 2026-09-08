@@ -1,10 +1,10 @@
 import { dbQuery } from '../db';
 import type {
     ICoachTournament, ICoachScheduleRound, ICoachResultRound,
-    ICoach, IStudent, IWitnessCallOrder, IStudentAssignment, ICompetitionTeam, ITournament
+    ICoach, IStudent, IWitnessCallOrder, IStudentAssignment, ICompetitionTeam, ITournament, ICustomRosterColumn
 } from '@mock-scores/shared';
 import { AlreadyExistsError, DbError, NotFoundError } from '../errors';
-import {ITeamRow, ITournamentRow} from "../types/dbtypes";
+import {ICustomRosterColumnRow, ITeamRow, ITournamentRow} from "../types/dbtypes";
 
 
 export async function getTeam(teamId: string): Promise<ICompetitionTeam | null> {
@@ -195,9 +195,39 @@ export async function transferOwnership(teamId: string, newOwnerCoachId: string)
 
 export async function getStudents(teamId: string): Promise<IStudent[]> {
     return (await dbQuery<IStudent>(
-        `SELECT student_id, team_id, student_name, pronouns FROM team_rostered_students WHERE team_id=$1 ORDER BY student_name`,
+        `SELECT student_id, team_id, student_name, pronouns, COALESCE(custom_data, '[]'::jsonb) AS custom_data
+         FROM team_rostered_students WHERE team_id=$1 ORDER BY student_name`,
         [teamId]
     ))?.rows ?? [];
+}
+
+/** Custom roster column definitions for the tournament the given team belongs to. */
+export async function getRosterColumnsByTeam(teamId: string): Promise<ICustomRosterColumn[]> {
+    const rows = (await dbQuery<ICustomRosterColumnRow>(
+        `SELECT crc.tournament_id, crc.position, crc.type, crc.column_name
+         FROM custom_roster_column_definitions crc
+         JOIN teams t ON t.tournament_id = crc.tournament_id
+         WHERE t.id = $1
+         ORDER BY crc.position`,
+        [teamId]
+    ))?.rows;
+    if (rows === undefined) throw new DbError('getRosterColumnsByTeam');
+    return rows.map<ICustomRosterColumn>(row => ({ field: row.column_name, type: row.type }));
+}
+
+/** Overwrites a student's custom_data (values for the tournament's custom roster columns). */
+export async function updateStudentCustomData(
+    studentId: string,
+    customData: NonNullable<IStudent['custom_data']>,
+): Promise<IStudent> {
+    const row = (await dbQuery<IStudent>(
+        `UPDATE team_rostered_students SET custom_data=$1::jsonb
+         WHERE student_id=$2
+         RETURNING student_id, team_id, student_name, pronouns, COALESCE(custom_data, '[]'::jsonb) AS custom_data`,
+        [JSON.stringify(customData), studentId]
+    ))?.rows[0];
+    if (!row) throw new NotFoundError('student');
+    return row;
 }
 
 export async function addStudent(teamId: string, studentName: string, pronouns?: string | null): Promise<IStudent> {
@@ -418,18 +448,18 @@ export async function getPairingBallots(tournamentId: string, pairingId: string)
 }
 
 export async function getStandingsData(tournamentId: string): Promise<{
-    config: { statsXml: string; standingsXml: string } | null;
+    config: { dsl: string } | null;
     teams: { id: string; name: string; code: string }[];
-    ballots: { p_team_id: string; d_team_id: string; p_points: number; d_points: number; pairing_id: string }[];
+    ballots: { p_team_id: string; d_team_id: string; p_points: number; d_points: number; pairing_id: string; tiebreaker: string | null; presider_ballot: boolean }[];
 }> {
     const [configRow, ballotsRows, teamsRows] = await Promise.all([
-        dbQuery<{ stats_xml: string; standings_xml: string }>(
-            `SELECT sc.stats_xml, sc.standings_xml FROM tournaments t
+        dbQuery<{ standings_dsl: string }>(
+            `SELECT sc.standings_dsl FROM tournaments t
              JOIN standings_configs sc ON sc.id = t.standings_config_id WHERE t.id=$1`,
             [tournamentId]
         ),
-        dbQuery<{ p_team_id: string; d_team_id: string; p_points: number; d_points: number; pairing_id: string }>(
-            `SELECT b.p_team_id, b.d_team_id, b.p_points, b.d_points, b.pairing_id
+        dbQuery<{ p_team_id: string; d_team_id: string; p_points: number; d_points: number; pairing_id: string; tiebreaker: string | null; presider_ballot: boolean }>(
+            `SELECT b.p_team_id, b.d_team_id, b.p_points, b.d_points, b.pairing_id, b.tiebreaker, b.presider_ballot
              FROM ballots b
              JOIN pairings p ON p.pairing_id = b.pairing_id
              JOIN rounds r   ON r.round_id   = p.round_id
@@ -443,8 +473,9 @@ export async function getStandingsData(tournamentId: string): Promise<{
     ]);
     const row = configRow?.rows[0];
     return {
-        config: row ? { statsXml: row.stats_xml, standingsXml: row.standings_xml } : null,
+        config: row ? { dsl: row.standings_dsl } : null,
         teams: teamsRows?.rows ?? [],
         ballots: ballotsRows?.rows ?? [],
     };
 }
+

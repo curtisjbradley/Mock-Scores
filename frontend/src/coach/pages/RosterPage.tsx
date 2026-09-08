@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react'
-import type { IStudent, IStudentAssignment, IScoringCategory } from '@mock-scores/shared'
+import type { IStudent, IStudentAssignment, IScoringCategory, ICustomRosterColumn } from '@mock-scores/shared'
 import { apiFetch } from '../../auth/auth'
 import { ConfirmRemoveModal } from '../../organizer/components/modals'
 import { useConfirmRemove } from '../../shared/hooks/useConfirmRemove'
@@ -94,12 +94,12 @@ function SideSetupModal({
             .filter(f => f.assignable && (cat.witnessCategory || (side === 'p' ? f.prosecution : f.defense)))
             .flatMap(f => {
                 if (!cat.witnessCategory) {
-                    return [{ key: f.id, label: `${cat.name} — ${f.label}`, fieldId: f.id, witnessId: null as string | null }]
+                    return [{ key: f.id, label: `${f.label} (${cat.name})`, fieldId: f.id, witnessId: null as string | null }]
                 }
                 const applicable = f.crossing ? oppSideWitnesses : ownSideWitnesses
                 return applicable.map(w => ({
                     key: `${f.id}:${w.id}`,
-                    label: `${cat.name} — ${w.name} — ${f.label}`,
+                    label: `${f.label}: ${w.name}`,
                     fieldId: f.id,
                     witnessId: w.id as string | null,
                 }))
@@ -150,7 +150,7 @@ function SideSetupModal({
                                         <td>
                                             <select className="rv-select" value={val}
                                                 onChange={e => setSlot(i, e.target.value)}>
-                                                <option value="">— select —</option>
+                                                <option value="">- select -</option>
                                                 {ownSideWitnesses.map(w => (
                                                     <option key={w.id} value={w.id}
                                                         disabled={callOrderSlots.includes(w.id) && callOrderSlots[i] !== w.id}>
@@ -184,7 +184,7 @@ function SideSetupModal({
                                                     else next.delete(r.key)
                                                     return next
                                                 })}>
-                                                <option value="">— unassigned —</option>
+                                                <option value="">unassigned</option>
                                                 {students.map(s => (
                                                     <option key={s.student_id} value={s.student_id}>{s.student_name}</option>
                                                 ))}
@@ -220,7 +220,7 @@ function SideSetupModal({
  * own form and per-side default-setup modal UI state locally.
  */
 export default function RosterPage() {
-    const { tournamentId, teamId, students, isCriminal, addStudent, removeStudent } = useCoachContext()
+    const { tournamentId, teamId, students, rosterColumns, isCriminal, addStudent, removeStudent, setStudentCustomData } = useCoachContext()
 
     const [name, setName] = useState('')
     const [pronounSelect, setPronounSelect] = useState('')
@@ -229,6 +229,24 @@ export default function RosterPage() {
     const [submitted, setSubmitted] = useState(false)
     const confirmRemove = useConfirmRemove<IStudent>()
     const [openSide, setOpenSide] = useState<'p' | 'd' | null>(null)
+
+    // Reads a student's stored value for a custom column (blank if unset).
+    const customValue = (student: IStudent, field: string): string => {
+        const entry = student.custom_data?.find(d => d.field === field)
+        return entry != null ? String(entry.value) : ''
+    }
+
+    // Persists an edited custom-column value, merging it into the student's
+    // existing custom_data (dropping empties, coercing numbers for int columns).
+    const commitCustomValue = (student: IStudent, col: ICustomRosterColumn, raw: string) => {
+        if (customValue(student, col.field) === raw.trim()) return
+        const others = (student.custom_data ?? []).filter(d => d.field !== col.field)
+        const trimmed = raw.trim()
+        const next = trimmed === ''
+            ? others
+            : [...others, { field: col.field, type: col.type, value: col.type === 'int' ? Number(trimmed) : trimmed }]
+        setStudentCustomData(student.student_id, next)
+    }
 
     const submit = () => {
         setSubmitted(true)
@@ -277,17 +295,53 @@ export default function RosterPage() {
 
             {students.length === 0
                 ? <EmptyState message="No students on the roster yet." />
-                : <ul className="roster-list">
-                    {students.map(s => (
-                        <li key={s.student_id} className="roster-item">
-                            <span className="roster-name">
-                                {s.student_name}
-                                {s.pronouns ? <span className="roster-pronouns">({s.pronouns})</span> : null}
-                            </span>
-                            <DangerButton onClick={() => confirmRemove.open(s)}>Remove</DangerButton>
-                        </li>
-                    ))}
-                </ul>
+                : rosterColumns.length === 0
+                    ? <ul className="roster-list">
+                        {students.map(s => (
+                            <li key={s.student_id} className="roster-item">
+                                <span className="roster-name">
+                                    {s.student_name}
+                                    {s.pronouns ? <span className="roster-pronouns">({s.pronouns})</span> : null}
+                                </span>
+                                <DangerButton onClick={() => confirmRemove.open(s)}>Remove</DangerButton>
+                            </li>
+                        ))}
+                    </ul>
+                    : <div className="dash-table-scroll">
+                        <table className="dash-standings-table roster-table">
+                            <thead>
+                                <tr>
+                                    <th>Name</th>
+                                    <th>Pronouns</th>
+                                    {rosterColumns.map(col => <th key={col.field}>{col.field}</th>)}
+                                    <th></th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {students.map(s => (
+                                    <tr key={s.student_id}>
+                                        <td className="dash-team-code">{s.student_name}</td>
+                                        <td>{s.pronouns ?? '—'}</td>
+                                        {rosterColumns.map(col => (
+                                            <td key={col.field}>
+                                                <input
+                                                    className="rv-select roster-custom-input"
+                                                    type={col.type === 'int' ? 'number' : 'text'}
+                                                    inputMode={col.type === 'int' ? 'numeric' : undefined}
+                                                    defaultValue={customValue(s, col.field)}
+                                                    aria-label={`${col.field} for ${s.student_name}`}
+                                                    onBlur={e => commitCustomValue(s, col, e.target.value)}
+                                                />
+                                            </td>
+                                        ))}
+                                        <td>
+                                            <DangerButton onClick={() => confirmRemove.open(s)}>Remove</DangerButton>
+                                        </td>
+                                    </tr>
+                                ))}
+                            </tbody>
+                        </table>
+                    </div>
             }
             {students.length > 0 && <p className="org-header-sub">{students.length} student{students.length !== 1 ? 's' : ''}</p>}
 

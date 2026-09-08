@@ -3,6 +3,8 @@ import { createPortal } from 'react-dom';
 import * as Blockly from 'blockly';
 import { standingsBlockDefs, dynamicOptions } from './standingsBlocks';
 import { extractStandingsConfig, type StandingsConfig } from './standingsGenerator';
+import { serializeConfig, parseDsl } from './standingsDsl';
+import { configToXml } from './configToXml';
 import { getTheme, watchTheme } from './blocklyTheme';
 
 function buildStatOptions(statDefs: { name: string }[]): [string, string][] {
@@ -64,6 +66,7 @@ const STATS_TOOLBOX = {
       kind: 'category', name: 'Pairing Data', colour: 65,
       contents: [
         { kind: 'block', type: 'pairing_field' },
+        { kind: 'block', type: 'team_field' },
         { kind: 'block', type: 'ballot_field' },
       ],
     },
@@ -90,27 +93,23 @@ const STANDINGS_TOOLBOX = {
   ],
 };
 
-function wsToXml(ws: Blockly.WorkspaceSvg): string {
-  return Blockly.Xml.domToPrettyText(Blockly.Xml.workspaceToDom(ws));
-}
-
 function loadXmlIntoWs(ws: Blockly.WorkspaceSvg, xml: string) {
   ws.clear();
   Blockly.Xml.domToWorkspace(Blockly.utils.xml.textToDom(xml), ws);
 }
 
 interface Props {
-  onChange?: (config: StandingsConfig, xml: { statsXml: string; standingsXml: string }) => void;
-  initialXml?: { statsXml: string; standingsXml: string } | null;
+  onChange?: (config: StandingsConfig, dsl: string) => void;
+  initialDsl?: string | null;
 }
 
-export default function StandingsBuilder({ onChange, initialXml }: Props) {
+export default function StandingsBuilder({ onChange, initialDsl }: Props) {
   const statsDiv = useRef<HTMLDivElement>(null);
   const standingsDiv = useRef<HTMLDivElement>(null);
   const statsWs = useRef<Blockly.WorkspaceSvg | null>(null);
   const standingsWs = useRef<Blockly.WorkspaceSvg | null>(null);
   const [, setConfig] = useState<StandingsConfig>({ statDefs: [], columns: [], tiebreakers: [] });
-  const [xmlSnapshot, setXmlSnapshot] = useState('');
+  const [dslSnapshot, setDslSnapshot] = useState('');
   const [pasteValue, setPasteValue] = useState('');
   const [pasteError, setPasteError] = useState('');
 
@@ -141,7 +140,7 @@ export default function StandingsBuilder({ onChange, initialXml }: Props) {
     tbHat.initSvg(); tbHat.render(); tbHat.moveBy(20, 20);
     tbHat.setDeletable(false); tbHat.setMovable(false);
 
-    setXmlSnapshot(JSON.stringify({ statsXml: wsToXml(sws), standingsXml: wsToXml(dws) }, null, 2));
+    setDslSnapshot(serializeConfig(extractStandingsConfig(sws, dws)));
 
     // Enforce uniqueness
     sws.addChangeListener((e: Blockly.Events.Abstract) => {
@@ -185,10 +184,10 @@ export default function StandingsBuilder({ onChange, initialXml }: Props) {
       dynamicOptions.intermediate = intermediateOptions;
       updateDropdowns(sws, colOptions, tbOptions, intermediateOptions);
       updateDropdowns(dws, colOptions, tbOptions, intermediateOptions);
-      const xml = { statsXml: wsToXml(sws), standingsXml: wsToXml(dws) };
+      const dsl = serializeConfig(cfg);
       setConfig(cfg);
-      setXmlSnapshot(JSON.stringify(xml, null, 2));
-      onChange?.(cfg, xml);
+      setDslSnapshot(dsl);
+      onChange?.(cfg, dsl);
     };
 
     sws.addChangeListener(sync);
@@ -206,38 +205,39 @@ export default function StandingsBuilder({ onChange, initialXml }: Props) {
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  // Load saved config once it arrives from the server
+  // Load saved config once it arrives from the server (DSL -> config -> XML -> blocks)
   useEffect(() => {
-    if (!initialXml || !statsWs.current || !standingsWs.current || disposedRef.current) return;
+    if (!initialDsl || !statsWs.current || !standingsWs.current || disposedRef.current) return;
+    let xml: { statsXml: string; standingsXml: string };
+    try {
+      xml = configToXml(parseDsl(initialDsl));
+    } catch {
+      return; // malformed DSL — leave the default empty workspaces in place
+    }
     loadingRef.current = true;
-    loadXmlIntoWs(statsWs.current, initialXml.statsXml);
+    loadXmlIntoWs(statsWs.current, xml.statsXml);
     // Extract stat defs from the now-loaded stats workspace and populate dynamicOptions
-    // so that when standingsXml is parsed, dropdown validation passes
+    // so that when the standings workspace is parsed, dropdown validation passes.
     const cfg = extractStandingsConfig(statsWs.current, standingsWs.current);
     dynamicOptions.col = buildStatOptions(cfg.statDefs.filter(d => !d.intermediate));
     dynamicOptions.tb = buildTiebreakerOptions(cfg.statDefs.filter(d => !d.intermediate));
     dynamicOptions.intermediate = buildStatOptions(cfg.statDefs.filter(d => d.intermediate));
-    loadXmlIntoWs(standingsWs.current, initialXml.standingsXml);
+    loadXmlIntoWs(standingsWs.current, xml.standingsXml);
     loadingRef.current = false;
-    setXmlSnapshot(JSON.stringify({ statsXml: wsToXml(statsWs.current), standingsXml: wsToXml(standingsWs.current) }, null, 2));
-  }, [initialXml, wsReady]);
+    setDslSnapshot(serializeConfig(extractStandingsConfig(statsWs.current, standingsWs.current)));
+  }, [initialDsl, wsReady]);
 
   function handlePaste() {
     try {
-      const parsed = JSON.parse(pasteValue);
-      if (typeof parsed?.statsXml !== 'string' || !parsed.statsXml.trim())
-        throw new Error('Missing or invalid statsXml');
-      if (typeof parsed?.standingsXml !== 'string' || !parsed.standingsXml.trim())
-        throw new Error('Missing or invalid standingsXml');
-      Blockly.utils.xml.textToDom(parsed.statsXml);
-      Blockly.utils.xml.textToDom(parsed.standingsXml);
-      loadXmlIntoWs(statsWs.current!, parsed.statsXml);
+      const cfg = parseDsl(pasteValue);
+      const xml = configToXml(cfg);
+      loadXmlIntoWs(statsWs.current!, xml.statsXml);
       // Repopulate dynamicOptions from freshly-loaded stats before loading standings
-      const cfg = extractStandingsConfig(statsWs.current!, standingsWs.current!);
-      dynamicOptions.col = buildStatOptions(cfg.statDefs.filter(d => !d.intermediate));
-      dynamicOptions.tb = buildTiebreakerOptions(cfg.statDefs.filter(d => !d.intermediate));
-      dynamicOptions.intermediate = buildStatOptions(cfg.statDefs.filter(d => d.intermediate));
-      loadXmlIntoWs(standingsWs.current!, parsed.standingsXml);
+      const loaded = extractStandingsConfig(statsWs.current!, standingsWs.current!);
+      dynamicOptions.col = buildStatOptions(loaded.statDefs.filter(d => !d.intermediate));
+      dynamicOptions.tb = buildTiebreakerOptions(loaded.statDefs.filter(d => !d.intermediate));
+      dynamicOptions.intermediate = buildStatOptions(loaded.statDefs.filter(d => d.intermediate));
+      loadXmlIntoWs(standingsWs.current!, xml.standingsXml);
       setPasteError('');
       setPasteValue('');
     } catch (e) {
@@ -286,11 +286,11 @@ export default function StandingsBuilder({ onChange, initialXml }: Props) {
       <details className="sb-config-details">
         <summary className="sb-config-summary">Copy / Paste Config</summary>
         <div className="sb-config-body">
-          <textarea readOnly rows={6} className="sb-config-textarea" value={xmlSnapshot} />
+          <textarea readOnly rows={6} className="sb-config-textarea" value={dslSnapshot} />
           <p className="sb-config-hint">Paste a config below to load it:</p>
           <textarea
             rows={4}
-            placeholder='{"statsXml":"...","standingsXml":"..."}'
+            placeholder='(config (stat "Wins" sum (pairing ballots_won)) (columns (column "Wins" "Wins")) (tiebreakers (by "Wins" desc)))'
             className="sb-config-textarea"
             value={pasteValue}
             onChange={e => setPasteValue(e.target.value)}

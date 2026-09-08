@@ -29,6 +29,9 @@ function blockToExpr(block: Blockly.Block | null): string {
   switch (block.type) {
     case 'pairing_field':
       return `p.${block.getFieldValue('FIELD')}`;
+    case 'team_field':
+      // Team-level builtins live in the stats dict (see computeTeamStats).
+      return `stats['${block.getFieldValue('FIELD')}']`;
     case 'ballot_field':
       return `p.${block.getFieldValue('FIELD')}`;
     case 'stat_ref':
@@ -143,24 +146,3 @@ export function extractStandingsConfig(
   return { statDefs, columns, tiebreakers };
 }
 
-/** Parse columns directly from statsXml DOM — avoids FieldDropdown fallback in headless workspaces */
-export function parseColumnsFromXml(statsXml: string): ColumnConfig[] {
-  try {
-    const dom = (new DOMParser()).parseFromString(statsXml, 'text/xml')
-    const hat = dom.querySelector('block[type="define_visible_stats"]')
-    if (!hat) return []
-    const cols: ColumnConfig[] = []
-    let next = hat.querySelector(':scope > next > block')
-    while (next) {
-      if (next.getAttribute('type') === 'standings_column') {
-        const stat = next.querySelector(':scope > field[name="STAT"]')?.textContent ?? ''
-        const label = next.querySelector(':scope > field[name="LABEL"]')?.textContent ?? stat
-        if (stat && stat !== '__none__') cols.push({ stat, label: label || stat })
-      }
-      next = next.querySelector(':scope > next > block')
-    }
-    return cols
-  } catch {
-    return []
-  }
-}

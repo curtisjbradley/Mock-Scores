@@ -16,6 +16,8 @@ interface IConfirmSubmitModalProps {
     prosecution: string;
     /** Defense team code. */
     defense: string;
+    defense_id: string;
+    prosecution_id: string;
     /** "Prosecution" or "Plaintiff" depending on case type. */
     prosecutionLabel: string;
     /** Full scoresheet data, used to build the structured submission payload. */
@@ -39,7 +41,7 @@ type NominationSelections = Record<string, string[]>;
  * focus trapping, and Escape-to-close.
  */
 const ConfirmSubmitModal = ({
-    setShowConfirm, pendingScores, setPendingScores, storageKey, prosecution, defense, prosecutionLabel, details, onSubmitSuccess,
+    setShowConfirm, pendingScores, setPendingScores, storageKey, prosecution, defense, prosecutionLabel, details, onSubmitSuccess, defense_id,prosecution_id
 }: IConfirmSubmitModalProps) => {
     const dialogRef = useRef<HTMLDivElement>(null);
     const [submitting, setSubmitting] = useState(false);
@@ -247,12 +249,12 @@ const ConfirmSubmitModal = ({
                         <p>If the scores are tied, which team wins?</p>
                         <div className="tiebreaker-options">
                             <label className={`tiebreaker-option${tiebreaker === prosecution ? " tiebreaker-option--selected" : ""}`}>
-                                <input type="radio" name="tiebreaker" value={prosecution} checked={tiebreaker === prosecution} onChange={(e) => setTiebreaker(e.target.value)} />
+                                <input type="radio" name="tiebreaker" value={prosecution_id} checked={tiebreaker === prosecution_id} onChange={(e) => setTiebreaker(e.target.value)} />
                                 <span className="tiebreaker-code">{prosecution}</span>
                                 <span className="tiebreaker-role">{prosecutionLabel}</span>
                             </label>
                             <label className={`tiebreaker-option${tiebreaker === defense ? " tiebreaker-option--selected" : ""}`}>
-                                <input type="radio" name="tiebreaker" value={defense} checked={tiebreaker === defense} onChange={(e) => setTiebreaker(e.target.value)} />
+                                <input type="radio" name="tiebreaker" value={defense_id} checked={tiebreaker === defense_id} onChange={(e) => setTiebreaker(e.target.value)} />
                                 <span className="tiebreaker-code">{defense}</span>
                                 <span className="tiebreaker-role">Defense</span>
                             </label>

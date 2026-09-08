@@ -5,17 +5,18 @@ import type {
     ICoachScheduleRound,
     ICoachTournament,
     ICompetitionTeam,
+    ICustomRosterColumn,
     IStudent,
 } from '@mock-scores/shared'
 
 /**
  * Raw payload returned by `GET /coach/tournaments/:id/standings`.
- * The layout fetches this; StandingsPage runs the Blockly computation on it.
+ * The layout fetches this; StandingsPage runs the DSL-based computation on it.
  */
 export interface StandingsApiPayload {
-    config: { statsXml: string; standingsXml: string }
+    config: { dsl: string }
     teams: { id: string; name: string; code: string }[]
-    ballots: { p_team_id: string; d_team_id: string; p_points: number; d_points: number; pairing_id: string }[]
+    ballots: { p_team_id: string; d_team_id: string; p_points: number; d_points: number; pairing_id: string; tiebreaker: string | null; presider_ballot: boolean }[]
 }
 
 /** Individual ballot detail for a pairing on the results page. */
@@ -62,6 +63,8 @@ export interface CoachContextValue {
     results: ICoachResultRound[]
     coaches: ICoach[]
     students: IStudent[]
+    /** Tournament-defined custom roster columns shown on the roster page. */
+    rosterColumns: ICustomRosterColumn[]
     field: ICompetitionTeam[]
     standings: StandingsApiPayload | null
     /** Whether the case format is criminal (affects prosecution/plaintiff labels). */
@@ -77,6 +80,8 @@ export interface CoachContextValue {
     // ── Student mutations ─────────────────────────────────────────────────────
     addStudent: (studentName: string, pronouns: string | null) => Promise<void>
     removeStudent: (studentId: string) => Promise<void>
+    /** Overwrites a student's custom roster column values and persists them. */
+    setStudentCustomData: (studentId: string, customData: NonNullable<IStudent['custom_data']>) => Promise<void>
 
     // ── Lazy loaders ──────────────────────────────────────────────────────────
     /** Loads (and caches) per-pairing ballot detail for the results page. */

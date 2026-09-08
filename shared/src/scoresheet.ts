@@ -36,7 +36,8 @@ export interface IAwardCategoryInfo {
 export interface IScoreSheetFormat {
     isCriminal: boolean;
     ballotOptions: {
-        fillableScores : boolean;
+        fillableScores: boolean;
+        showTiebreaker: boolean;
     }
     pairingID: string;
     scorer : IScoringUser;
@@ -48,6 +49,8 @@ export interface IScoreSheetFormat {
     tournamentName: string;
     prosecutionCode: string;
     defenseCode: string;
+    prosecutionId: string;
+    defenseId: string;
     students: Record<string, IStudentInfo>;
     witnesses: Record<string, IWitnessInfo>;
     scoringCategories: Record<string, IScoreCategory>;

@@ -62,6 +62,11 @@ export interface IStudent {
     team_id: string;
     student_name: string;
     pronouns: string | null;
+    custom_data?: {
+        field: string,
+        type: string,
+        value: string | number
+    }[]
 }
 
 export interface IWitnessCallOrder {
@@ -88,4 +93,9 @@ export interface ICompetitionTeam {
     id: string;
     name: string;
     code: string;
+}
+
+export interface ICustomRosterColumn {
+    field: string,
+    type: 'int' | 'string';
 }

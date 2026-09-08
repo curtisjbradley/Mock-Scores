@@ -7,7 +7,7 @@ import { AuthenticatedRequest } from "../../types/express";
 import { authedHandler } from "../../types/handlers";
 import {coachAddedToTeam, EmailTemplate, isValidEmail, sendEmail} from "../../email";
 import {getTeam, getTournamentFromTeamId} from "../../providers/coachProvider";
-import { removeCoachHandler, addStudentHandler } from "../teamHandlers";
+import { removeCoachHandler, addStudentHandler, updateStudentCustomDataHandler } from "../teamHandlers";
 
 const router = Router({ mergeParams: true });
 
@@ -219,6 +219,62 @@ router.delete("/students/:studentId", authedHandler(async (req, res) => {
         throw e;
     }
 }));
+
+/**
+ * @swagger
+ * /coach/teams/{teamId}/roster-columns:
+ *   get:
+ *     summary: List the tournament's custom roster columns (coach view)
+ *     tags: [Coach - Team]
+ *     parameters:
+ *       - in: path
+ *         name: teamId
+ *         required: true
+ *         schema: { type: string, format: uuid }
+ *     responses:
+ *       200: { description: Array of custom roster columns }
+ */
+router.get("/roster-columns", authedHandler(async (req, res) => {
+    return res.status(200).json(await coach.getRosterColumnsByTeam(req.params.teamId as string));
+}));
+
+/**
+ * @swagger
+ * /coach/teams/{teamId}/students/{studentId}/custom-data:
+ *   put:
+ *     summary: Set a student's custom roster column values
+ *     tags: [Coach - Team]
+ *     parameters:
+ *       - in: path
+ *         name: teamId
+ *         required: true
+ *         schema: { type: string, format: uuid }
+ *       - in: path
+ *         name: studentId
+ *         required: true
+ *         schema: { type: string, format: uuid }
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             required: [custom_data]
+ *             properties:
+ *               custom_data:
+ *                 type: array
+ *                 items:
+ *                   type: object
+ *                   properties:
+ *                     field: { type: string }
+ *                     type: { type: string, enum: [int, string] }
+ *                     value: { oneOf: [{ type: string }, { type: number }] }
+ *     responses:
+ *       200: { description: Updated student }
+ *       400: { description: Invalid student ID or custom_data }
+ *       404: { description: Not found }
+ */
+router.put("/students/:studentId/custom-data", authedHandler(updateStudentCustomDataHandler));
 
 /**
  * @swagger

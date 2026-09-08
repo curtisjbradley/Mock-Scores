@@ -13,12 +13,12 @@ import type {
     ITournament,
     IWitnesses,
     TournamentPayload,
-    ITournamentSummary
+    ITournamentSummary, ICustomRosterColumn
 } from '@mock-scores/shared';
 import type {
     IAuthRow,
     ICaseWitnessRow,
-    ICourtroomRow,
+    ICourtroomRow, ICustomRosterColumnRow,
     IPairingRow,
     IRoundRow,
     IScoringCategoryRow,
@@ -185,47 +185,47 @@ export async function updateTournamentStatus(tournamentID: string, status: 'acti
     if (result.rowCount === 0) throw new NotFoundError('tournament');
 }
 
-export async function getStandingsConfig(tournamentID: string): Promise<{ id: string; statsXml: string; standingsXml: string } | null> {
-    const r = await dbQuery<{ id: string; stats_xml: string; standings_xml: string }>(
-        `SELECT sc.id, sc.stats_xml, sc.standings_xml
+export async function getStandingsConfig(tournamentID: string): Promise<{ id: string; dsl: string } | null> {
+    const r = await dbQuery<{ id: string; standings_dsl: string }>(
+        `SELECT sc.id, sc.standings_dsl
          FROM tournaments t JOIN standings_configs sc ON sc.id = t.standings_config_id WHERE t.id = $1`,
         [tournamentID]
     );
     if (r === null) throw new DbError('getStandingsConfig');
     if (!r.rows[0]) return null;
-    const { id, stats_xml, standings_xml } = r.rows[0];
-    return { id, statsXml: stats_xml, standingsXml: standings_xml };
+    const { id, standings_dsl } = r.rows[0];
+    return { id, dsl: standings_dsl };
 }
 
-export async function upsertStandingsConfig(tournamentID: string, statsXml: string, standingsXml: string): Promise<void> {
+export async function upsertStandingsConfig(tournamentID: string, dsl: string): Promise<void> {
     const existing = await dbQuery<{ standings_config_id: string | null }>('SELECT standings_config_id FROM tournaments WHERE id=$1', [tournamentID]);
     if (!existing) throw new DbError('upsertStandingsConfig');
     const configId = existing.rows[0]?.standings_config_id;
     if (configId) {
         const isTemplate = !!(await dbQuery<{ id: string }>('SELECT id FROM standings_templates WHERE config_id=$1 LIMIT 1', [configId]))?.rows[0];
         if (isTemplate) {
-            const row = (await dbQuery<{ id: string }>('INSERT INTO standings_configs (stats_xml, standings_xml) VALUES ($1,$2) RETURNING id', [statsXml, standingsXml]))?.rows[0];
+            const row = (await dbQuery<{ id: string }>('INSERT INTO standings_configs (standings_dsl) VALUES ($1) RETURNING id', [dsl]))?.rows[0];
             if (!row) throw new DbError('upsertStandingsConfig insert');
             await dbQuery('UPDATE tournaments SET standings_config_id=$1 WHERE id=$2', [row.id, tournamentID]);
         } else {
-            await dbQuery('UPDATE standings_configs SET stats_xml=$1, standings_xml=$2 WHERE id=$3', [statsXml, standingsXml, configId]);
+            await dbQuery('UPDATE standings_configs SET standings_dsl=$1 WHERE id=$2', [dsl, configId]);
         }
     } else {
-        const row = (await dbQuery<{ id: string }>('INSERT INTO standings_configs (stats_xml, standings_xml) VALUES ($1,$2) RETURNING id', [statsXml, standingsXml]))?.rows[0];
+        const row = (await dbQuery<{ id: string }>('INSERT INTO standings_configs (standings_dsl) VALUES ($1) RETURNING id', [dsl]))?.rows[0];
         if (!row) throw new DbError('upsertStandingsConfig insert');
         await dbQuery('UPDATE tournaments SET standings_config_id=$1 WHERE id=$2', [row.id, tournamentID]);
     }
 }
 
 export async function getOrganizerStandingsData(tournamentID: string): Promise<{
-    config: { statsXml: string; standingsXml: string } | null;
+    config: { dsl: string } | null;
     teams: { id: string; name: string; code: string }[];
-    ballots: { p_team_id: string; d_team_id: string; p_points: number; d_points: number; pairing_id: string; round_id: string }[];
+    ballots: { p_team_id: string; d_team_id: string; p_points: number; d_points: number; pairing_id: string; round_id: string; tiebreaker: string | null; presider_ballot: boolean }[];
     rounds: { round_id: string; name: string }[];
 }> {
     const [configRow, teamsRows, roundsRows, ballotsRows] = await Promise.all([
-        dbQuery<{ stats_xml: string; standings_xml: string }>(
-            `SELECT sc.stats_xml, sc.standings_xml FROM tournaments t
+        dbQuery<{ standings_dsl: string }>(
+            `SELECT sc.standings_dsl FROM tournaments t
              JOIN standings_configs sc ON sc.id = t.standings_config_id WHERE t.id = $1`,
             [tournamentID],
         ),
@@ -237,8 +237,8 @@ export async function getOrganizerStandingsData(tournamentID: string): Promise<{
             'SELECT round_id, name FROM rounds WHERE tournament_id = $1 ORDER BY round_time  NULLS LAST',
             [tournamentID],
         ),
-        dbQuery<{ p_team_id: string; d_team_id: string; p_points: number; d_points: number; pairing_id: string; round_id: string }>(
-            `SELECT b.p_team_id, b.d_team_id, b.p_points, b.d_points, b.pairing_id, p.round_id
+        dbQuery<{ p_team_id: string; d_team_id: string; p_points: number; d_points: number; pairing_id: string; round_id: string; tiebreaker: string | null; presider_ballot: boolean }>(
+            `SELECT b.p_team_id, b.d_team_id, b.p_points, b.d_points, b.pairing_id, p.round_id, b.tiebreaker, b.presider_ballot
              FROM ballots b
              JOIN pairings p ON p.pairing_id = b.pairing_id
              WHERE b.tournament_id = $1`,
@@ -250,7 +250,7 @@ export async function getOrganizerStandingsData(tournamentID: string): Promise<{
 
     const row = configRow.rows[0];
     return {
-        config: row ? { statsXml: row.stats_xml, standingsXml: row.standings_xml } : null,
+        config: row ? { dsl: row.standings_dsl } : null,
         teams: teamsRows.rows,
         ballots: ballotsRows.rows,
         rounds: roundsRows.rows,
@@ -943,8 +943,8 @@ async function duplicateCourtrooms(sourceTournamentID: string, newTournamentID: 
 }
 
 async function duplicateTiebreaker(sourceTournamentID: string, newTournamentID: string): Promise<void> {
-    const sourceConfig = await dbQuery<{ id: string; stats_xml: string; standings_xml: string }>(
-        `SELECT sc.id, sc.stats_xml, sc.standings_xml FROM tournaments t
+    const sourceConfig = await dbQuery<{ id: string; standings_dsl: string }>(
+        `SELECT sc.id, sc.standings_dsl FROM tournaments t
          JOIN standings_configs sc ON sc.id = t.standings_config_id WHERE t.id=$1`,
         [sourceTournamentID]
     );
@@ -954,7 +954,7 @@ async function duplicateTiebreaker(sourceTournamentID: string, newTournamentID: 
     if (isTemplate) {
         await dbQuery('UPDATE tournaments SET standings_config_id=$1 WHERE id=$2', [cfg.id, newTournamentID]);
     } else {
-        const newCfg = (await dbQuery<{ id: string }>('INSERT INTO standings_configs (stats_xml, standings_xml) VALUES ($1,$2) RETURNING id', [cfg.stats_xml, cfg.standings_xml]))?.rows[0];
+        const newCfg = (await dbQuery<{ id: string }>('INSERT INTO standings_configs (standings_dsl) VALUES ($1) RETURNING id', [cfg.standings_dsl]))?.rows[0];
         if (newCfg) await dbQuery('UPDATE tournaments SET standings_config_id=$1 WHERE id=$2', [newCfg.id, newTournamentID]);
     }
 }
@@ -1377,4 +1377,78 @@ export async function getTournamentSummary(tournamentId: string) : Promise<ITour
             withConflicts: row.scorers_with_conflicts,
         },
     };
+}
+
+export async function getCustomRosterColumns(tournamentId : string) : Promise<ICustomRosterColumn[]> {
+    const rows = (await dbQuery<ICustomRosterColumnRow>(`SELECT * from custom_roster_column_definitions where tournament_id = $1 ORDER BY position`,[tournamentId]))?.rows;
+    if (rows === undefined) throw new NotFoundError('Could not query columns');
+
+    return rows.map<ICustomRosterColumn>(row => ({field: row.column_name, type: row.type}));
+}
+
+export interface IRosterExportRow {
+    team_name: string;
+    student_name: string;
+    pronouns: string | null;
+    custom_data: { field: string; type: string; value: string | number }[] | null;
+}
+
+/** All rostered students across every team in the tournament, ordered by team then student. */
+export async function getAllRosters(tournamentId: string): Promise<IRosterExportRow[]> {
+    const result = await dbQuery<IRosterExportRow>(
+        `SELECT t.name AS team_name, trs.student_name, trs.pronouns, trs.custom_data
+         FROM teams t
+         JOIN team_rostered_students trs ON trs.team_id = t.id
+         WHERE t.tournament_id = $1
+         ORDER BY t.name, trs.student_name`,
+        [tournamentId]
+    );
+    if (!result) throw new DbError('getAllRosters');
+    return result.rows;
+}
+
+export async function addCustomRosterColumn(tournamentId: string, field: string, type: 'int' | 'string'): Promise<ICustomRosterColumn> {
+    // Reject a duplicate column name within the tournament — student custom_data
+    // is keyed by column name, so names must be unique per tournament.
+    const existing = (await dbQuery<{ column_name: string }>(
+        'SELECT column_name FROM custom_roster_column_definitions WHERE tournament_id=$1 AND LOWER(column_name)=LOWER($2)',
+        [tournamentId, field]
+    ))?.rows[0];
+    if (existing) throw new AlreadyExistsError('A column with that name already exists');
+
+    // Append after the current highest position.
+    const row = (await dbQuery<ICustomRosterColumnRow>(
+        `INSERT INTO custom_roster_column_definitions (tournament_id, position, type, column_name)
+         VALUES ($1, COALESCE((SELECT MAX(position) + 1 FROM custom_roster_column_definitions WHERE tournament_id=$1), 0), $2, $3)
+         RETURNING *`,
+        [tournamentId, type, field]
+    ))?.rows[0];
+    if (!row) throw new DbError('addCustomRosterColumn');
+    return { field: row.column_name, type: row.type };
+}
+
+export async function updateCustomRosterColumn(tournamentId: string, originalField: string, field: string, type: 'int' | 'string'): Promise<ICustomRosterColumn> {
+    // When renaming, ensure the new name does not collide with a different column.
+    if (originalField.toLowerCase() !== field.toLowerCase()) {
+        const clash = (await dbQuery<{ column_name: string }>(
+            'SELECT column_name FROM custom_roster_column_definitions WHERE tournament_id=$1 AND LOWER(column_name)=LOWER($2)',
+            [tournamentId, field]
+        ))?.rows[0];
+        if (clash) throw new AlreadyExistsError('A column with that name already exists');
+    }
+
+    const row = (await dbQuery<ICustomRosterColumnRow>(
+        'UPDATE custom_roster_column_definitions SET column_name=$1, type=$2 WHERE tournament_id=$3 AND column_name=$4 RETURNING *',
+        [field, type, tournamentId, originalField]
+    ))?.rows[0];
+    if (!row) throw new NotFoundError('roster column');
+    return { field: row.column_name, type: row.type };
+}
+
+export async function deleteCustomRosterColumn(tournamentId: string, field: string): Promise<void> {
+    const row = (await dbQuery<{ column_name: string }>(
+        'DELETE FROM custom_roster_column_definitions WHERE tournament_id=$1 AND column_name=$2 RETURNING column_name',
+        [tournamentId, field]
+    ))?.rows[0];
+    if (!row) throw new NotFoundError('roster column');
 }

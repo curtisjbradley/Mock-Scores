@@ -18,6 +18,8 @@ interface PairingFormatContext {
     scorerLastName: string;
     isPaper: boolean;
     fillableScores: boolean;
+    /** Whether to show the tiebreaker selection — true only for the presider's ballot. */
+    showTiebreaker: boolean;
 }
 
 /**
@@ -276,7 +278,7 @@ async function buildScoreSheetForPairing(ctx: PairingFormatContext): Promise<ISc
 
     return {
         isCriminal: tourney.criminal_case,
-        ballotOptions: { fillableScores: ctx.fillableScores },
+        ballotOptions: { fillableScores: ctx.fillableScores, showTiebreaker: ctx.showTiebreaker, },
         pairingID: pairing_id,
         scorer: {
             firstName: ctx.scorerFirstName,
@@ -290,6 +292,8 @@ async function buildScoreSheetForPairing(ctx: PairingFormatContext): Promise<ISc
         tournamentName: tourney.tournament_name,
         prosecutionCode: pTeam?.code ?? '',
         defenseCode: dTeam?.code ?? '',
+        prosecutionId: p_team,
+        defenseId: d_team,
         students: studentsRecord,
         witnesses: witnessesRecord,
         scoringCategories,
@@ -362,6 +366,7 @@ export async function getPairingBallotFormat(pairingId: string): Promise<IScoreS
         scorerLastName: '',
         isPaper: true,
         fillableScores: true,
+        showTiebreaker: false,
     });
 }
 
@@ -721,7 +726,7 @@ export async function getScoreSheet(assignmentId: string, options?: { skipGuards
 
     return {
         isCriminal: tourney.criminal_case,
-        ballotOptions: { fillableScores },
+        ballotOptions: { fillableScores, showTiebreaker: isPresider },
         pairingID: pairing_id,
         scorer: {
             firstName: scorerFirstName,
@@ -735,6 +740,8 @@ export async function getScoreSheet(assignmentId: string, options?: { skipGuards
         tournamentName: tourney.tournament_name,
         prosecutionCode: pTeam?.code ?? '',
         defenseCode: dTeam?.code ?? '',
+        prosecutionId: p_team,
+        defenseId: d_team,
         students: studentsRecord,
         witnesses: witnessesRecord,
         scoringCategories,
@@ -758,11 +765,12 @@ export async function submitBallot(assignmentId: string, payload: ScorecardPaylo
         d_team: string;
         is_presider: boolean;
     }>(`
-        SELECT spa.pairing_id, r.tournament_id, p.p_team, p.d_team, pres.presider_assignment_id = $1 as is_presider
+        SELECT spa.pairing_id, r.tournament_id, p.p_team, p.d_team,
+               (pres.scorer_assignment_id = spa.assignment_id) AS is_presider
         FROM scorer_pairing_assignments spa
         JOIN pairings p ON p.pairing_id = spa.pairing_id
         JOIN rounds r   ON r.round_id   = p.round_id
-        join scorer_presider_assignment pres on pres.pairing_id = p.pairing_id
+        LEFT JOIN scorer_presider_assignment pres ON pres.pairing_id = p.pairing_id
         WHERE spa.assignment_id = $1
     `, [assignmentId]))?.rows[0];
 
@@ -770,6 +778,11 @@ export async function submitBallot(assignmentId: string, payload: ScorecardPaylo
 
     const pPoints = payload.scores.filter(s => s.side === 'P').reduce((sum, s) => sum + s.score, 0);
     const dPoints = payload.scores.filter(s => s.side === 'D').reduce((sum, s) => sum + s.score, 0);
+
+    // Only the presider's ballot carries a tiebreaker. Every other ballot stores
+    // NULL so standings never credit a non-presider ballot with a tiebreaker win.
+    const isPresiderBallot = asg.is_presider === true;
+    const tiebreaker = isPresiderBallot ? payload.tiebreaker : null;
 
     // Insert the ballot and its nominations atomically: if any nomination insert
     // fails, the ballot insert is rolled back too, so we never persist a ballot
@@ -782,7 +795,7 @@ export async function submitBallot(assignmentId: string, payload: ScorecardPaylo
                 (scorer_assignment_id, tournament_id, pairing_id, ballot_json, p_team_id, d_team_id, p_points, d_points,  tiebreaker, presider_ballot)
              VALUES ($1, $2, $3, $4, $5, $6, $7, $8,$9,$10)
              RETURNING ballot_id`,
-            [assignmentId, asg.tournament_id, asg.pairing_id, JSON.stringify(payload), asg.p_team, asg.d_team, pPoints, dPoints, payload.tiebreaker, asg.is_presider],
+            [assignmentId, asg.tournament_id, asg.pairing_id, JSON.stringify(payload), asg.p_team, asg.d_team, pPoints, dPoints, tiebreaker, isPresiderBallot],
         );
         const ballotId = ballotResult.rows[0]?.ballot_id;
         if (!ballotId) throw new DbError('Failed to insert ballot');

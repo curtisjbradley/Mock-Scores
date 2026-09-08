@@ -108,8 +108,7 @@ export interface IDuplicateOptions {
 
 export interface IStandingsConfig {
     id: string
-    statsXml: string
-    standingsXml: string
+    dsl: string
 }
 
 export interface IStandingsTemplate {
