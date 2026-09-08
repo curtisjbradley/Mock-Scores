@@ -7,6 +7,7 @@ import { useConfirmRemove } from '../../shared/hooks/useConfirmRemove'
 import { useSession } from '../../shared/hooks/useSession'
 import InlineEmailEdit from '../../shared/components/InlineEmailEdit'
 import StatusChip from '../../shared/components/StatusChip'
+import EmailStatusBadge from '../../shared/components/EmailStatusBadge'
 import DangerButton from '../../shared/components/DangerButton'
 import AddButton from '../../shared/components/AddButton'
 
@@ -17,16 +18,11 @@ export default function OrganizersTab({ tournamentId }: { tournamentId: string }
     const confirmRemove = useConfirmRemove<IOrganizer>()
     const [editingId, setEditingId] = useState<string | null>(null)
     const [editEmail, setEditEmail] = useState('')
-    const [bouncedEmails, setBouncedEmails] = useState<Set<string>>(new Set())
 
     useEffect(() => {
         apiFetch(`/organizer/tournament/${tournamentId}/organizers`)
             .then(r => r.ok ? r.json() : Promise.reject())
             .then(setOrganizers).catch(console.error)
-        apiFetch(`/organizer/tournament/${tournamentId}/bounced-emails`)
-            .then(r => r.ok ? r.json() : [])
-            .then((emails: string[]) => setBouncedEmails(new Set(emails.map(e => e.toLowerCase()))))
-            .catch(() => {})
     }, [tournamentId])
 
     const saveEmail = (org: IOrganizer) => {
@@ -70,9 +66,7 @@ export default function OrganizersTab({ tournamentId }: { tournamentId: string }
                                           />
                                         : <span className="dash-judge-name">
                                             {org.email}
-                                            {bouncedEmails.has(org.email.toLowerCase()) && (
-                                                <span title="Email delivery failed" className="dash-bounced-badge">⚠ BOUNCED</span>
-                                            )}
+                                            <EmailStatusBadge status={org.email_status} />
                                           </span>
                                     }
                                 </td>

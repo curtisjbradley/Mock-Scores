@@ -5,7 +5,7 @@ import { IPairingCreationPayload, IRound } from "@mock-scores/shared";
 import { DbError, NotFoundError } from "../../errors";
 import { uuidRegex } from "../../authUtils";
 import { roundHandler } from "../../types/handlers";
-import { scorerInviteEmail, roundResultsPublicEmail, sendEmail } from "../../email";
+import { scorerInviteEmail, roundResultsPublicEmail, sendEmail, sendTrackedEmail } from "../../email";
 
 const BASE_URL = process.env.FRONTEND_URL ?? 'http://localhost:5173';
 
@@ -598,13 +598,23 @@ router.get('/ballot-status', roundHandler(async (req, res) => {
  *       500: { description: Database error }
  */
 router.post('/send-scoring-links', roundHandler(async (req, res) => {
+    // Scoring links must never go out before the round is locked (scoring opens on lock).
+    if (!req.round.locked) {
+        return res.status(409).json({ message: 'Lock the round before sending scoring links.' });
+    }
+    // Bulk send is one-time per round: if any scoring-link email has already been
+    // recorded for this round's assignments, refuse (individual resends use the
+    // per-assignment endpoint). This holds even across page reloads / other clients.
+    if (await organizer.hasSentScoringLinksForRound(req.round.round_id)) {
+        return res.status(409).json({ message: 'Scoring links have already been sent for this round.' });
+    }
     const contexts = await organizer.getScorerInviteContextsForRound(req.round.round_id);
     let sent = 0;
     for (const ctx of contexts) {
         const scorecardUrl = `${BASE_URL}/score/${ctx.assignmentId}`;
         const template = scorerInviteEmail(ctx.tournamentName, scorecardUrl);
-        sendEmail(ctx.email, template.subject, template.html, template.text)
-            .then(() => { /* fire-and-forget */ })
+        sendTrackedEmail(ctx.email, template.subject, template.html, template.text,
+            { type: 'scoring_link', id: ctx.assignmentId })
             .catch(console.error);
         sent++;
     }
@@ -636,6 +646,10 @@ router.post('/send-scoring-links', roundHandler(async (req, res) => {
  *       500: { description: Database error }
  */
 router.post('/send-scoring-links/:assignment', roundHandler(async (req, res) => {
+    // Scoring links must never go out before the round is locked (scoring opens on lock).
+    if (!req.round.locked) {
+        return res.status(409).json({ message: 'Lock the round before sending scoring links.' });
+    }
     const assignment = req.params.assignment as string;
     const context = await organizer.getScorerInviteContextForAssignment(assignment);
     if (context === null) {
@@ -644,7 +658,8 @@ router.post('/send-scoring-links/:assignment', roundHandler(async (req, res) => 
 
     const scorecardUrl = `${BASE_URL}/score/${context.assignmentId}`;
     const template = scorerInviteEmail(context.tournamentName, scorecardUrl);
-    return await sendEmail(context.email, template.subject, template.html, template.text)
+    return await sendTrackedEmail(context.email, template.subject, template.html, template.text,
+        { type: 'scoring_link', id: context.assignmentId })
         .then(() => res.status(200).json({sent: true}) )
         .catch((err) => res.status(500).json({message: `Error when attempting to send email: ${err}`}))
 }));

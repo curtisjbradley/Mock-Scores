@@ -5,7 +5,7 @@ import { uuidRegex } from "../../authUtils";
 import { dbQuery } from "../../db";
 import { AuthenticatedRequest } from "../../types/express";
 import { authedHandler } from "../../types/handlers";
-import {coachAddedToTeam, EmailTemplate, isValidEmail, sendEmail} from "../../email";
+import {coachAddedToTeam, EmailTemplate, isValidEmail, sendTrackedEmail} from "../../email";
 import {getTeam, getTournamentFromTeamId} from "../../providers/coachProvider";
 import { removeCoachHandler, addStudentHandler, updateStudentCustomDataHandler } from "../teamHandlers";
 
@@ -81,7 +81,8 @@ router.post("/coaches", authedHandler(async (req, res) => {
     Promise.all([tournamentPromise, teamPromise]).then(([tournament,team]) => {
         if(!team || !tournament) return;
         const message : EmailTemplate = coachAddedToTeam(newCoach.name, team.name, tournament.name, team.id)
-        sendEmail(newCoach.email, message.subject, message.html, message.text);
+        sendTrackedEmail(newCoach.email, message.subject, message.html, message.text,
+            { type: 'coach_invite', id: team.id });
         }
     ).catch(err => console.error(err));
 
