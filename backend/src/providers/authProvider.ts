@@ -50,7 +50,7 @@ export class AuthProvider {
         teamInvites.rows.forEach(row =>
             dbQuery(
                 'INSERT INTO team_coaches (team_id, coach_id, is_owner) VALUES ($1, $2, $3)',
-                [row.team_id, userId, 'delegate'],
+                [row.team_id, userId, false],
             ),
         );
     }
