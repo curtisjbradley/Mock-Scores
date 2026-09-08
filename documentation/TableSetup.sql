@@ -328,6 +328,7 @@ create table rounds
             on delete cascade,
     results_public boolean default false             not null,
     teams_public   boolean default false             not null,
+    locked         boolean default false             not null,
     name           text                              not null,
     round_time     timestamp with time zone
 );

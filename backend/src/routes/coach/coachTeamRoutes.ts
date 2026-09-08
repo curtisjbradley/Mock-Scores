@@ -336,6 +336,7 @@ router.put("/pairings/:pairingId/witness-order", authedHandler(async (req, res) 
     if (!uuidRegex.test(pairingId)) return res.status(400).json({ message: "Invalid pairing ID" });
     const { witness_ids } = req.body as { witness_ids?: string[] };
     if (!Array.isArray(witness_ids)) return res.status(400).json({ message: "witness_ids must be an array" });
+    if (await coach.isPairingRoundLocked(pairingId)) return res.status(409).json({ message: "This round is locked; call order can no longer be edited." });
     await coach.setWitnessCallOrder(pairingId, req.params.teamId as string, witness_ids);
     return res.status(200).json({ success: true });
 }));
@@ -401,6 +402,7 @@ router.put("/pairings/:pairingId/assignments", authedHandler(async (req, res) =>
     if (!uuidRegex.test(pairingId)) return res.status(400).json({ message: "Invalid pairing ID" });
     const { field_id, student_id, witness_id } = req.body as { field_id?: string; student_id?: string; witness_id?: string };
     if (!field_id || !student_id) return res.status(400).json({ message: "Missing field_id or student_id" });
+    if (await coach.isPairingRoundLocked(pairingId)) return res.status(409).json({ message: "This round is locked; role assignments can no longer be edited." });
     try {
         return res.status(200).json(await coach.upsertStudentAssignment(pairingId, req.params.teamId as string, field_id, student_id, witness_id ?? null));
     } catch (e) {
@@ -414,6 +416,7 @@ router.post("/pairings/:pairingId/assignments/bulk", authedHandler(async (req, r
     if (!uuidRegex.test(pairingId)) return res.status(400).json({ message: "Invalid pairing ID" });
     const { assignments } = req.body as { assignments?: { field_id: string; student_id: string; witness_id?: string | null }[] };
     if (!Array.isArray(assignments)) return res.status(400).json({ message: "assignments must be an array" });
+    if (await coach.isPairingRoundLocked(pairingId)) return res.status(409).json({ message: "This round is locked; role assignments can no longer be edited." });
     try {
         await coach.bulkUpsertStudentAssignments(pairingId, req.params.teamId as string, assignments);
         return res.status(200).json({ success: true });

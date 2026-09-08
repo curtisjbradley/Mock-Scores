@@ -269,7 +269,7 @@ export function buildBallotInner(fmt: IScoreSheetFormat, meta: BallotMeta = {}):
 export function buildBallotHtml(fmt: IScoreSheetFormat, meta: BallotMeta = {}): string {
     const pCode = esc(meta.prosecutionCode ?? fmt.prosecutionCode)
     const dCode = esc(meta.defenseCode ?? fmt.defenseCode)
-    const title = `Ballot — ${pCode} v. ${dCode}`
+    const title = `Ballot - ${pCode} v. ${dCode}`
 
     return `<!DOCTYPE html>
 <html lang="en">
@@ -315,6 +315,7 @@ const MAX_BALLOT_FONT = 48
  *
  * @param innerHtml The `.ballot` markup from {@link buildBallotInner}.
  * @param maxHeight Available page height in CSS px (defaults to a Letter page).
+ * @param maxWidth Available page width in CSS px (defaults to a Letter page).
  * @returns The chosen font-size in px.
  */
 export function fitBallotFontSize(

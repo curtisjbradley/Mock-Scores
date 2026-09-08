@@ -367,6 +367,7 @@ describe('coachTeamRoutes — team access + uncovered paths', () => {
 
     it('PUT /pairings/:pairingId/assignments returns 500 on db failure', async () => {
         mockDbQuery.mockResolvedValueOnce({ rows: [{ coach_id: 'user-1' }], rowCount: 1 } as any); // team access
+        mockDbQuery.mockResolvedValueOnce({ rows: [{ locked: false }], rowCount: 1 } as any); // isPairingRoundLocked
         mockDbQuery.mockResolvedValueOnce(null); // upsert fails
         const res = await request(app)
             .put(`/coach/teams/${TEAM_ID}/pairings/${PAIRING_ID}/assignments`)

@@ -45,14 +45,25 @@ describe('GET /api/coach/tournaments/:id/pairings/:pairingId/ballots', () => {
         expect(res.status).toBe(400);
     });
 
-    it('returns 404 when pairing results are not published', async () => {
-        // canViewPairingResults returns false
+    it('returns 404 when the coach has no team in the tournament', async () => {
+        // getTeamIdForCoach returns no row
         mockDbQuery.mockResolvedValueOnce({ rows: [], rowCount: 0 } as any);
         const res = await request(app).get(url).set(auth());
         expect(res.status).toBe(404);
     });
 
-    it('returns 200 with ballot summaries when results are public', async () => {
+    it('returns 404 when pairing results are not published or the team did not compete', async () => {
+        // getTeamIdForCoach → coach's team
+        mockDbQuery.mockResolvedValueOnce({ rows: [{ team_id: TEAM }], rowCount: 1 } as any);
+        // canViewPairingResults returns false (not public, or team not in pairing)
+        mockDbQuery.mockResolvedValueOnce({ rows: [], rowCount: 0 } as any);
+        const res = await request(app).get(url).set(auth());
+        expect(res.status).toBe(404);
+    });
+
+    it('returns 200 with ballot summaries when results are public and the team competed', async () => {
+        // getTeamIdForCoach → coach's team
+        mockDbQuery.mockResolvedValueOnce({ rows: [{ team_id: TEAM }], rowCount: 1 } as any);
         // canViewPairingResults returns true
         mockDbQuery.mockResolvedValueOnce({ rows: [{ pairing_id: PID }], rowCount: 1 } as any);
         // getPairingBallots
@@ -90,7 +101,16 @@ describe('GET /api/coach/tournaments/:id/pairings/:pairingId/ballots/:assignment
         expect(res.status).toBe(400);
     });
 
-    it('returns 404 when assignment is not in a public-results pairing', async () => {
+    it('returns 404 when the coach has no team in the tournament', async () => {
+        // getTeamIdForCoach → no row
+        mockDbQuery.mockResolvedValueOnce({ rows: [], rowCount: 0 } as any);
+        const res = await request(app).get(url).set(auth());
+        expect(res.status).toBe(404);
+    });
+
+    it('returns 404 when assignment is not in a public-results pairing the team competed in', async () => {
+        // getTeamIdForCoach → coach's team
+        mockDbQuery.mockResolvedValueOnce({ rows: [{ team_id: TEAM }], rowCount: 1 } as any);
         // isAssignmentInPairingWithPublicResults returns false
         mockDbQuery.mockResolvedValueOnce({ rows: [], rowCount: 0 } as any);
         const res = await request(app).get(url).set(auth());
@@ -98,6 +118,8 @@ describe('GET /api/coach/tournaments/:id/pairings/:pairingId/ballots/:assignment
     });
 
     it('returns 200 with redacted scoresheet and ballot data', async () => {
+        // getTeamIdForCoach → coach's team
+        mockDbQuery.mockResolvedValueOnce({ rows: [{ team_id: TEAM }], rowCount: 1 } as any);
         // isAssignmentInPairingWithPublicResults returns true
         mockDbQuery.mockResolvedValueOnce({ rows: [{ assignment_id: AID }], rowCount: 1 } as any);
         // getScoreSheet (skipGuards): assignment lookup
@@ -155,6 +177,8 @@ describe('GET /api/coach/tournaments/:id/pairings/:pairingId/ballots/:assignment
     });
 
     it('strips award nominations from the ballot when share_individual_rankings is false', async () => {
+        // getTeamIdForCoach → coach's team
+        mockDbQuery.mockResolvedValueOnce({ rows: [{ team_id: TEAM }], rowCount: 1 } as any);
         // isAssignmentInPairingWithPublicResults returns true
         mockDbQuery.mockResolvedValueOnce({ rows: [{ assignment_id: AID }], rowCount: 1 } as any);
         // getScoreSheet (skipGuards): assignment lookup
@@ -210,6 +234,8 @@ describe('GET /api/coach/tournaments/:id/pairings/:pairingId/ballots/:assignment
     });
 
     it('returns 404 when both sheet and ballot are null', async () => {
+        // getTeamIdForCoach → coach's team
+        mockDbQuery.mockResolvedValueOnce({ rows: [{ team_id: TEAM }], rowCount: 1 } as any);
         // isAssignmentInPairingWithPublicResults
         mockDbQuery.mockResolvedValueOnce({ rows: [{ assignment_id: AID }], rowCount: 1 } as any);
         // getScoreSheet throws (assignment not found) → caught → null
@@ -380,6 +406,7 @@ describe('POST /api/coach/teams/:teamId/pairings/:pairingId/assignments/bulk', (
 
     it('returns 200 with empty assignments array', async () => {
         mockTeamAccess();
+        mockDbQuery.mockResolvedValueOnce({ rows: [{ locked: false }], rowCount: 1 } as any); // isPairingRoundLocked
         const res = await request(app).post(url).set(auth())
             .send({ assignments: [] });
         expect(res.status).toBe(200);
@@ -388,6 +415,7 @@ describe('POST /api/coach/teams/:teamId/pairings/:pairingId/assignments/bulk', (
 
     it('returns 200 on success with assignments', async () => {
         mockTeamAccess();
+        mockDbQuery.mockResolvedValueOnce({ rows: [{ locked: false }], rowCount: 1 } as any); // isPairingRoundLocked
         mockDbQuery.mockResolvedValueOnce({ rows: [], rowCount: 1 } as any); // UPSERT 1
         mockDbQuery.mockResolvedValueOnce({ rows: [], rowCount: 1 } as any); // UPSERT 2
         const res = await request(app).post(url).set(auth())
@@ -396,6 +424,14 @@ describe('POST /api/coach/teams/:teamId/pairings/:pairingId/assignments/bulk', (
                 { field_id: 'f2', student_id: 's2', witness_id: 'w1' },
             ] });
         expect(res.status).toBe(200);
+    });
+
+    it('returns 409 when the round is locked', async () => {
+        mockTeamAccess();
+        mockDbQuery.mockResolvedValueOnce({ rows: [{ locked: true }], rowCount: 1 } as any); // isPairingRoundLocked
+        const res = await request(app).post(url).set(auth())
+            .send({ assignments: [{ field_id: FID, student_id: SID }] });
+        expect(res.status).toBe(409);
     });
 });
 

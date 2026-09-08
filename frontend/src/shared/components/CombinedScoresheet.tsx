@@ -21,6 +21,16 @@ export interface SegmentRow {
     student: string | null
 }
 
+/** A single tournament-configured stat, computed for this trial, per side. */
+export interface CombinedStat {
+    /** Column label from the tournament's standings config. */
+    label: string
+    /** Value for the prosecution/plaintiff side. */
+    prosecution: number
+    /** Value for the defense side. */
+    defense: number
+}
+
 interface Props {
     rows: SegmentRow[]
     ballots: CombinedBallot[]
@@ -36,6 +46,14 @@ interface Props {
      * (matches `prosecutionCode` or `defenseCode`), or '' / null if none.
      */
     tiebreaker?: string | null
+    /**
+     * The tournament's configured standings stats, computed for this trial only.
+     * When provided, they are shown alongside the raw point percentages so the
+     * sheet reflects how the tournament actually tabulates (ballots won, point
+     * differential, custom stats, …) rather than points alone. Empty/omitted →
+     * only the point split is shown.
+     */
+    statSummary?: CombinedStat[] | null
 }
 
 /**
@@ -49,7 +67,7 @@ interface Props {
  * keys (labelling scorers however the viewer's role permits).
  */
 export default function CombinedScoresheet({
-    rows, ballots, prosLabel, prosecutionCode, defenseCode, roundLabel, dateLabel, tiebreaker,
+    rows, ballots, prosLabel, prosecutionCode, defenseCode, roundLabel, dateLabel, tiebreaker, statSummary,
 }: Props) {
     // Per-scorer column totals (sum of that scorer's scores on each side).
     const scorerTotals = ballots.map(b => {
@@ -61,20 +79,6 @@ export default function CombinedScoresheet({
         }
         return { p, d }
     })
-
-    // Grand totals across all scorers, per side.
-    const totalP = scorerTotals.reduce((a, t) => a + t.p, 0)
-    const totalD = scorerTotals.reduce((a, t) => a + t.d, 0)
-
-    // Percentages: each side's share of the combined points (mirrors the sheet's
-    // "Pros % / Def %" split used to determine the winner on points).
-    const combined = totalP + totalD
-    const prosPct = combined ? totalP / combined : 0
-    const defPct = combined ? totalD / combined : 0
-    const winner =
-        totalP > totalD ? `${prosLabel} (${prosecutionCode})`
-        : totalD > totalP ? `Defense (${defenseCode})`
-        : 'Tie'
 
     // Resolve the presider tiebreaker (a team code) to a readable side + code.
     const tiebreakerText = tiebreaker
@@ -144,34 +148,51 @@ export default function CombinedScoresheet({
             </div>
 
             {/* Summary: percentages + tiebreaker + winner */}
-            <div className="cs-summary">
-                <div className="cs-summary-pcts">
-                    <div className="cs-pct">
-                        <span className="cs-pct-label">{prosLabel} ({prosecutionCode})</span>
-                        <span className="cs-pct-points">{totalP}</span>
-                        <span className="cs-pct-value">{(prosPct * 100).toFixed(2)}%</span>
-                    </div>
-                    <div className="cs-pct">
-                        <span className="cs-pct-label">Defense ({defenseCode})</span>
-                        <span className="cs-pct-points">{totalD}</span>
-                        <span className="cs-pct-value">{(defPct * 100).toFixed(2)}%</span>
-                    </div>
+            {tiebreakerText && (
+                <div className="cs-tiebreaker">
+                    <span className="cs-tiebreaker-label">Presider tiebreaker:</span>
+                    <span className="cs-tiebreaker-value">{tiebreakerText}</span>
                 </div>
-                <div className="cs-summary-right">
-                    {tiebreakerText && (
-                        <div className="cs-tiebreaker">
-                            <span className="cs-tiebreaker-label">Presider tiebreaker:</span>
-                            <span className="cs-tiebreaker-value">{tiebreakerText}</span>
-                        </div>
-                    )}
-                    <div className="cs-winner">
-                        <span className="cs-winner-label">Winner:</span>
-                        <span className="cs-winner-value">{winner}</span>
-                    </div>
+            )}
+
+            {/* Tournament-configured stats for this trial, when available. Mirrors
+                the coach results view: shows how the tournament actually tabulates,
+                not just raw points. */}
+            {statSummary && statSummary.length > 0 && (
+                <div className="cs-stats">
+                    <div className="cs-stats-title">Tournament stats - this trial</div>
+                    <table className="cs-stats-table">
+                        <thead>
+                            <tr>
+                                <th className="cs-stats-label-col">Stat</th>
+                                <th className="cs-side-p">{prosLabel === 'Prosecution' ? 'Pros' : 'Pl'} ({prosecutionCode})</th>
+                                <th className="cs-side-d">Def ({defenseCode})</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {statSummary.map((s, i) => {
+                                const pLead = s.prosecution > s.defense
+                                const dLead = s.defense > s.prosecution
+                                return (
+                                    <tr key={i}>
+                                        <td className="cs-stats-label-col">{s.label}</td>
+                                        <td className={`cs-side-p${pLead ? ' cs-stat-lead' : ''}`}>{fmtStat(s.prosecution)}</td>
+                                        <td className={`cs-side-d${dLead ? ' cs-stat-lead' : ''}`}>{fmtStat(s.defense)}</td>
+                                    </tr>
+                                )
+                            })}
+                        </tbody>
+                    </table>
                 </div>
-            </div>
+            )}
         </div>
     )
+}
+
+/** Formats a computed stat value (integers plain, else 3 dp, NaN as —). */
+function fmtStat(value: number): string {
+    if (Number.isNaN(value)) return '—'
+    return Number.isInteger(value) ? String(value) : value.toFixed(3)
 }
 
 /** The paired "Pros / Def" sub-header cells under a scorer column. */

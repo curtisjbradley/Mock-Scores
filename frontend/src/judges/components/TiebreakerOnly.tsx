@@ -2,8 +2,9 @@ import { API_BASE } from '../../config';
 import "../styles/modal.css";
 import "../styles/scoresheet.css";
 import "../styles/conflict-check.css";
-import { useState } from "react";
+import { useState} from "react";
 import type { IScoreSheetFormat } from "@mock-scores/shared";
+
 
 interface TiebreakerOnlyProps {
     /** Full scoresheet data. Scoring categories are shown as a read-only roster. */
@@ -30,6 +31,7 @@ function TiebreakerOnly({ details, storageKey, onSubmitSuccess }: TiebreakerOnly
     /** Resolves a student ID to its info object, or null. */
     const student = (id: string | null) => id ? (details.students[id] ?? null) : null;
     const { categoryOrder, scoringCategories, witnesses } = details;
+
 
     const handleSubmit = async () => {
         if (!tiebreaker || submitting) return;
@@ -158,13 +160,13 @@ function TiebreakerOnly({ details, storageKey, onSubmitSuccess }: TiebreakerOnly
 
             <div className="scoresheet-footer scoresheet-footer--tiebreaker">
                 <div className="tiebreaker-options">
-                    <label className={`tiebreaker-option${tiebreaker === details.prosecutionCode ? " tiebreaker-option--selected" : ""}`}>
-                        <input type="radio" name="tiebreaker" value={details.prosecutionCode} checked={tiebreaker === details.prosecutionCode} onChange={(e) => setTiebreaker(e.target.value)} />
+                    <label className={`tiebreaker-option${tiebreaker === details.prosecutionId ? " tiebreaker-option--selected" : ""}`}>
+                        <input type="radio" name="tiebreaker" value={details.prosecutionId} checked={tiebreaker === details.prosecutionId} onChange={(e) => setTiebreaker(e.target.value)} />
                         <span className="tiebreaker-code">{details.prosecutionCode}</span>
                         <span className="tiebreaker-role">{prosecutionLabel}</span>
                     </label>
-                    <label className={`tiebreaker-option${tiebreaker === details.defenseCode ? " tiebreaker-option--selected" : ""}`}>
-                        <input type="radio" name="tiebreaker" value={details.defenseCode} checked={tiebreaker === details.defenseCode} onChange={(e) => setTiebreaker(e.target.value)} />
+                    <label className={`tiebreaker-option${tiebreaker === details.defenseId ? " tiebreaker-option--selected" : ""}`}>
+                        <input type="radio" name="tiebreaker" value={details.defenseId} checked={tiebreaker === details.defenseId} onChange={(e) => setTiebreaker(e.target.value)} />
                         <span className="tiebreaker-code">{details.defenseCode}</span>
                         <span className="tiebreaker-role">Defense</span>
                     </label>
@@ -178,7 +180,7 @@ function TiebreakerOnly({ details, storageKey, onSubmitSuccess }: TiebreakerOnly
                 <div className="modal-backdrop" role="presentation" onClick={(e) => { if (e.target === e.currentTarget) setConfirming(false); }}>
                     <div className="confirm-modal" role="dialog" aria-modal="true" aria-labelledby="tb-confirm-title">
                         <h2 id="tb-confirm-title">Submit tiebreaker?</h2>
-                        <p>You selected team <strong>{tiebreaker} — {tiebreaker === details.prosecutionCode ? prosecutionLabel : "Defense"}</strong>. This cannot be undone.</p>
+                        <p>You selected team <strong>{tiebreaker == details.prosecutionId ? details.prosecutionCode : details.defenseCode} - {tiebreaker === details.prosecutionId ? prosecutionLabel : "Defense"}</strong>. This cannot be undone.</p>
                         {submitError && (
                             <p className="ranking-error" role="alert">{submitError}</p>
                         )}

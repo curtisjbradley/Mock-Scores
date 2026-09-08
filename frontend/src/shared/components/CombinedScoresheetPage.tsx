@@ -2,12 +2,18 @@ import { useEffect, useState } from 'react'
 import { useParams, useNavigate, useSearchParams } from 'react-router-dom'
 import { apiFetch } from '../../auth/auth'
 import type { IScoreSheetFormat, ScorecardPayload, IPairingScorer, BallotLayoutSegment } from '@mock-scores/shared'
-import CombinedScoresheet, { type CombinedBallot, type SegmentRow } from './CombinedScoresheet'
+import CombinedScoresheet, { type CombinedBallot, type CombinedStat, type SegmentRow } from './CombinedScoresheet'
 import { downloadCombinedXlsx } from './combinedScoresheetXls'
 import { resolveCoachTournament } from '../../coach/coachApi'
+import { parseDsl } from '../../organizer/blockly/standingsDsl'
+import type { StandingsConfig } from '../../organizer/blockly/standingsGenerator'
+import { computePairingStats, type PairingBallot } from '../../coach/pairingStats'
 import './combined-scoresheet.css'
 
 type BallotDetail = { sheet: IScoreSheetFormat | null; ballot: ScorecardPayload | null }
+
+/** A scorer's ballot point totals for the pairing, used to compute per-trial stats. */
+type BallotPoints = { p_points: number; d_points: number }
 
 /** Formats an ISO date-time string as a localized date + time, or '' when absent/invalid. */
 function formatRoundTime(iso: string | null): string | null {
@@ -26,13 +32,15 @@ function formatRoundTime(iso: string | null): string | null {
     defenseCode: string
     /** Presider tiebreaker (a team code) from whichever ballot recorded one. */
     tiebreaker: string | null
+    /** Tournament-configured standings stats for this trial, or null if no config. */
+    statSummary: CombinedStat[] | null
 }
 
 /** Builds canonical segment rows from a ballot's stored layout snapshot. */
 function rowsFromLayout(layout: BallotLayoutSegment[]): SegmentRow[] {
     return layout.map(seg => ({
         key: seg.assignmentKey,
-        label: seg.witnessName ? `${seg.assignmentName} — ${seg.witnessName}` : seg.assignmentName,
+        label: seg.witnessName ? `${seg.witnessName}: ${seg.assignmentName}` : seg.assignmentName,
         hasP: seg.side !== 'D',
         hasD: seg.side !== 'P',
         student: seg.pStudentName ?? seg.dStudentName,
@@ -51,7 +59,7 @@ function rowsFromSheet(sheet: IScoreSheetFormat): SegmentRow[] {
             const dName = a.dStudentId ? sheet.students[a.dStudentId]?.name ?? null : null
             rows.push({
                 key: a.assignmentKey,
-                label: witnessName ? `${a.assignmentName} — ${witnessName}` : a.assignmentName,
+                label: witnessName ? `${witnessName}: ${a.assignmentName}` : a.assignmentName,
                 hasP: a.side !== 'D',
                 hasD: a.side !== 'P',
                 student: pName ?? dName,
@@ -169,19 +177,29 @@ export default function CombinedScoresheetPage() {
             const info = await resolveCoachTournament(routeId, false, undefined)
             const tid = info?.tournamentId
             if (!tid) throw new Error('Failed to resolve tournament')
-            const listRes = await apiFetch(`/coach/tournaments/${tid}/pairings/${pairingId}/ballots`)
+            const [listRes, standingsRes] = await Promise.all([
+                apiFetch(`/coach/tournaments/${tid}/pairings/${pairingId}/ballots`),
+                apiFetch(`/coach/tournaments/${tid}/standings`).catch(() => null),
+            ])
             if (!listRes.ok) throw new Error('Failed to load ballots')
-            const list = await listRes.json() as { assignment_id: string }[]
+            const list = await listRes.json() as { assignment_id: string; p_points: number; d_points: number }[]
             const details = await Promise.all(list.map(b =>
                 apiFetch(`/coach/tournaments/${tid}/pairings/${pairingId}/ballots/${b.assignment_id}`)
                     .then(r => r.ok ? r.json() as Promise<BallotDetail> : null)
             ))
-            return buildData(details, (_d, i) => `Scorer ${i + 1}`)
+            const points: BallotPoints[] = list.map(b => ({ p_points: b.p_points, d_points: b.d_points }))
+            const dsl = standingsRes?.ok
+                ? (await standingsRes.json().catch(() => null) as { config?: { dsl?: string } } | null)?.config?.dsl ?? null
+                : null
+            return buildData(details, (_d, i) => `Scorer ${i + 1}`, points, dsl)
         }
 
         const loadOrganizer = async (): Promise<LoadedData | null> => {
             if (!round) throw new Error('Missing round')
-            const scorersRes = await apiFetch(`/organizer/tournament/${routeId}/rounds/${round}/pairings/${pairingId}/scorers`)
+            const [scorersRes, configRes] = await Promise.all([
+                apiFetch(`/organizer/tournament/${routeId}/rounds/${round}/pairings/${pairingId}/scorers`),
+                apiFetch(`/organizer/tournament/${routeId}/standings-config`).catch(() => null),
+            ])
             if (!scorersRes.ok) throw new Error('Failed to load scorers')
             const scorers = await scorersRes.json() as IPairingScorer[]
             // Only scorers who have actually submitted a ballot contribute columns.
@@ -190,7 +208,11 @@ export default function CombinedScoresheetPage() {
                 apiFetch(`/organizer/tournament/${routeId}/pairings/${pairingId}/scoresheets/${s.assignment_id}`)
                     .then(r => r.ok ? r.json() as Promise<BallotDetail> : null)
             ))
-            return buildData(details, (_d, i) => submitted[i]?.name || `Scorer ${i + 1}`)
+            const points: BallotPoints[] = submitted.map(s => ({ p_points: s.p_points ?? 0, d_points: s.d_points ?? 0 }))
+            const dsl = configRes?.ok
+                ? (await configRes.json().catch(() => null) as { dsl?: string } | null)?.dsl ?? null
+                : null
+            return buildData(details, (_d, i) => submitted[i]?.name || `Scorer ${i + 1}`, points, dsl)
         }
 
         const run = async () => {
@@ -250,6 +272,7 @@ export default function CombinedScoresheetPage() {
                             roundLabel,
                             dateLabel,
                             tiebreaker: data.tiebreaker,
+                            statSummary: data.statSummary,
                         },
                         `scoresheet-${data.prosecutionCode || 'pros'}-vs-${data.defenseCode || 'def'}.xlsx`,
                     )}
@@ -266,6 +289,7 @@ export default function CombinedScoresheetPage() {
                 roundLabel={roundLabel}
                 dateLabel={dateLabel}
                 tiebreaker={data.tiebreaker}
+                statSummary={data.statSummary}
             />
         </main>
     )
@@ -282,8 +306,13 @@ export default function CombinedScoresheetPage() {
 function buildData(
     details: (BallotDetail | null)[],
     label: (d: BallotDetail, index: number) => string,
+    points: BallotPoints[],
+    dsl: string | null,
 ): LoadedData | null {
-    const usable = details.filter((d): d is BallotDetail => !!d && !!d.ballot)
+    // Keep each detail paired with its point totals so filtering stays aligned.
+    const paired = details.map((d, i) => ({ d, pts: points[i] }))
+    const usablePairs = paired.filter((x): x is { d: BallotDetail; pts: BallotPoints } => !!x.d && !!x.d.ballot)
+    const usable = usablePairs.map(x => x.d)
     if (usable.length === 0) return null
 
     const sheet = usable.find(d => d.sheet)?.sheet ?? null
@@ -300,12 +329,66 @@ function buildData(
     // carry them, so fall back to blanks (rows still render correctly).
     // The presider tiebreaker is taken from whichever ballot recorded one.
     const tiebreaker = usable.map(d => d.ballot?.tiebreaker).find(t => !!t) ?? null
+    const prosLabel = sheet ? (sheet.isCriminal ? 'Prosecution' : 'Plaintiff') : 'Prosecution'
+    const prosecutionCode = sheet?.prosecutionCode ?? ''
+    const defenseCode = sheet?.defenseCode ?? ''
+
+    // Compute the tournament's configured standings stats for this trial, when a
+    // config is available and team codes are known (needed to key the engine).
+    const statSummary = buildStatSummary(
+        dsl,
+        usablePairs.map(x => x.pts),
+        prosecutionCode,
+        defenseCode,
+        tiebreaker,
+    )
+
     return {
         rows,
         ballots,
-        prosLabel: sheet ? (sheet.isCriminal ? 'Prosecution' : 'Plaintiff') : 'Prosecution',
-        prosecutionCode: sheet?.prosecutionCode ?? '',
-        defenseCode: sheet?.defenseCode ?? '',
+        prosLabel,
+        prosecutionCode,
+        defenseCode,
         tiebreaker,
+        statSummary,
     }
+}
+
+/**
+ * Runs the tournament's standings DSL over this trial's per-ballot points to
+ * produce per-side stat values, using the same engine the standings page uses.
+ * Returns null when there is no config or the team codes are unknown (the engine
+ * keys teams by code).
+ */
+function buildStatSummary(
+    dsl: string | null,
+    points: BallotPoints[],
+    prosecutionCode: string,
+    defenseCode: string,
+    tiebreaker: string | null,
+): CombinedStat[] | null {
+    if (!dsl || !prosecutionCode || !defenseCode || points.length === 0) return null
+    let config: StandingsConfig
+    try {
+        config = parseDsl(dsl)
+    } catch {
+        return null
+    }
+    if (config.columns.length === 0) return null
+
+    const pairingBallots: PairingBallot[] = points.map(p => ({
+        p_points: p.p_points,
+        d_points: p.d_points,
+        presider_ballot: false,
+        tiebreaker: null,
+    }))
+    const tbWinner: 'P' | 'D' | null =
+        tiebreaker === prosecutionCode ? 'P' : tiebreaker === defenseCode ? 'D' : null
+
+    const stats = computePairingStats(config, pairingBallots, prosecutionCode, defenseCode, tbWinner)
+    return config.columns.map(c => ({
+        label: c.label,
+        prosecution: stats.prosecution.cells.find(x => x.stat === c.stat)?.value ?? NaN,
+        defense: stats.defense.cells.find(x => x.stat === c.stat)?.value ?? NaN,
+    }))
 }

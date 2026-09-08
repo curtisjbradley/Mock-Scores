@@ -31,6 +31,7 @@ export default function AssignRoles() {
     const [students, setStudents] = useState<IStudent[]>([])
     const [pending, setPending] = useState<Map<string, string>>(new Map())
     const [saving, setSaving] = useState(false)
+    const [error, setError] = useState<string | null>(null)
 
     useEffect(() => {
         if (!teamId || !pairingId) return
@@ -93,15 +94,21 @@ export default function AssignRoles() {
     async function handleSave() {
         if (!teamId || !pairingId) return
         setSaving(true)
+        setError(null)
         // Send all assigned rows in one request
         const assignments = rows
             .filter(r => pending.get(r.key))
             .map(r => ({ field_id: r.fieldId, student_id: pending.get(r.key)!, witness_id: r.witnessId ?? null }))
-        await apiFetch(`/coach/teams/${teamId}/pairings/${pairingId}/assignments/bulk`, {
+        const res = await apiFetch(`/coach/teams/${teamId}/pairings/${pairingId}/assignments/bulk`, {
             method: 'POST',
             body: JSON.stringify({ assignments }),
         })
         setSaving(false)
+        if (!res.ok) {
+            const body = await res.json().catch(() => null) as { message?: string } | null
+            setError(body?.message ?? 'Could not save role assignments.')
+            return
+        }
         navigate(-1)
     }
 
@@ -141,6 +148,7 @@ export default function AssignRoles() {
                     )
                 }
                 <SaveCancelActions onSave={handleSave} onCancel={() => navigate(-1)} saving={saving} />
+                {error && <p className="coach-save-error" role="alert">{error}</p>}
             </div>
         </main>
     )

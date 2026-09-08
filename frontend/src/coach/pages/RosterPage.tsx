@@ -136,7 +136,7 @@ function SideSetupModal({
     return (
         <ModalBackdrop onClose={onClose}>
             <div className="confirm-modal coach-setup-modal" role="dialog" aria-modal="true">
-                <h2>{sideLabel} — Default Setup</h2>
+                <h2>{sideLabel} - Default Setup</h2>
 
                 {callOrderSlots.length > 0 && (
                     <>
@@ -321,7 +321,7 @@ export default function RosterPage() {
                                 {students.map(s => (
                                     <tr key={s.student_id}>
                                         <td className="dash-team-code">{s.student_name}</td>
-                                        <td>{s.pronouns ?? '—'}</td>
+                                        <td>{s.pronouns ?? '-'}</td>
                                         {rosterColumns.map(col => (
                                             <td key={col.field}>
                                                 <input
