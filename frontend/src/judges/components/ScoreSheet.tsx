@@ -1,326 +1,884 @@
 import "../styles/scoresheet.css";
-import { useEffect, useRef, useState } from "react";
+import {useEffect, useState} from "react";
 import {
+    type Control,
     type FieldErrors,
+    get,
     type SubmitHandler,
     useForm,
-    useFormState,
     type UseFormRegister,
-    type Control,
+    useFormState,
 } from "react-hook-form";
 
-import type { IScoreSheetFormat, IStudentInfo } from "@mock-scores/shared";
+import type {IScoreSheetFormat, IStudentInfo,} from "@mock-scores/shared";
+
 import ConfirmSubmitModal from "./ConfirmSubmitModal.tsx";
 
-/** Flat map of form field IDs to their values. Scores are numbers. */
+/**
+ * Flat map of score field IDs to numeric values.
+ */
 export type ScoreResults = Record<string, number>;
+
 
 /**
  * Builds the form field ID for a score input.
- * @param assignmentKey - The assignment's stable key.
- * @param side - "P" for prosecution, "D" for defense.
  */
-function buildScoreId(assignmentKey: string, side: "P" | "D") {
+function buildScoreId(
+    assignmentKey: string,
+    side: "P" | "D",
+): string {
     return `${assignmentKey}${side}`;
 }
+
+
+/**
+ * Only keep valid finite numeric values when persisting/restoring scores.
+ *
+ * This prevents NaN, null, malformed localStorage data, etc. from being
+ * restored into the form.
+ */
+function sanitizeScores(value: unknown): ScoreResults {
+    if (
+        typeof value !== "object" ||
+        value === null ||
+        Array.isArray(value)
+    ) {
+        return {};
+    }
+
+    const scores: ScoreResults = {};
+
+    for (const [key, score] of Object.entries(value)) {
+        if (
+            typeof score === "number" &&
+            Number.isFinite(score)
+        ) {
+            scores[key] = score;
+        }
+    }
+
+    return scores;
+}
+
 
 interface ScoreBoxProps {
     /** Unique form field ID for this score input. */
     id: string;
-    /** Resolved student info, or null for team-score rows with no individual student. */
+
+    /** Student associated with this score, if applicable. */
     student: IStudentInfo | null;
+
     register: UseFormRegister<ScoreResults>;
     control: Control<ScoreResults>;
+
     minScore: number;
     maxScore: number;
+
+    /**
+     * Incremented on every failed submit so persistent errors can
+     * be re-announced to assistive technology.
+     */
     submitAttempt: number;
 }
 
+
 /**
- * A single score input cell with the student name and pronouns.
- * Scrolls itself into view on focus to avoid being hidden behind the sticky nav on mobile.
+ * A single score input.
  */
-function ScoreBox({ id, student, register, control, minScore, maxScore, submitAttempt }: ScoreBoxProps) {
-    const { errors } = useFormState({ control, name: id as keyof ScoreResults });
-    const hasError = !!errors[id];
+function ScoreBox({
+                      id,
+                      student,
+                      register,
+                      control,
+                      minScore,
+                      maxScore,
+                      submitAttempt,
+                  }: ScoreBoxProps) {
+    /*
+     * Subscribe only to this exact field's error state rather than
+     * causing every ScoreBox to react to every form-state update.
+     */
+    const {errors} = useFormState({
+        control,
+        name: id,
+        exact: true,
+    });
+
+    /*
+     * React Hook Form field names may be paths, so use get()
+     * rather than directly indexing errors[id].
+     *
+     * Your current UUID-style IDs are safe either way, but get()
+     * makes this robust if the ID format ever changes.
+     */
+    const fieldError = get(errors, id);
+    const hasError = !!fieldError;
+
+    const errorMessage =
+        typeof fieldError?.message === "string"
+            ? fieldError.message
+            : `Must be ${minScore}–${maxScore}.`;
+
+    /*
+     * One validation rule is the source of truth.
+     *
+     * valueAsNumber turns an empty number input into NaN, which
+     * Number.isFinite() handles correctly.
+     */
     const registered = register(id, {
-        required: true,
-        min: minScore,
-        max: maxScore,
         valueAsNumber: true,
-        validate: (v) => (typeof v === "number" && !isNaN(v) && v >= minScore && v <= maxScore) || `Must be ${minScore}–${maxScore}`,
+
+        validate: (value) => {
+            if (
+                !Number.isFinite(value) ||
+                value < minScore ||
+                value > maxScore
+            ) {
+                return `Must be ${minScore}–${maxScore}.`;
+            }
+
+            return true;
+        },
     });
 
     return (
         <div className="score-box">
-            <label className="sr-only" htmlFor={id}>
+            <label
+                className="sr-only"
+                htmlFor={id}
+            >
                 Score for {student?.name ?? id}
             </label>
+
             <input
-                className="score-input"
+                {...registered}
                 id={id}
+                className="score-input"
                 type="number"
                 inputMode="numeric"
-                aria-invalid={hasError ? "true" : "false"}
-                aria-describedby={hasError ? `${id}-error` : undefined}
-                onWheel={(e) => e.currentTarget.blur()}
-                {...registered}
+                min={minScore}
+                max={maxScore}
+                aria-invalid={hasError}
+                aria-describedby={
+                    hasError
+                        ? `${id}-error`
+                        : undefined
+                }
+                onWheel={(event) => {
+                    event.currentTarget.blur();
+                }}
+                onKeyDown={(event) => {
+                    if (event.key === "Enter") {
+                        event.preventDefault();
+                    }
+                }}
             />
             {hasError && (
-                <ScoreError id={id} minScore={minScore} maxScore={maxScore} submitAttempt={submitAttempt} />
+                <ScoreError
+                    key={`${id}-${submitAttempt}`}
+                    id={id}
+                    message={errorMessage}
+                />
             )}
+
             {student && (
                 <p className="student-name">
                     {student.name}
-                    {student.pronouns && <span className="student-pronouns"> ({student.pronouns})</span>}
+
+                    {student.pronouns && (
+                        <span className="student-pronouns">
+                            {" "}
+                            ({student.pronouns})
+                        </span>
+                    )}
                 </p>
             )}
         </div>
     );
 }
 
-/** Inline validation error shown below a score input after a failed submit attempt. */
-function ScoreError({ id, minScore, maxScore, submitAttempt }: {
-    id: string; minScore: number; maxScore: number; submitAttempt: number;
-}) {
+
+interface ScoreErrorProps {
+    id: string;
+    message: string;
+}
+
+
+/**
+ * Inline score validation message.
+ */
+function ScoreError({
+                        id,
+                        message,
+                    }: ScoreErrorProps) {
     return (
         <span
-            key={`${id}-${submitAttempt}`}
             id={`${id}-error`}
             className="error"
             role="alert"
-            aria-live="assertive"
         >
-            Must be {minScore}–{maxScore}.
+            {message}
         </span>
     );
 }
 
+
 /**
- * The main scoresheet form. Renders all scoring categories in `categoryOrder` order,
- * with mobile step-through navigation and a desktop submit button.
- * Persists in-progress scores to localStorage keyed by tournamentID.
+ * Main scoresheet.
  */
-function ScoreSheet(details: IScoreSheetFormat & { onSubmitSuccess: () => void }) {
-    const storageKey = `mock-trial-scores-${details.pairingID}-${details.scorer.scorerID}`;
-    const categoryKey = `${storageKey}-category`;
+function ScoreSheet(
+    details: IScoreSheetFormat & {
+        onSubmitSuccess: () => void;
+    },
+) {
+    const storageKey =
+        `mock-trial-scores-${details.pairingID}-${details.scorer.scorerID}`;
 
-    const [categoryIndex, setCategoryIndex] = useState(() => {
-        const saved = localStorage.getItem(categoryKey);
-        const parsed = saved !== null ? parseInt(saved, 10) : NaN;
-        return !isNaN(parsed) && parsed < details.categoryOrder.length ? parsed : 0;
-    });
-    const [submitAttempt, setSubmitAttempt] = useState(0);
-    const [showConfirm, setShowConfirm] = useState(false);
-    const [pendingScores, setPendingScores] = useState<ScoreResults | null>(null);
+    const categoryKey =
+        `${storageKey}-category`;
 
-    const { register, handleSubmit, watch, reset, getValues, control } = useForm<ScoreResults>({ mode: "onBlur", reValidateMode: "onBlur" });
+    const {
+        categoryOrder,
+        scoringCategories,
+        witnesses,
+    } = details;
 
-    const { categoryOrder, scoringCategories, witnesses } = details;
     const lastIndex = categoryOrder.length - 1;
-    const prosecutionLabel = details.isCriminal ? "Prosecution" : "Plaintiff";
 
-    /** Resolves a student ID to its info object, or null if the ID is null or not found. */
-    const student = (id: string | null) => id ? (details.students[id] ?? null) : null;
+    const prosecutionLabel =
+        details.isCriminal
+            ? "Prosecution"
+            : "Plaintiff";
 
+
+    /*
+     * Restore the last category when constructing the component.
+     */
+    const [categoryIndex, setCategoryIndex] = useState(() => {
+        const saved =
+            localStorage.getItem(categoryKey);
+
+        if (saved === null) {
+            return 0;
+        }
+
+        const parsed =
+            Number.parseInt(saved, 10);
+
+        if (
+            !Number.isInteger(parsed) ||
+            parsed < 0 ||
+            parsed >= categoryOrder.length
+        ) {
+            return 0;
+        }
+
+        return parsed;
+    });
+
+
+    /*
+     * Used to cause an existing error alert to be remounted after
+     * another failed submission.
+     */
+    const [submitAttempt, setSubmitAttempt] =
+        useState(0);
+
+
+    /*
+     * We don't attempt to focus the invalid field until React has
+     * committed the category change.
+     */
+    const [
+        pendingErrorId,
+        setPendingErrorId,
+    ] = useState<string | null>(null);
+
+
+    const [
+        showConfirm,
+        setShowConfirm,
+    ] = useState(false);
+
+
+    const [
+        pendingScores,
+        setPendingScores,
+    ] = useState<ScoreResults | null>(null);
+
+
+    const {
+        register,
+        handleSubmit,
+        reset,
+        control,
+        setFocus,
+        subscribe,
+    } = useForm<ScoreResults>({
+        mode: "onBlur",
+        reValidateMode: "onChange",
+        shouldFocusError: false,
+    });
+
+
+    /**
+     * Resolve student information.
+     */
+    const student = (
+        id: string | null,
+    ): IStudentInfo | null => {
+        if (!id) {
+            return null;
+        }
+
+        return details.students[id] ?? null;
+    };
+
+
+    /*
+     * Restore saved scores.
+     */
     useEffect(() => {
-        const savedScores = localStorage.getItem(storageKey);
-        if (!savedScores) return;
-        try { reset(JSON.parse(savedScores)); }
-        catch { localStorage.removeItem(storageKey); }
-    }, [reset, storageKey]);
+        const stored =
+            localStorage.getItem(storageKey);
 
-    const storageKeyRef = useRef(storageKey);
-    useEffect(() => { storageKeyRef.current = storageKey; }, [storageKey]);
+        if (!stored) {
+            return;
+        }
 
+        try {
+            const parsed = JSON.parse(stored);
+
+            reset(
+                sanitizeScores(parsed),
+            );
+        } catch {
+            localStorage.removeItem(storageKey);
+        }
+    }, [
+        reset,
+        storageKey,
+    ]);
+
+
+    /*
+     * Persist the currently selected category.
+     */
     useEffect(() => {
-        localStorage.setItem(categoryKey, String(categoryIndex));
-    }, [categoryIndex, categoryKey]);
+        localStorage.setItem(
+            categoryKey,
+            String(categoryIndex),
+        );
+    }, [
+        categoryIndex,
+        categoryKey,
+    ]);
 
 
+    /*
+     * Persist scores whenever a form value changes.
+     *
+     * The subscription is recreated automatically if storageKey
+     * changes and properly cleaned up on unmount.
+     */
     useEffect(() => {
-        // eslint-disable-next-line react-hooks/incompatible-library
-        const { unsubscribe } = watch(() => {
-            localStorage.setItem(storageKeyRef.current, JSON.stringify(getValues()));
+        return subscribe({
+            formState: {
+                values: true,
+            },
+
+            callback: ({values}) => {
+                const scores = sanitizeScores(values);
+
+                localStorage.setItem(
+                    storageKey,
+                    JSON.stringify(scores),
+                );
+            },
         });
-        return unsubscribe;
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-    }, []);
+    }, [
+        subscribe,
+        storageKey,
+    ]);
 
-    const onSubmit: SubmitHandler<ScoreResults> = (scores) => {
+
+    /*
+     * Focus and scroll only after categoryIndex has been committed
+     * by React.
+     *
+     * This removes the race between setCategoryIndex() and trying
+     * to focus an element inside the newly active category.
+     */
+    useEffect(() => {
+        if (!pendingErrorId) {
+            return;
+        }
+
+        const frame =
+            window.requestAnimationFrame(() => {
+                setFocus(pendingErrorId);
+
+                document
+                    .getElementById(pendingErrorId)
+                    ?.scrollIntoView({
+                        behavior: "smooth",
+                        block: "center",
+                    });
+
+                setPendingErrorId(null);
+            });
+
+        return () => {
+            window.cancelAnimationFrame(frame);
+        };
+    }, [
+        categoryIndex,
+        pendingErrorId,
+        setFocus,
+    ]);
+
+
+    /**
+     * Valid submission.
+     */
+    const onSubmit: SubmitHandler<ScoreResults> = (
+        scores,
+    ) => {
         setPendingScores(scores);
         setShowConfirm(true);
     };
 
-    /** On validation failure, navigates to the category containing the first error and scrolls to it. */
-    const onInvalid = (formErrors: FieldErrors<ScoreResults>) => {
-        setSubmitAttempt((c) => c + 1);
-        const errorIds = new Set(Object.keys(formErrors));
-        let firstErrorId: string | undefined;
-        let idx = -1;
-        for (let i = 0; i < categoryOrder.length; i++) {
-            const cat = scoringCategories[categoryOrder[i]];
-            const found = cat.categoryAssignments.find((a) => {
-                const pId = buildScoreId(a.assignmentKey, "P");
-                const dId = buildScoreId(a.assignmentKey, "D");
-                return errorIds.has(pId) || errorIds.has(dId);
-            });
-            if (found) {
-                idx = i;
-                const pId = buildScoreId(found.assignmentKey, "P");
-                firstErrorId = errorIds.has(pId) ? pId : buildScoreId(found.assignmentKey, "D");
-                break;
+
+    /**
+     * Invalid submission.
+     *
+     * Find the first invalid field according to the score sheet's
+     * category/assignment order rather than depending on object-key
+     * ordering from React Hook Form.
+     */
+    const onInvalid = (
+        formErrors: FieldErrors<ScoreResults>,
+    ) => {
+        setSubmitAttempt(
+            (current) => current + 1,
+        );
+
+        for (
+            let categoryIdx = 0;
+            categoryIdx < categoryOrder.length;
+            categoryIdx++
+        ) {
+            const category =
+                scoringCategories[
+                    categoryOrder[categoryIdx]
+                    ];
+
+            for (
+                const assignment
+                of category.categoryAssignments
+                ) {
+                const pId =
+                    buildScoreId(
+                        assignment.assignmentKey,
+                        "P",
+                    );
+
+                const dId =
+                    buildScoreId(
+                        assignment.assignmentKey,
+                        "D",
+                    );
+
+
+                /*
+                 * Only check fields that actually exist for this
+                 * assignment's side.
+                 */
+                if (
+                    assignment.side !== "D" &&
+                    get(formErrors, pId)
+                ) {
+                    setPendingErrorId(pId);
+                    setCategoryIndex(categoryIdx);
+                    return;
+                }
+
+
+                if (
+                    assignment.side !== "P" &&
+                    get(formErrors, dId)
+                ) {
+                    setPendingErrorId(dId);
+                    setCategoryIndex(categoryIdx);
+                    return;
+                }
             }
         }
-        if (idx === -1) return;
-        setCategoryIndex(idx);
-        window.requestAnimationFrame(() =>
-            document.getElementById(firstErrorId!)?.scrollIntoView({ behavior: "smooth", block: "center" })
+    };
+
+
+    const handlePrev = () => {
+        setCategoryIndex(
+            (current) =>
+                Math.max(
+                    0,
+                    current - 1,
+                ),
         );
     };
 
-    const handlePrev = () => setCategoryIndex((c) => Math.max(0, c - 1));
 
-    /** Advances to the next category and focuses the first score input in it. */
+    /**
+     * Advance to the next category.
+     */
     const handleNext = () => {
-        setCategoryIndex((c) => {
-            const next = Math.min(lastIndex, c + 1);
-            window.requestAnimationFrame(() => {
-                document.querySelector<HTMLElement>(`#category-${next} .score-input`)?.focus();
-            });
-            return next;
-        });
+        setCategoryIndex(
+            (current) =>
+                Math.min(
+                    lastIndex,
+                    current + 1,
+                ),
+        );
     };
 
-    const isLastCategory = categoryIndex === lastIndex;
+
+    const isLastCategory =
+        categoryIndex === lastIndex;
+
 
     return (
         <>
-            {/* eslint-disable-next-line jsx-a11y/no-noninteractive-element-interactions */}
             <form
                 id="scores"
-                onSubmit={handleSubmit(onSubmit, onInvalid)}
+                onSubmit={handleSubmit(
+                    onSubmit,
+                    onInvalid,
+                )}
                 noValidate
                 autoComplete="off"
-                onKeyDown={(e) => { if (e.key === "Enter" && (e.target as HTMLElement).tagName !== "BUTTON") e.preventDefault(); }}
             >
                 <div className="trial-info-card">
                     <div className="trial-info-meta">
-                        <span className="trial-info-courtroom">Courtroom {details.courtroomNumber}</span>
-                        <span className="trial-info-presider">{details.presiderName}</span>
+                        <span className="trial-info-courtroom">
+                            Courtroom{" "}
+                            {details.courtroomNumber}
+                        </span>
+
+                        <span className="trial-info-presider">
+                            {details.presiderName}
+                        </span>
                     </div>
-                    <h1 className="tournament-name">{details.tournamentName}</h1>
-                    <h2 className="case-name">{details.caseName}</h2>
+
+                    <h1 className="tournament-name">
+                        {details.tournamentName}
+                    </h1>
+
+                    <h2 className="case-name">
+                        {details.caseName}
+                    </h2>
+
                     <div className="team-labels">
                         <div className="team-label team-label--prosecution">
-                            <span className="team-code">{details.prosecutionCode}</span>
-                            <span className="team-label-role">{prosecutionLabel}</span>
+                            <span className="team-code">
+                                {details.prosecutionCode}
+                            </span>
+
+                            <span className="team-label-role">
+                                {prosecutionLabel}
+                            </span>
                         </div>
+
                         <div className="team-label team-label--defense">
-                            <span className="team-code team-code--defense">{details.defenseCode}</span>
-                            <span className="team-label-role">Defense</span>
+                            <span className="team-code team-code--defense">
+                                {details.defenseCode}
+                            </span>
+
+                            <span className="team-label-role">
+                                Defense
+                            </span>
                         </div>
                     </div>
                 </div>
+
 
                 <div className="score-container">
                     <table id="score-table">
                         <thead>
-                            <tr className="scoresheet-header">
-                                <th>Scoring Category</th>
-                                <th>{prosecutionLabel}</th>
-                                <th>Defense</th>
-                            </tr>
+                        <tr className="scoresheet-header">
+                            <th>
+                                Scoring Category
+                            </th>
+
+                            <th>
+                                {prosecutionLabel}
+                            </th>
+
+                            <th>
+                                Defense
+                            </th>
+                        </tr>
                         </thead>
-                        {categoryOrder.map((catId, index) => {
-                            const cat = scoringCategories[catId];
-                            const witness = cat.witnessId ? witnesses[cat.witnessId] : null;
-                            const displayName = witness
-                                ? `${cat.categoryName} — ${witness.characterName}`
-                                : cat.categoryName;
-                            return (
-                                <tbody
-                                    key={catId}
-                                    className={index === categoryIndex ? "category-active" : "category-inactive"}
-                                    id={`category-${index}`}
-                                    aria-hidden={index !== categoryIndex}
-                                >
+
+
+                        {categoryOrder.map(
+                            (catId, index) => {
+                                const category =
+                                    scoringCategories[catId];
+
+                                const witness =
+                                    category.witnessId
+                                        ? witnesses[
+                                            category.witnessId
+                                            ]
+                                        : null;
+
+                                const displayName =
+                                    witness
+                                        ? `${category.categoryName} — ${witness.characterName}`
+                                        : category.categoryName;
+
+
+                                return (
+                                    <tbody
+                                        key={catId}
+                                        id={`category-${index}`}
+                                        className={
+                                            index === categoryIndex
+                                                ? "category-active"
+                                                : "category-inactive"
+                                        }
+                                        aria-hidden={
+                                            index !== categoryIndex
+                                        }
+                                    >
                                     <tr className="category-name">
-                                        <th colSpan={3}>{displayName}</th>
+                                        <th colSpan={3}>
+                                            {displayName}
+                                        </th>
                                     </tr>
-                                    {cat.categoryAssignments.map((assignment) => {
-                                        const pId = buildScoreId(assignment.assignmentKey, "P");
-                                        const dId = buildScoreId(assignment.assignmentKey, "D");
-                                        return (
-                                            <tr key={`${assignment.assignmentKey}-${assignment.side}`} className="score-row">
-                                                <td>{assignment.assignmentName}</td>
-                                                <td>
-                                                    {assignment.side !== "D" && (
-                                                        <ScoreBox id={pId} register={register} control={control} student={student(assignment.pStudentId)} minScore={assignment.minScore} maxScore={assignment.maxScore} submitAttempt={submitAttempt} />
-                                                    )}
-                                                </td>
-                                                <td>
-                                                    {assignment.side !== "P" && (
-                                                        <ScoreBox id={dId} register={register} control={control} student={student(assignment.dStudentId)} minScore={assignment.minScore} maxScore={assignment.maxScore} submitAttempt={submitAttempt} />
-                                                    )}
-                                                </td>
-                                            </tr>
-                                        );
-                                    })}
-                                </tbody>
-                            );
-                        })}
+
+
+                                    {category.categoryAssignments.map(
+                                        (assignment) => {
+                                            const pId =
+                                                buildScoreId(
+                                                    assignment.assignmentKey,
+                                                    "P",
+                                                );
+
+                                            const dId =
+                                                buildScoreId(
+                                                    assignment.assignmentKey,
+                                                    "D",
+                                                );
+
+
+                                            return (
+                                                <tr
+                                                    key={
+                                                        `${assignment.assignmentKey}-${assignment.side}`
+                                                    }
+                                                    className="score-row"
+                                                >
+                                                    <td>
+                                                        {
+                                                            assignment.assignmentName
+                                                        }
+                                                    </td>
+
+                                                    <td>
+                                                        {
+                                                            assignment.side !== "D" && (
+                                                                <ScoreBox
+                                                                    id={pId}
+                                                                    register={register}
+                                                                    control={control}
+                                                                    student={
+                                                                        student(
+                                                                            assignment.pStudentId,
+                                                                        )
+                                                                    }
+                                                                    minScore={
+                                                                        assignment.minScore
+                                                                    }
+                                                                    maxScore={
+                                                                        assignment.maxScore
+                                                                    }
+                                                                    submitAttempt={
+                                                                        submitAttempt
+                                                                    }
+                                                                />
+                                                            )
+                                                        }
+                                                    </td>
+
+                                                    <td>
+                                                        {
+                                                            assignment.side !== "P" && (
+                                                                <ScoreBox
+                                                                    id={dId}
+                                                                    register={register}
+                                                                    control={control}
+                                                                    student={
+                                                                        student(
+                                                                            assignment.dStudentId,
+                                                                        )
+                                                                    }
+                                                                    minScore={
+                                                                        assignment.minScore
+                                                                    }
+                                                                    maxScore={
+                                                                        assignment.maxScore
+                                                                    }
+                                                                    submitAttempt={
+                                                                        submitAttempt
+                                                                    }
+                                                                />
+                                                            )
+                                                        }
+                                                    </td>
+                                                </tr>
+                                            );
+                                        },
+                                    )}
+                                    </tbody>
+                                );
+                            },
+                        )}
                     </table>
                 </div>
 
+
                 <div className="scoresheet-footer">
-                    <button type="submit" id="score-submit-desktop" aria-label="Submit scoresheet">
+                    <button
+                        type="submit"
+                        id="score-submit-desktop"
+                        aria-label="Submit scoresheet"
+                    >
                         Submit Scoresheet
                     </button>
                 </div>
 
-                {/* Mobile step-through navigation — hidden on desktop via CSS */}
-                <nav className="scoresheet-nav" aria-label="Scoresheet navigation">
-                    <button type="button" disabled={categoryIndex <= 0} id="prev-button" className="nav-button" aria-label="Previous category" onClick={handlePrev}>
+
+                <nav
+                    className="scoresheet-nav"
+                    aria-label="Scoresheet navigation"
+                >
+                    <button
+                        type="button"
+                        id="prev-button"
+                        className="nav-button"
+                        aria-label="Previous category"
+                        disabled={categoryIndex <= 0}
+                        onClick={handlePrev}
+                    >
                         ← Previous
                     </button>
-                    <span className="nav-progress" aria-live="polite" aria-atomic="true">
-                        {categoryIndex + 1} / {categoryOrder.length}
+
+
+                    <span
+                        className="nav-progress"
+                        aria-live="polite"
+                        aria-atomic="true"
+                    >
+                        {categoryIndex + 1}
+                        {" / "}
+                        {categoryOrder.length}
                     </span>
-                    <button type="button" disabled={isLastCategory} id="next-button" className="nav-button" aria-label="Next category" onClick={handleNext}>
+
+
+                    <button
+                        type="button"
+                        id="next-button"
+                        className="nav-button"
+                        aria-label="Next category"
+                        disabled={isLastCategory}
+                        onClick={handleNext}
+                    >
                         Next →
                     </button>
-                    <p className="nav-category-label" aria-hidden="true">
+
+
+                    <p
+                        className="nav-category-label"
+                        aria-hidden="true"
+                    >
                         {(() => {
-                            const cat = scoringCategories[categoryOrder[categoryIndex]];
-                            const w = cat.witnessId ? witnesses[cat.witnessId] : null;
-                            return w ? `${cat.categoryName} - ${w.characterName}` : cat.categoryName;
+                            const category =
+                                scoringCategories[
+                                    categoryOrder[
+                                        categoryIndex
+                                        ]
+                                    ];
+
+                            const witness =
+                                category.witnessId
+                                    ? witnesses[
+                                        category.witnessId
+                                        ]
+                                    : null;
+
+                            return witness
+                                ? `${category.categoryName} - ${witness.characterName}`
+                                : category.categoryName;
                         })()}
                     </p>
-                    <button type="submit" id="score-submit" className={isLastCategory ? "submit-active" : "submit-inactive"} aria-label="Submit scoresheet">
+
+
+                    <button
+                        type="submit"
+                        id="score-submit"
+                        className={
+                            isLastCategory
+                                ? "submit-active"
+                                : "submit-inactive"
+                        }
+                        aria-label="Submit scoresheet"
+                    >
                         Submit
                     </button>
                 </nav>
             </form>
 
+
             {showConfirm && (
                 <ConfirmSubmitModal
                     setShowConfirm={setShowConfirm}
                     storageKey={storageKey}
-                    setPendingScores={setPendingScores}
-                    pendingScores={pendingScores}
-                    prosecution={details.prosecutionCode}
-                    defense={details.defenseCode}
-                    prosecutionLabel={prosecutionLabel}
+                    setPendingScores={
+                        setPendingScores
+                    }
+                    pendingScores={
+                        pendingScores
+                    }
+                    prosecution={
+                        details.prosecutionCode
+                    }
+                    defense={
+                        details.defenseCode
+                    }
+                    prosecutionLabel={
+                        prosecutionLabel
+                    }
                     details={details}
-                    onSubmitSuccess={details.onSubmitSuccess}
-                    defense_id={details.defenseId}
-                    prosecution_id={details.prosecutionId}
-                    showTiebreaker={details.ballotOptions.showTiebreaker}
+                    onSubmitSuccess={
+                        details.onSubmitSuccess
+                    }
+                    defense_id={
+                        details.defenseId
+                    }
+                    prosecution_id={
+                        details.prosecutionId
+                    }
+                    showTiebreaker={
+                        details.ballotOptions
+                            .showTiebreaker
+                    }
                 />
             )}
         </>
     );
 }
+
 
 export default ScoreSheet;
