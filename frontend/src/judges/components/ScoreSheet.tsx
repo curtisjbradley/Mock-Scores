@@ -630,7 +630,7 @@ function ScoreSheet(
 
                                 const displayName =
                                     witness
-                                        ? `${category.categoryName} — ${witness.characterName}`
+                                        ? `${category.categoryName} - ${witness.characterName}`
                                         : category.categoryName;
 
 

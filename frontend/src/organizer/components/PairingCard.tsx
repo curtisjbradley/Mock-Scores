@@ -98,18 +98,18 @@ export default function PairingCard({ pairing, teams, courtrooms, scorers, assig
 
     const addRegisteredScorer = () => {
         if (!scorerDraft) return
-        apiFetch(`/organizer/tournament/${tournamentId}/rounds/${roundId}/pairings/${pairing.pairing_id}/scorers`, {
+        apiFetch(`/organizer/tournament/${tournamentId}/pairings/${pairing.pairing_id}/scorers`, {
             method: 'POST', body: JSON.stringify({ scorer_id: scorerDraft }),
         }).then(r => r.json()).then((data: { assignment_id: string }) => {
             const scorer = scorers.find(s => s.scorer_id === scorerDraft)!
             const isFirst = assignedScorers.length === 0
             if (isFirst) {
-                apiFetch(`/organizer/tournament/${tournamentId}/rounds/${roundId}/pairings/${pairing.pairing_id}/presider`, {
+                apiFetch(`/organizer/tournament/${tournamentId}/pairings/${pairing.pairing_id}/presider`, {
                     method: 'PUT', body: JSON.stringify({ assignment_id: data.assignment_id }),
                 })
                 onPresiderChanged(data.assignment_id)
             }
-            onScorerAssigned({ assignment_id: data.assignment_id, type: 'registered', scorer_id: scorerDraft, name: `${scorer.first_name} ${scorer.last_name}`, is_presider: isFirst, presider_only_tiebreaker: false, conflict_reported: false, p_points: null, d_points: null })
+            onScorerAssigned({ assignment_id: data.assignment_id, type: 'registered', scorer_id: scorerDraft, name: `${scorer.first_name} ${scorer.last_name}`, is_presider: isFirst, presider_only_tiebreaker: false, conflict_reported: false, p_points: null, d_points: null, ballot_id: null})
             setScorerDraft('')
             setScorerQuery('')
             setShowScorerAdd(false)
@@ -119,17 +119,17 @@ export default function PairingCard({ pairing, teams, courtrooms, scorers, assig
     const addPaperScorer = () => {
         const name = scorerQuery.trim()
         if (!name) return
-        apiFetch(`/organizer/tournament/${tournamentId}/rounds/${roundId}/pairings/${pairing.pairing_id}/scorers`, {
+        apiFetch(`/organizer/tournament/${tournamentId}/pairings/${pairing.pairing_id}/scorers`, {
             method: 'POST', body: JSON.stringify({ paper_name: name }),
         }).then(r => r.json()).then((data: { assignment_id: string; scorer_id: string }) => {
             const isFirst = assignedScorers.length === 0
             if (isFirst) {
-                apiFetch(`/organizer/tournament/${tournamentId}/rounds/${roundId}/pairings/${pairing.pairing_id}/presider`, {
+                apiFetch(`/organizer/tournament/${tournamentId}/pairings/${pairing.pairing_id}/presider`, {
                     method: 'PUT', body: JSON.stringify({ assignment_id: data.assignment_id }),
                 })
                 onPresiderChanged(data.assignment_id)
             }
-            onScorerAssigned({ assignment_id: data.assignment_id, type: 'paper', scorer_id: data.scorer_id, name, is_presider: isFirst, presider_only_tiebreaker: false, conflict_reported: false, p_points: null, d_points: null })
+            onScorerAssigned({ assignment_id: data.assignment_id, type: 'paper', scorer_id: data.scorer_id, name, is_presider: isFirst, presider_only_tiebreaker: false, conflict_reported: false, p_points: null, d_points: null, ballot_id: null })
             setScorerQuery('')
             setShowScorerAdd(false)
         })
@@ -137,7 +137,7 @@ export default function PairingCard({ pairing, teams, courtrooms, scorers, assig
 
     const removeScorer = (assignmentId: string) => {
         const wasPresider = assignedScorers.find(s => s.assignment_id === assignmentId)?.is_presider
-        apiFetch(`/organizer/tournament/${tournamentId}/rounds/${roundId}/pairings/${pairing.pairing_id}/scorers/${assignmentId}`, { method: 'DELETE' })
+        apiFetch(`/organizer/tournament/${tournamentId}/pairings/${pairing.pairing_id}/scorers/${assignmentId}`, { method: 'DELETE' })
         if (wasPresider) onPresiderChanged(null)
         onScorerRemoved(assignmentId)
     }
@@ -151,7 +151,7 @@ export default function PairingCard({ pairing, teams, courtrooms, scorers, assig
 
     const savePresider = () => {
         if (!presiderDraft) return
-        apiFetch(`/organizer/tournament/${tournamentId}/rounds/${roundId}/pairings/${pairing.pairing_id}/presider`, {
+        apiFetch(`/organizer/tournament/${tournamentId}/pairings/${pairing.pairing_id}/presider`, {
             method: 'PUT', body: JSON.stringify({ assignment_id: presiderDraft, only_tiebreaker: onlyTiebreakerDraft }),
         })
         onPresiderChanged(presiderDraft, onlyTiebreakerDraft)
@@ -259,7 +259,7 @@ export default function PairingCard({ pairing, teams, courtrooms, scorers, assig
                     )}
                     {assignedScorers.some(s => s.p_points != null || s.d_points != null) && (
                         <Link
-                            to={`/organizer/${tournamentId}/round/${roundId}/pairing/${pairing.pairing_id}/scoresheet${
+                            to={`/organizer/${tournamentId}/pairing/${pairing.pairing_id}/scoresheet${
                                 round ? `?roundName=${encodeURIComponent(round.name)}${round.round_time ? `&roundTime=${encodeURIComponent(round.round_time)}` : ''}` : ''
                             }`}
                             className="pc-view-btn"
@@ -316,7 +316,12 @@ export default function PairingCard({ pairing, teams, courtrooms, scorers, assig
                         </span>
 
                         {diffLabel && <span className={`pc-diff ${diffClass}`}>{diffLabel}</span>}
-                        {hasSubmitted && <Link to={`/organizer/${tournamentId}/scoresheet/${pairing.pairing_id}/${s.assignment_id}`} className="pc-view-btn">View</Link>}
+                        {hasSubmitted && <Link
+                            to={`/organizer/${tournamentId}/pairing/${pairing.pairing_id}/scoresheet/${s.ballot_id}`}
+                            className="pc-view-btn"
+                        >
+                            View
+                        </Link>}
                         {s.type === 'paper' && !hasSubmitted && (
                             <button className="pc-save-btn" onClick={() => window.open(`/score/${s.assignment_id}`, '_blank')}>Input scores</button>
                         )}

@@ -68,8 +68,8 @@ function App() {
                   </Route>
                   <Route path=":id/school/:teamId/assign-roles/:pairingId/:side" element={<AssignRoles />} />
                   <Route path=":id/school/:teamId/witness-order/:pairingId" element={<WitnessCallOrder />} />
-                  <Route path=":id/scoresheet/:pairingId/:judgeId" element={<ScorecardViewer />} />
-                  <Route path=":id/round/:round/pairing/:pairingId/scoresheet" element={<CombinedScoresheetPage />} />
+                  <Route path=":id/pairing/:pairingId/scoresheet/:ballotId" element={<ScorecardViewer />} />
+                  <Route path=":id/pairing/:pairingId/scoresheet" element={<CombinedScoresheetPage />} />
                   <Route path=":id/*" element={<NotFound />} />
 
               </Route>

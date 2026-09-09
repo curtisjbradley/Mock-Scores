@@ -1,7 +1,7 @@
 import 'express';
 import { Request } from 'express';
 import { ISessionPayload } from '../authUtils';
-import { IOrganizer, IRound, IScorer, ITeam } from '@mock-scores/shared';
+import {IOrganizer, IPairing, IRound, IScorer, ITeam} from '@mock-scores/shared';
 
 declare module 'express' {
     interface Request {
@@ -9,6 +9,7 @@ declare module 'express' {
         tournament?: string
         scorer?: IScorer
         round?: IRound
+        pairing?: IPairing
         selectedOrganizer?: IOrganizer
         selectedTeam?: ITeam
     }
@@ -24,6 +25,10 @@ export interface TournamentRequest extends AuthenticatedRequest {
 
 export interface RoundRequest extends TournamentRequest {
     round: IRound
+}
+
+export interface PairingRequest extends TournamentRequest {
+    pairing: IPairing
 }
 
 export interface ScorerRequest extends TournamentRequest {

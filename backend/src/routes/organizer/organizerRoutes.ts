@@ -163,4 +163,5 @@ router.delete("/:tournamentId", verifyTournamentOwner, tournamentHandler(async (
 
 router.use("/:tournamentId", verifyTournamentAccess, subRoutes);
 
+
 export default router;

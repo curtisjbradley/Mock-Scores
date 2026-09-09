@@ -3,8 +3,8 @@ import { IRound, TournamentPayload, IWitnesses, IOrganizer, IScorer, ITeam } fro
 import { AlreadyExistsError, DbError, NotFoundError, OrganizerAlreadyJoinedError } from "../../errors";
 import * as organizer from "../../providers/organizerProvider";
 import * as coachProvider from "../../providers/coachProvider";
-import * as scorerProv from "../../providers/scorerProvider";
 import roundRoutes from "./organizerRoundRoutes";
+import pairingRoutes from "./organizerPairingRoutes";
 import { uuidRegex } from "../../authUtils";
 import { transferOwnership } from "../../providers/coachProvider";
 import { TournamentRequest } from "../../types/express";
@@ -1667,7 +1667,26 @@ async function verifyRound(req: Request, res: Response, next: NextFunction) {
     }
 }
 
+
+async function verifyPairing(req: Request, res: Response, next: NextFunction) {
+    const { pairingId } = req.params;
+    if (!pairingId) return res.status(400).json({ message: 'No pairing id provided' });
+    const pairing = Array.isArray(pairingId) ? pairingId[0] : pairingId;
+    if (!uuidRegex.test(pairing)) return res.status(400).json({ message: 'Invalid UUID' });
+    try {
+        const r = await organizer.getPairing(pairing);
+        req.pairing = {...r}
+        next();
+    } catch (e) {
+        if (e instanceof NotFoundError) return res.status(404).json({ message: 'No pairing found' });
+        throw e;
+    }
+}
+
+
 router.use('/rounds/:round', verifyRound, roundRoutes);
+router.use('/pairings/:pairingId', verifyPairing, pairingRoutes);
+
 
 // ── Bulk Import ───────────────────────────────────────────────────────────────
 
@@ -2360,108 +2379,6 @@ router.get('/bounced-emails', tournamentHandler(async (req, res) => {
 
 // ── Scorecard viewer ──────────────────────────────────────────────────────────
 
-
-/**
- * GET /organizer/tournament/:tournamentId/pairings/:pairingId/scoresheets/:assignmentId
- * Returns the stored ballot for a scorer assignment, or null if not yet submitted.
- * Used by the organizer's ScorecardViewer page.
- */
-router.get('/pairings/:pairingId/scoresheets/:assignmentId', tournamentHandler(async (req, res) => {
-    const assignmentId = req.params.assignmentId as string;
-    if (!uuidRegex.test(assignmentId)) return res.status(400).json({ message: 'Invalid assignment ID' });
-    const [sheet, ballot, editLog] = await Promise.all([
-        scorerProv.getScoreSheet(assignmentId, { skipGuards: true }).catch(() => null),
-        scorerProv.getBallot(assignmentId),
-        organizer.getBallotEditLog(assignmentId),
-    ]);
-    return res.status(200).json({ sheet, ballot, editLog });
-}));
-/**
- * @swagger
- * /organizer/tournament/{tournamentId}/pairings/{pairingId}/scoresheets/{assignmentId}:
- *   put:
- *     summary: Edit a submitted ballot's scores
- *     tags: [Organizer - Scorecards]
- *     parameters:
- *       - in: path
- *         name: tournamentId
- *         required: true
- *         schema: { type: string, format: uuid }
- *       - in: path
- *         name: pairingId
- *         required: true
- *         schema: { type: string, format: uuid }
- *       - in: path
- *         name: assignmentId
- *         required: true
- *         schema: { type: string, format: uuid }
- *     requestBody:
- *       required: true
- *       content:
- *         application/json:
- *           schema:
- *             type: object
- *             required: [scores, reason]
- *             properties:
- *               scores: { type: array }
- *               reason: { type: string }
- *     responses:
- *       200: { description: Ballot updated }
- *       400: { description: Invalid input }
- *       404: { description: Ballot not found }
- *       500: { description: Database error }
- */
-router.put('/pairings/:pairingId/scoresheets/:assignmentId', tournamentHandler(async (req, res) => {
-    const assignmentId = req.params.assignmentId as string;
-    if (!uuidRegex.test(assignmentId)) return res.status(400).json({ message: 'Invalid assignment ID' });
-    const { scores, reason } = req.body as { scores?: { assignmentKey: string; side: 'P' | 'D'; score: number; studentId: string | null; categoryId: string }[]; reason?: string };
-    if (!Array.isArray(scores) || !reason?.trim()) return res.status(400).json({ message: 'scores array and reason are required' });
-    try {
-        await organizer.editBallot(assignmentId, { scores }, req.session.email, reason.trim());
-        return res.status(200).json({ success: true });
-    } catch (e) {
-        if (e instanceof NotFoundError) return res.status(404).json({ message: e.message });
-        if (e instanceof DbError) return res.status(500).json({ message: 'Unable to update ballot' });
-        throw e;
-    }
-}));
-/**
- * @swagger
- * /organizer/tournament/{tournamentId}/pairings/{pairingId}/scoresheets/{assignmentId}:
- *   delete:
- *     summary: Delete a submitted ballot
- *     tags: [Organizer - Scorecards]
- *     parameters:
- *       - in: path
- *         name: tournamentId
- *         required: true
- *         schema: { type: string, format: uuid }
- *       - in: path
- *         name: pairingId
- *         required: true
- *         schema: { type: string, format: uuid }
- *       - in: path
- *         name: assignmentId
- *         required: true
- *         schema: { type: string, format: uuid }
- *     responses:
- *       204: { description: Ballot deleted }
- *       400: { description: Invalid assignment ID }
- *       404: { description: Ballot not found }
- *       500: { description: Database error }
- */
-router.delete('/pairings/:pairingId/scoresheets/:assignmentId', tournamentHandler(async (req, res) => {
-    const assignmentId = req.params.assignmentId as string;
-    if (!uuidRegex.test(assignmentId)) return res.status(400).json({ message: 'Invalid assignment ID' });
-    try {
-        await organizer.deleteBallot(assignmentId);
-        return res.status(204).send();
-    } catch (e) {
-        if (e instanceof NotFoundError) return res.status(404).json({ message: e.message });
-        if (e instanceof DbError) return res.status(500).json({ message: 'Unable to delete ballot' });
-        throw e;
-    }
-}));
 
 /**
  * @swagger
