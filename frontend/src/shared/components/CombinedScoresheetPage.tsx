@@ -30,7 +30,9 @@ function formatRoundTime(iso: string | null): string | null {
     prosLabel: string
     prosecutionCode: string
     defenseCode: string
-    /** Presider tiebreaker (a team code) from whichever ballot recorded one. */
+    prosecutionId: string,
+    defenseId: string,
+    /** Presider tiebreaker (a team uuid) from whichever ballot recorded one. */
     tiebreaker: string | null
     /** Tournament-configured standings stats for this trial, or null if no config. */
     statSummary: CombinedStat[] | null
@@ -290,6 +292,8 @@ export default function CombinedScoresheetPage() {
                 dateLabel={dateLabel}
                 tiebreaker={data.tiebreaker}
                 statSummary={data.statSummary}
+                prosecutionId={data.prosecutionId}
+                defenseId={data.defenseId}
             />
         </main>
     )
@@ -333,6 +337,8 @@ function buildData(
     const prosecutionCode = sheet?.prosecutionCode ?? ''
     const defenseCode = sheet?.defenseCode ?? ''
 
+    const prosecutionId = sheet?.prosecutionId ?? ""
+    const defenseId = sheet?.defenseId ?? ""
     // Compute the tournament's configured standings stats for this trial, when a
     // config is available and team codes are known (needed to key the engine).
     const statSummary = buildStatSummary(
@@ -351,6 +357,8 @@ function buildData(
         defenseCode,
         tiebreaker,
         statSummary,
+        prosecutionId,
+        defenseId
     }
 }
 
