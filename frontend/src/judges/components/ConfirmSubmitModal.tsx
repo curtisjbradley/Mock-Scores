@@ -10,6 +10,8 @@ interface IConfirmSubmitModalProps {
     /** The raw form values captured at submit time. Used to build the structured payload. */
     pendingScores: ScoreResults | null;
     setPendingScores: (scores: ScoreResults | null) => void;
+
+    showTiebreaker: boolean;
     /** localStorage key used to clear saved progress on successful submission. */
     storageKey: string;
     /** Prosecution team code. */
@@ -41,7 +43,7 @@ type NominationSelections = Record<string, string[]>;
  * focus trapping, and Escape-to-close.
  */
 const ConfirmSubmitModal = ({
-    setShowConfirm, pendingScores, setPendingScores, storageKey, prosecution, defense, prosecutionLabel, details, onSubmitSuccess, defense_id,prosecution_id
+    setShowConfirm, pendingScores, setPendingScores, storageKey, prosecution, defense, prosecutionLabel, details, onSubmitSuccess, defense_id,prosecution_id, showTiebreaker
 }: IConfirmSubmitModalProps) => {
     const dialogRef = useRef<HTMLDivElement>(null);
     const [submitting, setSubmitting] = useState(false);
@@ -124,7 +126,7 @@ const ConfirmSubmitModal = ({
      * After successful ballot submission, submits nominations separately.
      */
     const handleConfirm = async () => {
-        if (!pendingScores || !isNominationsValid || !isTiebreakerValid || submitting) return;
+        if (!pendingScores || !isNominationsValid || (showTiebreaker && !isTiebreakerValid) || submitting) return;
 
         const scores: ScoreSection[] = details.categoryOrder.flatMap((catId) => {
             const cat = details.scoringCategories[catId];
@@ -202,7 +204,7 @@ const ConfirmSubmitModal = ({
         onSubmitSuccess();
     };
 
-    const canConfirm = isNominationsValid && isTiebreakerValid && !submitting;
+    const canConfirm = isNominationsValid && (!showTiebreaker ||  isTiebreakerValid) && !submitting;
 
     return (
         <div
@@ -244,6 +246,7 @@ const ConfirmSubmitModal = ({
                 )}
 
                 {
+                    showTiebreaker &&
                     <div className="tiebreaker-section">
                         <h3>Tiebreaker</h3>
                         <p>If the scores are tied, which team wins?</p>
