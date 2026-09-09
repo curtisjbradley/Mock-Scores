@@ -1,4 +1,5 @@
 import {dbQuery, withTransaction} from '../db';
+import { computeBallotTotals, getFieldMultipliers } from './scorerProvider';
 import type { PoolClient } from 'pg';
 import type {
     IBallotStatus,
@@ -1102,8 +1103,8 @@ export async function editBallot(
     reason: string,
 ): Promise<void> {
     // Get current ballot
-    const result = await dbQuery<{ ballot_id: string; ballot_json: string; p_points: number; d_points: number }>(
-        'SELECT ballot_id, ballot_json, p_points, d_points FROM ballots WHERE scorer_assignment_id=$1',
+    const result = await dbQuery<{ ballot_id: string; ballot_json: string; p_points: number; d_points: number; tournament_id: string }>(
+        'SELECT ballot_id, ballot_json, p_points, d_points, tournament_id FROM ballots WHERE scorer_assignment_id=$1',
         [assignmentId],
     );
     if (!result) throw new DbError('editBallot');
@@ -1114,9 +1115,10 @@ export async function editBallot(
     const pPointsBefore = current.p_points;
     const dPointsBefore = current.d_points;
 
-    // Calculate new totals
-    const pPointsAfter = newPayload.scores.filter(s => s.side === 'P').reduce((sum, s) => sum + s.score, 0);
-    const dPointsAfter = newPayload.scores.filter(s => s.side === 'D').reduce((sum, s) => sum + s.score, 0);
+    // Recompute totals applying per-field multipliers, mirroring submitBallot so
+    // an edited ballot's stored points stay consistent with a freshly submitted one.
+    const multipliers = await getFieldMultipliers(current.tournament_id);
+    const { pPoints: pPointsAfter, dPoints: dPointsAfter } = computeBallotTotals(newPayload.scores, multipliers);
 
     // Build new ballot_json (preserve original nominations/tiebreaker, replace scores)
     const originalBallot = typeof beforeJson === 'string' ? JSON.parse(beforeJson) : beforeJson;

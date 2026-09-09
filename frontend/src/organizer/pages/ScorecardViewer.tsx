@@ -173,6 +173,24 @@ const ScorecardViewer = () => {
         }
     }
 
+    // Per-field multiplier lookup keyed by assignmentKey, taken from the sheet
+    // format. Missing/undefined multipliers default to 1. Used so the displayed
+    // side totals match the multiplier-weighted p_points/d_points the server stores.
+    const multiplierMap = new Map<string, number>()
+    for (const catId of sheet.categoryOrder) {
+        const cat = sheet.scoringCategories[catId]
+        for (const a of cat.categoryAssignments) {
+            const m = Number(a.multiplier ?? 1)
+            multiplierMap.set(a.assignmentKey, Number.isNaN(m) ? 1 : m)
+        }
+    }
+    const sideTotal = (side: 'P' | 'D') =>
+        ballot
+            ? ballot.scores
+                .filter(s => s.side === side)
+                .reduce((sum, s) => sum + s.score * (multiplierMap.get(s.assignmentKey) ?? 1), 0)
+            : 0
+
     return (
         <>
         <main className="org-main">
@@ -438,11 +456,11 @@ const ScorecardViewer = () => {
                             <div className="sv-totals">
                                 <div>
                                     <strong>{sheet.prosecutionCode} ({prosecutionLabel}) Total:</strong>{' '}
-                                    {ballot.scores.filter(s => s.side === 'P').reduce((sum, s) => sum + s.score, 0)}
+                                    {sideTotal('P')}
                                 </div>
                                 <div>
                                     <strong>{sheet.defenseCode} (Defense) Total:</strong>{' '}
-                                    {ballot.scores.filter(s => s.side === 'D').reduce((sum, s) => sum + s.score, 0)}
+                                    {sideTotal('D')}
                                 </div>
                             </div>
                         </>

@@ -98,6 +98,15 @@
 }
 tfoot .cs-seg-col { font-weight: 700; }
 
+/* Per-row multiplier column */
+.cs-mult-col {
+    text-align: center;
+    font-size: 0.75rem;
+    font-weight: 600;
+    color: #555;
+    white-space: nowrap;
+}
+
 .cs-scorer-count { font-weight: 400; font-size: 0.72rem; color: #333; }
 
 /* Header band */
@@ -205,7 +214,19 @@ tfoot .cs-seg-col { font-weight: 700; }
 /* Bold the leading side for each stat so the tabulation winner is obvious. */
 .cs-stats-table .cs-stat-lead { font-weight: 800; }
 
+.cs-table td.cs-side-d , .cs-table th.cs-side-d{
+    border-right-width: 3px;
+}
+
+.cs-table td.cs-side-p, .cs-table th.cs-side-p {
+    border-left-width: 3px;
+}
+.cs-table th.cs-scorer-head {
+    border-width: 3px;
+    border-bottom-width: 1px;
+}
 /* Print: fill the page, drop chrome, keep the grid crisp. */
+
 @media print {
     .cs-page { max-width: none; padding: 0; }
     .cs-sheet { font-size: 100%; }

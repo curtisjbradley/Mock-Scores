@@ -19,6 +19,12 @@ export interface SegmentRow {
     hasD: boolean
     /** Student name associated with the row, if any (shown in the rightmost column). */
     student: string | null
+    /**
+     * Per-field score multiplier applied to this row's scores when totaling.
+     * Defaults to 1 when unknown. Score cells display the raw entered value; the
+     * Total row multiplies by this so totals match the tabulated point totals.
+     */
+    multiplier: number
 }
 
 /** A single tournament-configured stat, computed for this trial, per side. */
@@ -71,13 +77,16 @@ interface Props {
 export default function CombinedScoresheet({
     rows, ballots, prosLabel, prosecutionCode, defenseCode, roundLabel, dateLabel, tiebreaker, statSummary, prosecutionId, defenseId
 }: Props) {
-    // Per-scorer column totals (sum of that scorer's scores on each side).
+    // Per-scorer column totals (sum of that scorer's scores on each side),
+    // weighting each row by its field multiplier so the totals match how the
+    // tournament tabulates points.
     const scorerTotals = ballots.map(b => {
         let p = 0
         let d = 0
         for (const row of rows) {
-            if (row.hasP) p += b.scores.get(`${row.key}:P`) ?? 0
-            if (row.hasD) d += b.scores.get(`${row.key}:D`) ?? 0
+            const mult = Number(row.multiplier ?? 1) || 1
+            if (row.hasP) p += (b.scores.get(`${row.key}:P`) ?? 0) * mult
+            if (row.hasD) d += (b.scores.get(`${row.key}:D`) ?? 0) * mult
         }
         return { p, d }
     })
@@ -115,6 +124,7 @@ export default function CombinedScoresheet({
                             <th className="cs-seg-col" rowSpan={2}>
                                 <span className="cs-scorer-count">{ballots.length} scorer{ballots.length !== 1 ? 's' : ''}</span>
                             </th>
+                            <th className="cs-mult-col" rowSpan={2}>Mult</th>
                             {ballots.map((b, i) => (
                                 <th key={i} className="cs-scorer-head" colSpan={2}>{b.label}</th>
                             ))}
@@ -130,6 +140,7 @@ export default function CombinedScoresheet({
                         {rows.map(row => (
                             <tr key={row.key}>
                                 <td className="cs-seg-col">{row.label}</td>
+                                <td className="cs-mult-col">{fmtMultiplier(row.multiplier)}</td>
                                 {ballots.map((b, i) => (
                                     <SideCells
                                         key={i}
@@ -144,6 +155,7 @@ export default function CombinedScoresheet({
                     <tfoot>
                         <tr className="cs-total-row">
                             <td className="cs-seg-col">Total</td>
+                            <td className="cs-mult-col"></td>
                             {scorerTotals.map((t, i) => (
                                 <SideCells key={i} p={t.p} d={t.d} />
                             ))}
@@ -199,6 +211,14 @@ export default function CombinedScoresheet({
 function fmtStat(value: number): string {
     if (Number.isNaN(value)) return '—'
     return Number.isInteger(value) ? String(value) : value.toFixed(3)
+}
+
+/** Formats a per-row multiplier as `×N` (integers plain, else trimmed decimals). */
+function fmtMultiplier(value: number): string {
+    // pg `numeric` columns can arrive as strings, so coerce before formatting.
+    const m = Number(value ?? 1)
+    if (Number.isNaN(m)) return '×1'
+    return `×${Number.isInteger(m) ? String(m) : String(Number(m.toFixed(2)))}`
 }
 
 /** The paired "Pros / Def" sub-header cells under a scorer column. */
