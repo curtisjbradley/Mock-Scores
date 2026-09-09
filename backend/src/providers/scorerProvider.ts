@@ -23,6 +23,64 @@ interface PairingFormatContext {
 }
 
 /**
+ * Extracts the `field_id` embedded in an `assignmentKey`.
+ *
+ * Assignment keys are built by the scoresheet builder as either:
+ *   - `${categoryId}__${fieldId}`                (non-witness category)
+ *   - `${categoryId}__${fieldId}__${witnessId}`  (witness category)
+ *
+ * In both cases the field id is the second `__`-delimited segment. Returns null
+ * when the key does not contain a field segment.
+ */
+export function fieldIdFromAssignmentKey(assignmentKey: string): string | null {
+    const parts = assignmentKey.split('__');
+    return parts.length >= 2 ? parts[1] : null;
+}
+
+/**
+ * Computes P/D point totals from a set of scores, applying each scoring field's
+ * multiplier. The multiplier is resolved from `assignmentKey` (which embeds the
+ * field id) rather than `categoryId`, since a category has many fields and the
+ * multiplier is per-field.
+ *
+ * `multipliers` maps field_id → multiplier. A missing entry defaults to 1 so an
+ * unknown/legacy field never zeroes out its contribution. `numeric` columns come
+ * back from pg as strings, so multipliers are coerced with Number().
+ */
+export function computeBallotTotals(
+    scores: { side: 'P' | 'D'; assignmentKey: string; score: number }[],
+    multipliers: Map<string, number>,
+): { pPoints: number; dPoints: number } {
+    const contribution = (s: { assignmentKey: string; score: number }) => {
+        const fieldId = fieldIdFromAssignmentKey(s.assignmentKey);
+        const mult = fieldId != null ? Number(multipliers.get(fieldId) ?? 1) : 1;
+        return s.score * mult;
+    };
+    let pPoints = 0;
+    let dPoints = 0;
+    for (const s of scores) {
+        if (s.side === 'P') pPoints += contribution(s);
+        else if (s.side === 'D') dPoints += contribution(s);
+    }
+    return { pPoints, dPoints };
+}
+
+/**
+ * Loads a field_id → multiplier map for every scoring field in a tournament.
+ * Used to apply per-field multipliers when computing/recomputing ballot totals.
+ */
+export async function getFieldMultipliers(tournamentId: string): Promise<Map<string, number>> {
+    const rows = (await dbQuery<{ id: string; multiplier: number }>(
+        `SELECT sf.id, sf.multiplier
+         FROM scoring_fields sf
+         JOIN scoring_categories sc ON sc.id = sf.category_id
+         WHERE sc.tournament_id = $1`,
+        [tournamentId],
+    ))?.rows ?? [];
+    return new Map(rows.map(r => [r.id, Number(r.multiplier)]));
+}
+
+/**
  * Builds the scoring categories, students, witnesses, and award categories for a
  * pairing. Shared by {@link getScoreSheet} (scorer view) and
  * {@link getPairingBallotFormat} (blank printable ballot).
@@ -526,6 +584,7 @@ export async function getScoreSheet(assignmentId: string, options?: { skipGuards
         label: string;
         min_score: number;
         max_score: number;
+        multiplier: number;
         assignable: boolean;
         prosecution: boolean;
         defense: boolean;
@@ -535,7 +594,7 @@ export async function getScoreSheet(assignmentId: string, options?: { skipGuards
         position: number;
         award_category_id: string | null;
     }>(
-        `SELECT id, category_id, label, min_score, max_score, assignable,
+        `SELECT id, category_id, label, min_score, max_score, multiplier, assignable,
                 prosecution, defense, calling, crossing, visible_to_scorers, position,
                 award_category_id
          FROM scoring_fields
@@ -652,6 +711,7 @@ export async function getScoreSheet(assignmentId: string, options?: { skipGuards
                         side,
                         minScore: f.min_score,
                         maxScore: f.max_score,
+                        multiplier: Number(f.multiplier),
                     };
                 }),
             };
@@ -682,6 +742,7 @@ export async function getScoreSheet(assignmentId: string, options?: { skipGuards
                             side,
                             minScore: f.min_score,
                             maxScore: f.max_score,
+                            multiplier: Number(f.multiplier),
                         };
                     }),
                 };
@@ -787,8 +848,8 @@ export async function submitBallot(assignmentId: string, payload: ScorecardPaylo
     // pairings, rosters, and call orders). Reject ballots for unlocked rounds.
     if (!asg.locked) throw new RoundNotLockedError();
 
-    const pPoints = payload.scores.filter(s => s.side === 'P').reduce((sum, s) => sum + s.score, 0);
-    const dPoints = payload.scores.filter(s => s.side === 'D').reduce((sum, s) => sum + s.score, 0);
+    const multipliers = await getFieldMultipliers(asg.tournament_id);
+    const { pPoints, dPoints } = computeBallotTotals(payload.scores, multipliers);
 
     // Only the presider's ballot carries a tiebreaker. Every other ballot stores
     // NULL so standings never credit a non-presider ballot with a tiebreaker win.

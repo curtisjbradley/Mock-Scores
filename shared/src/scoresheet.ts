@@ -6,6 +6,13 @@ export interface ITrialAssignment {
     side: 'D' | 'P' | 'BOTH';
     minScore: number;
     maxScore: number;
+    /**
+     * Per-field score multiplier. Applied when computing ballot point totals so
+     * a field can weight (or, when negative, deduct) more than its raw score.
+     * Optional: some format builders (e.g. blank printable ballots) omit it, in
+     * which case consumers treat it as 1.
+     */
+    multiplier?: number;
 }
 
 export interface IScoreCategory {

@@ -34,12 +34,14 @@ export async function buildCombinedWorkbook(data: CombinedExport): Promise<Excel
     const { rows, ballots, prosLabel, prosecutionCode, defenseCode, roundLabel, dateLabel, tiebreaker, statSummary } = data
     const prosShort = prosLabel === 'Prosecution' ? 'Pros' : 'Pl'
 
-    // Per-scorer column totals (same math as the component's totals row).
+    // Per-scorer column totals (same math as the component's totals row):
+    // each row's scores are weighted by its field multiplier.
     const scorerTotals = ballots.map(b => {
         let p = 0, d = 0
         for (const r of rows) {
-            if (r.hasP) p += b.scores.get(`${r.key}:P`) ?? 0
-            if (r.hasD) d += b.scores.get(`${r.key}:D`) ?? 0
+            const mult = Number(r.multiplier ?? 1) || 1
+            if (r.hasP) p += (b.scores.get(`${r.key}:P`) ?? 0) * mult
+            if (r.hasD) d += (b.scores.get(`${r.key}:D`) ?? 0) * mult
         }
         return { p, d }
     })
@@ -53,10 +55,11 @@ export async function buildCombinedWorkbook(data: CombinedExport): Promise<Excel
     wb.creator = 'Mock Scores'
     const ws = wb.addWorksheet('Scoresheet')
 
-    // Column count: segment + 2 per scorer + student.
-    const lastCol = 1 + ballots.length * 2 + 1
+    // Column count: segment + multiplier + 2 per scorer + student.
+    const lastCol = 2 + ballots.length * 2 + 1
     ws.getColumn(1).width = 16
-    for (let c = 2; c < lastCol; c++) ws.getColumn(c).width = 7
+    ws.getColumn(2).width = 6
+    for (let c = 3; c < lastCol; c++) ws.getColumn(c).width = 7
     ws.getColumn(lastCol).width = 14
 
     /** Column letter helper for merge ranges (1-based). */
@@ -70,27 +73,32 @@ export async function buildCombinedWorkbook(data: CombinedExport): Promise<Excel
     ws.addRow([]) // spacer
 
     // ── Header rows: scorer names (merged over 2) + Pros/Def sub-headers ──
-    const nameRowValues: (string | null)[] = [`${ballots.length} scorer${ballots.length !== 1 ? 's' : ''}`]
+    const nameRowValues: (string | null)[] = [`${ballots.length} scorer${ballots.length !== 1 ? 's' : ''}`, 'Mult']
     for (const b of ballots) { nameRowValues.push(b.label, null) }
     nameRowValues.push('')
     const nameRow = ws.addRow(nameRowValues)
     const nameRowIdx = nameRow.number
 
-    const subRowValues: string[] = ['']
+    const subRowValues: string[] = ['', '']
     for (let i = 0; i < ballots.length; i++) subRowValues.push(prosShort, 'Def')
     subRowValues.push('Student')
     const subRow = ws.addRow(subRowValues)
 
+    // First scorer's P column (defense is the column immediately after each P).
+    const firstScorerCol = 3
+    const isDefenseCol = (colNum: number) =>
+        colNum >= firstScorerCol && colNum < lastCol && (colNum - firstScorerCol) % 2 === 1
+
     // Merge each scorer name across its two columns; style header band.
     ballots.forEach((_, i) => {
-        const start = 2 + i * 2
+        const start = firstScorerCol + i * 2
         ws.mergeCells(`${col(start)}${nameRowIdx}:${col(start + 1)}${nameRowIdx}`)
     })
     for (const r of [nameRow, subRow]) {
         r.eachCell({ includeEmpty: true }, (cell, colNum) => {
             if (colNum > lastCol) return
             cell.fill = fill(GRAY)
-            cell.font = { bold: true, color: colNum % 2 === 1 && colNum > 1 ? { argb: RED } : undefined }
+            cell.font = { bold: true, color: isDefenseCol(colNum) ? { argb: RED } : undefined }
             cell.alignment = { horizontal: 'center' }
             cell.border = {
                 bottom: { style: 'thin' }, right: { style: 'thin' },
@@ -101,7 +109,9 @@ export async function buildCombinedWorkbook(data: CombinedExport): Promise<Excel
 
     // ── Segment rows ──────────────────────────────────────────────────────
     for (const r of rows) {
-        const values: (number | string | null)[] = [r.label]
+        const mult = Number(r.multiplier ?? 1) || 1
+        const multLabel = `×${Number.isInteger(mult) ? String(mult) : String(Number(mult.toFixed(2)))}`
+        const values: (number | string | null)[] = [r.label, multLabel]
         for (const b of ballots) {
             values.push(r.hasP ? (b.scores.get(`${r.key}:P`) ?? null) : null)
             values.push(r.hasD ? (b.scores.get(`${r.key}:D`) ?? null) : null)
@@ -109,23 +119,24 @@ export async function buildCombinedWorkbook(data: CombinedExport): Promise<Excel
         values.push(r.student ?? '')
         const row = ws.addRow(values)
         row.getCell(1).font = { bold: true }
-        // Center scores; color defense (even data columns) red.
+        row.getCell(2).alignment = { horizontal: 'center' }
+        // Center scores; color defense columns red.
         for (let i = 0; i < ballots.length; i++) {
-            row.getCell(2 + i * 2).alignment = { horizontal: 'center' }
-            const dCell = row.getCell(3 + i * 2)
+            row.getCell(firstScorerCol + i * 2).alignment = { horizontal: 'center' }
+            const dCell = row.getCell(firstScorerCol + 1 + i * 2)
             dCell.alignment = { horizontal: 'center' }
             dCell.font = { color: { argb: RED } }
         }
     }
 
     // ── Totals row ────────────────────────────────────────────────────────
-    const totalValues: (number | string)[] = ['Total']
+    const totalValues: (number | string)[] = ['Total', '']
     for (const t of scorerTotals) totalValues.push(t.p, t.d)
     totalValues.push('')
     const totalRow = ws.addRow(totalValues)
     totalRow.eachCell({ includeEmpty: true }, (cell, colNum) => {
         if (colNum > lastCol) return
-        cell.font = { bold: true, color: colNum % 2 === 1 && colNum > 1 && colNum < lastCol ? { argb: RED } : undefined }
+        cell.font = { bold: true, color: isDefenseCol(colNum) ? { argb: RED } : undefined }
         cell.fill = fill(LIGHT)
         cell.border = { top: { style: 'medium' } }
         if (colNum > 1) cell.alignment = { horizontal: 'center' }

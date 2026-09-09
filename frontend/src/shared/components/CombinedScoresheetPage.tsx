@@ -46,7 +46,30 @@ function rowsFromLayout(layout: BallotLayoutSegment[]): SegmentRow[] {
         hasP: seg.side !== 'D',
         hasD: seg.side !== 'P',
         student: seg.pStudentName ?? seg.dStudentName,
+        // Layout snapshots don't capture the multiplier; default to 1 here and let
+        // buildData overlay the live multiplier from the sheet when available.
+        multiplier: 1,
     }))
+}
+
+/**
+ * Builds an `assignmentKey → multiplier` lookup from the live sheet format.
+ * Used to attach per-field multipliers to canonical rows regardless of whether
+ * those rows came from a layout snapshot (which omits multipliers) or the sheet.
+ */
+function multipliersFromSheet(sheet: IScoreSheetFormat): Map<string, number> {
+    const map = new Map<string, number>()
+    for (const catId of sheet.categoryOrder) {
+        const cat = sheet.scoringCategories[catId]
+        if (!cat) continue
+        for (const a of cat.categoryAssignments) {
+            // `numeric` columns can arrive as strings from the API; normalize to a
+            // number so SegmentRow.multiplier is genuinely numeric downstream.
+            const m = Number(a.multiplier ?? 1)
+            map.set(a.assignmentKey, Number.isNaN(m) ? 1 : m)
+        }
+    }
+    return map
 }
 
 /** Builds canonical segment rows from the live sheet format (legacy fallback). */
@@ -65,6 +88,7 @@ function rowsFromSheet(sheet: IScoreSheetFormat): SegmentRow[] {
                 hasP: a.side !== 'D',
                 hasD: a.side !== 'P',
                 student: pName ?? dName,
+                multiplier: Number(a.multiplier ?? 1) || 1,
             })
         }
     }
@@ -323,6 +347,18 @@ function buildData(
     const layout = usable.find(d => d.ballot?.layout && d.ballot.layout.length > 0)?.ballot?.layout
     const rows = layout ? rowsFromLayout(layout) : sheet ? rowsFromSheet(sheet) : null
     if (!rows || rows.length === 0) return null
+
+    // Overlay live per-field multipliers from the sheet onto the canonical rows.
+    // rowsFromSheet already sets them, but the preferred layout path can't, so
+    // this ensures the Mult column and multiplier-weighted totals are correct
+    // regardless of which row source was used.
+    if (sheet) {
+        const multMap = multipliersFromSheet(sheet)
+        for (const r of rows) {
+            const m = multMap.get(r.key)
+            if (m != null) r.multiplier = m
+        }
+    }
 
     const ballots: CombinedBallot[] = usable.map((d, i) => ({
         label: label(d, i),
