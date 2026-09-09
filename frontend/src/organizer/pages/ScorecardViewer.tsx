@@ -317,8 +317,6 @@ const ScorecardViewer = () => {
                                                     const dScore = scoreMap.get(`${a.assignmentKey}:D`)
                                                     const pStudent = student(a.pStudentId)
                                                     const dStudent = student(a.dStudentId)
-                                                    const pNominated = a.pStudentId ? nominationSet.has(a.pStudentId) : false
-                                                    const dNominated = a.dStudentId ? nominationSet.has(a.dStudentId) : false
                                                     return (
                                                         <tr key={`${a.assignmentKey}-${a.side}`} className="score-row">
                                                             <td>{a.assignmentName}</td>
@@ -343,7 +341,6 @@ const ScorecardViewer = () => {
                                                                             <p className="student-name">
                                                                                 {pStudent.name}
                                                                                 {pStudent.pronouns && <span className="student-pronouns"> ({pStudent.pronouns})</span>}
-                                                                                {pNominated && <span className="sv-nominated">★ Nominated</span>}
                                                                             </p>
                                                                         )}
                                                                     </div>
@@ -370,7 +367,6 @@ const ScorecardViewer = () => {
                                                                             <p className="student-name">
                                                                                 {dStudent.name}
                                                                                 {dStudent.pronouns && <span className="student-pronouns"> ({dStudent.pronouns})</span>}
-                                                                                {dNominated && <span className="sv-nominated">★ Nominated</span>}
                                                                             </p>
                                                                         )}
                                                                     </div>
