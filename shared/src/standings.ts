@@ -16,3 +16,20 @@ export interface IStandingsTeam {
     code: string;
     pairings: IStandingsPairing[];
 }
+
+export interface IAwardNomination {
+    student_name: string;
+    student_id: string;
+    team_id: string;
+    team_code: string;
+    team_name: string;
+    award_name: string;
+    award_category_id: string;
+    scorer_id: string;
+    scorer_name: string;
+    side: "P" | "D";
+    pairing_id: string;
+    round_id: string;
+    round_name: string;
+    rank: number;
+}
