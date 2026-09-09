@@ -10,6 +10,8 @@ interface IConfirmSubmitModalProps {
     /** The raw form values captured at submit time. Used to build the structured payload. */
     pendingScores: ScoreResults | null;
     setPendingScores: (scores: ScoreResults | null) => void;
+
+    showTiebreaker: boolean;
     /** localStorage key used to clear saved progress on successful submission. */
     storageKey: string;
     /** Prosecution team code. */
@@ -41,7 +43,7 @@ type NominationSelections = Record<string, string[]>;
  * focus trapping, and Escape-to-close.
  */
 const ConfirmSubmitModal = ({
-    setShowConfirm, pendingScores, setPendingScores, storageKey, prosecution, defense, prosecutionLabel, details, onSubmitSuccess, defense_id,prosecution_id
+    setShowConfirm, pendingScores, setPendingScores, storageKey, prosecution, defense, prosecutionLabel, details, onSubmitSuccess, defense_id,prosecution_id, showTiebreaker
 }: IConfirmSubmitModalProps) => {
     const dialogRef = useRef<HTMLDivElement>(null);
     const [submitting, setSubmitting] = useState(false);
@@ -51,6 +53,32 @@ const ConfirmSubmitModal = ({
 
     const awardCategories = useMemo(() => details.awardCategories ?? {}, [details.awardCategories]);
     const hasAwardCategories = Object.keys(awardCategories).length > 0;
+
+    /**
+     * Maps each studentId to the ordered, de-duplicated list of roles they played,
+     * derived from the scoring categories. A role is the assignment name, qualified
+     * with the witness name when the category is tied to a specific witness
+     * (e.g. "Opening", "W1 - Watson").
+     */
+    const studentRoles = useMemo(() => {
+        const roles: Record<string, string[]> = {};
+        const addRole = (studentId: string | null, label: string) => {
+            if (!studentId) return;
+            const existing = roles[studentId] ?? (roles[studentId] = []);
+            if (!existing.includes(label)) existing.push(label);
+        };
+        for (const catId of details.categoryOrder) {
+            const cat = details.scoringCategories[catId];
+            if (!cat) continue;
+            const witnessName = cat.witnessId ? details.witnesses[cat.witnessId]?.characterName ?? null : null;
+            for (const a of cat.categoryAssignments) {
+                const label = witnessName ? `${a.assignmentName} - ${witnessName}` : a.assignmentName;
+                addRole(a.pStudentId, label);
+                addRole(a.dStudentId, label);
+            }
+        }
+        return roles;
+    }, [details.categoryOrder, details.scoringCategories, details.witnesses]);
 
     useEffect(() => {
         dialogRef.current?.querySelector<HTMLElement>(FOCUSABLE)?.focus();
@@ -124,7 +152,7 @@ const ConfirmSubmitModal = ({
      * After successful ballot submission, submits nominations separately.
      */
     const handleConfirm = async () => {
-        if (!pendingScores || !isNominationsValid || !isTiebreakerValid || submitting) return;
+        if (!pendingScores || !isNominationsValid || (showTiebreaker && !isTiebreakerValid) || submitting) return;
 
         const scores: ScoreSection[] = details.categoryOrder.flatMap((catId) => {
             const cat = details.scoringCategories[catId];
@@ -202,7 +230,7 @@ const ConfirmSubmitModal = ({
         onSubmitSuccess();
     };
 
-    const canConfirm = isNominationsValid && isTiebreakerValid && !submitting;
+    const canConfirm = isNominationsValid && (!showTiebreaker ||  isTiebreakerValid) && !submitting;
 
     return (
         <div
@@ -231,9 +259,12 @@ const ConfirmSubmitModal = ({
                                 categoryId={catId}
                                 category={catInfo}
                                 students={details.students}
+                                studentRoles={studentRoles}
                                 selected={nominations[catId] ?? []}
                                 onToggle={(studentId) => toggleNominee(catId, studentId, catInfo.maxNominees)}
                                 onReorder={reorderNominee}
+                                prosecutionId={details.prosecutionId}
+                                defenseId={details.defenseId}
                             />
                         ))}
                     </div>
@@ -244,16 +275,17 @@ const ConfirmSubmitModal = ({
                 )}
 
                 {
+                    showTiebreaker &&
                     <div className="tiebreaker-section">
                         <h3>Tiebreaker</h3>
                         <p>If the scores are tied, which team wins?</p>
                         <div className="tiebreaker-options">
-                            <label className={`tiebreaker-option${tiebreaker === prosecution ? " tiebreaker-option--selected" : ""}`}>
+                            <label className={`tiebreaker-option${tiebreaker === prosecution_id ? " tiebreaker-option--selected" : ""}`}>
                                 <input type="radio" name="tiebreaker" value={prosecution_id} checked={tiebreaker === prosecution_id} onChange={(e) => setTiebreaker(e.target.value)} />
                                 <span className="tiebreaker-code">{prosecution}</span>
                                 <span className="tiebreaker-role">{prosecutionLabel}</span>
                             </label>
-                            <label className={`tiebreaker-option${tiebreaker === defense ? " tiebreaker-option--selected" : ""}`}>
+                            <label className={`tiebreaker-option${tiebreaker === defense_id ? " tiebreaker-option--selected" : ""}`}>
                                 <input type="radio" name="tiebreaker" value={defense_id} checked={tiebreaker === defense_id} onChange={(e) => setTiebreaker(e.target.value)} />
                                 <span className="tiebreaker-code">{defense}</span>
                                 <span className="tiebreaker-role">Defense</span>
@@ -280,13 +312,16 @@ const ConfirmSubmitModal = ({
 };
 
 /** Renders a single award category with selection checkboxes and ordered ranking. */
-function NominationCategory({ categoryId, category, students, selected, onToggle, onReorder }: {
+function NominationCategory({ categoryId, category, students, studentRoles, selected, onToggle, onReorder, prosecutionId, defenseId }: {
     categoryId: string;
     category: IAwardCategoryInfo;
     students: Record<string, { name: string; pronouns: string | null; schoolId: string }>;
+    studentRoles: Record<string, string[]>;
     selected: string[];
     onToggle: (studentId: string) => void;
     onReorder: (categoryId: string, fromIndex: number, toIndex: number) => void;
+    prosecutionId: string;
+    defenseId: string;
 }) {
     const atMax = selected.length >= category.maxNominees;
     const eligible = category.eligibleStudentIds.length;
@@ -308,6 +343,7 @@ function NominationCategory({ categoryId, category, students, selected, onToggle
                     if (!info) return null;
                     const isSelected = selected.includes(studentId);
                     const disabled = !isSelected && atMax;
+                    const roles = studentRoles[studentId] ?? [];
                     return (
                         <label key={studentId} className={`nomination-student${isSelected ? ' nomination-student--selected' : ''}${disabled ? ' nomination-student--disabled' : ''}`}>
                             <input
@@ -316,8 +352,10 @@ function NominationCategory({ categoryId, category, students, selected, onToggle
                                 disabled={disabled}
                                 onChange={() => onToggle(studentId)}
                             />
-                            <span>{info.name}</span>
-                            {info.pronouns && <span className="student-pronouns"> ({info.pronouns})</span>}
+                            <div className={'nomination-student-info'}>
+                                <span>{info.name} - {info.schoolId === prosecutionId ? "P" : info.schoolId === defenseId ? "D" : ""}</span>
+                                {roles.length > 0 && <span className="nomination-student-roles">{roles.join(", ")}</span>}
+                            </div>
                         </label>
                     );
                 })}

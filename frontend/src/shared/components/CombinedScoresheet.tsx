@@ -37,6 +37,8 @@ interface Props {
     prosLabel: string
     prosecutionCode: string
     defenseCode: string
+    prosecutionId: string
+    defenseId: string
     /** Round name/number, e.g. "Round 1". */
     roundLabel?: string | null
     /** Trial date shown in the header. */
@@ -67,7 +69,7 @@ interface Props {
  * keys (labelling scorers however the viewer's role permits).
  */
 export default function CombinedScoresheet({
-    rows, ballots, prosLabel, prosecutionCode, defenseCode, roundLabel, dateLabel, tiebreaker, statSummary,
+    rows, ballots, prosLabel, prosecutionCode, defenseCode, roundLabel, dateLabel, tiebreaker, statSummary, prosecutionId, defenseId
 }: Props) {
     // Per-scorer column totals (sum of that scorer's scores on each side).
     const scorerTotals = ballots.map(b => {
@@ -80,10 +82,14 @@ export default function CombinedScoresheet({
         return { p, d }
     })
 
+    const [pTotal, dTotal] = scorerTotals.reduce(([p,d],curr) => {
+        return [p+curr.p, d+curr.d];
+    }, [0,0]);
+
     // Resolve the presider tiebreaker (a team code) to a readable side + code.
     const tiebreakerText = tiebreaker
-        ? tiebreaker === prosecutionCode ? `${prosLabel} (${prosecutionCode})`
-        : tiebreaker === defenseCode ? `Defense (${defenseCode})`
+        ? tiebreaker === prosecutionId ? `${prosLabel} (${prosecutionCode})`
+        : tiebreaker === defenseId ? `Defense (${defenseCode})`
         : tiebreaker
         : null
 
@@ -148,7 +154,7 @@ export default function CombinedScoresheet({
             </div>
 
             {/* Summary: percentages + tiebreaker + winner */}
-            {tiebreakerText && (
+            {(pTotal === dTotal) && tiebreakerText && (
                 <div className="cs-tiebreaker">
                     <span className="cs-tiebreaker-label">Presider tiebreaker:</span>
                     <span className="cs-tiebreaker-value">{tiebreakerText}</span>

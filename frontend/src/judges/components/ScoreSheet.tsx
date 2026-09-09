@@ -316,7 +316,7 @@ function ScoreSheet(details: IScoreSheetFormat & { onSubmitSuccess: () => void }
                     onSubmitSuccess={details.onSubmitSuccess}
                     defense_id={details.defenseId}
                     prosecution_id={details.prosecutionId}
-
+                    showTiebreaker={details.ballotOptions.showTiebreaker}
                 />
             )}
         </>

@@ -197,16 +197,6 @@
     color: var(--text);
 }
 
-@media screen and (max-width: 48rem) {
-    .tiebreaker-option {
-        min-height: 6rem;
-        padding: 1.25rem 0.75rem;
-    }
-
-    .tiebreaker-code {
-        font-size: 2.4rem;
-    }
-}
 
 /* ── Actions ────────────────────────────────────────────────────────────── */
 
@@ -384,6 +374,15 @@
     height: 1rem;
     accent-color: var(--primary);
     cursor: inherit;
+}
+
+.nomination-student-roles {
+    display: block;
+    margin-left: auto;
+    color: var(--text-muted);
+    font-size: 0.8rem;
+    font-weight: 400;
+    text-align: right;
 }
 
 .nomination-empty {

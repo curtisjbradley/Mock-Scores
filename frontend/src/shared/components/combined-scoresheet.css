@@ -8,6 +8,7 @@
     max-width: 60rem;
     margin: 0 auto;
     padding: 1.5rem 1rem 3rem;
+    width: 100%;
 }
 
 .cs-message {
@@ -93,9 +94,7 @@
     text-align: left;
     font-weight: 600;
     background: #fff;
-    position: sticky;
     left: 0;
-    z-index: 1;
 }
 tfoot .cs-seg-col { font-weight: 700; }
 
@@ -167,7 +166,7 @@ tfoot .cs-seg-col { font-weight: 700; }
 
 /* ── Tournament stats (per-trial) block ─────────────────────────────────── */
 .cs-stats {
-    margin-top: 1rem;
+    margin-top: 0;
     border-top: 2px solid #000;
     padding-top: 0.75rem;
 }
