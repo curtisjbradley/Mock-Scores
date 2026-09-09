@@ -51,6 +51,14 @@ describe('GET .../rounds/:round/ballot-status', () => {
         const res = await request(app).get(`${ROUND_URL}/ballot-status`).set(auth());
         expect(res.status).toBe(404);
     });
+
+    it('returns 500 when getBallotStatus hits a DB error', async () => {
+        mockRoundAccess();
+        mockDbQuery.mockResolvedValueOnce(null as never); // getBallotStatus → DbError
+
+        const res = await request(app).get(`${ROUND_URL}/ballot-status`).set(auth());
+        expect(res.status).toBe(500);
+    });
 });
 
 // ─── POST .../rounds/:round/send-scoring-links ────────────────────────────────
@@ -66,6 +74,24 @@ describe('POST .../rounds/:round/send-scoring-links', () => {
         const res = await request(app).post(`${ROUND_URL}/send-scoring-links`).set(auth());
         expect(res.status).toBe(200);
         expect(res.body.sent).toBe(0);
+    });
+
+    it('returns sent count matching number of registered scorers', async () => {
+        mockRoundAccess({ ...ROUND_BASE, locked: true });
+        // hasSentScoringLinksForRound → not yet sent
+        mockDbQuery.mockResolvedValueOnce({ rows: [{ exists: false }], rowCount: 1 } as never);
+        // getScorerInviteContextsForRound → two registered scorers
+        mockDbQuery.mockResolvedValueOnce({
+            rows: [
+                { email: 'scorer1@test.com', first_name: 'A', last_name: 'B', tournament_name: 'T', assignment_id: 'a1' },
+                { email: 'scorer2@test.com', first_name: 'C', last_name: 'D', tournament_name: 'T', assignment_id: 'a2' },
+            ],
+            rowCount: 2,
+        } as never);
+
+        const res = await request(app).post(`${ROUND_URL}/send-scoring-links`).set(auth());
+        expect(res.status).toBe(200);
+        expect(res.body.sent).toBe(2);
     });
 });
 

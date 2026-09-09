@@ -22,21 +22,28 @@ module.exports = {
     '/node_modules/(?!(jose)/)',
   ],
   transform: {
+    // `isolatedModules: true` runs ts-jest in transpile-only mode: it strips
+    // types per-file without a full type-check, which is the dominant cost in
+    // ts-jest. Type safety is still enforced separately by `npm run build`
+    // (tsc) and `npm run lint` in CI, so skipping it here only speeds up tests.
     '^.+\\.tsx?$': [tsJestPath, {
       tsconfig: 'tsconfig.jest.json',
+      isolatedModules: true,
     }],
     '^.+\\.js$': [tsJestPath, {
       tsconfig: 'tsconfig.jest.json',
+      isolatedModules: true,
     }],
   },
   setupFilesAfterEnv: ['<rootDir>/testing/setup.ts'],
+  // Only instrument application source. Test files were previously listed here
+  // and then excluded via coveragePathIgnorePatterns — instrumenting them just
+  // to drop them was wasted work.
   collectCoverageFrom: [
     'src/**/*.ts',
-    'testing/**/*.ts'
   ],
   coveragePathIgnorePatterns: [
       'src/db\\.ts',
       'src/app\\.ts',
-      'testing/.*\\.ts',
   ],
 };
