@@ -426,17 +426,17 @@ export async function getFormatForTournament(tournamentId: string): Promise<{ p_
  * must not be able to read another matchup's scoresheet just because results
  * for the round are public.
  */
-export async function canViewPairingResults(tournamentId: string, pairingId: string, teamId: string): Promise<boolean> {
+export async function canViewPairingResults(pairingId: string, teamId: string): Promise<boolean> {
     const row = (await dbQuery<{ pairing_id: string }>(
         `SELECT p.pairing_id
          FROM pairings p
          JOIN rounds r ON r.round_id = p.round_id
+         join teams t on t.tournament_id = r.tournament_id
          WHERE p.pairing_id = $1
-           AND r.tournament_id = $2
            AND r.results_public = true
-           AND (p.p_team = $3 OR p.d_team = $3)
+           AND (p.p_team = $2 OR p.d_team = $2)
          LIMIT 1`,
-        [pairingId, tournamentId, teamId],
+        [pairingId, teamId],
     ))?.rows[0];
     return !!row;
 }
@@ -447,44 +447,43 @@ export async function canViewPairingResults(tournamentId: string, pairingId: str
  * the pairing must be in the tournament, its round's results must be public, and
  * the coach's own team (`teamId`) must have competed in the pairing.
  */
-export async function isAssignmentInPairingWithPublicResults(
-    tournamentId: string,
-    pairingId: string,
-    assignmentId: string,
+export async function isBallotInPairingWithPublicResults(
+    ballotId: string,
     teamId: string,
 ): Promise<boolean> {
     const row = (await dbQuery<{ assignment_id: string }>(
-        `SELECT spa.assignment_id
-         FROM scorer_pairing_assignments spa
-         JOIN pairings p ON p.pairing_id = spa.pairing_id
+        `SELECT b.ballot_id
+         FROM ballots b
+         JOIN pairings p ON p.pairing_id = b.pairing_id
          JOIN rounds r   ON r.round_id   = p.round_id
-         WHERE spa.assignment_id = $1
-           AND p.pairing_id = $2
-           AND r.tournament_id = $3
+         join teams t on r.tournament_id = t.tournament_id
+         WHERE b.ballot_id = $1
            AND r.results_public = true
-           AND (p.p_team = $4 OR p.d_team = $4)
+           AND (p.p_team = $2 OR p.d_team = $2)
          LIMIT 1`,
-        [assignmentId, pairingId, tournamentId, teamId],
+        [ballotId, teamId],
     ))?.rows[0];
     return !!row;
 }
 
-export async function getPairingBallots(tournamentId: string, pairingId: string): Promise<{
+export async function getPairingBallots(teamId: string, pairingId: string): Promise<{
     p_points: number;
     d_points: number;
     assignment_id: string;
+    ballot_id: string;
 }[]> {
-    const rows = (await dbQuery<{ p_points: number; d_points: number; scorer_assignment_id: string }>(
-        `SELECT b.p_points, b.d_points, b.scorer_assignment_id
+    const rows = (await dbQuery<{ p_points: number; d_points: number; scorer_assignment_id: string, ballot_id : string }>(
+        `SELECT b.p_points, b.d_points, b.scorer_assignment_id, b.ballot_id
          FROM ballots b
          JOIN pairings p ON p.pairing_id = b.pairing_id
          JOIN rounds r   ON r.round_id   = p.round_id
+         join teams t on t.tournament_id = r.tournament_id
          WHERE b.pairing_id = $1
-           AND r.tournament_id = $2
+           AND t.id = $2
            AND r.results_public = true`,
-        [pairingId, tournamentId]
+        [pairingId, teamId]
     ))?.rows ?? [];
-    return rows.map(r => ({ p_points: r.p_points, d_points: r.d_points, assignment_id: r.scorer_assignment_id }));
+    return rows.map(r => ({ p_points: r.p_points, d_points: r.d_points, assignment_id: r.scorer_assignment_id, ballot_id: r.ballot_id }));
 }
 
 export async function getStandingsData(tournamentId: string): Promise<{

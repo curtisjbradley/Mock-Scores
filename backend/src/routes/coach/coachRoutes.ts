@@ -94,21 +94,21 @@ router.get("/tournaments/:teamId/field", authedHandler(async (req, res) => {
 
 /**
  * @swagger
- * /coach/tournaments/{teamId}/standings:
+ * /coach/tournaments/{tournamentId}/standings:
  *   get:
  *     summary: Get standings data for a tournament
  *     tags: [Coach]
  *     parameters:
  *       - in: path
- *         name: teamId
+ *         name: tournamentId
  *         required: true
  *         schema: { type: string, format: uuid }
  *     responses:
  *       200: { description: Standings data }
  *       400: { description: Invalid team ID }
  */
-router.get("/tournaments/:teamId/standings", authedHandler(async (req, res) => {
-    const id = req.params.teamId as string;
+router.get("/tournaments/:tournamentId/standings", authedHandler(async (req, res) => {
+    const id = req.params.tournamentId as string;
     if (!uuidRegex.test(id)) return res.status(400).json({ message: "Invalid team ID" });
     return res.status(200).json(await coach.getStandingsData(id));
 }));
@@ -205,16 +205,14 @@ router.get("/tournaments/:teamId/pairings/:pairingId/ballots", authedHandler(asy
     if (!uuidRegex.test(pairingId)) return res.status(400).json({ message: "Invalid pairing ID" });
     // `:teamId` here is the tournament id; resolve the coach's actual competing
     // team so we only expose scoresheets for pairings their team was part of.
-    const coachTeamId = await coach.getTeamIdForCoach(teamId, req.session.userId);
-    if (!coachTeamId) return res.status(404).json({ message: "Pairing not found" });
-    if (!await coach.canViewPairingResults(teamId, pairingId, coachTeamId)) return res.status(404).json({ message: "Pairing not found" });
+    if (!await coach.canViewPairingResults(pairingId, teamId)) return res.status(404).json({ message: "Pairing not found" });
     return res.status(200).json(await coach.getPairingBallots(teamId, pairingId));
 }));
 
 
 /**
  * @swagger
- * /coach/tournaments/{teamId}/pairings/{pairingId}/ballots/{assignmentId}:
+ * /coach/tournaments/{teamId}/pairings/{pairingId}/ballots/{ballotId}:
  *   get:
  *     summary: Get full ballot detail (scoresheet format + scores) for a specific ballot
  *     tags: [Coach]
@@ -228,7 +226,7 @@ router.get("/tournaments/:teamId/pairings/:pairingId/ballots", authedHandler(asy
  *         required: true
  *         schema: { type: string, format: uuid }
  *       - in: path
- *         name: assignmentId
+ *         name: ballotId
  *         required: true
  *         schema: { type: string, format: uuid }
  *     responses:
@@ -236,23 +234,18 @@ router.get("/tournaments/:teamId/pairings/:pairingId/ballots", authedHandler(asy
  *       400: { description: Invalid ID }
  *       404: { description: Ballot not found }
  */
-router.get("/tournaments/:teamId/pairings/:pairingId/ballots/:assignmentId", authedHandler(async (req, res) => {
+router.get("/tournaments/:teamId/pairings/:pairingId/ballots/:ballotId", authedHandler(async (req, res) => {
     const teamId = req.params.teamId as string;
     const pairingId = req.params.pairingId as string;
-    const assignmentId = req.params.assignmentId as string;
+    const ballotId = req.params.ballotId as string;
     if (!uuidRegex.test(teamId)) return res.status(400).json({ message: "Invalid team ID" });
     if (!uuidRegex.test(pairingId)) return res.status(400).json({ message: "Invalid pairing ID" });
-    if (!uuidRegex.test(assignmentId)) return res.status(400).json({ message: "Invalid assignment ID" });
+    if (!uuidRegex.test(ballotId)) return res.status(400).json({ message: "Invalid ballot ID" });
 
-    // `:teamId` here is the tournament id; resolve the coach's actual competing
-    // team so we only expose ballots for pairings their team was part of.
-    const coachTeamId = await coach.getTeamIdForCoach(teamId, req.session.userId);
-    if (!coachTeamId) return res.status(404).json({ message: "Ballot not found" });
-    if (!await coach.isAssignmentInPairingWithPublicResults(teamId, pairingId, assignmentId, coachTeamId))
+    if (!await coach.isBallotInPairingWithPublicResults(ballotId, teamId))
         return res.status(404).json({ message: "Ballot not found" });
-
-    const sheet = await getScoreSheet(assignmentId, { skipGuards: true }).catch(() => null);
-    const ballot = await getBallot(assignmentId);
+    const sheet = await getScoreSheet(ballotId, { skipGuards: true }).catch(() => null);
+    const ballot = await getBallot(ballotId);
 
     if (!sheet && !ballot) return res.status(404).json({ message: "Ballot not found" });
 

@@ -122,7 +122,7 @@ export default function ResultsPage() {
                                             {bd > 0 ? `+${bd} P Win` : bd < 0 ? `${bd} D Win` : 'Tie'}
                                         </td>
                                         <td>
-                                            <Link to={`/coach/${teamId}/ballot/${p.pairing_id}/${b.assignment_id}`} className="pc-view-btn">View ballot</Link>
+                                            <Link to={`/coach/${teamId}/ballot/${p.pairing_id}/${b.ballot_id}`} className="pc-view-btn">View ballot</Link>
                                         </td>
                                     </tr>
                                 )

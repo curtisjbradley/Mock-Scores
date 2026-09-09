@@ -23,6 +23,7 @@ export interface StandingsApiPayload {
 export interface BallotDetail {
     p_points: number
     d_points: number
+    ballot_id: string
     assignment_id: string
 }
 

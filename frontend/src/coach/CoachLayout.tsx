@@ -186,7 +186,7 @@ export default function CoachLayout({ isOrganizerView = false }: Props) {
     const loadBallots = useCallback(async (pairingId: string): Promise<BallotDetail[]> => {
         const cached = ballotCache.current.get(pairingId)
         if (cached) return cached
-        const res = await apiFetch(`/coach/tournaments/${tournamentId}/pairings/${pairingId}/ballots`)
+        const res = await apiFetch(`/coach/tournaments/${teamId}/pairings/${pairingId}/ballots`)
         const data: BallotDetail[] = res.ok ? await res.json() : []
         ballotCache.current.set(pairingId, data)
         return data

@@ -204,13 +204,13 @@ export default function CombinedScoresheetPage() {
             const tid = info?.tournamentId
             if (!tid) throw new Error('Failed to resolve tournament')
             const [listRes, standingsRes] = await Promise.all([
-                apiFetch(`/coach/tournaments/${tid}/pairings/${pairingId}/ballots`),
+                apiFetch(`/coach/tournaments/${teamId}/pairings/${pairingId}/ballots`),
                 apiFetch(`/coach/tournaments/${tid}/standings`).catch(() => null),
             ])
             if (!listRes.ok) throw new Error('Failed to load ballots')
-            const list = await listRes.json() as { assignment_id: string; p_points: number; d_points: number }[]
+            const list = await listRes.json() as { assignment_id: string; p_points: number; d_points: number; ballot_id: string }[]
             const details = await Promise.all(list.map(b =>
-                apiFetch(`/coach/tournaments/${tid}/pairings/${pairingId}/ballots/${b.assignment_id}`)
+                apiFetch(`/coach/tournaments/${teamId}/pairings/${pairingId}/ballots/${b.ballot_id}`)
                     .then(r => r.ok ? r.json() as Promise<BallotDetail> : null)
             ))
             const points: BallotPoints[] = list.map(b => ({ p_points: b.p_points, d_points: b.d_points }))
@@ -231,7 +231,7 @@ export default function CombinedScoresheetPage() {
             // Only scorers who have actually submitted a ballot contribute columns.
             const submitted = scorers.filter(s => s.p_points != null || s.d_points != null)
             const details = await Promise.all(submitted.map(s =>
-                apiFetch(`/organizer/tournament/${routeId}/pairings/${pairingId}/scoresheets/${s.assignment_id}`)
+                apiFetch(`/organizer/tournament/${routeId}/pairings/${pairingId}/scoresheets/${s}`)
                     .then(r => r.ok ? r.json() as Promise<BallotDetail> : null)
             ))
             const points: BallotPoints[] = submitted.map(s => ({ p_points: s.p_points ?? 0, d_points: s.d_points ?? 0 }))
