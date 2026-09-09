@@ -8,6 +8,8 @@ import { resolveCoachTournament } from '../../coach/coachApi'
 import '../styles/organizer.css'
 import '../../judges/styles/scoresheet.css'
 import '../../judges/styles/modal.css'
+import AddButton from "../../shared/components/AddButton.tsx";
+import DangerButton from "../../shared/components/DangerButton.tsx";
 
 /**
  * Organizer read-only view of a submitted scorecard.
@@ -179,10 +181,10 @@ const ScorecardViewer = () => {
 
                 <div className="coach-section">
                     <div className="sv-header">
-                        <h2>Scorecard{sheet.scorer.firstName ? ` — ${sheet.scorer.firstName} ${sheet.scorer.lastName}` : ''}</h2>
+                        <h2>Scorecard{sheet.scorer.firstName ? ` - ${sheet.scorer.firstName} ${sheet.scorer.lastName}` : ''}</h2>
                         {ballot && (
                             <div className="sv-header-actions">
-                                <button className="pc-cancel-btn" onClick={() => {
+                                <AddButton onClick={() => {
                                     if (!sheet || !ballot) return
                                     const rows: string[][] = [['Category', 'Field', 'Side', 'Score', 'Student']]
                                     for (const catId of sheet.categoryOrder) {
@@ -202,6 +204,7 @@ const ScorecardViewer = () => {
                                             }
                                         }
                                     }
+
                                     const csv = rows.map(r => r.map(c => c.includes(',') || c.includes('"') ? `"${c.replace(/"/g, '""')}"` : c).join(',')).join('\n')
                                     const blob = new Blob([csv], { type: 'text/csv' })
                                     const url = URL.createObjectURL(blob)
@@ -210,7 +213,15 @@ const ScorecardViewer = () => {
                                     a.download = `ballot-${ballotAssignmentId}.csv`
                                     a.click()
                                     URL.revokeObjectURL(url)
-                                }}>Export CSV</button>
+                                }}>Export CSV</AddButton>
+                                {!editing ? (
+                                    <AddButton onClick={startEditing}>Edit Scores</AddButton>
+                                ) : (
+                                    <>
+                                        <button className="pc-save-btn" onClick={() => setShowSaveModal(true)}>Save Changes</button>
+                                        <button className="pc-cancel-btn" onClick={cancelEditing}>Cancel</button>
+                                    </>
+                                )}
                             </div>
                         )}
                     </div>
@@ -245,22 +256,14 @@ const ScorecardViewer = () => {
 
                     {!isCoachView && ballot && (
                         <div className="sv-edit-actions">
-                            {!editing ? (
-                                <button className="pc-save-btn" onClick={startEditing}>Edit Scores</button>
-                            ) : (
-                                <>
-                                    <button className="pc-save-btn" onClick={() => setShowSaveModal(true)}>Save Changes</button>
-                                    <button className="pc-cancel-btn" onClick={cancelEditing}>Cancel</button>
-                                </>
-                            )}
-                            <button
-                                className="org-back-btn sv-delete-btn"
+
+                            <DangerButton
                                 onClick={() => setShowDeleteModal(true)}
                                 disabled={deleting}
                                 aria-label="Delete ballot permanently"
                             >
                                 {deleting ? 'Deleting…' : 'Delete Ballot'}
-                            </button>
+                            </DangerButton>
                         </div>
                     )}
 
@@ -305,7 +308,7 @@ const ScorecardViewer = () => {
                                         const cat = sheet.scoringCategories[catId]
                                         const witness = cat.witnessId ? sheet.witnesses[cat.witnessId] : null
                                         const displayName = witness
-                                            ? `${cat.categoryName} — ${witness.characterName}`
+                                            ? `${cat.categoryName} - ${witness.characterName}`
                                             : cat.categoryName
                                         return (
                                             <tbody key={catId}>
@@ -340,7 +343,6 @@ const ScorecardViewer = () => {
                                                                         {pStudent && (
                                                                             <p className="student-name">
                                                                                 {pStudent.name}
-                                                                                {pStudent.pronouns && <span className="student-pronouns"> ({pStudent.pronouns})</span>}
                                                                             </p>
                                                                         )}
                                                                     </div>
@@ -366,7 +368,6 @@ const ScorecardViewer = () => {
                                                                         {dStudent && (
                                                                             <p className="student-name">
                                                                                 {dStudent.name}
-                                                                                {dStudent.pronouns && <span className="student-pronouns"> ({dStudent.pronouns})</span>}
                                                                             </p>
                                                                         )}
                                                                     </div>
@@ -381,20 +382,43 @@ const ScorecardViewer = () => {
                                 </table>
                             </div>
 
-                            {/* Nominations with ranks */}
+                            {/* Nominations with ranks, grouped by award category */}
                             {ballot.nominations.length > 0 && (
                                 <div className="sv-section">
                                     <h3>Nominations</h3>
-                                    <ul className="sv-nominations-list">
-                                        {ballot.nominations.map((n) => {
-                                            const s = sheet.students[n.studentId]
+                                    <div className={"sv-nominations-grid"}>
+                                    {(() => {
+                                        // Group nominations by their award category, preserving encounter order.
+                                        const groups = new Map<string, typeof ballot.nominations>()
+                                        for (const n of ballot.nominations) {
+                                            const key = n.awardCategoryId ?? ''
+                                            if (!groups.has(key)) groups.set(key, [])
+                                            groups.get(key)!.push(n)
+                                        }
+                                        return [...groups.entries()].map(([awardCategoryId, noms]) => {
+                                            const award = sheet.awardCategories[awardCategoryId]
+                                            const awardName = award ? award.name : (awardCategoryId || 'Uncategorized')
+                                            const sorted = [...noms].sort((a, b) => a.rank - b.rank)
                                             return (
-                                                <li key={n.studentId}>
-                                                    {s ? s.name : n.studentId} — Rank {n.rank}
-                                                </li>
+                                                <div key={awardCategoryId} className="sv-nomination-group">
+                                                    <h4 className="sv-nomination-award">{awardName}</h4>
+                                                    <ul className="sv-nominations-list">
+                                                        {sorted.map((n) => {
+                                                            const s = sheet.students[n.studentId]
+                                                            return (
+                                                                <li key={`${awardCategoryId}:${n.studentId}`}>
+
+                                                                    {s ? s.name : n.studentId} - Rank {n.rank}
+                                                                    <span className={"sv-nomination-side"}>{s.schoolId === sheet.prosecutionId ? prosecutionLabel : "Defense"}</span>
+                                                                </li>
+                                                            )
+                                                        })}
+                                                    </ul>
+                                                </div>
                                             )
-                                        })}
-                                    </ul>
+                                        })
+                                    })()}
+                                    </div>
                                 </div>
                             )}
 

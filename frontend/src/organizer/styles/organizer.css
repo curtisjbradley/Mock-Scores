@@ -177,12 +177,12 @@
 }
 
 .org-status-filter-btn:hover {
-    background: var(--surface-hover, #e5e7eb);
+    background: var(--surface);
 }
 
 .org-status-filter-btn--active {
     background: #fff;
-    color: var(--text-primary, #1a1a2e);
+    color: var(--text);
     box-shadow: 0 1px 3px rgba(0,0,0,0.1);
 }
 
@@ -420,11 +420,6 @@
     font-weight: bold;
 }
 
-.sv-nominated {
-    margin-left: 0.25rem;
-    font-size: 0.75rem;
-    color: var(--color-accent, #e07b00);
-}
 
 .sv-section {
     margin-top: 1.5rem;
@@ -436,6 +431,27 @@
 
 .sv-nominations-list {
     padding-left: 1.25rem;
+}
+
+.sv-nominations-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(15rem, 1fr));
+}
+
+.sv-nomination-side {
+    margin-left: 1rem;
+    color: var(--text-muted);
+    font-size: small;
+}
+
+.sv-nomination-group {
+    margin-top: 0.75rem;
+}
+
+.sv-nomination-award {
+    margin: 0 0 0.25rem;
+    font-size: 0.95rem;
+    font-weight: 600;
 }
 
 .sv-totals {
