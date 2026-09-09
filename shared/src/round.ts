@@ -32,6 +32,7 @@ export interface IPairingScorer {
     d_points: number | null;
     /** Delivery status of this scorer's most recent scoring-link email, if any. */
     email_status?: EmailStatus | null;
+    ballot_id: string | null;
 }
 
 export interface IBallotStatus {

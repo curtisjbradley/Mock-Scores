@@ -24,7 +24,7 @@ const BallotPage = () => {
 
     useEffect(() => {
         if (!id || !roundId || !pairingId) return
-        apiFetch(`/organizer/tournament/${id}/rounds/${roundId}/pairings/${pairingId}/ballot-format`)
+        apiFetch(`/organizer/tournament/${id}/pairings/${pairingId}/ballot-format`)
             .then(r => {
                 if (!r.ok) throw new Error('Failed to load ballot')
                 return r.json() as Promise<IScoreSheetFormat>

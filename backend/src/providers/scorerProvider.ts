@@ -1,6 +1,7 @@
 import { dbQuery, withTransaction } from '../db';
 import type { IScoreSheetFormat, ScorecardPayload } from '@mock-scores/shared';
 import { DbError, NotFoundError, AlreadySubmittedError, ConflictReportedError, RoundNotLockedError } from '../errors';
+import {IBallotRow} from "../types/dbtypes";
 
 // ─── Shared format builder ───────────────────────────────────────────────────
 
@@ -976,12 +977,12 @@ export async function getConflictReportContext(assignmentId: string): Promise<{
  * Returns the stored ballot_json for a given assignment, or null if none has
  * been submitted yet. Used by the organizer scorecard viewer.
  */
-export async function getBallot(ballotId: string): Promise<ScorecardPayload | null> {
-    const row = (await dbQuery<{ ballot_json: ScorecardPayload }>(
-        'SELECT ballot_json FROM ballots WHERE ballot_id = $1',
+export async function getBallot(ballotId: string): Promise<IBallotRow | null> {
+    const row = (await dbQuery<IBallotRow>(
+        'SELECT * FROM ballots WHERE ballot_id = $1',
         [ballotId],
     ))?.rows[0];
-    return row?.ballot_json ?? null;
+    return row ?? null;
 }
 
 // ─── submitNominations ────────────────────────────────────────────────────────

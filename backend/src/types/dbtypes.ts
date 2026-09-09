@@ -1,6 +1,8 @@
 
 // Row interfaces for all database tables
 
+import {ScorecardPayload} from "@mock-scores/shared";
+
 export interface IAuthRow {
     user_id: string;
     password_hash: string;
@@ -63,6 +65,21 @@ export interface IScoringFieldRow {
     crossing: boolean;
     position: number;
     award_category_id: string | null;
+}
+
+export interface IBallotRow {
+    ballot_id: string;
+    scorer_assignment: string;
+    tournament_id: string;
+    pairing_id: string;
+    ballot_json: ScorecardPayload;
+    p_team_id: string;
+    d_team_id: string;
+    d_points: number;
+    p_points: number;
+    tiebreaker?: string;
+    presider_ballot: boolean;
+
 }
 
 export interface IScoringTemplateFieldRow {

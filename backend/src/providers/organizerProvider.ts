@@ -1,5 +1,5 @@
 import {dbQuery, withTransaction} from '../db';
-import { computeBallotTotals, getFieldMultipliers } from './scorerProvider';
+import {computeBallotTotals, getFieldMultipliers} from './scorerProvider';
 import type { PoolClient } from 'pg';
 import type {
     IBallotStatus,
@@ -768,6 +768,12 @@ export async function getPairings(roundID: string): Promise<IPairingRow[]> {
     return result.rows;
 }
 
+export async function getPairing(pairingId: string) : Promise<IPairingRow> {
+    const result = await dbQuery<IPairingRow>('SELECT * FROM pairings WHERE pairing_id=$1', [pairingId]);
+    if (!result) throw new DbError('getPairing');
+    return result.rows[0];
+}
+
 export async function updatePairing(pairingID: string, prosecution: string, defense: string, courtroomID: string | null): Promise<IPairingRow> {
     const result = await dbQuery<IPairingRow>(
         'UPDATE pairings SET p_team=$1, d_team=$2, courtroom=$3 WHERE pairing_id=$4 RETURNING *',
@@ -800,13 +806,13 @@ export async function deletePairing(pairingID: string): Promise<void> {
     if (!row) throw new NotFoundError('pairing');
 }
 
-export async function getPairingScorers(pairingID: string): Promise<{ assignment_id: string; type: 'registered' | 'paper'; scorer_id: string; name: string; is_presider: boolean; presider_only_tiebreaker: boolean; conflict_reported: boolean; p_points: number | null; d_points: number | null; email_status: EmailStatus | null }[]> {
+export async function getPairingScorers(pairingID: string): Promise<{ assignment_id: string; type: 'registered' | 'paper'; scorer_id: string; name: string; is_presider: boolean; presider_only_tiebreaker: boolean; conflict_reported: boolean; p_points: number | null; d_points: number | null; email_status: EmailStatus | null, ballot_id: string | null}[]> {
     const presiderRow = (await dbQuery<{ scorer_assignment_id: string; show_scores: boolean }>('SELECT scorer_assignment_id, show_scores FROM scorer_presider_assignment WHERE pairing_id=$1', [pairingID]))?.rows[0];
     const presiderAssignmentId = presiderRow?.scorer_assignment_id ?? null;
     const presiderOnlyTiebreaker = presiderRow ? presiderRow.show_scores === false : false;
-    const registered = (await dbQuery<{ assignment_id: string; scorer_id: string; first_name: string; last_name: string; conflict_reported: boolean; p_points: number | null; d_points: number | null; email_status: EmailStatus | null }>(
+    const registered = (await dbQuery<{ assignment_id: string; scorer_id: string; first_name: string; last_name: string; conflict_reported: boolean; p_points: number | null; d_points: number | null; email_status: EmailStatus | null, ballot_id: string | null }>(
         `SELECT spa.assignment_id, s.scorer_id, s.first_name, s.last_name, spa.conflict_reported,
-                b.p_points, b.d_points, em.status AS email_status
+                b.p_points, b.d_points, em.status AS email_status, b.ballot_id
          FROM scorer_pairing_assignments spa
          JOIN scorers s ON spa.registered_scorer_id = s.scorer_id
          LEFT JOIN ballots b ON b.scorer_assignment_id = spa.assignment_id
@@ -818,9 +824,9 @@ export async function getPairingScorers(pairingID: string): Promise<{ assignment
          WHERE spa.pairing_id=$1 AND spa.registered_scorer_id IS NOT NULL`,
         [pairingID]
     ))?.rows ?? [];
-    const paper = (await dbQuery<{ assignment_id: string; scorer_id: string; name: string; conflict_reported: boolean; p_points: number | null; d_points: number | null }>(
+    const paper = (await dbQuery<{ assignment_id: string; scorer_id: string; name: string; conflict_reported: boolean; p_points: number | null; d_points: number | null, ballot_id: string| null }>(
         `SELECT spa.assignment_id, ps.scorer_id, ps.name, spa.conflict_reported,
-                b.p_points, b.d_points
+                b.p_points, b.d_points, b.ballot_id
          FROM scorer_pairing_assignments spa
          JOIN paper_scorers ps ON spa.paper_scorer_id = ps.scorer_id
          LEFT JOIN ballots b ON b.scorer_assignment_id = spa.assignment_id
@@ -828,8 +834,8 @@ export async function getPairingScorers(pairingID: string): Promise<{ assignment
         [pairingID]
     ))?.rows ?? [];
     return [
-        ...registered.map(r => ({ assignment_id: r.assignment_id, type: 'registered' as const, scorer_id: r.scorer_id, name: `${r.first_name} ${r.last_name}`, is_presider: r.assignment_id === presiderAssignmentId, presider_only_tiebreaker: r.assignment_id === presiderAssignmentId && presiderOnlyTiebreaker, conflict_reported: r.conflict_reported, p_points: r.p_points, d_points: r.d_points, email_status: r.email_status })),
-        ...paper.map(p => ({ assignment_id: p.assignment_id, type: 'paper' as const, scorer_id: p.scorer_id, name: p.name, is_presider: p.assignment_id === presiderAssignmentId, presider_only_tiebreaker: p.assignment_id === presiderAssignmentId && presiderOnlyTiebreaker, conflict_reported: p.conflict_reported, p_points: p.p_points, d_points: p.d_points, email_status: null })),
+        ...registered.map(r => ({ assignment_id: r.assignment_id, type: 'registered' as const, scorer_id: r.scorer_id, name: `${r.first_name} ${r.last_name}`, is_presider: r.assignment_id === presiderAssignmentId, presider_only_tiebreaker: r.assignment_id === presiderAssignmentId && presiderOnlyTiebreaker, conflict_reported: r.conflict_reported, p_points: r.p_points, d_points: r.d_points, email_status: r.email_status, ballot_id: r.ballot_id })),
+        ...paper.map(p => ({ assignment_id: p.assignment_id, type: 'paper' as const, scorer_id: p.scorer_id, name: p.name, is_presider: p.assignment_id === presiderAssignmentId, presider_only_tiebreaker: p.assignment_id === presiderAssignmentId && presiderOnlyTiebreaker, conflict_reported: p.conflict_reported, p_points: p.p_points, d_points: p.d_points, email_status: null, ballot_id: p.ballot_id })),
     ];
 }
 
@@ -1090,8 +1096,8 @@ async function duplicateTiebreaker(sourceTournamentID: string, newTournamentID: 
     }
 }
 
-export async function deleteBallot(assignmentId: string): Promise<void> {
-    const result = await dbQuery('DELETE FROM ballots WHERE scorer_assignment_id=$1 RETURNING ballot_id', [assignmentId]);
+export async function deleteBallot(ballotId: string): Promise<void> {
+    const result = await dbQuery('DELETE FROM ballots WHERE ballot_id=$1 RETURNING ballot_id', [ballotId]);
     if (!result) throw new DbError('deleteBallot');
     if (!result.rows[0]) throw new NotFoundError('ballot');
 }
@@ -1139,7 +1145,7 @@ export async function editBallot(
     );
 }
 
-export async function getBallotEditLog(assignmentId: string): Promise<{ editor_email: string; edited_at: string; reason: string; p_points_before: number; p_points_after: number; d_points_before: number; d_points_after: number }[]> {
+export async function getBallotEditLog(ballotId: string): Promise<{ editor_email: string; edited_at: string; reason: string; p_points_before: number; p_points_after: number; d_points_before: number; d_points_after: number }[]> {
     return (await dbQuery<{
         editor_email: string;
         edited_at: string;
@@ -1152,9 +1158,9 @@ export async function getBallotEditLog(assignmentId: string): Promise<{ editor_e
         `SELECT bel.editor_email, bel.edited_at, bel.reason, bel.p_points_before, bel.p_points_after, bel.d_points_before, bel.d_points_after
          FROM ballot_edit_log bel
          JOIN ballots b ON b.ballot_id = bel.ballot_id
-         WHERE b.scorer_assignment_id = $1
+         WHERE b.ballot_id = $1
          ORDER BY bel.edited_at DESC`,
-        [assignmentId],
+        [ballotId],
     ))?.rows ?? [];
 }
 
@@ -1583,4 +1589,10 @@ export async function deleteCustomRosterColumn(tournamentId: string, field: stri
         [tournamentId, field]
     ))?.rows[0];
     if (!row) throw new NotFoundError('roster column');
+}
+
+export async function listSubmittedBallots(pairingID: string) : Promise<{ballot_id :string}[]> {
+    const ballots = (await dbQuery<{ ballot_id: string }>(`Select ballot_id from ballots where pairing_id = $1`,[pairingID]));
+    if (!ballots) throw new NotFoundError('Could not find the given pairing.')
+    return ballots.rows;
 }

@@ -245,7 +245,7 @@ router.get("/tournaments/:teamId/pairings/:pairingId/ballots/:ballotId", authedH
     if (!await coach.isBallotInPairingWithPublicResults(ballotId, teamId))
         return res.status(404).json({ message: "Ballot not found" });
     const sheet = await getScoreSheet(ballotId, { skipGuards: true }).catch(() => null);
-    const ballot = await getBallot(ballotId);
+    const ballot = (await getBallot(ballotId))?.ballot_json ?? null;
 
     if (!sheet && !ballot) return res.status(404).json({ message: "Ballot not found" });
 
@@ -258,7 +258,7 @@ router.get("/tournaments/:teamId/pairings/:pairingId/ballots/:ballotId", authedH
     // When the tournament does not share individual rankings, coaches must not
     // see award nominations on the ballot.
     if (ballot && !await coach.sharesIndividualRankings(teamId)) {
-        ballot.nominations = [];
+        ballot.nominations = []
     }
 
     return res.status(200).json({ sheet, ballot });

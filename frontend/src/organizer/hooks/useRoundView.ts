@@ -43,7 +43,7 @@ export function useRoundView(id: string | undefined, roundId: string | undefined
             setPairings(pairingsData); setScorers(Array.isArray(scorersData) ? scorersData : [])
             return Promise.all([
                 Promise.all((pairingsData as IPairing[]).map((p: IPairing) =>
-                    apiFetch(`/organizer/tournament/${id}/rounds/${roundId}/pairings/${p.pairing_id}/scorers`)
+                    apiFetch(`/organizer/tournament/${id}/pairings/${p.pairing_id}/scorers`)
                         .then(r => r.json())
                         .then((s: IPairingScorer[]) => [p.pairing_id, s] as [string, IPairingScorer[]])
                 )),
@@ -129,7 +129,7 @@ export function useRoundView(id: string | undefined, roundId: string | undefined
 
     const updatePairing = (updated: IPairing) => {
         setPairings(prev => prev.map(p => p.pairing_id === updated.pairing_id ? updated : p))
-        apiFetch(`/organizer/tournament/${id}/rounds/${roundId}/pairings/${updated.pairing_id}`, {
+        apiFetch(`/organizer/tournament/${id}/pairings/${updated.pairing_id}`, {
             method: 'PUT',
             body: JSON.stringify({
                 prosectionID: updated.p_team,
@@ -147,7 +147,7 @@ export function useRoundView(id: string | undefined, roundId: string | undefined
     }
 
     const removePairing = (pairing: IPairing) => {
-        apiFetch(`/organizer/tournament/${id}/rounds/${roundId}/pairings/${pairing.pairing_id}`, { method: 'DELETE' })
+        apiFetch(`/organizer/tournament/${id}/pairings/${pairing.pairing_id}`, { method: 'DELETE' })
             .catch(() => setError('Failed to remove matchup.'))
         setPairings(prev => prev.filter(p => p.pairing_id !== pairing.pairing_id))
     }
