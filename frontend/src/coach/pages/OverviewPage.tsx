@@ -30,11 +30,11 @@ export default function OverviewPage() {
     const nextRound = findNextRound(schedule)
 
     // Prep gaps for this team across the whole schedule.
-    const pairingsNeedingRoles = schedule.reduce(
+    const pairingsNeedingRoles = schedule.filter(r => !r.locked).reduce(
         (count, round) => count + round.pairings.filter(p => !p.has_assignments).length,
         0,
     )
-    const pairingsNeedingCallOrder = schedule.reduce(
+    const pairingsNeedingCallOrder = schedule.filter(r => !r.locked).reduce(
         (count, round) => count + round.pairings.filter(p => !p.has_call_order).length,
         0,
     )
