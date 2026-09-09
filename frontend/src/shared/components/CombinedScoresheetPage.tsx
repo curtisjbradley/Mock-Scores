@@ -299,6 +299,8 @@ export default function CombinedScoresheetPage() {
                             dateLabel,
                             tiebreaker: data.tiebreaker,
                             statSummary: data.statSummary,
+                            prosecutionId: data.prosecutionId,
+                            defenseId: data.defenseId,
                         },
                         `scoresheet-${data.prosecutionCode || 'pros'}-vs-${data.defenseCode || 'def'}.xlsx`,
                     )}

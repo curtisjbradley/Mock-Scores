@@ -13,6 +13,8 @@ export interface CombinedExport {
     tiebreaker?: string | null
     /** Tournament-configured standings stats for this trial, per side. */
     statSummary?: CombinedStat[] | null
+    prosecutionId: string,
+    defenseId: string,
 }
 
 const GRAY = 'FFBFBFBF'
@@ -31,7 +33,7 @@ function fill(color: string): ExcelJS.Fill {
  * and a summary block (percentages, presider tiebreaker, winner).
  */
 export async function buildCombinedWorkbook(data: CombinedExport): Promise<ExcelJS.Buffer> {
-    const { rows, ballots, prosLabel, prosecutionCode, defenseCode, roundLabel, dateLabel, tiebreaker, statSummary } = data
+    const { rows, ballots, prosLabel, prosecutionCode, defenseCode, roundLabel, dateLabel, tiebreaker, statSummary, prosecutionId, defenseId } = data
     const prosShort = prosLabel === 'Prosecution' ? 'Pros' : 'Pl'
 
     // Per-scorer column totals (same math as the component's totals row):
@@ -46,8 +48,8 @@ export async function buildCombinedWorkbook(data: CombinedExport): Promise<Excel
         return { p, d }
     })
     const tiebreakerText = tiebreaker
-        ? tiebreaker === prosecutionCode ? `${prosLabel} (${prosecutionCode})`
-        : tiebreaker === defenseCode ? `Defense (${defenseCode})`
+        ? tiebreaker === prosecutionId ? `${prosLabel} (${prosecutionCode})`
+        : tiebreaker === defenseId ? `Defense (${defenseCode})`
         : tiebreaker
         : null
 
@@ -108,17 +110,21 @@ export async function buildCombinedWorkbook(data: CombinedExport): Promise<Excel
     }
 
     // ── Segment rows ──────────────────────────────────────────────────────
+    let firstSegRowIdx = 0
+    let lastSegRowIdx = 0
     for (const r of rows) {
         const mult = Number(r.multiplier ?? 1) || 1
-        const multLabel = `×${Number.isInteger(mult) ? String(mult) : String(Number(mult.toFixed(2)))}`
-        const values: (number | string | null)[] = [r.label, multLabel]
+        const values: (number | string | null)[] = [r.label, mult]
         for (const b of ballots) {
             values.push(r.hasP ? (b.scores.get(`${r.key}:P`) ?? null) : null)
             values.push(r.hasD ? (b.scores.get(`${r.key}:D`) ?? null) : null)
         }
         values.push(r.student ?? '')
         const row = ws.addRow(values)
+        if (firstSegRowIdx === 0) firstSegRowIdx = row.number
+        lastSegRowIdx = row.number
         row.getCell(1).font = { bold: true }
+        // Multiplier is a real number so the totals formula can reference it.
         row.getCell(2).alignment = { horizontal: 'center' }
         // Center scores; color defense columns red.
         for (let i = 0; i < ballots.length; i++) {
@@ -130,10 +136,49 @@ export async function buildCombinedWorkbook(data: CombinedExport): Promise<Excel
     }
 
     // ── Totals row ────────────────────────────────────────────────────────
-    const totalValues: (number | string)[] = ['Total', '']
-    for (const t of scorerTotals) totalValues.push(t.p, t.d)
-    totalValues.push('')
-    const totalRow = ws.addRow(totalValues)
+    // Totals are Excel formulas: the dot product of the multiplier column (B)
+    // with each score column, so edits in the sheet recompute live. Blank score
+    // cells are treated as 0. MMULT(TRANSPOSE(mult), score) yields the weighted
+    // sum. `result` carries the precomputed value so viewers that don't evaluate
+    // formulas still show the number; it matches the component's totals.
+    const multRange = firstSegRowIdx > 0
+        ? `$${col(2)}$${firstSegRowIdx}:$${col(2)}$${lastSegRowIdx}`
+        : null
+    const weightedSumFormula = (scoreCol: string): string | null => {
+        if (!multRange) return null
+        const scoreRange = `${scoreCol}${firstSegRowIdx}:${scoreCol}${lastSegRowIdx}`
+        return `_xlfn.MMULT(TRANSPOSE(${multRange}),IF(${scoreRange}="",0,${scoreRange}))`
+    }
+
+    const totalRow = ws.addRow(['Total', ''])
+    for (let i = 0; i < ballots.length; i++) {
+        const pColNum = firstScorerCol + i * 2
+        const dColNum = pColNum + 1
+        const pFormula = weightedSumFormula(col(pColNum))
+        const dFormula = weightedSumFormula(col(dColNum))
+
+        const pCell = totalRow.getCell(pColNum);
+        pCell.value = pFormula
+            ? {
+                formula: pFormula,
+                result: scorerTotals[i].p,
+                shareType: 'array',
+                ref: pCell.address,
+            } as ExcelJS.CellFormulaValue
+            : scorerTotals[i].p
+
+        const dCell =  totalRow.getCell(dColNum);
+
+        dCell.value = dFormula
+            ? {
+                formula: dFormula,
+                result: scorerTotals[i].d,
+                shareType: 'array',
+                ref: dCell.address,
+            } as ExcelJS.CellFormulaValue
+            : scorerTotals[i].d
+    }
+    totalRow.getCell(lastCol).value = ''
     totalRow.eachCell({ includeEmpty: true }, (cell, colNum) => {
         if (colNum > lastCol) return
         cell.font = { bold: true, color: isDefenseCol(colNum) ? { argb: RED } : undefined }
