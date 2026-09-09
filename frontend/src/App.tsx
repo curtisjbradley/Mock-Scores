@@ -78,7 +78,7 @@ function App() {
                 <Route index element={<CoachHome />} />
                 <Route path=":teamId/assign-roles/:pairingId/:side" element={<AssignRoles />} />
                 <Route path=":teamId/witness-order/:pairingId" element={<WitnessCallOrder />} />
-                <Route path=":teamId/ballot/:pairingId/:assignmentId" element={<ScorecardViewer />} />
+                <Route path=":teamId/ballot/:pairingId/:ballotId" element={<ScorecardViewer />} />
                 <Route path=":teamId/pairing/:pairingId/scoresheet" element={<CombinedScoresheetPage />} />
                 <Route path=":teamId" element={<CoachLayout />}>
                     <Route index element={<Navigate to="overview" replace />} />

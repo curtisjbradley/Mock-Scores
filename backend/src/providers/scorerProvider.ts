@@ -441,9 +441,10 @@ export async function getPairingBallotFormat(pairingId: string): Promise<IScoreS
  * Throws NotFoundError when the assignment does not exist.
  * Throws DbError when a query fails.
  */
-export async function getScoreSheet(assignmentId: string, options?: { skipGuards?: boolean }): Promise<IScoreSheetFormat> {
+export async function getScoreSheet(ballotId: string, options?: { skipGuards?: boolean }): Promise<IScoreSheetFormat> {
     // ── 1. Resolve assignment → pairing → tournament ──────────────────────────
     const asg = (await dbQuery<{
+        assignment_id: string;
         pairing_id: string;
         registered_scorer_id: string | null;
         paper_scorer_id: string | null;
@@ -457,6 +458,7 @@ export async function getScoreSheet(assignmentId: string, options?: { skipGuards
         locked: boolean;
     }>(`
         SELECT
+            spa.assignment_id,
             spa.pairing_id,
             spa.registered_scorer_id,
             spa.paper_scorer_id,
@@ -469,13 +471,14 @@ export async function getScoreSheet(assignmentId: string, options?: { skipGuards
             spa2.show_scores,
             spa.conflict_reported
         FROM scorer_pairing_assignments spa
+        join ballots b on spa.assignment_id = b.scorer_assignment_id
         JOIN pairings p                          ON p.pairing_id = spa.pairing_id
         JOIN rounds r                            ON r.round_id   = p.round_id
         LEFT JOIN courtrooms cr                  ON cr.id        = p.courtroom
         LEFT JOIN scorer_presider_assignment spa2
                ON spa2.pairing_id = spa.pairing_id
-        WHERE spa.assignment_id = $1
-    `, [assignmentId]))?.rows[0];
+        WHERE b.ballot_id = $1
+    `, [ballotId]))?.rows[0];
 
     if (!asg) throw new NotFoundError('Assignment not found');
 
@@ -485,15 +488,15 @@ export async function getScoreSheet(assignmentId: string, options?: { skipGuards
     // Prevent re-entry: if a ballot already exists this link is spent
     if (!options?.skipGuards) {
         const existing = (await dbQuery<{ ballot_id: string }>(
-            'SELECT ballot_id FROM ballots WHERE scorer_assignment_id = $1 LIMIT 1',
-            [assignmentId],
+            'SELECT ballot_id FROM ballots WHERE ballot_id = $1 LIMIT 1',
+            [ballotId],
         ))?.rows[0];
         if (existing) throw new AlreadySubmittedError();
     }
 
     const { pairing_id, tournament_id, p_team, d_team } = asg;
     // This scorer is the presider when their assignment_id matches the presider row's scorer_assignment_id
-    const isPresider = asg.presider_scorer_assignment_id === assignmentId;
+    const isPresider = asg.presider_scorer_assignment_id === asg.assignment_id;
 
     // ── 2. Scorer name ────────────────────────────────────────────────────────
     let scorerFirstName = '';
@@ -797,7 +800,7 @@ export async function getScoreSheet(assignmentId: string, options?: { skipGuards
         scorer: {
             firstName: scorerFirstName,
             lastName: scorerLastName,
-            scorerID: assignmentId,
+            scorerID: asg.assignment_id,
             isPaper: asg.paper_scorer_id != null,
         },
         presiderName,
@@ -973,10 +976,10 @@ export async function getConflictReportContext(assignmentId: string): Promise<{
  * Returns the stored ballot_json for a given assignment, or null if none has
  * been submitted yet. Used by the organizer scorecard viewer.
  */
-export async function getBallot(assignmentId: string): Promise<ScorecardPayload | null> {
+export async function getBallot(ballotId: string): Promise<ScorecardPayload | null> {
     const row = (await dbQuery<{ ballot_json: ScorecardPayload }>(
-        'SELECT ballot_json FROM ballots WHERE scorer_assignment_id = $1',
-        [assignmentId],
+        'SELECT ballot_json FROM ballots WHERE ballot_id = $1',
+        [ballotId],
     ))?.rows[0];
     return row?.ballot_json ?? null;
 }

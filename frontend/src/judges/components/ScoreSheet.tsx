@@ -184,11 +184,8 @@ function ScoreBox({
             {student && (
                 <p className="student-name">
                     {student.name}
-
                     {student.pronouns && (
-                        <span className="student-pronouns">
-                            {" "}
-                            ({student.pronouns})
+                        <span className="student-pronouns">({student.pronouns})
                         </span>
                     )}
                 </p>
@@ -560,8 +557,7 @@ function ScoreSheet(
                 <div className="trial-info-card">
                     <div className="trial-info-meta">
                         <span className="trial-info-courtroom">
-                            Courtroom{" "}
-                            {details.courtroomNumber}
+                            Courtroom {details.courtroomNumber}
                         </span>
 
                         <span className="trial-info-presider">

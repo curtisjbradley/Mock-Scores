@@ -17,11 +17,11 @@ import DangerButton from "../../shared/components/DangerButton.tsx";
  * and the submitted ballot (organizer endpoint, JWT-required) and renders them together.
  */
 const ScorecardViewer = () => {
-    const { id, teamId, pairingId, judgeId, assignmentId } = useParams<{ id: string; teamId: string; pairingId: string; judgeId?: string; assignmentId?: string }>()
+    const { id, teamId, pairingId, judgeId, ballotId } = useParams<{ id: string; teamId: string; pairingId: string; judgeId?: string; ballotId?: string }>()
     const navigate = useNavigate()
     const location = window.location.pathname
     const isCoachView = location.includes('/coach/')
-    const ballotAssignmentId = judgeId ?? assignmentId ?? ''
+    const ballotAssignmentId = judgeId ?? ballotId ?? ''
 
     const [sheet, setSheet] = useState<IScoreSheetFormat | null>(null)
     const [ballot, setBallot] = useState<ScorecardPayload | null | undefined>(undefined)
@@ -116,7 +116,7 @@ const ScorecardViewer = () => {
                 if (isCoachView) {
                     const info = await resolveCoachTournament(scopeId, false, undefined)
                     if (!info?.tournamentId) throw new Error('Failed to resolve tournament')
-                    url = `/coach/tournaments/${info.tournamentId}/pairings/${pairingId}/ballots/${ballotAssignmentId}`
+                    url = `/coach/tournaments/${info.teamId}/pairings/${pairingId}/ballots/${ballotAssignmentId}`
                 } else {
                     url = `/organizer/tournament/${id}/pairings/${pairingId}/scoresheets/${ballotAssignmentId}`
                 }
@@ -334,6 +334,8 @@ const ScorecardViewer = () => {
                                                     <th colSpan={3}>{displayName}</th>
                                                 </tr>
                                                 {cat.categoryAssignments.map((a) => {
+                                                    console.log(a.assignmentKey)
+                                                    console.log(scoreMap)
                                                     const pScore = scoreMap.get(`${a.assignmentKey}:P`)
                                                     const dScore = scoreMap.get(`${a.assignmentKey}:D`)
                                                     const pStudent = student(a.pStudentId)
