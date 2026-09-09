@@ -62,7 +62,7 @@ export default function PairingCard({ pairing, teams, courtrooms, scorers, assig
 
     const teamName = (tid: string) => {
         const t = teams.find(t => t.id === tid)
-        return t ? `${t.code} — ${t.name}` : '—'
+        return t ? `${t.code} - ${t.name}` : '-'
     }
 
     const courtroomName = (id: string | null) => {

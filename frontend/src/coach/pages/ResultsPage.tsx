@@ -191,8 +191,8 @@ export default function ResultsPage() {
                                 return (
                                     <Fragment key={p.pairing_id}>
                                         <tr onClick={() => togglePairing(p.pairing_id)} className="coach-pairing-row">
-                                            <td>{p.p_team_code} — {p.p_team_name}</td><td><strong>{p.p_points}</strong></td>
-                                            <td>{p.d_team_code} — {p.d_team_name}</td><td><strong>{p.d_points}</strong></td>
+                                            <td>{p.p_team_code} - {p.p_team_name}</td><td><strong>{p.p_points}</strong></td>
+                                            <td>{p.d_team_code} - {p.d_team_name}</td><td><strong>{p.d_points}</strong></td>
                                             <td className={`coach-diff-cell ${diffClass(diff)}`}>
                                                 {diff > 0 ? `+${diff} P` : diff < 0 ? `${diff} D` : 'Tie'}
                                             </td>
