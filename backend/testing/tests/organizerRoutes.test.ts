@@ -1,20 +1,27 @@
+jest.mock('../../src/email', () =>
+    jest.requireActual('../mocks/email')
+);
 
-jest.mock('../../src/email', () => jest.requireActual('../mocks/email'));
 import request from 'supertest';
 import app from '../../src/appService';
 import { dbQuery } from '../../src/db';
 import { setupAuth, makeAuth } from '../helpers/auth';
 
-const mockDbQuery = dbQuery as jest.MockedFunction<typeof dbQuery>;
+const mockDbQuery =
+    dbQuery as jest.MockedFunction<typeof dbQuery>;
 
-const TOURNAMENT_ID = 'a1b2c3d4-e5f6-7890-abcd-ef1234567890';
-const SCORER_ID     = 'b2c3d4e5-f6a7-8901-bcde-f12345678901';
-const ORG_ID        = 'c3d4e5f6-a7b8-9012-cdef-123456789012';
-const ROUND_ID      = 'd4e5f6a7-b8c9-0123-defa-234567890123';
-const PAIRING_ID    = 'e5f6a7b8-c9d0-1234-efab-345678901234';
+const TOURNAMENT_ID = 'a1b2c3d4-e5f6-4789-abcd-ef1234567890';
+const SCORER_ID     = 'b2c3d4e5-f6a7-4901-bcde-f12345678901';
+const ORG_ID        = 'c3d4e5f6-a7b8-4012-8def-123456789012';
+const ROUND_ID      = 'd4e5f6a7-b8c9-4123-9efa-234567890123';
+const PAIRING_ID    = 'e5f6a7b8-c9d0-4234-afab-345678901234';
 
 const getToken = setupAuth();
 const auth = () => makeAuth(getToken());
+
+beforeEach(() => {
+    mockDbQuery.mockReset();
+});
 
 /** Mock verifyUser session + verifyTournamentAccess ownership check */
 function mockAccess() {
@@ -420,41 +427,12 @@ describe('GET /api/organizer/tournament/:tournamentId/standings-config', () => {
     });
 });
 
-// ─── PATCH /api/organizer/tournament/:tournamentId/standings-config ───────────
-describe('PATCH /api/organizer/tournament/:tournamentId/standings-config', () => {
-    it('returns 400 when dsl missing', async () => {
-        mockAccess();
-        const res = await request(app).patch(`/organizer/tournament/${TOURNAMENT_ID}/standings-config`).set(auth()).send({});
-        expect(res.status).toBe(400);
-    });
-
-    it('returns 200 on success', async () => {
-        mockAccess();
-        mockDbQuery
-            .mockResolvedValueOnce({ rows: [{ standings_config_id: null }], rowCount: 1 } as any) // SELECT existing config
-            .mockResolvedValueOnce({ rows: [{ id: 'cfg1' }], rowCount: 1 } as any)               // INSERT config
-            .mockResolvedValueOnce({ rows: [], rowCount: 1 } as any);                             // UPDATE tournament
-        const res = await request(app).patch(`/organizer/tournament/${TOURNAMENT_ID}/standings-config`).set(auth()).send({ dsl: '(config (columns) (tiebreakers))' });
-        expect(res.status).toBe(200);
-    });
-});
-
 // ─── GET /api/organizer/tournament/:tournamentId/scoring-categories ───────────
 describe('GET /api/organizer/tournament/:tournamentId/scoring-categories', () => {
     it('returns 200 with categories', async () => {
         mockAccess();
         mockDbQuery.mockResolvedValueOnce({ rows: [], rowCount: 0 } as any);
         const res = await request(app).get(`/organizer/tournament/${TOURNAMENT_ID}/scoring-categories`).set(auth());
-        expect(res.status).toBe(200);
-    });
-});
-
-// ─── PATCH /api/organizer/tournament/:tournamentId/scoring-categories ─────────
-describe('PATCH /api/organizer/tournament/:tournamentId/scoring-categories', () => {
-    it('returns 200 on success', async () => {
-        mockAccess();
-        mockDbQuery.mockResolvedValueOnce({ rows: [{ id: TOURNAMENT_ID }], rowCount: 1 } as any);
-        const res = await request(app).patch(`/organizer/tournament/${TOURNAMENT_ID}/scoring-categories`).set(auth()).send([]);
         expect(res.status).toBe(200);
     });
 });
@@ -474,110 +452,6 @@ describe('PUT /api/organizer/tournament/:tournamentId/scorers', () => {
         mockDbQuery.mockResolvedValueOnce({ rows: [scorer], rowCount: 1 } as any);
         const res = await request(app).put(`/organizer/tournament/${TOURNAMENT_ID}/scorers`).set(auth()).send(scorer);
         expect(res.status).toBe(200);
-    });
-});
-
-// ─── PUT /api/organizer/tournament/:tournamentId/organizers ───────────────────
-describe('PUT /api/organizer/tournament/:tournamentId/organizers', () => {
-    it('returns 400 when id missing', async () => {
-        mockAccess();
-        const res = await request(app).put(`/organizer/tournament/${TOURNAMENT_ID}/organizers`).set(auth()).send({ organizer: { name: 'Bob', email: 'b@c.com', role: 'delegate' } });
-        expect(res.status).toBe(400);
-    });
-
-    it('returns 400 when id is invalid UUID', async () => {
-        mockAccess();
-        const res = await request(app).put(`/organizer/tournament/${TOURNAMENT_ID}/organizers`).set(auth()).send({ organizer: { id: 'not-a-uuid', name: 'Bob', email: 'b@c.com', role: 'delegate' } });
-        expect(res.status).toBe(400);
-    });
-
-    it('returns 200 on success', async () => {
-        mockAccess();
-        const updated = { id: ORG_ID, name: 'Bob', email: 'b@c.com', role: 'delegate' };
-        mockDbQuery.mockResolvedValueOnce({ rows: [updated], rowCount: 1 } as any);
-        const res = await request(app).put(`/organizer/tournament/${TOURNAMENT_ID}/organizers`).set(auth()).send({ organizer: { id: ORG_ID, name: 'Bob', email: 'b@c.com', role: 'delegate' } });
-        expect(res.status).toBe(200);
-    });
-});
-
-// ─── PUT /api/organizer/tournament/:tournamentId/courtrooms ───────────────────
-describe('PUT /api/organizer/tournament/:tournamentId/courtrooms', () => {
-    it('returns 400 when id or name missing', async () => {
-        mockAccess();
-        const res = await request(app).put(`/organizer/tournament/${TOURNAMENT_ID}/courtrooms`).set(auth()).send({ name: 'Room 1' });
-        expect(res.status).toBe(400);
-    });
-
-    it('returns 200 on success', async () => {
-        mockAccess();
-        const row = { id: 'c1', tournament_id: TOURNAMENT_ID, name: 'Room 1', location: null };
-        mockDbQuery.mockResolvedValueOnce({ rows: [row], rowCount: 1 } as any);
-        const res = await request(app).put(`/organizer/tournament/${TOURNAMENT_ID}/courtrooms`).set(auth()).send({ id: 'c1', name: 'Room 1' });
-        expect(res.status).toBe(200);
-    });
-});
-
-// ─── DELETE /api/organizer/tournament/:tournamentId/courtrooms ────────────────
-describe('DELETE /api/organizer/tournament/:tournamentId/courtrooms', () => {
-    it('returns 400 when id missing', async () => {
-        mockAccess();
-        const res = await request(app).delete(`/organizer/tournament/${TOURNAMENT_ID}/courtrooms`).set(auth()).send({});
-        expect(res.status).toBe(400);
-    });
-
-    it('returns 204 on success', async () => {
-        mockAccess();
-        mockDbQuery.mockResolvedValueOnce({ rows: [{ id: 'c1' }], rowCount: 1 } as any);
-        const res = await request(app).delete(`/organizer/tournament/${TOURNAMENT_ID}/courtrooms`).set(auth()).send({ id: 'c1' });
-        expect(res.status).toBe(204);
-    });
-});
-
-// ─── PUT /api/organizer/tournament/:tournamentId/teams ────────────────────────
-describe('PUT /api/organizer/tournament/:tournamentId/teams', () => {
-    it('returns 400 when id missing', async () => {
-        mockAccess();
-        const res = await request(app).put(`/organizer/tournament/${TOURNAMENT_ID}/teams`).set(auth()).send({ team: { name: 'Eagles', coach_email: 'c@d.com' } });
-        expect(res.status).toBe(400);
-    });
-
-    it('returns 400 when id is invalid UUID', async () => {
-        mockAccess();
-        const res = await request(app).put(`/organizer/tournament/${TOURNAMENT_ID}/teams`).set(auth()).send({ team: { id: 'bad-id', name: 'Eagles', coach_email: 'c@d.com' } });
-        expect(res.status).toBe(400);
-    });
-
-    it('returns 200 on success', async () => {
-        mockAccess();
-        const teamId = 'f6a7b8c9-d0e1-2345-fabc-456789012345';
-        mockDbQuery
-            .mockResolvedValueOnce({ rows: [], rowCount: 0 } as any) // teamNameExists
-            .mockResolvedValueOnce({ rows: [{ id: teamId, name: 'Eagles' }], rowCount: 1 } as any); // updateTeam
-        const res = await request(app).put(`/organizer/tournament/${TOURNAMENT_ID}/teams`).set(auth()).send({ team: { id: teamId, name: 'Eagles', coach_email: 'c@d.com' } });
-        expect(res.status).toBe(200);
-    });
-});
-
-// ─── DELETE /api/organizer/tournament/:tournamentId/teams ─────────────────────
-describe('DELETE /api/organizer/tournament/:tournamentId/teams', () => {
-    it('returns 400 when id missing', async () => {
-        mockAccess();
-        const res = await request(app).delete(`/organizer/tournament/${TOURNAMENT_ID}/teams`).set(auth()).send({});
-        expect(res.status).toBe(400);
-    });
-
-    it('returns 400 when id is invalid UUID', async () => {
-        mockAccess();
-        const res = await request(app).delete(`/organizer/tournament/${TOURNAMENT_ID}/teams`).set(auth()).send({ id: 'bad-id' });
-        expect(res.status).toBe(400);
-    });
-
-    it('returns 204 on success', async () => {
-        mockAccess();
-        const teamId = 'f6a7b8c9-d0e1-2345-fabc-456789012345';
-        mockDbQuery.mockResolvedValueOnce({ rows: [{ id: teamId }], rowCount: 1 } as any);
-        const res = await request(app).delete(`/organizer/tournament/${TOURNAMENT_ID}/teams`).set(auth()).send({ id: teamId });
-        expect(res.status).toBe(204);
     });
 });
 
@@ -719,9 +593,26 @@ describe('DELETE /api/organizer/tournament/:tournamentId/rounds/:round', () => {
 
 // ─── Pairings ─────────────────────────────────────────────────────────────────
 const PAIRINGS_URL = `${ROUND_URL}/pairings`;
-const TEAM_A = 'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa';
-const TEAM_B = 'bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbbbb';
-const COURTROOM_ID = 'cccccccc-cccc-cccc-cccc-cccccccccccc';
+const PAIRING_BASE_URL = `/organizer/tournament/${TOURNAMENT_ID}/pairings`;
+const PAIRING_URL = `${PAIRING_BASE_URL}/${PAIRING_ID}`;
+const TEAM_A = 'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa';
+const TEAM_B = 'bbbbbbbb-bbbb-4bbb-9bbb-bbbbbbbbbbbb';
+const COURTROOM_ID = 'cccccccc-cccc-4ccc-accc-cccccccccccc';
+
+
+const PAIRING_BASE = {
+    pairing_id: PAIRING_ID,
+    round_id: ROUND_ID,
+    p_team: TEAM_A,
+    d_team: TEAM_B,
+    courtroom: COURTROOM_ID,
+};
+
+/** Mock verifyTournamentAccess + verifyPairing/getPairing. */
+function mockPairingAccess(pairing: object = PAIRING_BASE) {
+    mockAccess();
+    mockDbQuery.mockResolvedValueOnce({ rows: [pairing], rowCount: 1 } as any);
+}
 
 describe('GET /api/organizer/tournament/:tournamentId/rounds/:round/pairings', () => {
     it('returns 200 with pairings', async () => {
@@ -772,29 +663,27 @@ describe('POST /api/organizer/tournament/:tournamentId/rounds/:round/pairings', 
     });
 });
 
-describe('PUT /api/organizer/tournament/:tournamentId/rounds/:round/pairings/:pairing', () => {
-    const PAIRING_URL = `${PAIRINGS_URL}/${PAIRING_ID}`;
-
+describe('PUT /api/organizer/tournament/:tournamentId/pairings/:pairingId', () => {
     it('returns 400 for invalid pairing UUID', async () => {
-        mockRoundAccess(ROUND_BASE);
-        const res = await request(app).put(`${PAIRINGS_URL}/bad-uuid`).set(auth()).send({ prosectionID: TEAM_A, defenseID: TEAM_B, courtroomID: COURTROOM_ID });
+        mockAccess();
+        const res = await request(app).put(`${PAIRING_BASE_URL}/bad-uuid`).set(auth()).send({ prosectionID: TEAM_A, defenseID: TEAM_B, courtroomID: COURTROOM_ID });
         expect(res.status).toBe(400);
     });
 
     it('returns 400 when fields missing', async () => {
-        mockRoundAccess(ROUND_BASE);
+        mockPairingAccess();
         const res = await request(app).put(PAIRING_URL).set(auth()).send({ prosectionID: TEAM_A });
         expect(res.status).toBe(400);
     });
 
     it('returns 400 when prosecution and defense are the same team', async () => {
-        mockRoundAccess(ROUND_BASE);
+        mockPairingAccess();
         const res = await request(app).put(PAIRING_URL).set(auth()).send({ prosectionID: TEAM_A, defenseID: TEAM_A, courtroomID: COURTROOM_ID });
         expect(res.status).toBe(400);
     });
 
     it('returns 200 with the updated pairing on success', async () => {
-        mockRoundAccess(ROUND_BASE);
+        mockPairingAccess();
         const pairing = { pairing_id: PAIRING_ID, round_id: ROUND_ID, p_team: TEAM_A, d_team: TEAM_B, courtroom: COURTROOM_ID };
         mockDbQuery.mockResolvedValueOnce({ rows: [pairing], rowCount: 1 } as any);
         const res = await request(app).put(PAIRING_URL).set(auth()).send({ prosectionID: TEAM_A, defenseID: TEAM_B, courtroomID: COURTROOM_ID });
@@ -803,14 +692,14 @@ describe('PUT /api/organizer/tournament/:tournamentId/rounds/:round/pairings/:pa
     });
 
     it('returns 404 when the pairing does not exist', async () => {
-        mockRoundAccess(ROUND_BASE);
+        mockPairingAccess();
         mockDbQuery.mockResolvedValueOnce({ rows: [], rowCount: 0 } as any);
         const res = await request(app).put(PAIRING_URL).set(auth()).send({ prosectionID: TEAM_A, defenseID: TEAM_B, courtroomID: null });
         expect(res.status).toBe(404);
     });
 
     it('returns 409 when prosecution team already assigned this round', async () => {
-        mockRoundAccess(ROUND_BASE);
+        mockPairingAccess();
         const err = Object.assign(new Error(), { detail: 'Key (round_id, p_team)=(r1, team1) already exists.' });
         mockDbQuery.mockRejectedValueOnce(err);
         const res = await request(app).put(PAIRING_URL).set(auth()).send({ prosectionID: TEAM_A, defenseID: TEAM_B, courtroomID: COURTROOM_ID });
@@ -819,7 +708,7 @@ describe('PUT /api/organizer/tournament/:tournamentId/rounds/:round/pairings/:pa
     });
 
     it('returns 409 when defense team already assigned this round', async () => {
-        mockRoundAccess(ROUND_BASE);
+        mockPairingAccess();
         const err = Object.assign(new Error(), { detail: 'Key (round_id, d_team)=(r1, team2) already exists.' });
         mockDbQuery.mockRejectedValueOnce(err);
         const res = await request(app).put(PAIRING_URL).set(auth()).send({ prosectionID: TEAM_A, defenseID: TEAM_B, courtroomID: COURTROOM_ID });
@@ -828,101 +717,101 @@ describe('PUT /api/organizer/tournament/:tournamentId/rounds/:round/pairings/:pa
     });
 });
 
-describe('DELETE /api/organizer/tournament/:tournamentId/rounds/:round/pairings/:pairing', () => {
+describe('DELETE /api/organizer/tournament/:tournamentId/pairings/:pairingId', () => {
     it('returns 400 for invalid pairing UUID', async () => {
-        mockRoundAccess(ROUND_BASE);
-        const res = await request(app).delete(`${PAIRINGS_URL}/bad-uuid`).set(auth());
+        mockAccess();
+        const res = await request(app).delete(`${PAIRING_BASE_URL}/bad-uuid`).set(auth());
         expect(res.status).toBe(400);
     });
 
     it('returns 204 on success', async () => {
-        mockRoundAccess(ROUND_BASE);
+        mockPairingAccess();
         mockDbQuery.mockResolvedValueOnce({ rows: [{ id: PAIRING_ID }], rowCount: 1 } as any);
-        const res = await request(app).delete(`${PAIRINGS_URL}/${PAIRING_ID}`).set(auth());
+        const res = await request(app).delete(PAIRING_URL).set(auth());
         expect(res.status).toBe(204);
     });
 });
 
 // ─── Pairing scorers ──────────────────────────────────────────────────────────
-const SCORER_ASSIGN_ID = 'dddddddd-dddd-dddd-dddd-dddddddddddd';
+const SCORER_ASSIGN_ID = 'dddddddd-dddd-4ddd-bddd-dddddddddddd';
 
-describe('GET /api/organizer/tournament/:tournamentId/rounds/:round/pairings/:pairing/scorers', () => {
+describe('GET /api/organizer/tournament/:tournamentId/pairings/:pairingId/scorers', () => {
     it('returns 200 with scorers', async () => {
-        mockRoundAccess(ROUND_BASE);
+        mockPairingAccess();
         mockDbQuery.mockResolvedValueOnce({ rows: [], rowCount: 0 } as any);
-        const res = await request(app).get(`${PAIRINGS_URL}/${PAIRING_ID}/scorers`).set(auth());
+        const res = await request(app).get(`${PAIRING_URL}/scorers`).set(auth());
         expect(res.status).toBe(200);
     });
 });
 
-describe('POST /api/organizer/tournament/:tournamentId/rounds/:round/pairings/:pairing/scorers', () => {
+describe('POST /api/organizer/tournament/:tournamentId/pairings/:pairingId/scorers', () => {
     it('returns 400 when neither scorer_id nor paper_name provided', async () => {
-        mockRoundAccess(ROUND_BASE);
-        const res = await request(app).post(`${PAIRINGS_URL}/${PAIRING_ID}/scorers`).set(auth()).send({});
+        mockPairingAccess();
+        const res = await request(app).post(`${PAIRING_URL}/scorers`).set(auth()).send({});
         expect(res.status).toBe(400);
     });
 
     it('returns 201 when assigning by scorer_id', async () => {
-        mockRoundAccess(ROUND_BASE);
+        mockPairingAccess();
         const assignment = { id: SCORER_ASSIGN_ID, pairing_id: PAIRING_ID, scorer_id: SCORER_ID };
         mockDbQuery.mockResolvedValueOnce({ rows: [assignment], rowCount: 1 } as any);
-        const res = await request(app).post(`${PAIRINGS_URL}/${PAIRING_ID}/scorers`).set(auth()).send({ scorer_id: SCORER_ID });
+        const res = await request(app).post(`${PAIRING_URL}/scorers`).set(auth()).send({ scorer_id: SCORER_ID });
         expect(res.status).toBe(201);
     });
 
     it('returns 201 when assigning by paper_name', async () => {
-        mockRoundAccess(ROUND_BASE);
+        mockPairingAccess();
         mockDbQuery
             .mockResolvedValueOnce({ rows: [{ scorer_id: 'ps-id-000-0000-0000-000000000000' }], rowCount: 1 } as any) // INSERT paper_scorers
             .mockResolvedValueOnce({ rows: [{ assignment_id: SCORER_ASSIGN_ID, scorer_id: 'ps-id-000-0000-0000-000000000000' }], rowCount: 1 } as any); // INSERT assignment
-        const res = await request(app).post(`${PAIRINGS_URL}/${PAIRING_ID}/scorers`).set(auth()).send({ paper_name: 'Judge Smith' });
+        const res = await request(app).post(`${PAIRING_URL}/scorers`).set(auth()).send({ paper_name: 'Judge Smith' });
         expect(res.status).toBe(201);
     });
 });
 
-describe('DELETE /api/organizer/tournament/:tournamentId/rounds/:round/pairings/:pairing/scorers/:assignment', () => {
+describe('DELETE /api/organizer/tournament/:tournamentId/pairings/:pairingId/scorers/:assignment', () => {
     it('returns 400 for invalid assignment UUID', async () => {
-        mockRoundAccess(ROUND_BASE);
-        const res = await request(app).delete(`${PAIRINGS_URL}/${PAIRING_ID}/scorers/bad-uuid`).set(auth());
+        mockPairingAccess();
+        const res = await request(app).delete(`${PAIRING_URL}/scorers/bad-uuid`).set(auth());
         expect(res.status).toBe(400);
     });
 
     it('returns 204 on success', async () => {
-        mockRoundAccess(ROUND_BASE);
+        mockPairingAccess();
         mockDbQuery.mockResolvedValueOnce({ rows: [], rowCount: 0 } as any); // DELETE ballots
         mockDbQuery.mockResolvedValueOnce({ rows: [{ paper_scorer_id: null }], rowCount: 1 } as any); // DELETE assignment
-        const res = await request(app).delete(`${PAIRINGS_URL}/${PAIRING_ID}/scorers/${SCORER_ASSIGN_ID}`).set(auth());
+        const res = await request(app).delete(`${PAIRING_URL}/scorers/${SCORER_ASSIGN_ID}`).set(auth());
         expect(res.status).toBe(204);
     });
 });
 
 // ─── Presider ─────────────────────────────────────────────────────────────────
-describe('PUT /api/organizer/tournament/:tournamentId/rounds/:round/pairings/:pairing/presider', () => {
+describe('PUT /api/organizer/tournament/:tournamentId/pairings/:pairingId/presider', () => {
     it('returns 400 when assignment_id missing', async () => {
-        mockRoundAccess(ROUND_BASE);
-        const res = await request(app).put(`${PAIRINGS_URL}/${PAIRING_ID}/presider`).set(auth()).send({});
+        mockPairingAccess();
+        const res = await request(app).put(`${PAIRING_URL}/presider`).set(auth()).send({});
         expect(res.status).toBe(400);
     });
 
     it('returns 400 when assignment_id is invalid UUID', async () => {
-        mockRoundAccess(ROUND_BASE);
-        const res = await request(app).put(`${PAIRINGS_URL}/${PAIRING_ID}/presider`).set(auth()).send({ assignment_id: 'bad-uuid' });
+        mockPairingAccess();
+        const res = await request(app).put(`${PAIRING_URL}/presider`).set(auth()).send({ assignment_id: 'bad-uuid' });
         expect(res.status).toBe(400);
     });
 
     it('returns 200 on success', async () => {
-        mockRoundAccess(ROUND_BASE);
+        mockPairingAccess();
         mockDbQuery.mockResolvedValueOnce({ rows: [{ id: PAIRING_ID }], rowCount: 1 } as any);
-        const res = await request(app).put(`${PAIRINGS_URL}/${PAIRING_ID}/presider`).set(auth()).send({ assignment_id: SCORER_ASSIGN_ID });
+        const res = await request(app).put(`${PAIRING_URL}/presider`).set(auth()).send({ assignment_id: SCORER_ASSIGN_ID });
         expect(res.status).toBe(200);
     });
 });
 
-describe('DELETE /api/organizer/tournament/:tournamentId/rounds/:round/pairings/:pairing/presider', () => {
+describe('DELETE /api/organizer/tournament/:tournamentId/pairings/:pairingId/presider', () => {
     it('returns 204 on success', async () => {
-        mockRoundAccess(ROUND_BASE);
+        mockPairingAccess();
         mockDbQuery.mockResolvedValueOnce({ rows: [], rowCount: 0 } as any);
-        const res = await request(app).delete(`${PAIRINGS_URL}/${PAIRING_ID}/presider`).set(auth());
+        const res = await request(app).delete(`${PAIRING_URL}/presider`).set(auth());
         expect(res.status).toBe(204);
     });
 });
@@ -954,16 +843,6 @@ describe('PATCH /api/organizer/tournament/:tournamentId/format — witness valid
         mockDbQuery.mockResolvedValueOnce({ rows: [], rowCount: 0 } as any); // getTournamentFormatId -> NotFoundError
         const res = await request(app).patch(`/organizer/tournament/${TOURNAMENT_ID}/format`).set(auth()).send({ caseName: 'C' });
         expect(res.status).toBe(404);
-    });
-});
-
-// ─── GET /standings-config ────────────────────────────────────────────────────
-describe('GET /api/organizer/tournament/:tournamentId/standings-config', () => {
-    it('returns 200 with config', async () => {
-        mockAccess();
-        mockDbQuery.mockResolvedValueOnce({ rows: [{ id: 'sc1', standings_dsl: '(config (columns) (tiebreakers))' }], rowCount: 1 } as any);
-        const res = await request(app).get(`/organizer/tournament/${TOURNAMENT_ID}/standings-config`).set(auth());
-        expect(res.status).toBe(200);
     });
 });
 
@@ -1005,19 +884,6 @@ describe('PATCH /api/organizer/tournament/:tournamentId/scoring-categories', () 
         const res = await request(app).patch(`/organizer/tournament/${TOURNAMENT_ID}/scoring-categories`).set(auth()).send([]);
         expect(res.status).toBe(200);
     });
-});
-
-// ─── PUT /scorers ─────────────────────────────────────────────────────────────
-describe('PUT /api/organizer/tournament/:tournamentId/scorers', () => {
-    const scorer = { scorer_id: SCORER_ID, first_name: 'A', last_name: 'B', email: 'a@b.com' };
-
-    it('returns 200 on success', async () => {
-        mockAccess();
-        mockDbQuery.mockResolvedValueOnce({ rows: [], rowCount: 1 } as any);
-        const res = await request(app).put(`/organizer/tournament/${TOURNAMENT_ID}/scorers`).set(auth()).send(scorer);
-        expect(res.status).toBe(200);
-    });
-
 });
 
 // ─── PUT /organizers ──────────────────────────────────────────────────────────

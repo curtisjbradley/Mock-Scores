@@ -1,85 +1,157 @@
-/**
- * Coverage gap tests for organizerTournamentRoutes.ts:
- * - POST /import/scorers (CSV import)
- * - POST /import/teams (CSV import)
- * - GET /export/standings (CSV export)
- * - GET /export/results (CSV export)
- * - GET /awards
- * - GET /bounced-emails
- * - GET /standings
- * - PATCH /status
- */
 jest.mock('../../src/email', () => jest.requireActual('../mocks/email'));
+
 import request from 'supertest';
 import app from '../../src/appService';
 import { dbQuery } from '../../src/db';
 import { sendEmail, sendTrackedEmail } from '../../src/email';
+import * as organizer from '../../src/providers/organizerProvider';
+import { DbError, NotFoundError } from '../../src/errors';
 import { setupAuth, makeAuth, makeMockAccess } from '../helpers/auth';
 
 const mockDbQuery = dbQuery as jest.MockedFunction<typeof dbQuery>;
 const mockSendEmail = sendEmail as jest.MockedFunction<typeof sendEmail>;
 const mockSendTrackedEmail = sendTrackedEmail as jest.MockedFunction<typeof sendTrackedEmail>;
 
-/** Flush pending microtasks so fire-and-forget email promises resolve. */
-const flushAsync = () => new Promise(resolve => setImmediate(resolve));
+/** Flush fire-and-forget promise chains used by invitation emails. */
+const flushAsync = () => new Promise<void>(resolve => setImmediate(resolve));
 
-const T = 'a1b2c3d4-e5f6-7890-abcd-ef1234567890';
+const T = 'a1b2c3d4-e5f6-4789-abcd-ef1234567890';
+const PID = 'b1b2c3d4-e5f6-4789-abcd-ef1234567890';
+const AID = 'c1b2c3d4-e5f6-4789-abcd-ef1234567890';
 
 const getToken = setupAuth();
 const auth = () => makeAuth(getToken());
-const mockAccess = () => makeMockAccess(mockDbQuery as jest.MockedFunction<(...args: unknown[]) => unknown>);
 
-// ═══════════════════════════════════════════════════════════════════════════════
+const mockAccess = () =>
+    makeMockAccess(
+        mockDbQuery as jest.MockedFunction<(...args: unknown[]) => unknown>
+    );
+
+/**
+ * Avoid relying on error constructor signatures while still satisfying
+ * `instanceof DbError` / `instanceof NotFoundError` checks in the routers.
+ */
+const dbError = (message = 'database failure') =>
+    Object.setPrototypeOf(new Error(message), DbError.prototype) as DbError;
+
+const notFoundError = (message = 'not found') =>
+    Object.setPrototypeOf(new Error(message), NotFoundError.prototype) as NotFoundError;
+
+/**
+ * Requests below /pairings/:pairingId first pass through verifyPairing(),
+ * which calls organizer.getPairing().
+ */
+function mockPairingAccess(pairingId = PID) {
+    mockAccess();
+    jest.spyOn(organizer, 'getPairing').mockResolvedValue({
+        pairing_id: pairingId,
+    } as any);
+}
+
+beforeEach(() => {
+    mockDbQuery.mockReset();
+    mockSendEmail.mockClear();
+    mockSendTrackedEmail.mockClear();
+});
+
+afterEach(() => {
+    jest.restoreAllMocks();
+});
+
+// ============================================================================
 // POST /import/scorers
-// ═══════════════════════════════════════════════════════════════════════════════
+// ============================================================================
+
 describe('POST /api/organizer/tournament/:id/import/scorers', () => {
     const url = `/organizer/tournament/${T}/import/scorers`;
 
     it('returns 400 when csv is missing', async () => {
         mockAccess();
+
         const res = await request(app).post(url).set(auth()).send({});
+
         expect(res.status).toBe(400);
         expect(res.body.message).toMatch(/no csv/i);
     });
 
     it('returns 400 when csv is empty string', async () => {
         mockAccess();
-        const res = await request(app).post(url).set(auth()).send({ csv: '   ' });
+
+        const res = await request(app)
+            .post(url)
+            .set(auth())
+            .send({ csv: '   ' });
+
         expect(res.status).toBe(400);
     });
 
     it('returns 400 when csv has only empty lines', async () => {
         mockAccess();
-        const res = await request(app).post(url).set(auth()).send({ csv: '\n\n\n' });
+
+        const res = await request(app)
+            .post(url)
+            .set(auth())
+            .send({ csv: '\n\n\n' });
+
         expect(res.status).toBe(400);
         expect(res.body.message).toMatch(/no csv|empty/i);
     });
 
     it('imports scorers successfully with header row', async () => {
         mockAccess();
-        const csv = 'first_name,last_name,email\nAlice,Smith,alice@test.com\nBob,Jones,bob@test.com';
-        // Two addScorer calls
-        mockDbQuery.mockResolvedValueOnce({ rows: [], rowCount: 1 } as any); // insert Alice
-        mockDbQuery.mockResolvedValueOnce({ rows: [], rowCount: 1 } as any); // insert Bob
+        const addScorer = jest
+            .spyOn(organizer, 'addScorer')
+            .mockResolvedValue(undefined as any);
+
+        const csv =
+            'first_name,last_name,email\n' +
+            'Alice,Smith,alice@test.com\n' +
+            'Bob,Jones,bob@test.com';
+
         const res = await request(app).post(url).set(auth()).send({ csv });
+
         expect(res.status).toBe(200);
         expect(res.body.created).toBe(2);
         expect(res.body.errors).toHaveLength(0);
+        expect(addScorer).toHaveBeenCalledTimes(2);
+        expect(addScorer).toHaveBeenNthCalledWith(
+            1,
+            expect.objectContaining({
+                first_name: 'Alice',
+                last_name: 'Smith',
+                email: 'alice@test.com',
+                scorer_id: expect.any(String),
+            }),
+            T
+        );
     });
 
     it('imports scorers without header row', async () => {
         mockAccess();
-        const csv = 'Alice,Smith,alice@test.com';
-        mockDbQuery.mockResolvedValueOnce({ rows: [], rowCount: 1 } as any);
-        const res = await request(app).post(url).set(auth()).send({ csv });
+        const addScorer = jest
+            .spyOn(organizer, 'addScorer')
+            .mockResolvedValue(undefined as any);
+
+        const res = await request(app)
+            .post(url)
+            .set(auth())
+            .send({ csv: 'Alice,Smith,alice@test.com' });
+
         expect(res.status).toBe(200);
         expect(res.body.created).toBe(1);
+        expect(addScorer).toHaveBeenCalledTimes(1);
     });
 
     it('reports errors for rows with missing names', async () => {
         mockAccess();
-        const csv = 'first_name,last_name,email\n,Smith,a@b.com\nBob,,b@c.com';
+
+        const csv =
+            'first_name,last_name,email\n' +
+            ',Smith,a@b.com\n' +
+            'Bob,,b@c.com';
+
         const res = await request(app).post(url).set(auth()).send({ csv });
+
         expect(res.status).toBe(200);
         expect(res.body.created).toBe(0);
         expect(res.body.errors).toHaveLength(2);
@@ -88,27 +160,44 @@ describe('POST /api/organizer/tournament/:id/import/scorers', () => {
 
     it('reports errors for rows with invalid email', async () => {
         mockAccess();
-        const csv = 'Alice,Smith,not-an-email';
-        const res = await request(app).post(url).set(auth()).send({ csv });
+
+        const res = await request(app)
+            .post(url)
+            .set(auth())
+            .send({ csv: 'Alice,Smith,not-an-email' });
+
         expect(res.status).toBe(200);
         expect(res.body.created).toBe(0);
+        expect(res.body.errors).toHaveLength(1);
         expect(res.body.errors[0].message).toMatch(/invalid email/i);
     });
 
     it('reports errors for rows with empty email', async () => {
         mockAccess();
-        const csv = 'Alice,Smith,';
-        const res = await request(app).post(url).set(auth()).send({ csv });
+
+        const res = await request(app)
+            .post(url)
+            .set(auth())
+            .send({ csv: 'Alice,Smith,' });
+
         expect(res.status).toBe(200);
+        expect(res.body.created).toBe(0);
         expect(res.body.errors[0].message).toMatch(/invalid email/i);
     });
 
-    it('reports db errors per row without failing the whole import', async () => {
+    it('reports provider errors per row without failing the whole import', async () => {
         mockAccess();
-        const csv = 'first_name,last_name,email\nAlice,Smith,alice@test.com\nBob,Jones,bob@test.com';
-        mockDbQuery.mockResolvedValueOnce(null); // Alice fails (DbError)
-        mockDbQuery.mockResolvedValueOnce({ rows: [], rowCount: 1 } as any); // Bob succeeds
+        jest.spyOn(organizer, 'addScorer')
+            .mockRejectedValueOnce(dbError())
+            .mockResolvedValueOnce(undefined as any);
+
+        const csv =
+            'first_name,last_name,email\n' +
+            'Alice,Smith,alice@test.com\n' +
+            'Bob,Jones,bob@test.com';
+
         const res = await request(app).post(url).set(auth()).send({ csv });
+
         expect(res.status).toBe(200);
         expect(res.body.created).toBe(1);
         expect(res.body.errors).toHaveLength(1);
@@ -116,439 +205,699 @@ describe('POST /api/organizer/tournament/:id/import/scorers', () => {
 
     it('handles quoted CSV fields with commas', async () => {
         mockAccess();
-        const csv = '"Smith, Jr.",Bob,bob@test.com';
-        mockDbQuery.mockResolvedValueOnce({ rows: [], rowCount: 1 } as any);
-        const res = await request(app).post(url).set(auth()).send({ csv });
+        const addScorer = jest
+            .spyOn(organizer, 'addScorer')
+            .mockResolvedValue(undefined as any);
+
+        const res = await request(app)
+            .post(url)
+            .set(auth())
+            .send({ csv: '"Smith, Jr.",Bob,bob@test.com' });
+
         expect(res.status).toBe(200);
         expect(res.body.created).toBe(1);
+        expect(addScorer).toHaveBeenCalledWith(
+            expect.objectContaining({
+                first_name: 'Smith, Jr.',
+                last_name: 'Bob',
+                email: 'bob@test.com',
+            }),
+            T
+        );
     });
 });
 
-// ═══════════════════════════════════════════════════════════════════════════════
+// ============================================================================
 // POST /import/teams
-// ═══════════════════════════════════════════════════════════════════════════════
+// ============================================================================
+
 describe('POST /api/organizer/tournament/:id/import/teams', () => {
     const url = `/organizer/tournament/${T}/import/teams`;
 
     it('returns 400 when csv is missing', async () => {
         mockAccess();
+
         const res = await request(app).post(url).set(auth()).send({});
+
         expect(res.status).toBe(400);
         expect(res.body.message).toMatch(/no csv/i);
     });
 
     it('returns 400 when csv is empty', async () => {
         mockAccess();
-        const res = await request(app).post(url).set(auth()).send({ csv: '' });
+
+        const res = await request(app)
+            .post(url)
+            .set(auth())
+            .send({ csv: '' });
+
         expect(res.status).toBe(400);
     });
 
-    it('imports teams with header row', async () => {
+    it('imports teams with header row and sends invitations', async () => {
         mockAccess();
-        const csv = 'name,coach_email,code\nEagles,coach@test.com,EAG\nHawks,coach2@test.com,HWK';
-        // For each team: teamNameExists + addTeam (INSERT team, SELECT auth, INSERT invite)
-        mockDbQuery.mockResolvedValueOnce({ rows: [], rowCount: 0 } as any); // Eagles doesn't exist
-        mockDbQuery
-            .mockResolvedValueOnce({ rows: [{ id: 't1', tournament_id: T, name: 'Eagles', code: 'EAG' }], rowCount: 1 } as any) // INSERT team
-            .mockResolvedValueOnce({ rows: [], rowCount: 0 } as any) // SELECT auth (no user)
-            .mockResolvedValueOnce({ rows: [], rowCount: 1 } as any); // INSERT invite
-        mockDbQuery.mockResolvedValueOnce({ rows: [], rowCount: 0 } as any); // Hawks doesn't exist
-        mockDbQuery
-            .mockResolvedValueOnce({ rows: [{ id: 't2', tournament_id: T, name: 'Hawks', code: 'HWK' }], rowCount: 1 } as any)
-            .mockResolvedValueOnce({ rows: [], rowCount: 0 } as any)
-            .mockResolvedValueOnce({ rows: [], rowCount: 1 } as any);
-        // getTournament (SELECT tournaments) used when sending invitation emails
-        mockDbQuery.mockResolvedValueOnce({ rows: [{ id: T, name: 'Regionals 2026' }], rowCount: 1 } as any);
+
+        jest.spyOn(organizer, 'teamNameExists')
+            .mockResolvedValueOnce(false)
+            .mockResolvedValueOnce(false);
+
+        const addTeam = jest.spyOn(organizer, 'addTeam')
+            .mockResolvedValueOnce({
+                id: '11111111-1111-4111-8111-111111111111',
+                tournament_id: T,
+                name: 'Eagles',
+                code: 'EAG',
+            } as any)
+            .mockResolvedValueOnce({
+                id: '22222222-2222-4222-8222-222222222222',
+                tournament_id: T,
+                name: 'Hawks',
+                code: 'HWK',
+            } as any);
+
+        jest.spyOn(organizer, 'getTournament').mockResolvedValue({
+            id: T,
+            name: 'Regionals 2026',
+        } as any);
+
+        const csv =
+            'name,coach_email,code\n' +
+            'Eagles,coach@test.com,EAG\n' +
+            'Hawks,coach2@test.com,HWK';
+
         const res = await request(app).post(url).set(auth()).send({ csv });
+
         expect(res.status).toBe(200);
         expect(res.body.created).toBe(2);
         expect(res.body.errors).toHaveLength(0);
+        expect(addTeam).toHaveBeenCalledTimes(2);
 
-        // Coach invitation emails are dispatched (fire-and-forget) for each created team
         await flushAsync();
+
         expect(mockSendTrackedEmail).toHaveBeenCalledTimes(2);
-        expect(mockSendTrackedEmail).toHaveBeenCalledWith('coach@test.com', expect.any(String), expect.any(String), expect.any(String), expect.any(Object));
-        expect(mockSendTrackedEmail).toHaveBeenCalledWith('coach2@test.com', expect.any(String), expect.any(String), expect.any(String), expect.any(Object));
+        expect(mockSendTrackedEmail).toHaveBeenCalledWith(
+            'coach@test.com',
+            expect.any(String),
+            expect.any(String),
+            expect.any(String),
+            expect.objectContaining({ type: 'coach_invite' })
+        );
+        expect(mockSendTrackedEmail).toHaveBeenCalledWith(
+            'coach2@test.com',
+            expect.any(String),
+            expect.any(String),
+            expect.any(String),
+            expect.objectContaining({ type: 'coach_invite' })
+        );
     });
 
     it('imports teams without header row', async () => {
         mockAccess();
-        const csv = 'Eagles,coach@test.com,EAG';
-        mockDbQuery.mockResolvedValueOnce({ rows: [], rowCount: 0 } as any);
-        mockDbQuery
-            .mockResolvedValueOnce({ rows: [{ id: 't1', tournament_id: T, name: 'Eagles', code: 'EAG' }], rowCount: 1 } as any)
-            .mockResolvedValueOnce({ rows: [], rowCount: 0 } as any)
-            .mockResolvedValueOnce({ rows: [], rowCount: 1 } as any);
-        const res = await request(app).post(url).set(auth()).send({ csv });
+
+        jest.spyOn(organizer, 'teamNameExists').mockResolvedValue(false);
+        const addTeam = jest.spyOn(organizer, 'addTeam').mockResolvedValue({
+            id: '11111111-1111-4111-8111-111111111111',
+            tournament_id: T,
+            name: 'Eagles',
+            code: 'EAG',
+        } as any);
+        jest.spyOn(organizer, 'getTournament').mockResolvedValue({
+            id: T,
+            name: 'Regionals 2026',
+        } as any);
+
+        const res = await request(app)
+            .post(url)
+            .set(auth())
+            .send({ csv: 'Eagles,coach@test.com,EAG' });
+
         expect(res.status).toBe(200);
         expect(res.body.created).toBe(1);
+        expect(addTeam).toHaveBeenCalledWith(
+            T,
+            'Eagles',
+            'coach@test.com',
+            'EAG'
+        );
+
+        await flushAsync();
     });
 
     it('reports error for missing team name', async () => {
         mockAccess();
-        const csv = ',coach@test.com,EAG';
-        const res = await request(app).post(url).set(auth()).send({ csv });
+
+        const res = await request(app)
+            .post(url)
+            .set(auth())
+            .send({ csv: ',coach@test.com,EAG' });
+
         expect(res.status).toBe(200);
+        expect(res.body.created).toBe(0);
         expect(res.body.errors[0].message).toMatch(/missing team name/i);
     });
 
     it('reports error for invalid coach email', async () => {
         mockAccess();
-        const csv = 'Eagles,not-an-email,EAG';
-        const res = await request(app).post(url).set(auth()).send({ csv });
+
+        const res = await request(app)
+            .post(url)
+            .set(auth())
+            .send({ csv: 'Eagles,not-an-email,EAG' });
+
         expect(res.status).toBe(200);
+        expect(res.body.created).toBe(0);
         expect(res.body.errors[0].message).toMatch(/invalid coach email/i);
     });
 
-    it('reports error for duplicate team name', async () => {
+    it('reports error for duplicate team name and sends no invitation', async () => {
         mockAccess();
-        const csv = 'Eagles,coach@test.com,EAG';
-        mockDbQuery.mockResolvedValueOnce({ rows: [{ id: 'existing' }], rowCount: 1 } as any); // teamNameExists
-        const res = await request(app).post(url).set(auth()).send({ csv });
+        jest.spyOn(organizer, 'teamNameExists').mockResolvedValue(true);
+
+        const res = await request(app)
+            .post(url)
+            .set(auth())
+            .send({ csv: 'Eagles,coach@test.com,EAG' });
+
         expect(res.status).toBe(200);
+        expect(res.body.created).toBe(0);
         expect(res.body.errors[0].message).toMatch(/already exists/i);
-        // No team was created, so no invitation email should be sent
+
         await flushAsync();
+
+        expect(mockSendTrackedEmail).not.toHaveBeenCalled();
         expect(mockSendEmail).not.toHaveBeenCalled();
     });
 
     it('uses team name as code when code column is missing', async () => {
         mockAccess();
-        const csv = 'Eagles,coach@test.com';
-        mockDbQuery.mockResolvedValueOnce({ rows: [], rowCount: 0 } as any);
-        mockDbQuery
-            .mockResolvedValueOnce({ rows: [{ id: 't1', tournament_id: T, name: 'Eagles', code: 'Eagles' }], rowCount: 1 } as any)
-            .mockResolvedValueOnce({ rows: [], rowCount: 0 } as any);
-        const res = await request(app).post(url).set(auth()).send({ csv });
+
+        jest.spyOn(organizer, 'teamNameExists').mockResolvedValue(false);
+        const addTeam = jest.spyOn(organizer, 'addTeam').mockResolvedValue({
+            id: '11111111-1111-4111-8111-111111111111',
+            tournament_id: T,
+            name: 'Eagles',
+            code: 'Eagles',
+        } as any);
+        jest.spyOn(organizer, 'getTournament').mockResolvedValue({
+            id: T,
+            name: 'Regionals 2026',
+        } as any);
+
+        const res = await request(app)
+            .post(url)
+            .set(auth())
+            .send({ csv: 'Eagles,coach@test.com' });
+
         expect(res.status).toBe(200);
         expect(res.body.created).toBe(1);
+        expect(addTeam).toHaveBeenCalledWith(
+            T,
+            'Eagles',
+            'coach@test.com',
+            'Eagles'
+        );
+
+        await flushAsync();
+    });
+
+    it('reports addTeam errors per row', async () => {
+        mockAccess();
+
+        jest.spyOn(organizer, 'teamNameExists').mockResolvedValue(false);
+        jest.spyOn(organizer, 'addTeam').mockRejectedValue(dbError('insert failed'));
+
+        const res = await request(app)
+            .post(url)
+            .set(auth())
+            .send({ csv: 'Eagles,coach@test.com,EAG' });
+
+        expect(res.status).toBe(200);
+        expect(res.body.created).toBe(0);
+        expect(res.body.errors).toHaveLength(1);
+        expect(res.body.errors[0].message).toMatch(/insert failed/i);
     });
 });
 
-// ═══════════════════════════════════════════════════════════════════════════════
+// ============================================================================
 // GET /export/standings
-// ═══════════════════════════════════════════════════════════════════════════════
+// ============================================================================
+
 describe('GET /api/organizer/tournament/:id/export/standings', () => {
     const url = `/organizer/tournament/${T}/export/standings`;
 
     it('returns CSV with standings data', async () => {
         mockAccess();
-        // getOrganizerStandingsData returns config, teams, ballots, rounds
-        mockDbQuery
-            .mockResolvedValueOnce({ rows: [{ standings_dsl: '(config (columns) (tiebreakers))' }], rowCount: 1 } as any) // config
-            .mockResolvedValueOnce({ rows: [
+
+        jest.spyOn(organizer, 'getOrganizerStandingsData').mockResolvedValue({
+            config: null,
+            teams: [
                 { id: 't1', name: 'Eagles', code: 'EAG' },
                 { id: 't2', name: 'Hawks', code: 'HWK' },
-            ], rowCount: 2 } as any) // teams
-            .mockResolvedValueOnce({ rows: [{ round_id: 'r1', name: 'Round 1' }], rowCount: 1 } as any) // rounds
-            .mockResolvedValueOnce({ rows: [
-                { p_team_id: 't1', d_team_id: 't2', p_points: 80, d_points: 70, pairing_id: 'p1', round_id: 'r1' },
-            ], rowCount: 1 } as any); // ballots
+            ],
+            rounds: [{ round_id: 'r1', name: 'Round 1' }],
+            ballots: [
+                {
+                    p_team_id: 't1',
+                    d_team_id: 't2',
+                    p_points: 80,
+                    d_points: 70,
+                    pairing_id: 'p1',
+                    round_id: 'r1',
+                },
+            ],
+        } as any);
+
         const res = await request(app).get(url).set(auth());
+
         expect(res.status).toBe(200);
         expect(res.headers['content-type']).toMatch(/text\/csv/);
         expect(res.headers['content-disposition']).toMatch(/standings\.csv/);
-        expect(res.text).toContain('Team Name,Team Code,Ballots Won');
-        expect(res.text).toContain('Eagles');
-        expect(res.text).toContain('Hawks');
+        expect(res.text).toContain(
+            'Team Name,Team Code,Ballots Won,Ballots Lost,Total Points For,Total Points Against'
+        );
+        expect(res.text).toContain('Eagles,EAG,1,0,80,70');
+        expect(res.text).toContain('Hawks,HWK,0,1,70,80');
     });
 
-    it('returns CSV with empty data when no teams', async () => {
+    it('returns CSV with only the header when there are no teams', async () => {
         mockAccess();
-        mockDbQuery
-            .mockResolvedValueOnce({ rows: [], rowCount: 0 } as any)
-            .mockResolvedValueOnce({ rows: [], rowCount: 0 } as any)
-            .mockResolvedValueOnce({ rows: [], rowCount: 0 } as any)
-            .mockResolvedValueOnce({ rows: [], rowCount: 0 } as any);
+
+        jest.spyOn(organizer, 'getOrganizerStandingsData').mockResolvedValue({
+            config: null,
+            teams: [],
+            rounds: [],
+            ballots: [],
+        } as any);
+
         const res = await request(app).get(url).set(auth());
+
         expect(res.status).toBe(200);
         expect(res.text).toContain('Team Name');
     });
 
-    it('returns 500 on db failure', async () => {
+    it('returns 500 when standings provider throws DbError', async () => {
         mockAccess();
-        mockDbQuery
-            .mockResolvedValueOnce(null) // config query fails
-            .mockResolvedValueOnce(null)
-            .mockResolvedValueOnce(null)
-            .mockResolvedValueOnce(null);
+
+        jest.spyOn(organizer, 'getOrganizerStandingsData')
+            .mockRejectedValue(dbError());
+
         const res = await request(app).get(url).set(auth());
+
         expect(res.status).toBe(500);
     });
 });
 
-// ═══════════════════════════════════════════════════════════════════════════════
+// ============================================================================
 // GET /export/results
-// ═══════════════════════════════════════════════════════════════════════════════
+// ============================================================================
+
 describe('GET /api/organizer/tournament/:id/export/results', () => {
     const url = `/organizer/tournament/${T}/export/results`;
 
     it('returns CSV with results data', async () => {
         mockAccess();
-        mockDbQuery
-            .mockResolvedValueOnce({ rows: [], rowCount: 0 } as any) // config
-            .mockResolvedValueOnce({ rows: [
+
+        jest.spyOn(organizer, 'getOrganizerStandingsData').mockResolvedValue({
+            config: null,
+            teams: [
                 { id: 't1', name: 'Eagles', code: 'EAG' },
                 { id: 't2', name: 'Hawks', code: 'HWK' },
-            ], rowCount: 2 } as any)
-            .mockResolvedValueOnce({ rows: [{ round_id: 'r1', name: 'Round 1' }], rowCount: 1 } as any)
-            .mockResolvedValueOnce({ rows: [
-                { p_team_id: 't1', d_team_id: 't2', p_points: 80, d_points: 70, pairing_id: 'p1', round_id: 'r1' },
-            ], rowCount: 1 } as any);
+            ],
+            rounds: [{ round_id: 'r1', name: 'Round 1' }],
+            ballots: [
+                {
+                    p_team_id: 't1',
+                    d_team_id: 't2',
+                    p_points: 80,
+                    d_points: 70,
+                    pairing_id: 'p1',
+                    round_id: 'r1',
+                },
+            ],
+        } as any);
+
         const res = await request(app).get(url).set(auth());
+
         expect(res.status).toBe(200);
         expect(res.headers['content-type']).toMatch(/text\/csv/);
         expect(res.headers['content-disposition']).toMatch(/results\.csv/);
-        expect(res.text).toContain('Round,Prosecution,Defense,P Points,D Points');
-        expect(res.text).toContain('Round 1');
+        expect(res.text).toContain(
+            'Round,Prosecution,Defense,P Points,D Points'
+        );
+        expect(res.text).toContain('Round 1,Eagles,Hawks,80,70');
     });
 
-    it('handles unknown team/round IDs gracefully', async () => {
+    it('handles unknown team and round IDs gracefully', async () => {
         mockAccess();
-        mockDbQuery
-            .mockResolvedValueOnce({ rows: [], rowCount: 0 } as any)
-            .mockResolvedValueOnce({ rows: [], rowCount: 0 } as any) // no teams
-            .mockResolvedValueOnce({ rows: [], rowCount: 0 } as any) // no rounds
-            .mockResolvedValueOnce({ rows: [
-                { p_team_id: 'unknown1', d_team_id: 'unknown2', p_points: 50, d_points: 60, pairing_id: 'p1', round_id: 'unknownR' },
-            ], rowCount: 1 } as any);
+
+        jest.spyOn(organizer, 'getOrganizerStandingsData').mockResolvedValue({
+            config: null,
+            teams: [],
+            rounds: [],
+            ballots: [
+                {
+                    p_team_id: 'unknown1',
+                    d_team_id: 'unknown2',
+                    p_points: 50,
+                    d_points: 60,
+                    pairing_id: 'p1',
+                    round_id: 'unknownR',
+                },
+            ],
+        } as any);
+
         const res = await request(app).get(url).set(auth());
+
         expect(res.status).toBe(200);
-        expect(res.text).toContain('Unknown');
+        expect(res.text).toContain('Unknown,Unknown,Unknown,50,60');
     });
 
-    it('returns 500 on db failure', async () => {
+    it('returns 500 when standings provider throws DbError', async () => {
         mockAccess();
-        mockDbQuery
-            .mockResolvedValueOnce(null)
-            .mockResolvedValueOnce(null)
-            .mockResolvedValueOnce(null)
-            .mockResolvedValueOnce(null);
+
+        jest.spyOn(organizer, 'getOrganizerStandingsData')
+            .mockRejectedValue(dbError());
+
         const res = await request(app).get(url).set(auth());
+
         expect(res.status).toBe(500);
     });
 });
 
-// ═══════════════════════════════════════════════════════════════════════════════
+// ============================================================================
 // GET /awards
-// ═══════════════════════════════════════════════════════════════════════════════
+// ============================================================================
+
 describe('GET /api/organizer/tournament/:id/awards', () => {
     const url = `/organizer/tournament/${T}/awards`;
 
-    it('returns empty array when no nominations exist', async () => {
+    it('returns an empty array when there are no award results', async () => {
         mockAccess();
-        // nominations query returns empty
-        mockDbQuery.mockResolvedValueOnce({ rows: [], rowCount: 0 } as any);
+        jest.spyOn(organizer, 'getAwardsSummary').mockResolvedValue([] as any);
+
         const res = await request(app).get(url).set(auth());
+
         expect(res.status).toBe(200);
         expect(res.body).toEqual([]);
     });
 
-    it('aggregates nominations and returns sorted results', async () => {
+    it('returns the aggregated award summary from the provider', async () => {
         mockAccess();
-        const s1 = 'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa';
-        const s2 = 'bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbbbb';
-        const cat1 = 'cccccccc-cccc-cccc-cccc-cccccccccccc';
-        // nominations aggregation query
-        mockDbQuery.mockResolvedValueOnce({
-            rows: [
-                { award_category_id: cat1, student_id: s1, total_nominations: 2, average_rank: 1.5 },
-                { award_category_id: cat1, student_id: s2, total_nominations: 1, average_rank: 2.0 },
-            ],
-            rowCount: 2,
-        } as any);
-        // student info lookup
-        mockDbQuery.mockResolvedValueOnce({
-            rows: [
-                { student_id: s1, student_name: 'Alice', team_name: 'Eagles', team_code: 'EAG' },
-                { student_id: s2, student_name: 'Bob', team_name: 'Hawks', team_code: 'HWK' },
-            ],
-            rowCount: 2,
-        } as any);
-        // getAwardCategories
-        mockDbQuery.mockResolvedValueOnce({ rows: [{ id: cat1, name: 'Best Attorney', min_nominees: 1, max_nominees: 3 }], rowCount: 1 } as any);
+
+        const s1 = 'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa';
+        const s2 = 'bbbbbbbb-bbbb-4bbb-9bbb-bbbbbbbbbbbb';
+        const cat1 = 'cccccccc-cccc-4ccc-accc-cccccccccccc';
+
+        jest.spyOn(organizer, 'getAwardsSummary').mockResolvedValue([
+            {
+                award_category_id: cat1,
+                award_category_name: 'Best Attorney',
+                student_id: s1,
+                student_name: 'Alice',
+                team_name: 'Eagles',
+                team_code: 'EAG',
+                total_nominations: 2,
+                average_rank: 1.5,
+            },
+            {
+                award_category_id: cat1,
+                award_category_name: 'Best Attorney',
+                student_id: s2,
+                student_name: 'Bob',
+                team_name: 'Hawks',
+                team_code: 'HWK',
+                total_nominations: 1,
+                average_rank: 2,
+            },
+        ] as any);
+
         const res = await request(app).get(url).set(auth());
+
         expect(res.status).toBe(200);
         expect(res.body).toHaveLength(2);
-        expect(res.body[0].student_id).toBe(s1);
-        expect(res.body[0].total_nominations).toBe(2);
-        expect(res.body[0].average_rank).toBe(1.5);
-        expect(res.body[0].award_category_name).toBe('Best Attorney');
+        expect(res.body[0]).toEqual(
+            expect.objectContaining({
+                student_id: s1,
+                total_nominations: 2,
+                average_rank: 1.5,
+                award_category_name: 'Best Attorney',
+            })
+        );
         expect(res.body[1].student_id).toBe(s2);
-        expect(res.body[1].total_nominations).toBe(1);
     });
 
-    it('handles nominations with unknown students', async () => {
+    it('preserves Unknown student data returned by the provider', async () => {
         mockAccess();
-        const s1 = 'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa';
-        const cat1 = 'cccccccc-cccc-cccc-cccc-cccccccccccc';
-        // nominations aggregation
-        mockDbQuery.mockResolvedValueOnce({
-            rows: [{ award_category_id: cat1, student_id: s1, total_nominations: 1, average_rank: 1.0 }],
-            rowCount: 1,
-        } as any);
-        // student lookup returns empty
-        mockDbQuery.mockResolvedValueOnce({ rows: [], rowCount: 0 } as any);
-        // getAwardCategories
-        mockDbQuery.mockResolvedValueOnce({ rows: [], rowCount: 0 } as any);
+
+        jest.spyOn(organizer, 'getAwardsSummary').mockResolvedValue([
+            {
+                student_id: 'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa',
+                student_name: 'Unknown',
+                team_name: 'Unknown',
+                team_code: 'Unknown',
+                total_nominations: 1,
+                average_rank: 1,
+            },
+        ] as any);
+
         const res = await request(app).get(url).set(auth());
+
         expect(res.status).toBe(200);
         expect(res.body[0].student_name).toBe('Unknown');
     });
+
+    it('returns 500 when award provider throws DbError', async () => {
+        mockAccess();
+
+        jest.spyOn(organizer, 'getAwardsSummary')
+            .mockRejectedValue(dbError());
+
+        const res = await request(app).get(url).set(auth());
+
+        expect(res.status).toBe(500);
+    });
 });
 
-// ═══════════════════════════════════════════════════════════════════════════════
+// ============================================================================
 // GET /bounced-emails
-// ═══════════════════════════════════════════════════════════════════════════════
+// ============================================================================
+
 describe('GET /api/organizer/tournament/:id/bounced-emails', () => {
     const url = `/organizer/tournament/${T}/bounced-emails`;
 
     it('returns array of bounced email addresses', async () => {
         mockAccess();
         mockDbQuery.mockResolvedValueOnce({
-            rows: [{ email: 'bad@test.com' }, { email: 'invalid@test.com' }],
+            rows: [
+                { email: 'bad@test.com' },
+                { email: 'invalid@test.com' },
+            ],
             rowCount: 2,
         } as any);
+
         const res = await request(app).get(url).set(auth());
+
         expect(res.status).toBe(200);
-        expect(res.body).toEqual(['bad@test.com', 'invalid@test.com']);
+        expect(res.body).toEqual([
+            'bad@test.com',
+            'invalid@test.com',
+        ]);
     });
 
-    it('returns empty array when no bounced emails', async () => {
+    it('returns empty array when no bounced emails exist', async () => {
         mockAccess();
-        mockDbQuery.mockResolvedValueOnce({ rows: [], rowCount: 0 } as any);
+        mockDbQuery.mockResolvedValueOnce({
+            rows: [],
+            rowCount: 0,
+        } as any);
+
         const res = await request(app).get(url).set(auth());
+
         expect(res.status).toBe(200);
         expect(res.body).toEqual([]);
     });
 
-    it('returns empty array when query returns null', async () => {
+    it('returns empty array when dbQuery returns null', async () => {
         mockAccess();
-        mockDbQuery.mockResolvedValueOnce(null);
+        mockDbQuery.mockResolvedValueOnce(null as any);
+
         const res = await request(app).get(url).set(auth());
+
         expect(res.status).toBe(200);
         expect(res.body).toEqual([]);
     });
 });
 
-// ═══════════════════════════════════════════════════════════════════════════════
+// ============================================================================
 // GET /standings
-// ═══════════════════════════════════════════════════════════════════════════════
+// ============================================================================
+
 describe('GET /api/organizer/tournament/:id/standings', () => {
     const url = `/organizer/tournament/${T}/standings`;
 
     it('returns 200 with standings data', async () => {
         mockAccess();
-        mockDbQuery
-            .mockResolvedValueOnce({ rows: [{ standings_dsl: '(config (columns) (tiebreakers))' }], rowCount: 1 } as any)
-            .mockResolvedValueOnce({ rows: [{ id: 't1', name: 'Eagles', code: 'EAG' }], rowCount: 1 } as any)
-            .mockResolvedValueOnce({ rows: [{ round_id: 'r1', name: 'Round 1' }], rowCount: 1 } as any)
-            .mockResolvedValueOnce({ rows: [], rowCount: 0 } as any);
+
+        const data = {
+            config: { standings_dsl: '(config (columns) (tiebreakers))' },
+            teams: [{ id: 't1', name: 'Eagles', code: 'EAG' }],
+            rounds: [{ round_id: 'r1', name: 'Round 1' }],
+            ballots: [],
+        };
+
+        jest.spyOn(organizer, 'getOrganizerStandingsData')
+            .mockResolvedValue(data as any);
+
         const res = await request(app).get(url).set(auth());
+
         expect(res.status).toBe(200);
+        expect(res.body).toEqual(data);
         expect(res.body).toHaveProperty('teams');
         expect(res.body).toHaveProperty('ballots');
     });
 
-    it('returns 500 on db failure', async () => {
+    it('returns 500 when standings provider throws DbError', async () => {
         mockAccess();
-        mockDbQuery
-            .mockResolvedValueOnce(null)
-            .mockResolvedValueOnce(null)
-            .mockResolvedValueOnce(null)
-            .mockResolvedValueOnce(null);
+
+        jest.spyOn(organizer, 'getOrganizerStandingsData')
+            .mockRejectedValue(dbError());
+
         const res = await request(app).get(url).set(auth());
+
         expect(res.status).toBe(500);
     });
 });
 
-// ═══════════════════════════════════════════════════════════════════════════════
+// ============================================================================
 // PATCH /status
-// ═══════════════════════════════════════════════════════════════════════════════
+// ============================================================================
+
 describe('PATCH /api/organizer/tournament/:id/status', () => {
     const url = `/organizer/tournament/${T}/status`;
 
     it('returns 400 when status is missing', async () => {
         mockAccess();
-        const res = await request(app).patch(url).set(auth()).send({});
+
+        const res = await request(app)
+            .patch(url)
+            .set(auth())
+            .send({});
+
         expect(res.status).toBe(400);
         expect(res.body.message).toMatch(/active, completed, or archived/i);
     });
 
     it('returns 400 for invalid status value', async () => {
         mockAccess();
-        const res = await request(app).patch(url).set(auth()).send({ status: 'invalid' });
+
+        const res = await request(app)
+            .patch(url)
+            .set(auth())
+            .send({ status: 'invalid' });
+
         expect(res.status).toBe(400);
     });
 
-    it('returns 200 on success with "active"', async () => {
-        mockAccess();
-        mockDbQuery.mockResolvedValueOnce({ rows: [{ id: T }], rowCount: 1 } as any);
-        const res = await request(app).patch(url).set(auth()).send({ status: 'active' });
-        expect(res.status).toBe(200);
-        expect(res.body.success).toBe(true);
-    });
+    it.each(['active', 'completed', 'archived'] as const)(
+        'returns 200 on success with "%s"',
+        async status => {
+            mockAccess();
 
-    it('returns 200 on success with "completed"', async () => {
-        mockAccess();
-        mockDbQuery.mockResolvedValueOnce({ rows: [{ id: T }], rowCount: 1 } as any);
-        const res = await request(app).patch(url).set(auth()).send({ status: 'completed' });
-        expect(res.status).toBe(200);
-    });
+            const updateStatus = jest
+                .spyOn(organizer, 'updateTournamentStatus')
+                .mockResolvedValue(undefined as any);
 
-    it('returns 200 on success with "archived"', async () => {
-        mockAccess();
-        mockDbQuery.mockResolvedValueOnce({ rows: [{ id: T }], rowCount: 1 } as any);
-        const res = await request(app).patch(url).set(auth()).send({ status: 'archived' });
-        expect(res.status).toBe(200);
-    });
+            const res = await request(app)
+                .patch(url)
+                .set(auth())
+                .send({ status });
 
-    it('returns 404 when tournament not found', async () => {
+            expect(res.status).toBe(200);
+            expect(res.body.success).toBe(true);
+            expect(updateStatus).toHaveBeenCalledWith(T, status);
+        }
+    );
+
+    it('returns 404 when tournament status target is not found', async () => {
         mockAccess();
-        mockDbQuery.mockResolvedValueOnce({ rows: [], rowCount: 0 } as any);
-        const res = await request(app).patch(url).set(auth()).send({ status: 'active' });
+
+        jest.spyOn(organizer, 'updateTournamentStatus')
+            .mockRejectedValue(notFoundError('Tournament not found'));
+
+        const res = await request(app)
+            .patch(url)
+            .set(auth())
+            .send({ status: 'active' });
+
         expect(res.status).toBe(404);
+        expect(res.body.message).toMatch(/not found/i);
     });
 
-    it('returns 500 on db failure', async () => {
+    it('returns 500 when status update throws DbError', async () => {
         mockAccess();
-        mockDbQuery.mockResolvedValueOnce(null);
-        const res = await request(app).patch(url).set(auth()).send({ status: 'active' });
+
+        jest.spyOn(organizer, 'updateTournamentStatus')
+            .mockRejectedValue(dbError());
+
+        const res = await request(app)
+            .patch(url)
+            .set(auth())
+            .send({ status: 'active' });
+
         expect(res.status).toBe(500);
     });
 });
 
-// ═══════════════════════════════════════════════════════════════════════════════
-// PUT /pairings/:pairingId/scoresheets/:assignmentId — DbError (500)
-// (400/200/404 cases are in organizerRoundAndScorecard.test.ts)
-// ═══════════════════════════════════════════════════════════════════════════════
-describe('PUT /api/organizer/tournament/:id/pairings/:pid/scoresheets/:aid — DbError', () => {
-    const PID = 'b1b2c3d4-e5f6-7890-abcd-ef1234567890';
-    const AID = 'c1b2c3d4-e5f6-7890-abcd-ef1234567890';
-    const url = `/organizer/tournament/${T}/pairings/${PID}/scoresheets/${AID}`;
+// ============================================================================
+// PUT /pairings/:pairingId/scoresheets/:assignmentId - DbError
+// ============================================================================
+
+describe('PUT /api/organizer/tournament/:id/pairings/:pid/scoresheets/:aid - DbError', () => {
+    const url =
+        `/organizer/tournament/${T}/pairings/${PID}/scoresheets/${AID}`;
 
     it('returns 500 on db failure', async () => {
-        mockAccess();
-        mockDbQuery.mockResolvedValueOnce(null);
-        const res = await request(app).put(url).set(auth())
-            .send({ scores: [{ assignmentKey: 'k1', side: 'P', score: 9, studentId: null, categoryId: 'c1' }], reason: 'Fix' });
+        mockPairingAccess();
+
+        jest.spyOn(organizer, 'editBallot')
+            .mockRejectedValue(dbError());
+
+        const res = await request(app)
+            .put(url)
+            .set(auth())
+            .send({
+                scores: [{
+                    assignmentKey: 'k1',
+                    side: 'P',
+                    score: 9,
+                    studentId: null,
+                    categoryId: 'c1',
+                }],
+                reason: 'Fix',
+            });
+
         expect(res.status).toBe(500);
     });
 });
 
-// ═══════════════════════════════════════════════════════════════════════════════
-// DELETE /pairings/:pairingId/scoresheets/:assignmentId — DbError (500)
-// (400/204/404 cases are in organizerRoundAndScorecard.test.ts)
-// ═══════════════════════════════════════════════════════════════════════════════
-describe('DELETE /api/organizer/tournament/:id/pairings/:pid/scoresheets/:aid — DbError', () => {
-    const PID = 'b1b2c3d4-e5f6-7890-abcd-ef1234567890';
-    const AID = 'c1b2c3d4-e5f6-7890-abcd-ef1234567890';
-    const url = `/organizer/tournament/${T}/pairings/${PID}/scoresheets/${AID}`;
+// ============================================================================
+// DELETE /pairings/:pairingId/scoresheets/:ballotId - DbError
+// ============================================================================
+
+describe('DELETE /api/organizer/tournament/:id/pairings/:pid/scoresheets/:bid - DbError', () => {
+    const url =
+        `/organizer/tournament/${T}/pairings/${PID}/scoresheets/${AID}`;
 
     it('returns 500 on db failure', async () => {
-        mockAccess();
-        mockDbQuery.mockResolvedValueOnce(null);
-        const res = await request(app).delete(url).set(auth());
+        mockPairingAccess();
+
+        jest.spyOn(organizer, 'deleteBallot')
+            .mockRejectedValue(dbError());
+
+        const res = await request(app)
+            .delete(url)
+            .set(auth());
+
         expect(res.status).toBe(500);
     });
 });
