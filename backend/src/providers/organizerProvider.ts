@@ -762,7 +762,7 @@ export async function addTeam(tournamentID: string, name: string, coachEmail: st
     if (!teamInsert?.rows[0]) throw new DbError('addTeam');
     const user = (await dbQuery<IAuthRow>('SELECT * FROM auth WHERE LOWER(email) = LOWER($1)', [coachEmail]))?.rows[0];
     if (!user) {
-        await dbQuery('INSERT INTO team_invites (team_id, invite_email) VALUES ($1,$2)', [teamId, coachEmail]);
+        await dbQuery('INSERT INTO team_invites (team_id, invite_email, is_owner) VALUES ($1,$2,$3)', [teamId, coachEmail, true]);
         return {id: teamId, tournament_id: tournamentID, name, code, coach_email: coachEmail, has_joined: false};
     }
     await dbQuery('INSERT INTO team_coaches (coach_id, team_id, is_owner) VALUES ($1,$2,$3)', [user.user_id, teamId, true]);

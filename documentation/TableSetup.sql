@@ -299,7 +299,8 @@ create table team_invites
     team_id      uuid                           not null
         references teams
             on delete cascade,
-    invite_email text                           not null
+    invite_email text                           not null,
+    is_owner boolean not null default false;
 );
 
 create index team_invites_team_id_idx on team_invites (team_id);

@@ -42,15 +42,15 @@ export class AuthProvider {
             ),
         );
 
-        const teamInvites = await dbQuery<{ team_id: string }>(
-            'DELETE FROM team_invites WHERE invite_email = $1 RETURNING team_id',
+        const teamInvites = await dbQuery<{ team_id: string, is_owner : boolean }>(
+            'DELETE FROM team_invites WHERE invite_email = $1 RETURNING team_id, is_owner',
             [email],
         );
         if (!teamInvites) throw new DbError('redeemInvites team');
         teamInvites.rows.forEach(row =>
             dbQuery(
                 'INSERT INTO team_coaches (team_id, coach_id, is_owner) VALUES ($1, $2, $3)',
-                [row.team_id, userId, false],
+                [row.team_id, userId, row.is_owner],
             ),
         );
     }
