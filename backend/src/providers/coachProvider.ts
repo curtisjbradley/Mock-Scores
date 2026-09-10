@@ -140,20 +140,20 @@ export async function getCoaches(teamId: string): Promise<ICoach[]> {
     return [...joined, ...invited];
 }
 
-export async function addCoach(teamId: string, email: string): Promise<ICoach> {
+export async function addCoach(teamId: string, email: string, isOwner?: false): Promise<ICoach> {
     const user = (await dbQuery<{ user_id: string; first_name: string; last_name: string; email: string }>(
         `SELECT user_id, first_name, last_name, email FROM auth WHERE LOWER(email)=LOWER($1)`, [email]
     ))?.rows[0];
     if (user) {
         await dbQuery(
-            `INSERT INTO team_coaches (coach_id, team_id, is_owner) VALUES ($1,$2,false) ON CONFLICT DO NOTHING`,
-            [user.user_id, teamId]
+            `INSERT INTO team_coaches (coach_id, team_id, is_owner) VALUES ($1,$2,$3) ON CONFLICT DO NOTHING`,
+            [user.user_id, teamId,isOwner]
         );
         return { coach_id: user.user_id, name: `${user.first_name} ${user.last_name}`, email: user.email, is_owner: false, has_joined: true, notifications_enabled: true };
     }
     const row = (await dbQuery<{ id: string }>(
-        `INSERT INTO team_invites (team_id, invite_email) VALUES ($1,$2) ON CONFLICT DO NOTHING RETURNING id`,
-        [teamId, email]
+        `INSERT INTO team_invites (team_id, invite_email, is_owner) VALUES ($1,$2,$3) ON CONFLICT DO NOTHING RETURNING id`,
+        [teamId, email,isOwner]
     ))?.rows[0];
     return { coach_id: row?.id ?? '', name: email, email, is_owner: false, has_joined: false, notifications_enabled: true };
 }
