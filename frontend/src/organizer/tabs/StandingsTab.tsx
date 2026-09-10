@@ -460,18 +460,17 @@ export default function StandingsTab({ tournamentId }: { tournamentId: string })
 }
 
 function AwardsSummary({ data, selectedRounds }: AwardsSummaryProps) {
-    const safeData = Array.isArray(data) ? data : []
-    const navigate = useNavigate();
+    const navigate = useNavigate()
 
     const filteredNominations = useMemo(() => {
         if (!(selectedRounds instanceof Set)) return []
 
-        return safeData.filter((nomination): nomination is IAwardNomination => {
+        return data.filter((nomination): nomination is IAwardNomination => {
             if (!nomination || typeof nomination !== 'object') return false
             if (typeof nomination.round_id !== 'string') return false
             return selectedRounds.has(nomination.round_id)
         })
-    }, [safeData, selectedRounds])
+    }, [data, selectedRounds])
 
     const grouped = useMemo<AwardCategoryGroup[]>(() => {
         const categoryMap = new Map<string, IAwardNomination[]>()
