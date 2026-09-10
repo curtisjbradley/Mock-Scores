@@ -57,12 +57,17 @@ export async function buildCombinedWorkbook(data: CombinedExport): Promise<Excel
     wb.creator = 'Mock Scores'
     const ws = wb.addWorksheet('Scoresheet')
 
-    // Column count: segment + multiplier + 2 per scorer + student.
-    const lastCol = 2 + ballots.length * 2 + 1
+    // Column count: segment + multiplier + 2 per scorer + 2 student columns.
+    const firstStudentCol = 3 + ballots.length * 2
+    const pStudentCol = firstStudentCol
+    const dStudentCol = firstStudentCol + 1
+    const lastCol = dStudentCol
+
     ws.getColumn(1).width = 16
     ws.getColumn(2).width = 6
-    for (let c = 3; c < lastCol; c++) ws.getColumn(c).width = 7
-    ws.getColumn(lastCol).width = 14
+    for (let c = 3; c < firstStudentCol; c++) ws.getColumn(c).width = 7
+    ws.getColumn(pStudentCol).width = 14
+    ws.getColumn(dStudentCol).width = 14
 
     /** Column letter helper for merge ranges (1-based). */
     const col = (n: number) => ws.getColumn(n).letter
@@ -77,19 +82,22 @@ export async function buildCombinedWorkbook(data: CombinedExport): Promise<Excel
     // ── Header rows: scorer names (merged over 2) + Pros/Def sub-headers ──
     const nameRowValues: (string | null)[] = [`${ballots.length} scorer${ballots.length !== 1 ? 's' : ''}`, 'Mult']
     for (const b of ballots) { nameRowValues.push(b.label, null) }
-    nameRowValues.push('')
+    nameRowValues.push('', '')
     const nameRow = ws.addRow(nameRowValues)
     const nameRowIdx = nameRow.number
 
     const subRowValues: string[] = ['', '']
     for (let i = 0; i < ballots.length; i++) subRowValues.push(prosShort, 'Def')
-    subRowValues.push('Student')
+    subRowValues.push('P Student')
+    subRowValues.push('D Student')
     const subRow = ws.addRow(subRowValues)
 
     // First scorer's P column (defense is the column immediately after each P).
     const firstScorerCol = 3
+    const isDefenseScoreCol = (colNum: number) =>
+        colNum >= firstScorerCol && colNum < firstStudentCol && (colNum - firstScorerCol) % 2 === 1
     const isDefenseCol = (colNum: number) =>
-        colNum >= firstScorerCol && colNum < lastCol && (colNum - firstScorerCol) % 2 === 1
+        isDefenseScoreCol(colNum) || colNum === dStudentCol
 
     // Merge each scorer name across its two columns; style header band.
     ballots.forEach((_, i) => {
@@ -119,20 +127,26 @@ export async function buildCombinedWorkbook(data: CombinedExport): Promise<Excel
             values.push(r.hasP ? (b.scores.get(`${r.key}:P`) ?? null) : null)
             values.push(r.hasD ? (b.scores.get(`${r.key}:D`) ?? null) : null)
         }
-        values.push(r.student ?? '')
+        values.push(r.pStudent ?? '')
+        values.push(r.dStudent ?? '')
+
         const row = ws.addRow(values)
         if (firstSegRowIdx === 0) firstSegRowIdx = row.number
         lastSegRowIdx = row.number
         row.getCell(1).font = { bold: true }
         // Multiplier is a real number so the totals formula can reference it.
         row.getCell(2).alignment = { horizontal: 'center' }
-        // Center scores; color defense columns red.
+        // Center scores; color defense columns red. Student names stay left-aligned.
         for (let i = 0; i < ballots.length; i++) {
             row.getCell(firstScorerCol + i * 2).alignment = { horizontal: 'center' }
             const dCell = row.getCell(firstScorerCol + 1 + i * 2)
             dCell.alignment = { horizontal: 'center' }
             dCell.font = { color: { argb: RED } }
         }
+        row.getCell(pStudentCol).alignment = { horizontal: 'left' }
+        const dStudentCell = row.getCell(dStudentCol)
+        dStudentCell.alignment = { horizontal: 'left' }
+        dStudentCell.font = { color: { argb: RED } }
     }
 
     // ── Totals row ────────────────────────────────────────────────────────
@@ -157,7 +171,7 @@ export async function buildCombinedWorkbook(data: CombinedExport): Promise<Excel
         const pFormula = weightedSumFormula(col(pColNum))
         const dFormula = weightedSumFormula(col(dColNum))
 
-        const pCell = totalRow.getCell(pColNum);
+        const pCell = totalRow.getCell(pColNum)
         pCell.value = pFormula
             ? {
                 formula: pFormula,
@@ -167,7 +181,7 @@ export async function buildCombinedWorkbook(data: CombinedExport): Promise<Excel
             } as ExcelJS.CellFormulaValue
             : scorerTotals[i].p
 
-        const dCell =  totalRow.getCell(dColNum);
+        const dCell = totalRow.getCell(dColNum)
 
         dCell.value = dFormula
             ? {
@@ -178,7 +192,8 @@ export async function buildCombinedWorkbook(data: CombinedExport): Promise<Excel
             } as ExcelJS.CellFormulaValue
             : scorerTotals[i].d
     }
-    totalRow.getCell(lastCol).value = ''
+    totalRow.getCell(pStudentCol).value = ''
+    totalRow.getCell(dStudentCol).value = ''
     totalRow.eachCell({ includeEmpty: true }, (cell, colNum) => {
         if (colNum > lastCol) return
         cell.font = { bold: true, color: isDefenseCol(colNum) ? { argb: RED } : undefined }
