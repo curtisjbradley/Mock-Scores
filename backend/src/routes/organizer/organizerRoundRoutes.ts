@@ -3,7 +3,7 @@ import * as organizer from "../../providers/organizerProvider";
 import { IPairingCreationPayload, IRound } from "@mock-scores/shared";
 import { DbError, NotFoundError } from "../../errors";
 import { roundHandler } from "../../types/handlers";
-import { scorerInviteEmail, roundResultsPublicEmail, sendEmail, sendTrackedEmail } from "../../email";
+import { scorerInviteEmail, roundResultsPublicEmail, pairingsPublicEmail, sendEmail, sendTrackedEmail } from "../../email";
 
 const BASE_URL = process.env.FRONTEND_URL ?? 'http://localhost:5173';
 
@@ -76,17 +76,26 @@ router.patch("/", roundHandler(async (req, res) => {
         return res.status(400).json({ message: "Teams cannot be made private once published" });
 
     try {
-        const wasPublic = req.round.results_public;
+        const wasResultsPublic = req.round.results_public;
+        const wasPairingsPublic = req.round.teams_public;
         const updated = await organizer.updateRound(req.round.round_id, body);
         // Fire results-public emails only on the false→true transition
-        if (!wasPublic && updated.results_public) {
-            organizer.getRoundResultsPublicContext(req.round.round_id).then(ctx => {
-                if (!ctx || ctx.coachEmails.length === 0) return;
-                const standingsUrl = `${BASE_URL}/coach`;
-                const template = roundResultsPublicEmail(ctx.tournamentName, ctx.roundName, standingsUrl);
-                return Promise.all(ctx.coachEmails.map(email =>
-                    sendEmail(email, template.subject, template.html, template.text).catch(console.error)
-                ));
+        if (!wasPairingsPublic && updated.results_public) {
+            organizer.getRoundEmailContext(req.round.round_id).then(ctx => {
+                if (!ctx || ctx.coaches.length === 0) return;
+                return Promise.all(ctx.coaches.map(coach => {
+                    const template = pairingsPublicEmail(ctx.tournamentName, ctx.roundName, `${BASE_URL}/coach/${coach.team_id}/schedule`);
+                    sendEmail(coach.coach_email, template.subject, template.html, template.text).catch(console.error)
+                }));
+            }).catch(console.error);
+        }
+        if (!wasResultsPublic && updated.results_public) {
+            organizer.getRoundEmailContext(req.round.round_id).then(ctx => {
+                if (!ctx || ctx.coaches.length === 0) return;
+                return Promise.all(ctx.coaches.map(coach => {
+                    const template = roundResultsPublicEmail(ctx.tournamentName, ctx.roundName, `${BASE_URL}/coach/${coach.team_id}/results`);
+                    sendEmail(coach.coach_email, template.subject, template.html, template.text).catch(console.error)
+                }));
             }).catch(console.error);
         }
         return res.status(200).json(updated);

@@ -1328,44 +1328,36 @@ describe('getRoundResultsPublicContext', () => {
     it('returns null when the round does not exist', async () => {
         mockDbQuery.mockResolvedValueOnce(ok([]));
 
-        await expect(provider.getRoundResultsPublicContext('r1')).resolves.toBeNull();
+        await expect(provider.getRoundEmailContext('r1')).resolves.toBeNull();
     });
 
     it('returns null when the tournament does not exist', async () => {
         mockDbQuery
-            .mockResolvedValueOnce(ok([{ name: 'Round 1', tournament_id: TID }]))
             .mockResolvedValueOnce(ok([]));
 
-        await expect(provider.getRoundResultsPublicContext('r1')).resolves.toBeNull();
+        await expect(provider.getRoundEmailContext('r1')).resolves.toBeNull();
     });
 
     it('returns tournament, round, and coach email context', async () => {
         mockDbQuery
-            .mockResolvedValueOnce(ok([{ name: 'Round 1', tournament_id: TID }]))
-            .mockResolvedValueOnce(ok([{ name: 'State Championship' }]))
-            .mockResolvedValueOnce(ok([
-                { email: 'one@example.com' },
-                { email: 'two@example.com' },
-            ]));
+            .mockResolvedValueOnce(ok([{ tournament_name: 'State Championship', round_name:  'Round 1', coach_first_name: "Test", coach_last_name: "Coach", coach_email : "one.example.com", team_id: TID }]));
 
-        await expect(provider.getRoundResultsPublicContext('r1')).resolves.toEqual({
+        await expect(provider.getRoundEmailContext('r1')).resolves.toEqual({
             tournamentName: 'State Championship',
             roundName: 'Round 1',
-            coachEmails: ['one@example.com', 'two@example.com'],
+            coaches: [
+                {coach_name: "Test Coach",
+                coach_email: "one.example.com",
+                team_id: TID}
+            ],
         });
     });
 
-    it('uses an empty coach list when the email query fails', async () => {
+    it('returns null when the email query fails', async () => {
         mockDbQuery
-            .mockResolvedValueOnce(ok([{ name: 'Round 1', tournament_id: TID }]))
-            .mockResolvedValueOnce(ok([{ name: 'State Championship' }]))
             .mockResolvedValueOnce(null);
 
-        await expect(provider.getRoundResultsPublicContext('r1')).resolves.toEqual({
-            tournamentName: 'State Championship',
-            roundName: 'Round 1',
-            coachEmails: [],
-        });
+        await expect(null);
     });
 });
 
