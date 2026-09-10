@@ -6,6 +6,7 @@ import request from 'supertest';
 import app from '../../src/appService';
 import { dbQuery } from '../../src/db';
 import { setupAuth, makeAuth } from '../helpers/auth';
+import { DbError } from '../../src/errors';
 
 const mockDbQuery =
     dbQuery as jest.MockedFunction<typeof dbQuery>;
@@ -1072,5 +1073,395 @@ describe('DELETE /api/organizer/tournament/:tournamentId/teams', () => {
         mockDbQuery.mockResolvedValueOnce({ rows: [{ id: ROUND_ID }], rowCount: 1 } as any);
         const res = await request(app).delete(`/organizer/tournament/${TOURNAMENT_ID}/teams`).set(auth()).send({ id: ROUND_ID });
         expect(res.status).toBe(204);
+    });
+});
+
+// ─── Coverage: bulk import / CSV export / awards / overview / roster columns ──
+
+describe('POST /api/organizer/tournament/:tournamentId/import/scorers — coverage', () => {
+    const url = `/organizer/tournament/${TOURNAMENT_ID}/import/scorers`;
+
+    it('returns 400 when CSV is missing', async () => {
+        mockAccess();
+        const res = await request(app).post(url).set(auth()).send({});
+        expect(res.status).toBe(400);
+    });
+
+    it('parses header/quoted fields, creates valid scorers, and reports invalid rows', async () => {
+        mockAccess();
+        mockDbQuery
+            .mockResolvedValueOnce({ rows: [], rowCount: 1 } as any) // valid scorer insert
+            .mockResolvedValueOnce(null as any);                     // provider error for final valid row
+
+        const csv = [
+            'first_name,last_name,email',
+            'Alice,"Smith, Jr",alice@example.com',
+            ',Missing,missing@example.com',
+            'Bad,Email,not-an-email',
+            'DB,Failure,db@example.com',
+        ].join('\n');
+
+        const res = await request(app).post(url).set(auth()).send({ csv });
+        expect(res.status).toBe(200);
+        expect(res.body.created).toBe(1);
+        expect(res.body.errors).toHaveLength(3);
+    });
+
+    it('accepts CSV without a header', async () => {
+        mockAccess();
+        mockDbQuery.mockResolvedValueOnce({ rows: [], rowCount: 1 } as any);
+        const res = await request(app).post(url).set(auth()).send({ csv: 'Alice,Smith,alice@example.com' });
+        expect(res.status).toBe(200);
+        expect(res.body.created).toBe(1);
+    });
+});
+
+describe('POST /api/organizer/tournament/:tournamentId/import/teams — coverage', () => {
+    const url = `/organizer/tournament/${TOURNAMENT_ID}/import/teams`;
+
+    it('returns 400 when CSV is missing', async () => {
+        mockAccess();
+        const res = await request(app).post(url).set(auth()).send({});
+        expect(res.status).toBe(400);
+    });
+
+    it('creates a team, defaults an empty code, and reaches the invitation-email branch', async () => {
+        mockAccess();
+        mockDbQuery
+            .mockResolvedValueOnce({ rows: [], rowCount: 0 } as any) // teamNameExists
+            .mockResolvedValueOnce({ rows: [{ id: ROUND_ID, tournament_id: TOURNAMENT_ID, name: 'Eagles', code: 'Eagles' }], rowCount: 1 } as any) // addTeam insert
+            .mockResolvedValueOnce({ rows: [], rowCount: 0 } as any) // auth lookup
+            .mockResolvedValueOnce({ rows: [], rowCount: 1 } as any) // team invite
+            .mockResolvedValueOnce({ rows: [{ id: TOURNAMENT_ID, name: 'Tournament' }], rowCount: 1 } as any); // async getTournament
+
+        const csv = 'name,coach_email,code\nEagles,coach@example.com,';
+        const res = await request(app).post(url).set(auth()).send({ csv });
+        expect(res.status).toBe(200);
+        expect(res.body).toEqual({ created: 1, errors: [] });
+        await new Promise(setImmediate);
+    });
+
+    it('reports missing names, bad emails, duplicates, and add-team failures', async () => {
+        mockAccess();
+        mockDbQuery
+            .mockResolvedValueOnce({ rows: [{ id: 'existing' }], rowCount: 1 } as any) // duplicate row
+            .mockResolvedValueOnce({ rows: [], rowCount: 0 } as any) // nonduplicate
+            .mockResolvedValueOnce(null as any); // addTeam fails
+
+        const csv = [
+            'name,coach_email,code',
+            ',coach@example.com,X',
+            'BadEmail,not-an-email,X',
+            'Duplicate,dup@example.com,D',
+            'Failure,fail@example.com,F',
+        ].join('\n');
+        const res = await request(app).post(url).set(auth()).send({ csv });
+        expect(res.status).toBe(200);
+        expect(res.body.created).toBe(0);
+        expect(res.body.errors).toHaveLength(4);
+    });
+});
+
+describe('CSV export routes — coverage', () => {
+    it('exports standings and covers wins, losses, ties, missing teams, and CSV escaping', async () => {
+        mockAccess();
+        mockDbQuery
+            .mockResolvedValueOnce({ rows: [{ standings_dsl: 'dsl' }], rowCount: 1 } as any)
+            .mockResolvedValueOnce({ rows: [
+                    { id: 'p', name: '=Alpha, Inc', code: 'A"1' },
+                    { id: 'd', name: 'Beta\nSchool', code: '@B' },
+                ], rowCount: 2 } as any)
+            .mockResolvedValueOnce({ rows: [{ round_id: ROUND_ID, name: 'Round 1' }], rowCount: 1 } as any)
+            .mockResolvedValueOnce({ rows: [
+                    { p_team_id: 'p', d_team_id: 'd', p_points: 10, d_points: 5, pairing_id: 'x1', round_id: ROUND_ID, tiebreaker: null, presider_ballot: false },
+                    { p_team_id: 'p', d_team_id: 'd', p_points: 4, d_points: 9, pairing_id: 'x2', round_id: ROUND_ID, tiebreaker: null, presider_ballot: false },
+                    { p_team_id: 'p', d_team_id: 'd', p_points: 7, d_points: 7, pairing_id: 'x3', round_id: ROUND_ID, tiebreaker: null, presider_ballot: false },
+                    { p_team_id: 'missing-p', d_team_id: 'missing-d', p_points: 1, d_points: 2, pairing_id: 'x4', round_id: ROUND_ID, tiebreaker: null, presider_ballot: false },
+                ], rowCount: 4 } as any);
+
+        const res = await request(app).get(`/organizer/tournament/${TOURNAMENT_ID}/export/standings`).set(auth());
+        expect(res.status).toBe(200);
+        expect(res.headers['content-type']).toMatch(/text\/csv/);
+        expect(res.text).toContain('Ballots Won');
+        expect(res.text).toContain("'=Alpha");
+        expect(res.text).toContain('A""1');
+    });
+
+    it('returns 500 when standings data cannot be queried', async () => {
+        mockAccess();
+        mockDbQuery.mockResolvedValueOnce(null as any);
+        const res = await request(app).get(`/organizer/tournament/${TOURNAMENT_ID}/export/standings`).set(auth());
+        expect(res.status).toBe(500);
+    });
+
+    it('exports rosters with custom values, null pronouns, missing fields, and escaped cells', async () => {
+        mockAccess();
+        mockDbQuery
+            .mockResolvedValueOnce({ rows: [
+                    { tournament_id: TOURNAMENT_ID, position: 0, type: 'int', column_name: 'Year' },
+                    { tournament_id: TOURNAMENT_ID, position: 1, type: 'string', column_name: 'Note' },
+                ], rowCount: 2 } as any)
+            .mockResolvedValueOnce({ rows: [{
+                    team_name: 'School, Inc',
+                    student_name: '=Alice',
+                    pronouns: null,
+                    custom_data: [{ field: 'Year', type: 'int', value: 2027 }],
+                }, {
+                    team_name: 'Plain School',
+                    student_name: 'Bob',
+                    pronouns: 'he/him',
+                    custom_data: null,
+                }], rowCount: 2 } as any);
+
+        const res = await request(app).get(`/organizer/tournament/${TOURNAMENT_ID}/export/rosters`).set(auth());
+        expect(res.status).toBe(200);
+        expect(res.text).toContain('School,Name,Pronoun,Year,Note');
+        expect(res.text).toContain('2027');
+        expect(res.text).toContain("'=Alice");
+    });
+
+    it('returns 404 when roster-column lookup fails', async () => {
+        mockAccess();
+        mockDbQuery
+            .mockResolvedValueOnce(null as any)
+            .mockResolvedValueOnce({ rows: [], rowCount: 0 } as any);
+        const res = await request(app).get(`/organizer/tournament/${TOURNAMENT_ID}/export/rosters`).set(auth());
+        expect(res.status).toBe(404);
+    });
+
+    it('returns 500 when roster export query fails', async () => {
+        mockAccess();
+        mockDbQuery
+            .mockResolvedValueOnce({ rows: [], rowCount: 0 } as any)
+            .mockResolvedValueOnce(null as any);
+        const res = await request(app).get(`/organizer/tournament/${TOURNAMENT_ID}/export/rosters`).set(auth());
+        expect(res.status).toBe(500);
+    });
+
+    it('exports results and falls back to Unknown for missing team/round names', async () => {
+        mockAccess();
+        mockDbQuery
+            .mockResolvedValueOnce({ rows: [], rowCount: 0 } as any)
+            .mockResolvedValueOnce({ rows: [{ id: 'p', name: 'Known Team', code: 'K' }], rowCount: 1 } as any)
+            .mockResolvedValueOnce({ rows: [], rowCount: 0 } as any)
+            .mockResolvedValueOnce({ rows: [{ p_team_id: 'p', d_team_id: 'missing', p_points: 8, d_points: 7, pairing_id: PAIRING_ID, round_id: 'missing-round', tiebreaker: null, presider_ballot: false }], rowCount: 1 } as any);
+
+        const res = await request(app).get(`/organizer/tournament/${TOURNAMENT_ID}/export/results`).set(auth());
+        expect(res.status).toBe(200);
+        expect(res.text).toContain('Unknown,Known Team,Unknown,8,7');
+    });
+
+    it('returns 500 when results export data fails', async () => {
+        mockAccess();
+        mockDbQuery.mockResolvedValueOnce(null as any);
+        const res = await request(app).get(`/organizer/tournament/${TOURNAMENT_ID}/export/results`).set(auth());
+        expect(res.status).toBe(500);
+    });
+});
+
+describe('award category routes — coverage', () => {
+    const base = `/organizer/tournament/${TOURNAMENT_ID}/award-categories`;
+    const CATEGORY_ID = 'dddddddd-dddd-4ddd-8ddd-dddddddddddd';
+
+    it('lists award categories and handles database failure', async () => {
+        mockAccess();
+        mockDbQuery.mockResolvedValueOnce({ rows: [{ id: CATEGORY_ID, name: 'Best Attorney', min_nominees: 1, max_nominees: 2 }], rowCount: 1 } as any);
+        expect((await request(app).get(base).set(auth())).status).toBe(200);
+
+        mockDbQuery.mockReset();
+        mockAccess();
+        mockDbQuery.mockResolvedValueOnce(null as any);
+        expect((await request(app).get(base).set(auth())).status).toBe(500);
+    });
+
+    it.each([
+        [{}, 400],
+        [{ name: 'A' }, 400],
+        [{ name: 'A', minNominees: -1, maxNominees: 1 }, 400],
+        [{ name: 'A', minNominees: 0, maxNominees: 0 }, 400],
+        [{ name: 'A', minNominees: 2, maxNominees: 1 }, 400],
+    ])('validates create payload %#', async (body, status) => {
+        mockAccess();
+        const res = await request(app).post(base).set(auth()).send(body);
+        expect(res.status).toBe(status);
+    });
+
+    it('creates an award category and returns 500 on provider DbError', async () => {
+        mockAccess();
+        mockDbQuery.mockResolvedValueOnce({ rows: [{ id: CATEGORY_ID, name: 'Best Attorney', min_nominees: 1, max_nominees: 2 }], rowCount: 1 } as any);
+        expect((await request(app).post(base).set(auth()).send({ name: ' Best Attorney ', minNominees: 1, maxNominees: 2 })).status).toBe(201);
+
+        mockDbQuery.mockReset();
+        mockAccess();
+        mockDbQuery.mockResolvedValueOnce(null as any);
+        expect((await request(app).post(base).set(auth()).send({ name: 'A', minNominees: 0, maxNominees: 1 })).status).toBe(500);
+    });
+
+    it('validates update id/payload and covers success, not-found, and DbError paths', async () => {
+        mockAccess();
+        expect((await request(app).put(`${base}/bad`).set(auth()).send({ name: 'A', minNominees: 0, maxNominees: 1 })).status).toBe(400);
+
+        mockDbQuery.mockReset(); mockAccess();
+        expect((await request(app).put(`${base}/${CATEGORY_ID}`).set(auth()).send({ name: '', minNominees: 0, maxNominees: 1 })).status).toBe(400);
+
+        mockDbQuery.mockReset(); mockAccess();
+        expect((await request(app).put(`${base}/${CATEGORY_ID}`).set(auth()).send({ name: 'A' })).status).toBe(400);
+
+        mockDbQuery.mockReset(); mockAccess();
+        mockDbQuery.mockResolvedValueOnce({ rows: [{ id: CATEGORY_ID, name: 'A', min_nominees: 0, max_nominees: 1 }], rowCount: 1 } as any);
+        expect((await request(app).put(`${base}/${CATEGORY_ID}`).set(auth()).send({ name: 'A', minNominees: 0, maxNominees: 1 })).status).toBe(200);
+
+        mockDbQuery.mockReset(); mockAccess();
+        mockDbQuery.mockResolvedValueOnce({ rows: [], rowCount: 0 } as any);
+        expect((await request(app).put(`${base}/${CATEGORY_ID}`).set(auth()).send({ name: 'A', minNominees: 0, maxNominees: 1 })).status).toBe(404);
+
+        mockDbQuery.mockReset(); mockAccess();
+        mockDbQuery.mockRejectedValueOnce(new DbError('forced'));
+        expect((await request(app).put(`${base}/${CATEGORY_ID}`).set(auth()).send({ name: 'A', minNominees: 0, maxNominees: 1 })).status).toBe(500);
+    });
+
+    it('deletes an award category and handles invalid/not-found IDs', async () => {
+        mockAccess();
+        expect((await request(app).delete(`${base}/bad`).set(auth())).status).toBe(400);
+
+        mockDbQuery.mockReset(); mockAccess();
+        mockDbQuery.mockResolvedValueOnce({ rows: [{ id: CATEGORY_ID }], rowCount: 1 } as any);
+        expect((await request(app).delete(`${base}/${CATEGORY_ID}`).set(auth())).status).toBe(204);
+
+        mockDbQuery.mockReset(); mockAccess();
+        mockDbQuery.mockResolvedValueOnce({ rows: [], rowCount: 0 } as any);
+        expect((await request(app).delete(`${base}/${CATEGORY_ID}`).set(auth())).status).toBe(404);
+    });
+});
+
+describe('awards, overview, bounced emails, and roster-column routes — coverage', () => {
+    it('returns awards and covers its database-error branch', async () => {
+        mockAccess();
+        mockDbQuery.mockResolvedValueOnce({ rows: [{ student_id: 's1', rank: 1 }], rowCount: 1 } as any);
+        expect((await request(app).get(`/organizer/tournament/${TOURNAMENT_ID}/awards`).set(auth())).status).toBe(200);
+
+        mockDbQuery.mockReset(); mockAccess();
+        mockDbQuery.mockRejectedValueOnce(new DbError('forced'));
+        expect((await request(app).get(`/organizer/tournament/${TOURNAMENT_ID}/awards`).set(auth())).status).toBe(500);
+    });
+
+    it('returns bounced email addresses and defaults to [] on a null query', async () => {
+        mockAccess();
+        mockDbQuery.mockResolvedValueOnce({ rows: [{ email: 'bad@example.com' }], rowCount: 1 } as any);
+        const success = await request(app).get(`/organizer/tournament/${TOURNAMENT_ID}/bounced-emails`).set(auth());
+        expect(success.status).toBe(200);
+        expect(success.body).toEqual(['bad@example.com']);
+
+        mockDbQuery.mockReset(); mockAccess();
+        mockDbQuery.mockResolvedValueOnce(null as any);
+        const empty = await request(app).get(`/organizer/tournament/${TOURNAMENT_ID}/bounced-emails`).set(auth());
+        expect(empty.status).toBe(200);
+        expect(empty.body).toEqual([]);
+    });
+
+    it('covers overview success, not-found, and DbError responses', async () => {
+        const summaryRow = {
+            teams_total: 0, teams_with_rosters: 0, teams_without_rosters: 0,
+            teams_with_default_assignments: 0, teams_without_default_assignments: 0,
+            teams_with_default_call_orders: 0, teams_without_default_call_orders: 0,
+            teams_with_coaches: 0, teams_without_coaches: 0,
+            rounds_total: 0, rounds_with_pairings: 0, rounds_without_pairings: 0,
+            pairings_total: 0, pairings_with_scorers: 0, pairings_without_scorers: 0,
+            pairings_with_presiders: 0, pairings_without_presiders: 0,
+            pairings_with_courtrooms: 0, pairings_without_courtrooms: 0,
+            courtrooms_double_booked: 0, pairings_in_double_booked_courtrooms: 0,
+            ballots_submitted: 0, paper_ballots_awaiting_input: 0,
+            scorers_total: 0, scorers_with_conflicts: 0,
+        };
+        mockAccess();
+        mockDbQuery.mockResolvedValueOnce({ rows: [summaryRow], rowCount: 1 } as any);
+        expect((await request(app).get(`/organizer/tournament/${TOURNAMENT_ID}/overview`).set(auth())).status).toBe(200);
+
+        mockDbQuery.mockReset(); mockAccess();
+        mockDbQuery.mockResolvedValueOnce({ rows: [], rowCount: 0 } as any);
+        expect((await request(app).get(`/organizer/tournament/${TOURNAMENT_ID}/overview`).set(auth())).status).toBe(404);
+
+        mockDbQuery.mockReset(); mockAccess();
+        mockDbQuery.mockRejectedValueOnce(new DbError('forced'));
+        expect((await request(app).get(`/organizer/tournament/${TOURNAMENT_ID}/overview`).set(auth())).status).toBe(500);
+    });
+
+    it('gets roster columns and handles missing-query results', async () => {
+        const url = `/organizer/tournament/${TOURNAMENT_ID}/roster-columns`;
+        mockAccess();
+        mockDbQuery.mockResolvedValueOnce({ rows: [{ column_name: 'Year', type: 'int' }], rowCount: 1 } as any);
+        expect((await request(app).get(url).set(auth())).status).toBe(200);
+
+        mockDbQuery.mockReset(); mockAccess();
+        mockDbQuery.mockResolvedValueOnce(null as any);
+        expect((await request(app).get(url).set(auth())).status).toBe(404);
+    });
+
+    it('validates, creates, detects duplicates, and handles DbError when adding roster columns', async () => {
+        const url = `/organizer/tournament/${TOURNAMENT_ID}/roster-columns`;
+        mockAccess();
+        expect((await request(app).post(url).set(auth()).send({ field: '   ', type: 'int' })).status).toBe(400);
+
+        mockDbQuery.mockReset(); mockAccess();
+        expect((await request(app).post(url).set(auth()).send({ field: 'Year', type: 'float' })).status).toBe(400);
+
+        mockDbQuery.mockReset(); mockAccess();
+        mockDbQuery
+            .mockResolvedValueOnce({ rows: [], rowCount: 0 } as any)
+            .mockResolvedValueOnce({ rows: [{ column_name: 'Year', type: 'int' }], rowCount: 1 } as any);
+        expect((await request(app).post(url).set(auth()).send({ field: ' Year ', type: 'int' })).status).toBe(201);
+
+        mockDbQuery.mockReset(); mockAccess();
+        mockDbQuery.mockResolvedValueOnce({ rows: [{ column_name: 'Year' }], rowCount: 1 } as any);
+        expect((await request(app).post(url).set(auth()).send({ field: 'Year', type: 'int' })).status).toBe(409);
+
+        mockDbQuery.mockReset(); mockAccess();
+        mockDbQuery
+            .mockResolvedValueOnce({ rows: [], rowCount: 0 } as any)
+            .mockResolvedValueOnce(null as any);
+        expect((await request(app).post(url).set(auth()).send({ field: 'Year', type: 'int' })).status).toBe(500);
+    });
+
+    it('validates and covers success/conflict/not-found/DbError when updating roster columns', async () => {
+        const url = `/organizer/tournament/${TOURNAMENT_ID}/roster-columns`;
+        mockAccess();
+        expect((await request(app).put(url).set(auth()).send({ originalField: '', field: 'Year', type: 'int' })).status).toBe(400);
+
+        mockDbQuery.mockReset(); mockAccess();
+        expect((await request(app).put(url).set(auth()).send({ originalField: 'Year', field: 'Year', type: 'float' })).status).toBe(400);
+
+        mockDbQuery.mockReset(); mockAccess();
+        mockDbQuery.mockResolvedValueOnce({ rows: [{ column_name: 'YEAR', type: 'string' }], rowCount: 1 } as any);
+        expect((await request(app).put(url).set(auth()).send({ originalField: 'Year', field: 'YEAR', type: 'string' })).status).toBe(200);
+
+        mockDbQuery.mockReset(); mockAccess();
+        mockDbQuery.mockResolvedValueOnce({ rows: [{ column_name: 'Taken' }], rowCount: 1 } as any);
+        expect((await request(app).put(url).set(auth()).send({ originalField: 'Year', field: 'Taken', type: 'int' })).status).toBe(409);
+
+        mockDbQuery.mockReset(); mockAccess();
+        mockDbQuery.mockResolvedValueOnce({ rows: [], rowCount: 0 } as any);
+        expect((await request(app).put(url).set(auth()).send({ originalField: 'Year', field: 'YEAR', type: 'int' })).status).toBe(404);
+
+        mockDbQuery.mockReset(); mockAccess();
+        mockDbQuery.mockRejectedValueOnce(new DbError('forced'));
+        expect((await request(app).put(url).set(auth()).send({ originalField: 'Year', field: 'YEAR', type: 'int' })).status).toBe(500);
+    });
+
+    it('validates and covers success/not-found/DbError when deleting roster columns', async () => {
+        const url = `/organizer/tournament/${TOURNAMENT_ID}/roster-columns`;
+        mockAccess();
+        expect((await request(app).delete(url).set(auth()).send({})).status).toBe(400);
+
+        mockDbQuery.mockReset(); mockAccess();
+        mockDbQuery.mockResolvedValueOnce({ rows: [{ column_name: 'Year' }], rowCount: 1 } as any);
+        expect((await request(app).delete(url).set(auth()).send({ field: ' Year ' })).status).toBe(204);
+
+        mockDbQuery.mockReset(); mockAccess();
+        mockDbQuery.mockResolvedValueOnce({ rows: [], rowCount: 0 } as any);
+        expect((await request(app).delete(url).set(auth()).send({ field: 'Year' })).status).toBe(404);
+
+        mockDbQuery.mockReset(); mockAccess();
+        mockDbQuery.mockRejectedValueOnce(new DbError('forced'));
+        expect((await request(app).delete(url).set(auth()).send({ field: 'Year' })).status).toBe(500);
     });
 });
