@@ -129,7 +129,8 @@ export default function CombinedScoresheet({
                             {ballots.map((b, i) => (
                                 <th key={i} className="cs-scorer-head" colSpan={2}>{b.label}</th>
                             ))}
-                            <th className="cs-student-col" rowSpan={2}></th>
+                            <th className="cs-student-col" rowSpan={2}>{prosLabel} Student</th>
+                            <th className="cs-student-col" rowSpan={2}>Defense Student</th>
                         </tr>
                         <tr>
                             {ballots.map((_, i) => (
@@ -149,8 +150,9 @@ export default function CombinedScoresheet({
                                         d={row.hasD ? (b.scores.get(`${row.key}:D`) ?? null) : null}
                                     />
                                 ))}
-                                <td className="cs-student-col">{row.pStudent ? <span className="cs-side-p">{row.pStudent}</span> : ""}
-                                    {row.dStudent ? <span className="cs-side-d">{row.dStudent}</span> : ""}</td>
+                                <td className="cs-student-col">{row.pStudent ? <span className="cs-side-p">{row.pStudent}</span> : ""}</td>
+                                <td className="cs-student-col">{row.dStudent ? <span className="cs-side-d">{row.dStudent}</span> : ""}</td>
+
                             </tr>
                         ))}
                     </tbody>
@@ -161,6 +163,7 @@ export default function CombinedScoresheet({
                             {scorerTotals.map((t, i) => (
                                 <SideCells key={i} p={t.p} d={t.d} />
                             ))}
+                            <td className="cs-student-col"></td>
                             <td className="cs-student-col"></td>
                         </tr>
                     </tfoot>
