@@ -952,31 +952,58 @@ export async function getPairingScorers(pairingID: string): Promise<{
 }
 
 
-/** Returns coach emails + tournament name for notifying results going public. */
-export async function getRoundResultsPublicContext(roundID: string): Promise<{
-    tournamentName: string; roundName: string; coachEmails: string[];
+export async function getRoundEmailContext(roundID: string): Promise<{
+    tournamentName: string
+    roundName: string
+    coaches: {
+        coach_name: string
+        coach_email: string
+        team_id: string
+    }[]
 } | null> {
-    const roundRow = (await dbQuery<{
-        name: string;
-        tournament_id: string
-    }>('SELECT name, tournament_id FROM rounds WHERE round_id = $1', [roundID],))?.rows[0];
-    if (!roundRow) return null;
+    const res = await dbQuery<{
+        tournament_name: string
+        round_name: string
+        coach_first_name: string
+        coach_last_name: string
+        coach_email: string
+        team_id: string
+    }>(`
+        SELECT
+            t.name AS tournament_name,
+            r.name AS round_name,
+            a.first_name AS coach_first_name,
+            a.last_name AS coach_last_name,
+            a.email AS coach_email,
+            tm.id AS team_id
+        FROM rounds r
+                 JOIN tournaments t
+                      ON t.id = r.tournament_id
+                 JOIN teams tm
+                      ON tm.tournament_id = r.tournament_id
+                 JOIN team_coaches tc
+                      ON tc.team_id = tm.id
+                 JOIN auth a
+                      ON a.user_id = tc.coach_id
+        WHERE tc.notifications = true
+          AND r.round_id = $1
+    `, [roundID])
 
-    const tourneyRow = (await dbQuery<{
-        name: string
-    }>('SELECT name FROM tournaments WHERE id = $1', [roundRow.tournament_id],))?.rows[0];
-    if (!tourneyRow) return null;
+    const rows = res?.rows ?? null
 
-    const emailRows = (await dbQuery<{ email: string }>(`SELECT DISTINCT a.email
-                                                         FROM team_coaches tc
-                                                                  JOIN teams t ON t.id = tc.team_id
-                                                                  JOIN auth a ON a.user_id = tc.coach_id
-                                                         WHERE t.tournament_id = $1
-                                                           AND tc.notifications`, [roundRow.tournament_id],))?.rows ?? [];
+    if (!rows || rows.length === 0) {
+        return null
+    }
 
     return {
-        tournamentName: tourneyRow.name, roundName: roundRow.name, coachEmails: emailRows.map(r => r.email),
-    };
+        tournamentName: rows[0].tournament_name,
+        roundName: rows[0].round_name,
+        coaches: rows.map(row => ({
+            coach_name: `${row.coach_first_name} ${row.coach_last_name}`.trim(),
+            coach_email: row.coach_email,
+            team_id: row.team_id,
+        })),
+    }
 }
 
 /** Returns the data needed to send scorer invite emails for every registered scorer in a round. */

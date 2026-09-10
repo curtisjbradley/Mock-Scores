@@ -261,13 +261,48 @@ export function teamAddedEmail(teamName: string, tournamentName: string, teamID:
 }
 
 
-export function roundResultsPublicEmail(tournamentName: string, roundName: string, standingsUrl: string): EmailTemplate {
-    const subject = `Round results published - ${tournamentName}`
+export function roundResultsPublicEmail(
+    tournamentName: string,
+    roundName: string,
+    standingsUrl: string
+): EmailTemplate {
+    const subject = `Results available - ${tournamentName}`
+
     const html = layout(subject, `
-        <p>The results for <strong>${roundName}</strong> at <strong>${tournamentName}</strong> have been published.</p>
-        <a class="btn" href="${standingsUrl}">View Standings</a>
+        <p>Results for <strong>${roundName}</strong> at <strong>${tournamentName}</strong> are now available.</p>
+        <p>View the latest standings and round results below.</p>
+        <a class="btn" href="${standingsUrl}">View Results & Standings</a>
     `)
-    return { subject, html, text: `Results for ${roundName} at ${tournamentName} have been published.\n\nView standings: ${standingsUrl}` }
+
+    const text = `Results for ${roundName} at ${tournamentName} are now available.
+
+View the latest standings and round results here:
+
+${standingsUrl}`
+
+    return { subject, html, text }
+}
+
+export function pairingsPublicEmail(
+    tournamentName: string,
+    roundName: string,
+    teamDashboardUrl: string
+): EmailTemplate {
+    const subject = `Matchups available - ${tournamentName}`
+
+    const html = layout(subject, `
+        <p>Matchups for <strong>${roundName}</strong> at <strong>${tournamentName}</strong> are now available.</p>
+        <p>You can view your assignment and begin updating your roster and witness call order.</p>
+        <a class="btn" href="${teamDashboardUrl}">View Team Dashboard</a>
+    `)
+
+    const text = `Matchups for ${roundName} at ${tournamentName} are now available.
+
+You can view your assignment and begin updating your roster and witness call order.
+
+View Team Dashboard: ${teamDashboardUrl}`
+
+    return { subject, html, text }
 }
 
 export function conflictReportEmail(
