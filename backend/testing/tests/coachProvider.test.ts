@@ -10,9 +10,16 @@ import {
     getCompetitionField, getStandingsData,
     getWitnessesForTournament, getFormatForTournament,
 } from '../../src/providers/coachProvider';
+import * as provider from '../../src/providers/coachProvider';
 import { setupAuth, makeAuth } from '../helpers/auth';
 
 const mockDbQuery = dbQuery as jest.MockedFunction<typeof dbQuery>;
+const ok = (rows: unknown[] = [], rowCount = rows.length) =>
+    ({ rows, rowCount } as any);
+
+beforeEach(() => {
+    mockDbQuery.mockReset();
+});
 
 const TID  = 'a1b2c3d4-e5f6-7890-abcd-ef1234567890';
 const TEAM = 'b2c3d4e5-f6a7-8901-bcde-f12345678901';
@@ -43,13 +50,13 @@ describe('getSchedule', () => {
         mockDbQuery
             .mockResolvedValueOnce({ rows: [{ round_id: 'r1', name: 'R1', round_time: null }], rowCount: 1 } as any)
             .mockResolvedValueOnce({ rows: [{ pairing_id: PID }], rowCount: 1 } as any);
-        const result = await getSchedule(TID);
+        const result = await getSchedule(TID, TEAM);
         expect(result[0].round_id).toBe('r1');
         expect(result[0].pairings[0].pairing_id).toBe(PID);
     });
     it('returns [] when no rounds', async () => {
         mockDbQuery.mockResolvedValueOnce({ rows: [], rowCount: 0 } as any);
-        expect(await getSchedule(TID)).toEqual([]);
+        expect(await getSchedule(TID, TEAM)).toEqual([]);
     });
 });
 
@@ -538,5 +545,386 @@ describe('getFormatForTournament', () => {
     it('returns null when not found', async () => {
         mockDbQuery.mockResolvedValueOnce({ rows: [], rowCount: 0 } as any);
         expect(await getFormatForTournament(TID)).toBeNull();
+    });
+});
+
+// ─── Additional coachProvider coverage ───────────────────────────────────────
+
+// ─── sharesIndividualRankings ─────────────────────────────────────────────────
+
+describe('sharesIndividualRankings', () => {
+    it('returns the stored setting when present', async () => {
+        mockDbQuery.mockResolvedValueOnce(ok([{ share_individual_rankings: false }]));
+
+        await expect(provider.sharesIndividualRankings('t1')).resolves.toBe(false);
+    });
+
+    it('defaults to true when the tournament row is missing', async () => {
+        mockDbQuery.mockResolvedValueOnce(ok([]));
+
+        await expect(provider.sharesIndividualRankings('t1')).resolves.toBe(true);
+    });
+
+    it('throws DbError when the query fails', async () => {
+        mockDbQuery.mockResolvedValueOnce(null);
+
+        await expect(provider.sharesIndividualRankings('t1')).rejects.toThrow(DbError);
+    });
+});
+
+// ─── toggleNotifications ──────────────────────────────────────────────────────
+
+describe('toggleNotifications', () => {
+    it('returns the updated coach', async () => {
+        const coach = {
+            coach_id: 'c1',
+            name: 'Coach One',
+            email: 'coach@example.com',
+            is_owner: false,
+            has_joined: true,
+            notifications_enabled: false,
+        };
+
+        mockDbQuery.mockResolvedValueOnce(ok([coach]));
+
+        await expect(provider.toggleNotifications('team1', 'c1')).resolves.toEqual(coach);
+        expect(mockDbQuery).toHaveBeenCalledWith(
+            expect.stringMatching(/UPDATE team_coaches/i),
+            ['c1', 'team1'],
+        );
+    });
+
+    it('returns null when no coach is updated', async () => {
+        mockDbQuery.mockResolvedValueOnce(ok([]));
+
+        await expect(provider.toggleNotifications('team1', 'missing')).resolves.toBeNull();
+    });
+
+    it('returns null when dbQuery returns null', async () => {
+        mockDbQuery.mockResolvedValueOnce(null);
+
+        await expect(provider.toggleNotifications('team1', 'c1')).resolves.toBeNull();
+    });
+});
+
+// ─── roster columns / student custom data ────────────────────────────────────
+
+describe('getRosterColumnsByTeam', () => {
+    it('maps database rows to custom roster columns', async () => {
+        mockDbQuery.mockResolvedValueOnce(ok([
+            { tournament_id: 't1', position: 0, type: 'string', column_name: 'Year' },
+            { tournament_id: 't1', position: 1, type: 'int', column_name: 'Graduation' },
+        ]));
+
+        await expect(provider.getRosterColumnsByTeam('team1')).resolves.toEqual([
+            { field: 'Year', type: 'string' },
+            { field: 'Graduation', type: 'int' },
+        ]);
+    });
+
+    it('returns an empty array when there are no columns', async () => {
+        mockDbQuery.mockResolvedValueOnce(ok([]));
+
+        await expect(provider.getRosterColumnsByTeam('team1')).resolves.toEqual([]);
+    });
+
+    it('throws DbError when the query fails', async () => {
+        mockDbQuery.mockResolvedValueOnce(null);
+
+        await expect(provider.getRosterColumnsByTeam('team1')).rejects.toThrow(DbError);
+    });
+});
+
+describe('updateStudentCustomData', () => {
+    const customData = [
+        { field: 'Year', type: 'string' as const, value: 'Senior' },
+        { field: 'Graduation', type: 'int' as const, value: 2027 },
+    ];
+
+    it('updates and returns the student', async () => {
+        const student = {
+            student_id: 's1',
+            team_id: 'team1',
+            student_name: 'Student',
+            pronouns: null,
+            custom_data: customData,
+        };
+
+        mockDbQuery.mockResolvedValueOnce(ok([student]));
+
+        await expect(provider.updateStudentCustomData('s1', customData)).resolves.toEqual(student);
+        expect(mockDbQuery).toHaveBeenCalledWith(
+            expect.stringMatching(/UPDATE team_rostered_students/i),
+            [JSON.stringify(customData), 's1'],
+        );
+    });
+
+    it('throws NotFoundError when no student is updated', async () => {
+        mockDbQuery.mockResolvedValueOnce(ok([]));
+
+        await expect(provider.updateStudentCustomData('missing', customData)).rejects.toThrow(NotFoundError);
+    });
+
+    it('throws NotFoundError when dbQuery returns null', async () => {
+        mockDbQuery.mockResolvedValueOnce(null);
+
+        await expect(provider.updateStudentCustomData('missing', customData)).rejects.toThrow(NotFoundError);
+    });
+});
+
+// ─── bulk student assignments ────────────────────────────────────────────────
+
+describe('bulkUpsertStudentAssignments', () => {
+    it('does nothing for an empty assignment list', async () => {
+        await expect(
+            provider.bulkUpsertStudentAssignments('p1', 'team1', []),
+        ).resolves.toBeUndefined();
+
+        expect(mockDbQuery).not.toHaveBeenCalled();
+    });
+
+    it('upserts every assignment and normalizes missing witness_id to null', async () => {
+        mockDbQuery.mockResolvedValue(ok([], 1));
+
+        await provider.bulkUpsertStudentAssignments('p1', 'team1', [
+            { field_id: 'f1', student_id: 's1' },
+            { field_id: 'f2', student_id: 's2', witness_id: 'w1' },
+        ]);
+
+        expect(mockDbQuery).toHaveBeenCalledTimes(2);
+        expect(mockDbQuery).toHaveBeenNthCalledWith(
+            1,
+            expect.stringMatching(/INSERT INTO student_assignments/i),
+            ['p1', 'team1', 'f1', null, 's1'],
+        );
+        expect(mockDbQuery).toHaveBeenNthCalledWith(
+            2,
+            expect.stringMatching(/INSERT INTO student_assignments/i),
+            ['p1', 'team1', 'f2', 'w1', 's2'],
+        );
+    });
+});
+
+// ─── default witness call order ──────────────────────────────────────────────
+
+describe('getDefaultWitnessCallOrder', () => {
+    it('returns defaults from the database', async () => {
+        const rows = [
+            { witness_id: 'w1', witness_name: 'Witness One', position: 1 },
+            { witness_id: 'w2', witness_name: 'Witness Two', position: 2 },
+        ];
+        mockDbQuery.mockResolvedValueOnce(ok(rows));
+
+        await expect(provider.getDefaultWitnessCallOrder('team1')).resolves.toEqual(rows);
+    });
+
+    it('returns an empty array when dbQuery returns null', async () => {
+        mockDbQuery.mockResolvedValueOnce(null);
+
+        await expect(provider.getDefaultWitnessCallOrder('team1')).resolves.toEqual([]);
+    });
+});
+
+describe('setDefaultWitnessCallOrder', () => {
+    it('deletes existing defaults and stops when the new order is empty', async () => {
+        mockDbQuery.mockResolvedValueOnce(ok([]));
+
+        await provider.setDefaultWitnessCallOrder('team1', []);
+
+        expect(mockDbQuery).toHaveBeenCalledTimes(1);
+        expect(mockDbQuery).toHaveBeenCalledWith(
+            expect.stringMatching(/DELETE FROM default_witness_call_order/i),
+            ['team1'],
+        );
+    });
+
+    it('deletes existing defaults and inserts each witness in order', async () => {
+        mockDbQuery.mockResolvedValue(ok([], 1));
+
+        await provider.setDefaultWitnessCallOrder('team1', ['w1', 'w2']);
+
+        expect(mockDbQuery).toHaveBeenCalledTimes(3);
+        expect(mockDbQuery).toHaveBeenNthCalledWith(
+            2,
+            expect.stringMatching(/INSERT INTO default_witness_call_order/i),
+            ['team1', 'w1', 1],
+        );
+        expect(mockDbQuery).toHaveBeenNthCalledWith(
+            3,
+            expect.stringMatching(/INSERT INTO default_witness_call_order/i),
+            ['team1', 'w2', 2],
+        );
+    });
+});
+
+// ─── default student assignments ─────────────────────────────────────────────
+
+describe('getDefaultStudentAssignments', () => {
+    it('returns defaults from the database', async () => {
+        const rows = [{
+            id: 'd1',
+            pairing_id: null,
+            team_id: 'team1',
+            field_id: 'f1',
+            field_label: 'Opening',
+            witness_id: null,
+            student_id: 's1',
+            student_name: 'Student One',
+        }];
+        mockDbQuery.mockResolvedValueOnce(ok(rows));
+
+        await expect(provider.getDefaultStudentAssignments('team1')).resolves.toEqual(rows);
+    });
+
+    it('returns an empty array when dbQuery returns null', async () => {
+        mockDbQuery.mockResolvedValueOnce(null);
+
+        await expect(provider.getDefaultStudentAssignments('team1')).resolves.toEqual([]);
+    });
+});
+
+describe('upsertDefaultStudentAssignment', () => {
+    it('stores a null witness id when none is provided', async () => {
+        mockDbQuery.mockResolvedValueOnce(ok([], 1));
+
+        await provider.upsertDefaultStudentAssignment('team1', 'f1', 's1');
+
+        expect(mockDbQuery).toHaveBeenCalledWith(
+            expect.stringMatching(/INSERT INTO default_student_assignments/i),
+            ['team1', 'f1', null, 's1'],
+        );
+    });
+
+    it('passes through an explicit witness id', async () => {
+        mockDbQuery.mockResolvedValueOnce(ok([], 1));
+
+        await provider.upsertDefaultStudentAssignment('team1', 'f1', 's1', 'w1');
+
+        expect(mockDbQuery).toHaveBeenCalledWith(
+            expect.stringMatching(/INSERT INTO default_student_assignments/i),
+            ['team1', 'f1', 'w1', 's1'],
+        );
+    });
+});
+
+describe('deleteDefaultStudentAssignment', () => {
+    it('deletes using null witness matching when witnessId is omitted', async () => {
+        mockDbQuery.mockResolvedValueOnce(ok([], 1));
+
+        await provider.deleteDefaultStudentAssignment('team1', 'f1');
+
+        expect(mockDbQuery).toHaveBeenCalledWith(
+            expect.stringMatching(/DELETE FROM default_student_assignments/i),
+            ['team1', 'f1', null],
+        );
+    });
+
+    it('passes through an explicit witness id', async () => {
+        mockDbQuery.mockResolvedValueOnce(ok([], 1));
+
+        await provider.deleteDefaultStudentAssignment('team1', 'f1', 'w1');
+
+        expect(mockDbQuery).toHaveBeenCalledWith(
+            expect.stringMatching(/DELETE FROM default_student_assignments/i),
+            ['team1', 'f1', 'w1'],
+        );
+    });
+});
+
+// ─── coach ballot visibility ─────────────────────────────────────────────────
+
+describe('canViewPairingResults', () => {
+    it('returns true when a visible pairing row exists', async () => {
+        mockDbQuery.mockResolvedValueOnce(ok([{ pairing_id: 'p1' }]));
+
+        await expect(provider.canViewPairingResults('p1', 'team1')).resolves.toBe(true);
+        expect(mockDbQuery).toHaveBeenCalledWith(
+            expect.stringMatching(/results_public = true/i),
+            ['p1', 'team1'],
+        );
+    });
+
+    it('returns false when no matching row exists', async () => {
+        mockDbQuery.mockResolvedValueOnce(ok([]));
+
+        await expect(provider.canViewPairingResults('p1', 'team1')).resolves.toBe(false);
+    });
+
+    it('returns false when dbQuery returns null', async () => {
+        mockDbQuery.mockResolvedValueOnce(null);
+
+        await expect(provider.canViewPairingResults('p1', 'team1')).resolves.toBe(false);
+    });
+});
+
+describe('isBallotInPairingWithPublicResults', () => {
+    it('returns true when the ballot belongs to a public pairing for the team', async () => {
+        mockDbQuery.mockResolvedValueOnce(ok([{ ballot_id: 'b1' }]));
+
+        await expect(
+            provider.isBallotInPairingWithPublicResults('b1', 'team1'),
+        ).resolves.toBe(true);
+
+        expect(mockDbQuery).toHaveBeenCalledWith(
+            expect.stringMatching(/FROM ballots b/i),
+            ['b1', 'team1'],
+        );
+    });
+
+    it('returns false when no matching ballot is visible', async () => {
+        mockDbQuery.mockResolvedValueOnce(ok([]));
+
+        await expect(
+            provider.isBallotInPairingWithPublicResults('b1', 'team1'),
+        ).resolves.toBe(false);
+    });
+
+    it('returns false when dbQuery returns null', async () => {
+        mockDbQuery.mockResolvedValueOnce(null);
+
+        await expect(
+            provider.isBallotInPairingWithPublicResults('b1', 'team1'),
+        ).resolves.toBe(false);
+    });
+});
+
+describe('getPairingBallots', () => {
+    it('maps scorer_assignment_id to assignment_id', async () => {
+        mockDbQuery.mockResolvedValueOnce(ok([
+            {
+                p_points: 82,
+                d_points: 79,
+                scorer_assignment_id: 'a1',
+                ballot_id: 'b1',
+            },
+            {
+                p_points: 75,
+                d_points: 80,
+                scorer_assignment_id: 'a2',
+                ballot_id: 'b2',
+            },
+        ]));
+
+        await expect(provider.getPairingBallots('team1', 'p1')).resolves.toEqual([
+            { p_points: 82, d_points: 79, assignment_id: 'a1', ballot_id: 'b1' },
+            { p_points: 75, d_points: 80, assignment_id: 'a2', ballot_id: 'b2' },
+        ]);
+
+        expect(mockDbQuery).toHaveBeenCalledWith(
+            expect.stringMatching(/WHERE b\.pairing_id = \$1/i),
+            ['p1', 'team1'],
+        );
+    });
+
+    it('returns an empty array when there are no ballots', async () => {
+        mockDbQuery.mockResolvedValueOnce(ok([]));
+
+        await expect(provider.getPairingBallots('team1', 'p1')).resolves.toEqual([]);
+    });
+
+    it('returns an empty array when dbQuery returns null', async () => {
+        mockDbQuery.mockResolvedValueOnce(null);
+
+        await expect(provider.getPairingBallots('team1', 'p1')).resolves.toEqual([]);
     });
 });

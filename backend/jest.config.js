@@ -3,47 +3,64 @@ const tsJestPath = require.resolve('ts-jest');
 
 module.exports = {
   testEnvironment: 'node',
+
   roots: ['<rootDir>/src', '<rootDir>/testing'],
-  testMatch: ['**/testing/**/*.test.ts', '**/__tests__/**/*.test.ts'],
+
+  testMatch: [
+    '**/testing/**/*.test.ts',
+    '**/__tests__/**/*.test.ts',
+  ],
 
   // Run all test files in a single worker process. This means:
-  //  - jose's Web Crypto cold-start (~2.5s) happens exactly once per run
+  //  - jose's Web Crypto cold-start happens exactly once per run
   //  - the signed test JWT is cached in module scope across all test files
-  //  - total suite time drops by ~20s vs 1 cold-start per parallel worker
+  //  - total suite time is lower than paying the cold-start cost
+  //    once per parallel Jest worker
   maxWorkers: 1,
 
   moduleNameMapper: {
     '^.*/db$': '<rootDir>/testing/mocks/db.ts',
     '^@mock-scores/shared$': '<rootDir>/../shared/src/index.ts',
+
+    // TypeScript source may use NodeNext-style imports such as:
+    //   import { foo } from './foo.js'
+    //
+    // During Jest execution the actual source file is ./foo.ts, so strip
+    // the .js extension when resolving relative imports.
     '^(\\.{1,2}/.*)\\.js$': '$1',
   },
-  // Transform jose (ESM) through ts-jest
+
+  // jose is ESM distributed as JavaScript inside node_modules.
+  // Normally Jest skips transforms for node_modules, so explicitly allow
+  // jose through the ts-jest transform.
   transformIgnorePatterns: [
     '/node_modules/(?!(jose)/)',
   ],
+
   transform: {
-    // `isolatedModules: true` runs ts-jest in transpile-only mode: it strips
-    // types per-file without a full type-check, which is the dominant cost in
-    // ts-jest. Type safety is still enforced separately by `npm run build`
-    // (tsc) and `npm run lint` in CI, so skipping it here only speeds up tests.
-    '^.+\\.tsx?$': [tsJestPath, {
-      tsconfig: 'tsconfig.jest.json',
-      isolatedModules: true,
-    }],
-    '^.+\\.js$': [tsJestPath, {
-      tsconfig: 'tsconfig.jest.json',
-      isolatedModules: true,
-    }],
+    // Transform both TypeScript application/test files and JavaScript
+    // dependencies such as jose through the same ts-jest configuration.
+    //
+    // isolatedModules is configured in tsconfig.jest.json rather than here.
+    '^.+\\.[tj]sx?$': [
+      tsJestPath,
+      {
+        tsconfig: 'tsconfig.jest.json',
+      },
+    ],
   },
-  setupFilesAfterEnv: ['<rootDir>/testing/setup.ts'],
-  // Only instrument application source. Test files were previously listed here
-  // and then excluded via coveragePathIgnorePatterns — instrumenting them just
-  // to drop them was wasted work.
+
+  setupFilesAfterEnv: [
+    '<rootDir>/testing/setup.ts',
+  ],
+
+  // Only instrument application source.
   collectCoverageFrom: [
     'src/**/*.ts',
   ],
+
   coveragePathIgnorePatterns: [
-      'src/db\\.ts',
-      'src/app\\.ts',
+    'src/db\\.ts',
+    'src/app\\.ts',
   ],
 };

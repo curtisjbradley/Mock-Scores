@@ -14,6 +14,9 @@ import testApp from '../../src/appService';
 import { dbQuery } from '../../src/db';
 import bcrypt from 'bcrypt';
 import { signToken, verifyRefreshToken } from '../../src/authUtils';
+import { AuthProvider } from '../../src/providers/authProvider';
+import { DbError } from '../../src/errors';
+import { OAuth2Client } from 'google-auth-library';
 
 jest.mock('bcrypt');
 
@@ -107,7 +110,7 @@ describe('POST /api/auth/login', () => {
         const res = await request(testApp).post('/auth/login').send({ email: 'a@b.com', password: 'Password1' });
         expect(res.status).toBe(200);
         expect(typeof res.body.accessToken).toBe('string');
-        const cookies = res.headers['set-cookie'] as string[] | undefined;
+        const cookies = res.headers['set-cookie'] as unknown as string[] | undefined;
         expect(cookies?.some(c => c.startsWith('rt='))).toBe(true);
         expect(cookies?.some(c => c.includes('HttpOnly'))).toBe(true);
     });
@@ -147,7 +150,7 @@ describe('POST /api/auth/refresh', () => {
             .set('Cookie', 'rt=valid-refresh-token');
         expect(res.status).toBe(200);
         expect(typeof res.body.accessToken).toBe('string');
-        const cookies = res.headers['set-cookie'] as string[] | undefined;
+        const cookies = res.headers['set-cookie'] as unknown as string[] | undefined;
         expect(cookies?.some(c => c.startsWith('rt='))).toBe(true);
     });
 });
@@ -160,7 +163,7 @@ describe('POST /api/auth/logout', () => {
         const res = await request(testApp).post('/auth/logout')
             .set('Cookie', 'rt=sometoken');
         expect(res.status).toBe(204);
-        const cookies = res.headers['set-cookie'] as string[] | undefined;
+        const cookies = res.headers['set-cookie'] as unknown as string[] | undefined;
         expect(cookies?.some(c => c.startsWith('rt=;') || c.includes('Expires=Thu, 01 Jan 1970'))).toBe(true);
     });
 
@@ -441,5 +444,310 @@ describe('POST /api/auth/resend-verification', () => {
         const res = await request(testApp).post('/auth/resend-verification').set('Authorization', `Bearer ${token}`);
         expect(res.status).toBe(200);
         expect(res.body.message).toMatch(/verification email sent/i);
+    });
+});
+
+
+// ─── Additional branch coverage ──────────────────────────────────────────────
+
+// Silence the app's catch-all error logger only while exercising intentional
+// unexpected-error branches. This keeps Jest output clean without globally
+// masking console.error for unrelated tests.
+async function withSilencedConsoleError<T>(fn: () => PromiseLike<T>): Promise<T> {
+    const consoleSpy = jest.spyOn(console, 'error').mockImplementation(() => undefined);
+    try {
+        return await fn();
+    } finally {
+        consoleSpy.mockRestore();
+    }
+}
+
+describe('auth route error and async branches', () => {
+    it('covers successful register verification-email creation', async () => {
+        const registerSpy = jest.spyOn(AuthProvider.prototype, 'registerUser') as jest.Mock;
+        const verifySpy = jest.spyOn(AuthProvider.prototype, 'createEmailVerificationTokenByEmail') as jest.Mock;
+        try {
+            registerSpy.mockResolvedValueOnce({ status: 201, message: 'Registered' });
+            verifySpy.mockResolvedValueOnce({ token: 'verify-token', firstName: 'Alice' });
+            const res = await request(testApp).post('/auth/register').send({
+                email: 'alice@example.com', password: 'Password1', firstName: 'Alice', lastName: 'Smith',
+            });
+            expect(res.status).toBe(201);
+            await new Promise(setImmediate);
+        } finally {
+            registerSpy.mockRestore();
+            verifySpy.mockRestore();
+        }
+    });
+
+    it('covers verification-email promise rejection after registration', async () => {
+        const registerSpy = jest.spyOn(AuthProvider.prototype, 'registerUser') as jest.Mock;
+        const verifySpy = jest.spyOn(AuthProvider.prototype, 'createEmailVerificationTokenByEmail') as jest.Mock;
+        const consoleSpy = jest.spyOn(console, 'error').mockImplementation(() => undefined);
+        try {
+            registerSpy.mockResolvedValueOnce({ status: 201, message: 'Registered' });
+            verifySpy.mockRejectedValueOnce(new Error('email token failed'));
+            const res = await request(testApp).post('/auth/register').send({
+                email: 'alice@example.com', password: 'Password1', firstName: 'Alice', lastName: 'Smith',
+            });
+            expect(res.status).toBe(201);
+            await new Promise(setImmediate);
+            expect(consoleSpy).toHaveBeenCalled();
+        } finally {
+            registerSpy.mockRestore();
+            verifySpy.mockRestore();
+            consoleSpy.mockRestore();
+        }
+    });
+
+    it('rethrows an unexpected register error to the app error handler', async () => {
+        const spy = (jest.spyOn(AuthProvider.prototype, 'registerUser') as jest.Mock).mockRejectedValueOnce(new Error('boom'));
+        try {
+            const res = await withSilencedConsoleError(() =>
+                request(testApp).post('/auth/register').send({
+                    email: 'a@b.com', password: 'Password1', firstName: 'A', lastName: 'B',
+                })
+            );
+            expect(res.status).toBe(500);
+        } finally { spy.mockRestore(); }
+    });
+
+    it('covers login DbError and unexpected-error branches', async () => {
+        let spy = (jest.spyOn(AuthProvider.prototype, 'loginUser') as jest.Mock).mockRejectedValueOnce(new DbError('forced'));
+        let res = await request(testApp).post('/auth/login').send({ email: 'a@b.com', password: 'Password1' });
+        expect(res.status).toBe(500);
+        spy.mockRestore();
+
+        spy = (jest.spyOn(AuthProvider.prototype, 'loginUser') as jest.Mock).mockRejectedValueOnce(new Error('boom'));
+        res = await withSilencedConsoleError(() =>
+            request(testApp).post('/auth/login').send({ email: 'a@b.com', password: 'Password1' })
+        );
+        expect(res.status).toBe(500);
+        spy.mockRestore();
+    });
+
+    it('covers refresh DbError and unexpected-error branches', async () => {
+        let spy = (jest.spyOn(AuthProvider.prototype, 'refreshSession') as jest.Mock).mockRejectedValueOnce(new DbError('forced'));
+        let res = await request(testApp).post('/auth/refresh').set('Cookie', 'rt=test-token');
+        expect(res.status).toBe(500);
+        spy.mockRestore();
+
+        spy = (jest.spyOn(AuthProvider.prototype, 'refreshSession') as jest.Mock).mockRejectedValueOnce(new Error('boom'));
+        res = await withSilencedConsoleError(() =>
+            request(testApp).post('/auth/refresh').set('Cookie', 'rt=test-token')
+        );
+        expect(res.status).toBe(500);
+        spy.mockRestore();
+    });
+
+    it('covers change-password DbError and unexpected-error branches', async () => {
+        const token = validToken();
+        let spy = (jest.spyOn(AuthProvider.prototype, 'changePassword') as jest.Mock).mockRejectedValueOnce(new DbError('forced'));
+        let res = await request(testApp).post('/auth/change-password')
+            .set('Authorization', `Bearer ${token}`)
+            .send({ currentPassword: 'old', newPassword: 'Newpass123' });
+        expect(res.status).toBe(500);
+        spy.mockRestore();
+
+        spy = (jest.spyOn(AuthProvider.prototype, 'changePassword') as jest.Mock).mockRejectedValueOnce(new Error('boom'));
+        res = await withSilencedConsoleError(() =>
+            request(testApp).post('/auth/change-password')
+                .set('Authorization', `Bearer ${token}`)
+                .send({ currentPassword: 'old', newPassword: 'Newpass123' })
+        );
+        expect(res.status).toBe(500);
+        spy.mockRestore();
+    });
+
+    it('covers unexpected account-deletion error', async () => {
+        const spy = (jest.spyOn(AuthProvider.prototype, 'deleteAccount') as jest.Mock).mockRejectedValueOnce(new Error('boom'));
+        try {
+            const res = await withSilencedConsoleError(() =>
+                request(testApp).delete('/auth/account')
+                    .set('Authorization', `Bearer ${validToken()}`)
+            );
+            expect(res.status).toBe(500);
+        } finally { spy.mockRestore(); }
+    });
+
+    it('covers forgot-password DbError and unexpected-error branches', async () => {
+        let spy = (jest.spyOn(AuthProvider.prototype, 'createPasswordResetToken') as jest.Mock).mockRejectedValueOnce(new DbError('forced'));
+        let res = await request(testApp).post('/auth/forgot-password').send({ email: 'a@b.com' });
+        expect(res.status).toBe(500);
+        spy.mockRestore();
+
+        spy = (jest.spyOn(AuthProvider.prototype, 'createPasswordResetToken') as jest.Mock).mockRejectedValueOnce(new Error('boom'));
+        res = await withSilencedConsoleError(() =>
+            request(testApp).post('/auth/forgot-password').send({ email: 'a@b.com' })
+        );
+        expect(res.status).toBe(500);
+        spy.mockRestore();
+    });
+
+    it('covers reset-password DbError and unexpected-error branches', async () => {
+        let spy = (jest.spyOn(AuthProvider.prototype, 'resetPassword') as jest.Mock).mockRejectedValueOnce(new DbError('forced'));
+        let res = await request(testApp).post('/auth/reset-password').send({ token: 't', newPassword: 'Newpass123' });
+        expect(res.status).toBe(500);
+        spy.mockRestore();
+
+        spy = (jest.spyOn(AuthProvider.prototype, 'resetPassword') as jest.Mock).mockRejectedValueOnce(new Error('boom'));
+        res = await withSilencedConsoleError(() =>
+            request(testApp).post('/auth/reset-password').send({ token: 't', newPassword: 'Newpass123' })
+        );
+        expect(res.status).toBe(500);
+        spy.mockRestore();
+    });
+
+    it('covers verify-email DbError and unexpected-error branches', async () => {
+        let spy = (jest.spyOn(AuthProvider.prototype, 'verifyEmail') as jest.Mock).mockRejectedValueOnce(new DbError('forced'));
+        let res = await request(testApp).post('/auth/verify-email').send({ token: 't' });
+        expect(res.status).toBe(500);
+        spy.mockRestore();
+
+        spy = (jest.spyOn(AuthProvider.prototype, 'verifyEmail') as jest.Mock).mockRejectedValueOnce(new Error('boom'));
+        res = await withSilencedConsoleError(() =>
+            request(testApp).post('/auth/verify-email').send({ token: 't' })
+        );
+        expect(res.status).toBe(500);
+        spy.mockRestore();
+    });
+
+    it('covers resend-verification DbError and unexpected-error branches', async () => {
+        const token = validToken();
+        let spy = (jest.spyOn(AuthProvider.prototype, 'createEmailVerificationTokenByEmail') as jest.Mock).mockRejectedValueOnce(new DbError('forced'));
+        let res = await request(testApp).post('/auth/resend-verification').set('Authorization', `Bearer ${token}`);
+        expect(res.status).toBe(500);
+        spy.mockRestore();
+
+        spy = (jest.spyOn(AuthProvider.prototype, 'createEmailVerificationTokenByEmail') as jest.Mock).mockRejectedValueOnce(new Error('boom'));
+        res = await withSilencedConsoleError(() =>
+            request(testApp).post('/auth/resend-verification').set('Authorization', `Bearer ${token}`)
+        );
+        expect(res.status).toBe(500);
+        spy.mockRestore();
+    });
+});
+
+describe('POST /api/auth/refresh — production CSRF branches', () => {
+    const originalNodeEnv = process.env.NODE_ENV;
+
+    afterEach(() => {
+        process.env.NODE_ENV = originalNodeEnv;
+    });
+
+    it('returns 403 when the CSRF cookie is absent', async () => {
+        process.env.NODE_ENV = 'production';
+        const res = await request(testApp).post('/auth/refresh').set('Cookie', 'rt=test-token');
+        expect(res.status).toBe(403);
+    });
+
+    it('returns 403 when the CSRF header is absent', async () => {
+        process.env.NODE_ENV = 'production';
+        const res = await request(testApp).post('/auth/refresh')
+            .set('Cookie', ['rt=test-token', 'csrf_token=abc']);
+        expect(res.status).toBe(403);
+    });
+
+    it('returns 403 when CSRF cookie and header differ', async () => {
+        process.env.NODE_ENV = 'production';
+        const res = await request(testApp).post('/auth/refresh')
+            .set('Cookie', ['rt=test-token', 'csrf_token=abc'])
+            .set('X-CSRF-Token', 'xyz');
+        expect(res.status).toBe(403);
+    });
+
+    it('continues when CSRF cookie and header match', async () => {
+        process.env.NODE_ENV = 'production';
+        const spy = jest.spyOn(AuthProvider.prototype, 'refreshSession') as jest.Mock;
+        try {
+            spy.mockResolvedValueOnce({ accessToken: 'access', refreshToken: 'refresh' });
+            const res = await request(testApp).post('/auth/refresh')
+                .set('Cookie', ['rt=test-token', 'csrf_token=abc'])
+                .set('X-CSRF-Token', 'abc');
+            expect(res.status).toBe(200);
+            expect(res.body.accessToken).toBe('access');
+        } finally { spy.mockRestore(); }
+    });
+});
+
+describe('POST /api/auth/google/login', () => {
+    it('returns 400 when OAuth token is missing', async () => {
+        const res = await request(testApp).post('/auth/google/login').send({});
+        expect(res.status).toBe(400);
+    });
+
+    it('returns 401 when Google payload has no email', async () => {
+        const oauthSpy = jest.spyOn(OAuth2Client.prototype, 'verifyIdToken') as jest.Mock;
+        try {
+            oauthSpy.mockResolvedValueOnce({ getPayload: () => ({ name: 'No Email' }) });
+            const res = await request(testApp).post('/auth/google/login').send({ token: 'google-token' });
+            expect(res.status).toBe(401);
+        } finally { oauthSpy.mockRestore(); }
+    });
+
+    it('uses the name fallback and returns auth tokens', async () => {
+        const oauthSpy = jest.spyOn(OAuth2Client.prototype, 'verifyIdToken') as jest.Mock;
+        const googleSpy = jest.spyOn(AuthProvider.prototype, 'googleAuth') as jest.Mock;
+        try {
+            oauthSpy.mockResolvedValueOnce({ getPayload: () => ({ email: 'g@example.com', name: 'Google User' }) });
+            googleSpy.mockResolvedValueOnce({ accessToken: 'access', refreshToken: 'refresh' });
+            const res = await request(testApp).post('/auth/google/login').send({ token: 'google-token' });
+            expect(res.status).toBe(200);
+            expect(googleSpy).toHaveBeenCalledWith('g@example.com', 'Google', 'User');
+        } finally {
+            oauthSpy.mockRestore();
+            googleSpy.mockRestore();
+        }
+    });
+
+    it('uses given/family names when supplied', async () => {
+        const oauthSpy = jest.spyOn(OAuth2Client.prototype, 'verifyIdToken') as jest.Mock;
+        const googleSpy = jest.spyOn(AuthProvider.prototype, 'googleAuth') as jest.Mock;
+        try {
+            oauthSpy.mockResolvedValueOnce({ getPayload: () => ({ email: 'g@example.com', given_name: 'Given', family_name: 'Family' }) });
+            googleSpy.mockResolvedValueOnce({ accessToken: 'access', refreshToken: 'refresh' });
+            const res = await request(testApp).post('/auth/google/login').send({ token: 'google-token' });
+            expect(res.status).toBe(200);
+            expect(googleSpy).toHaveBeenCalledWith('g@example.com', 'Given', 'Family');
+        } finally {
+            oauthSpy.mockRestore();
+            googleSpy.mockRestore();
+        }
+    });
+
+    it('uses empty names when the payload has no name fields', async () => {
+        const oauthSpy = jest.spyOn(OAuth2Client.prototype, 'verifyIdToken') as jest.Mock;
+        const googleSpy = jest.spyOn(AuthProvider.prototype, 'googleAuth') as jest.Mock;
+        try {
+            oauthSpy.mockResolvedValueOnce({ getPayload: () => ({ email: 'g@example.com' }) });
+            googleSpy.mockResolvedValueOnce({ accessToken: 'access', refreshToken: 'refresh' });
+            const res = await request(testApp).post('/auth/google/login').send({ token: 'google-token' });
+            expect(res.status).toBe(200);
+            expect(googleSpy).toHaveBeenCalledWith('g@example.com', '', '');
+        } finally {
+            oauthSpy.mockRestore();
+            googleSpy.mockRestore();
+        }
+    });
+
+    it('returns 500 when googleAuth throws DbError', async () => {
+        const oauthSpy = jest.spyOn(OAuth2Client.prototype, 'verifyIdToken') as jest.Mock;
+        const googleSpy = (jest.spyOn(AuthProvider.prototype, 'googleAuth') as jest.Mock).mockRejectedValueOnce(new DbError('forced'));
+        try {
+            oauthSpy.mockResolvedValueOnce({ getPayload: () => ({ email: 'g@example.com', name: 'Google User' }) });
+            const res = await request(testApp).post('/auth/google/login').send({ token: 'google-token' });
+            expect(res.status).toBe(500);
+        } finally {
+            oauthSpy.mockRestore();
+            googleSpy.mockRestore();
+        }
+    });
+
+    it('returns 401 when Google token verification rejects', async () => {
+        const oauthSpy = (jest.spyOn(OAuth2Client.prototype, 'verifyIdToken') as jest.Mock).mockRejectedValueOnce(new Error('invalid'));
+        try {
+            const res = await request(testApp).post('/auth/google/login').send({ token: 'bad-token' });
+            expect(res.status).toBe(401);
+        } finally { oauthSpy.mockRestore(); }
     });
 });

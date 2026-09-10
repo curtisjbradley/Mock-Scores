@@ -1,21 +1,68 @@
-/**
- * Coverage gap tests for coachRoutes.ts and coachTeamRoutes.ts:
- * - GET /tournaments/:id/pairings/:pairingId/ballots (pairing ballot list)
- * - GET /tournaments/:id/pairings/:pairingId/ballots/:assignmentId (ballot detail)
- * - GET /teams/:teamId/default-witness-order
- * - PUT /teams/:teamId/default-witness-order
- * - GET /teams/:teamId/default-assignments
- * - PUT /teams/:teamId/default-assignments
- * - DELETE /teams/:teamId/default-assignments
- * - POST /teams/:teamId/pairings/:pairingId/assignments/bulk
- */
 jest.mock('../../src/email', () => jest.requireActual('../mocks/email'));
+jest.mock('../../src/providers/coachProvider', () => {
+    const actual = jest.requireActual('../../src/providers/coachProvider');
+    return {
+        ...actual,
+        canViewPairingResults: jest.fn(),
+        getPairingBallots: jest.fn(),
+        isBallotInPairingWithPublicResults: jest.fn(),
+        sharesIndividualRankings: jest.fn(),
+        getDefaultWitnessCallOrder: jest.fn(),
+        setDefaultWitnessCallOrder: jest.fn(),
+        getDefaultStudentAssignments: jest.fn(),
+        upsertDefaultStudentAssignment: jest.fn(),
+        deleteDefaultStudentAssignment: jest.fn(),
+        isPairingRoundLocked: jest.fn(),
+        bulkUpsertStudentAssignments: jest.fn(),
+        getTeamIdForCoach: jest.fn(),
+        getSchedule: jest.fn(),
+    };
+});
+jest.mock('../../src/providers/scorerProvider', () => {
+    const actual = jest.requireActual('../../src/providers/scorerProvider');
+    return {
+        ...actual,
+        getBallot: jest.fn(),
+        getSheetFromBallot: jest.fn(),
+    };
+});
 import request from 'supertest';
 import app from '../../src/appService';
 import { dbQuery } from '../../src/db';
+import {
+    bulkUpsertStudentAssignments,
+    canViewPairingResults,
+    deleteDefaultStudentAssignment,
+    getDefaultStudentAssignments,
+    getDefaultWitnessCallOrder,
+    getPairingBallots,
+    getSchedule,
+    getTeamIdForCoach,
+    isBallotInPairingWithPublicResults,
+    isPairingRoundLocked,
+    setDefaultWitnessCallOrder,
+    sharesIndividualRankings,
+    upsertDefaultStudentAssignment,
+} from '../../src/providers/coachProvider';
+import { getBallot, getSheetFromBallot } from '../../src/providers/scorerProvider';
 import { setupAuth, makeAuth } from '../helpers/auth';
 
 const mockDbQuery = dbQuery as jest.MockedFunction<typeof dbQuery>;
+const mockGetBallot = getBallot as jest.MockedFunction<typeof getBallot>;
+const mockGetSheetFromBallot = getSheetFromBallot as jest.MockedFunction<typeof getSheetFromBallot>;
+const mockCanViewPairingResults = canViewPairingResults as jest.MockedFunction<typeof canViewPairingResults>;
+const mockGetPairingBallots = getPairingBallots as jest.MockedFunction<typeof getPairingBallots>;
+const mockIsBallotInPairingWithPublicResults = isBallotInPairingWithPublicResults as jest.MockedFunction<typeof isBallotInPairingWithPublicResults>;
+const mockSharesIndividualRankings = sharesIndividualRankings as jest.MockedFunction<typeof sharesIndividualRankings>;
+const mockGetDefaultWitnessCallOrder = getDefaultWitnessCallOrder as jest.MockedFunction<typeof getDefaultWitnessCallOrder>;
+const mockSetDefaultWitnessCallOrder = setDefaultWitnessCallOrder as jest.MockedFunction<typeof setDefaultWitnessCallOrder>;
+const mockGetDefaultStudentAssignments = getDefaultStudentAssignments as jest.MockedFunction<typeof getDefaultStudentAssignments>;
+const mockUpsertDefaultStudentAssignment = upsertDefaultStudentAssignment as jest.MockedFunction<typeof upsertDefaultStudentAssignment>;
+const mockDeleteDefaultStudentAssignment = deleteDefaultStudentAssignment as jest.MockedFunction<typeof deleteDefaultStudentAssignment>;
+const mockIsPairingRoundLocked = isPairingRoundLocked as jest.MockedFunction<typeof isPairingRoundLocked>;
+const mockBulkUpsertStudentAssignments = bulkUpsertStudentAssignments as jest.MockedFunction<typeof bulkUpsertStudentAssignments>;
+const mockGetTeamIdForCoach = getTeamIdForCoach as jest.MockedFunction<typeof getTeamIdForCoach>;
+const mockGetSchedule = getSchedule as jest.MockedFunction<typeof getSchedule>;
 
 const TID  = 'a1b2c3d4-e5f6-7890-abcd-ef1234567890';
 const TEAM = 'b2c3d4e5-f6a7-8901-bcde-f12345678901';
@@ -28,6 +75,28 @@ const getToken = setupAuth();
 const auth = () => makeAuth(getToken());
 const mockTeamAccess = () =>
     mockDbQuery.mockResolvedValueOnce({ rows: [{ coach_id: 'user-1' }], rowCount: 1 } as any);
+
+// Every route in this file shares the same mocked dbQuery function. Some handlers
+// return before consuming every queued value, so reset the one-shot queue between
+// tests to prevent a failure in one case from changing middleware behavior later.
+beforeEach(() => {
+    mockDbQuery.mockReset();
+    mockGetBallot.mockReset();
+    mockGetSheetFromBallot.mockReset();
+    mockCanViewPairingResults.mockReset();
+    mockGetPairingBallots.mockReset();
+    mockIsBallotInPairingWithPublicResults.mockReset();
+    mockSharesIndividualRankings.mockReset();
+    mockGetDefaultWitnessCallOrder.mockReset();
+    mockSetDefaultWitnessCallOrder.mockReset();
+    mockGetDefaultStudentAssignments.mockReset();
+    mockUpsertDefaultStudentAssignment.mockReset();
+    mockDeleteDefaultStudentAssignment.mockReset();
+    mockIsPairingRoundLocked.mockReset();
+    mockBulkUpsertStudentAssignments.mockReset();
+    mockGetTeamIdForCoach.mockReset();
+    mockGetSchedule.mockReset();
+});
 
 // ═══════════════════════════════════════════════════════════════════════════════
 // GET /tournaments/:id/pairings/:pairingId/ballots
@@ -45,34 +114,17 @@ describe('GET /api/coach/tournaments/:id/pairings/:pairingId/ballots', () => {
         expect(res.status).toBe(400);
     });
 
-    it('returns 404 when the coach has no team in the tournament', async () => {
-        // getTeamIdForCoach returns no row
-        mockDbQuery.mockResolvedValueOnce({ rows: [], rowCount: 0 } as any);
+    it('returns 404 when pairing results are not viewable', async () => {
+        mockCanViewPairingResults.mockResolvedValueOnce(false);
         const res = await request(app).get(url).set(auth());
         expect(res.status).toBe(404);
     });
 
-    it('returns 404 when pairing results are not published or the team did not compete', async () => {
-        // getTeamIdForCoach → coach's team
-        mockDbQuery.mockResolvedValueOnce({ rows: [{ team_id: TEAM }], rowCount: 1 } as any);
-        // canViewPairingResults returns false (not public, or team not in pairing)
-        mockDbQuery.mockResolvedValueOnce({ rows: [], rowCount: 0 } as any);
-        const res = await request(app).get(url).set(auth());
-        expect(res.status).toBe(404);
-    });
-
-    it('returns 200 with ballot summaries when results are public and the team competed', async () => {
-        // getTeamIdForCoach → coach's team
-        mockDbQuery.mockResolvedValueOnce({ rows: [{ team_id: TEAM }], rowCount: 1 } as any);
-        // canViewPairingResults returns true
-        mockDbQuery.mockResolvedValueOnce({ rows: [{ pairing_id: PID }], rowCount: 1 } as any);
-        // getPairingBallots
-        mockDbQuery.mockResolvedValueOnce({
-            rows: [
-                { p_points: 80, d_points: 70, scorer_assignment_id: AID },
-            ],
-            rowCount: 1,
-        } as any);
+    it('returns 200 with ballot summaries when results are viewable', async () => {
+        mockCanViewPairingResults.mockResolvedValueOnce(true);
+        mockGetPairingBallots.mockResolvedValueOnce([
+            { p_points: 80, d_points: 70, scorer_assignment_id: AID },
+        ] as any);
         const res = await request(app).get(url).set(auth());
         expect(res.status).toBe(200);
         expect(res.body).toHaveLength(1);
@@ -81,9 +133,9 @@ describe('GET /api/coach/tournaments/:id/pairings/:pairingId/ballots', () => {
 });
 
 // ═══════════════════════════════════════════════════════════════════════════════
-// GET /tournaments/:id/pairings/:pairingId/ballots/:assignmentId
+// GET /tournaments/:id/pairings/:pairingId/ballots/:ballotId
 // ═══════════════════════════════════════════════════════════════════════════════
-describe('GET /api/coach/tournaments/:id/pairings/:pairingId/ballots/:assignmentId', () => {
+describe('GET /api/coach/tournaments/:id/pairings/:pairingId/ballots/:ballotId', () => {
     const url = `/coach/tournaments/${TID}/pairings/${PID}/ballots/${AID}`;
 
     it('returns 400 for invalid tournament ID', async () => {
@@ -96,152 +148,64 @@ describe('GET /api/coach/tournaments/:id/pairings/:pairingId/ballots/:assignment
         expect(res.status).toBe(400);
     });
 
-    it('returns 400 for invalid assignment ID', async () => {
+    it('returns 400 for invalid ballot ID', async () => {
         const res = await request(app).get(`/coach/tournaments/${TID}/pairings/${PID}/ballots/bad`).set(auth());
         expect(res.status).toBe(400);
     });
 
-    it('returns 404 when the coach has no team in the tournament', async () => {
-        // getTeamIdForCoach → no row
-        mockDbQuery.mockResolvedValueOnce({ rows: [], rowCount: 0 } as any);
-        const res = await request(app).get(url).set(auth());
-        expect(res.status).toBe(404);
-    });
-
-    it('returns 404 when assignment is not in a public-results pairing the team competed in', async () => {
-        // getTeamIdForCoach → coach's team
-        mockDbQuery.mockResolvedValueOnce({ rows: [{ team_id: TEAM }], rowCount: 1 } as any);
-        // isAssignmentInPairingWithPublicResults returns false
-        mockDbQuery.mockResolvedValueOnce({ rows: [], rowCount: 0 } as any);
+    it('returns 404 when the ballot is not in a public-results pairing', async () => {
+        mockIsBallotInPairingWithPublicResults.mockResolvedValueOnce(false);
         const res = await request(app).get(url).set(auth());
         expect(res.status).toBe(404);
     });
 
     it('returns 200 with redacted scoresheet and ballot data', async () => {
-        // getTeamIdForCoach → coach's team
-        mockDbQuery.mockResolvedValueOnce({ rows: [{ team_id: TEAM }], rowCount: 1 } as any);
-        // isAssignmentInPairingWithPublicResults returns true
-        mockDbQuery.mockResolvedValueOnce({ rows: [{ assignment_id: AID }], rowCount: 1 } as any);
-        // getScoreSheet (skipGuards): assignment lookup
-        mockDbQuery.mockResolvedValueOnce({
-            rows: [{
-                pairing_id: PID,
-                registered_scorer_id: 's1',
-                paper_scorer_id: null,
-                p_team: 't1',
-                d_team: 't2',
-                courtroom_name: 'Room 1',
-                tournament_id: TID,
-                presider_scorer_assignment_id: null,
-                show_scores: null,
-                conflict_reported: false,
-            }],
-            rowCount: 1,
+        // isBallotInPairingWithPublicResults -> true
+        mockIsBallotInPairingWithPublicResults.mockResolvedValueOnce(true);
+        mockGetSheetFromBallot.mockResolvedValueOnce({
+            scorer: { firstName: 'Jane', lastName: 'Judge', scorerID: 's1', isPaper: false },
+            presiderName: 'Presider',
         } as any);
-        // scorer name
-        mockDbQuery.mockResolvedValueOnce({ rows: [{ first_name: 'Jane', last_name: 'Judge' }], rowCount: 1 } as any);
-        // tournament/format
-        mockDbQuery.mockResolvedValueOnce({
-            rows: [{ case_name: 'Case', criminal_case: false, p_witnesses_called: 2, d_witnesses_called: 2, has_swing: false, format_id: 'f1' }],
-            rowCount: 1,
+        mockGetBallot.mockResolvedValueOnce({
+            ballot_json: { scores: [], nominations: [] },
         } as any);
-        // teams
-        mockDbQuery.mockResolvedValueOnce({ rows: [{ id: 't1', code: '101', name: 'A' }, { id: 't2', code: '202', name: 'B' }], rowCount: 2 } as any);
-        // scoring categories
-        mockDbQuery.mockResolvedValueOnce({ rows: [], rowCount: 0 } as any);
-        // scoring fields
-        mockDbQuery.mockResolvedValueOnce({ rows: [], rowCount: 0 } as any);
-        // witnesses
-        mockDbQuery.mockResolvedValueOnce({ rows: [], rowCount: 0 } as any);
-        // witness call order
-        mockDbQuery.mockResolvedValueOnce({ rows: [], rowCount: 0 } as any);
-        // student assignments
-        mockDbQuery.mockResolvedValueOnce({ rows: [], rowCount: 0 } as any);
-        // award categories
-        mockDbQuery.mockResolvedValueOnce({ rows: [], rowCount: 0 } as any);
-        // getBallot
-        mockDbQuery.mockResolvedValueOnce({
-            rows: [{ ballot_json: { scores: [], nominations: [] } }],
-            rowCount: 1,
-        } as any);
-        // sharesIndividualRankings
-        mockDbQuery.mockResolvedValueOnce({ rows: [{ share_individual_rankings: true }], rowCount: 1 } as any);
+        // sharesIndividualRankings -> true
+        mockSharesIndividualRankings.mockResolvedValueOnce(true);
 
         const res = await request(app).get(url).set(auth());
         expect(res.status).toBe(200);
         expect(res.body.sheet).toBeTruthy();
-        // Scorer identity should be redacted
         expect(res.body.sheet.scorer.firstName).toBe('');
         expect(res.body.sheet.scorer.lastName).toBe('');
         expect(res.body.ballot).toBeTruthy();
     });
 
     it('strips award nominations from the ballot when share_individual_rankings is false', async () => {
-        // getTeamIdForCoach → coach's team
-        mockDbQuery.mockResolvedValueOnce({ rows: [{ team_id: TEAM }], rowCount: 1 } as any);
-        // isAssignmentInPairingWithPublicResults returns true
-        mockDbQuery.mockResolvedValueOnce({ rows: [{ assignment_id: AID }], rowCount: 1 } as any);
-        // getScoreSheet (skipGuards): assignment lookup
-        mockDbQuery.mockResolvedValueOnce({
-            rows: [{
-                pairing_id: PID,
-                registered_scorer_id: 's1',
-                paper_scorer_id: null,
-                p_team: 't1',
-                d_team: 't2',
-                courtroom_name: 'Room 1',
-                tournament_id: TID,
-                presider_scorer_assignment_id: null,
-                show_scores: null,
-                conflict_reported: false,
-            }],
-            rowCount: 1,
+        // isBallotInPairingWithPublicResults -> true
+        mockIsBallotInPairingWithPublicResults.mockResolvedValueOnce(true);
+        mockGetSheetFromBallot.mockResolvedValueOnce({
+            scorer: { firstName: 'Jane', lastName: 'Judge', scorerID: 's1', isPaper: false },
+            presiderName: 'Presider',
         } as any);
-        // scorer name
-        mockDbQuery.mockResolvedValueOnce({ rows: [{ first_name: 'Jane', last_name: 'Judge' }], rowCount: 1 } as any);
-        // tournament/format
-        mockDbQuery.mockResolvedValueOnce({
-            rows: [{ case_name: 'Case', criminal_case: false, p_witnesses_called: 2, d_witnesses_called: 2, has_swing: false, format_id: 'f1' }],
-            rowCount: 1,
+        mockGetBallot.mockResolvedValueOnce({
+            ballot_json: {
+                scores: [],
+                nominations: [{ awardCategoryId: 'ac1', studentId: 'stu1', rank: 1 }],
+            },
         } as any);
-        // teams
-        mockDbQuery.mockResolvedValueOnce({ rows: [{ id: 't1', code: '101', name: 'A' }, { id: 't2', code: '202', name: 'B' }], rowCount: 2 } as any);
-        // scoring categories
-        mockDbQuery.mockResolvedValueOnce({ rows: [], rowCount: 0 } as any);
-        // scoring fields
-        mockDbQuery.mockResolvedValueOnce({ rows: [], rowCount: 0 } as any);
-        // witnesses
-        mockDbQuery.mockResolvedValueOnce({ rows: [], rowCount: 0 } as any);
-        // witness call order
-        mockDbQuery.mockResolvedValueOnce({ rows: [], rowCount: 0 } as any);
-        // student assignments
-        mockDbQuery.mockResolvedValueOnce({ rows: [], rowCount: 0 } as any);
-        // award categories
-        mockDbQuery.mockResolvedValueOnce({ rows: [], rowCount: 0 } as any);
-        // getBallot — includes a nomination
-        mockDbQuery.mockResolvedValueOnce({
-            rows: [{ ballot_json: { scores: [], nominations: [{ awardCategoryId: 'ac1', studentId: 'stu1', rank: 1 }] } }],
-            rowCount: 1,
-        } as any);
-        // sharesIndividualRankings → false
-        mockDbQuery.mockResolvedValueOnce({ rows: [{ share_individual_rankings: false }], rowCount: 1 } as any);
+        // sharesIndividualRankings -> false
+        mockSharesIndividualRankings.mockResolvedValueOnce(false);
 
         const res = await request(app).get(url).set(auth());
         expect(res.status).toBe(200);
         expect(res.body.ballot).toBeTruthy();
-        // Nominations must be hidden from the coach.
         expect(res.body.ballot.nominations).toEqual([]);
     });
 
     it('returns 404 when both sheet and ballot are null', async () => {
-        // getTeamIdForCoach → coach's team
-        mockDbQuery.mockResolvedValueOnce({ rows: [{ team_id: TEAM }], rowCount: 1 } as any);
-        // isAssignmentInPairingWithPublicResults
-        mockDbQuery.mockResolvedValueOnce({ rows: [{ assignment_id: AID }], rowCount: 1 } as any);
-        // getScoreSheet throws (assignment not found) → caught → null
-        mockDbQuery.mockResolvedValueOnce({ rows: [], rowCount: 0 } as any);
-        // getBallot returns null
-        mockDbQuery.mockResolvedValueOnce({ rows: [], rowCount: 0 } as any);
+        mockIsBallotInPairingWithPublicResults.mockResolvedValueOnce(true);
+        mockGetSheetFromBallot.mockRejectedValueOnce(new Error('Ballot not found'));
+        mockGetBallot.mockResolvedValueOnce(undefined as any);
 
         const res = await request(app).get(url).set(auth());
         expect(res.status).toBe(404);
@@ -254,10 +218,9 @@ describe('GET /api/coach/tournaments/:id/pairings/:pairingId/ballots/:assignment
 describe('GET /api/coach/teams/:teamId/default-witness-order', () => {
     it('returns 200 with default witness order', async () => {
         mockTeamAccess();
-        mockDbQuery.mockResolvedValueOnce({
-            rows: [{ witness_id: 'w1', witness_name: 'Alice', position: 1 }],
-            rowCount: 1,
-        } as any);
+        mockGetDefaultWitnessCallOrder.mockResolvedValueOnce([
+            { witness_id: 'w1', witness_name: 'Alice', position: 1 },
+        ] as any);
         const res = await request(app).get(`/coach/teams/${TEAM}/default-witness-order`).set(auth());
         expect(res.status).toBe(200);
         expect(res.body).toHaveLength(1);
@@ -266,7 +229,7 @@ describe('GET /api/coach/teams/:teamId/default-witness-order', () => {
 
     it('returns 200 empty array when no defaults set', async () => {
         mockTeamAccess();
-        mockDbQuery.mockResolvedValueOnce({ rows: [], rowCount: 0 } as any);
+        mockGetDefaultWitnessCallOrder.mockResolvedValueOnce([] as any);
         const res = await request(app).get(`/coach/teams/${TEAM}/default-witness-order`).set(auth());
         expect(res.status).toBe(200);
         expect(res.body).toEqual([]);
@@ -283,7 +246,7 @@ describe('PUT /api/coach/teams/:teamId/default-witness-order', () => {
 
     it('returns 200 on success with empty array', async () => {
         mockTeamAccess();
-        mockDbQuery.mockResolvedValueOnce({ rows: [], rowCount: 0 } as any); // DELETE
+        mockSetDefaultWitnessCallOrder.mockResolvedValueOnce(undefined as any);
         const res = await request(app).put(`/coach/teams/${TEAM}/default-witness-order`).set(auth())
             .send({ witness_ids: [] });
         expect(res.status).toBe(200);
@@ -292,9 +255,7 @@ describe('PUT /api/coach/teams/:teamId/default-witness-order', () => {
 
     it('returns 200 on success with witness IDs', async () => {
         mockTeamAccess();
-        mockDbQuery.mockResolvedValueOnce({ rows: [], rowCount: 0 } as any); // DELETE
-        mockDbQuery.mockResolvedValueOnce({ rows: [], rowCount: 1 } as any); // INSERT w1
-        mockDbQuery.mockResolvedValueOnce({ rows: [], rowCount: 1 } as any); // INSERT w2
+        mockSetDefaultWitnessCallOrder.mockResolvedValueOnce(undefined as any);
         const res = await request(app).put(`/coach/teams/${TEAM}/default-witness-order`).set(auth())
             .send({ witness_ids: ['w1', 'w2'] });
         expect(res.status).toBe(200);
@@ -307,10 +268,9 @@ describe('PUT /api/coach/teams/:teamId/default-witness-order', () => {
 describe('GET /api/coach/teams/:teamId/default-assignments', () => {
     it('returns 200 with default assignments', async () => {
         mockTeamAccess();
-        mockDbQuery.mockResolvedValueOnce({
-            rows: [{ id: 'da1', team_id: TEAM, field_id: FID, student_id: SID, witness_id: null, field_label: 'Opening', student_name: 'Bob' }],
-            rowCount: 1,
-        } as any);
+        mockGetDefaultStudentAssignments.mockResolvedValueOnce([
+            { id: 'da1', team_id: TEAM, field_id: FID, student_id: SID, witness_id: null, field_label: 'Opening', student_name: 'Bob' },
+        ] as any);
         const res = await request(app).get(`/coach/teams/${TEAM}/default-assignments`).set(auth());
         expect(res.status).toBe(200);
         expect(res.body).toHaveLength(1);
@@ -318,7 +278,7 @@ describe('GET /api/coach/teams/:teamId/default-assignments', () => {
 
     it('returns 200 empty when no defaults', async () => {
         mockTeamAccess();
-        mockDbQuery.mockResolvedValueOnce({ rows: [], rowCount: 0 } as any);
+        mockGetDefaultStudentAssignments.mockResolvedValueOnce([] as any);
         const res = await request(app).get(`/coach/teams/${TEAM}/default-assignments`).set(auth());
         expect(res.status).toBe(200);
         expect(res.body).toEqual([]);
@@ -342,7 +302,7 @@ describe('PUT /api/coach/teams/:teamId/default-assignments', () => {
 
     it('returns 200 on success', async () => {
         mockTeamAccess();
-        mockDbQuery.mockResolvedValueOnce({ rows: [], rowCount: 1 } as any); // UPSERT
+        mockUpsertDefaultStudentAssignment.mockResolvedValueOnce(undefined as any);
         const res = await request(app).put(`/coach/teams/${TEAM}/default-assignments`).set(auth())
             .send({ field_id: FID, student_id: SID });
         expect(res.status).toBe(200);
@@ -351,7 +311,7 @@ describe('PUT /api/coach/teams/:teamId/default-assignments', () => {
 
     it('returns 200 with witness_id', async () => {
         mockTeamAccess();
-        mockDbQuery.mockResolvedValueOnce({ rows: [], rowCount: 1 } as any);
+        mockUpsertDefaultStudentAssignment.mockResolvedValueOnce(undefined as any);
         const res = await request(app).put(`/coach/teams/${TEAM}/default-assignments`).set(auth())
             .send({ field_id: FID, student_id: SID, witness_id: 'w1' });
         expect(res.status).toBe(200);
@@ -368,7 +328,7 @@ describe('DELETE /api/coach/teams/:teamId/default-assignments', () => {
 
     it('returns 200 on success', async () => {
         mockTeamAccess();
-        mockDbQuery.mockResolvedValueOnce({ rows: [], rowCount: 1 } as any); // DELETE
+        mockDeleteDefaultStudentAssignment.mockResolvedValueOnce(undefined as any);
         const res = await request(app).delete(`/coach/teams/${TEAM}/default-assignments`).set(auth())
             .send({ field_id: FID });
         expect(res.status).toBe(200);
@@ -377,7 +337,7 @@ describe('DELETE /api/coach/teams/:teamId/default-assignments', () => {
 
     it('returns 200 with witness_id', async () => {
         mockTeamAccess();
-        mockDbQuery.mockResolvedValueOnce({ rows: [], rowCount: 1 } as any);
+        mockDeleteDefaultStudentAssignment.mockResolvedValueOnce(undefined as any);
         const res = await request(app).delete(`/coach/teams/${TEAM}/default-assignments`).set(auth())
             .send({ field_id: FID, witness_id: 'w1' });
         expect(res.status).toBe(200);
@@ -406,7 +366,8 @@ describe('POST /api/coach/teams/:teamId/pairings/:pairingId/assignments/bulk', (
 
     it('returns 200 with empty assignments array', async () => {
         mockTeamAccess();
-        mockDbQuery.mockResolvedValueOnce({ rows: [{ locked: false }], rowCount: 1 } as any); // isPairingRoundLocked
+        mockIsPairingRoundLocked.mockResolvedValueOnce(false);
+        mockBulkUpsertStudentAssignments.mockResolvedValueOnce(undefined as any);
         const res = await request(app).post(url).set(auth())
             .send({ assignments: [] });
         expect(res.status).toBe(200);
@@ -415,20 +376,19 @@ describe('POST /api/coach/teams/:teamId/pairings/:pairingId/assignments/bulk', (
 
     it('returns 200 on success with assignments', async () => {
         mockTeamAccess();
-        mockDbQuery.mockResolvedValueOnce({ rows: [{ locked: false }], rowCount: 1 } as any); // isPairingRoundLocked
-        mockDbQuery.mockResolvedValueOnce({ rows: [], rowCount: 1 } as any); // UPSERT 1
-        mockDbQuery.mockResolvedValueOnce({ rows: [], rowCount: 1 } as any); // UPSERT 2
+        mockIsPairingRoundLocked.mockResolvedValueOnce(false);
+        mockBulkUpsertStudentAssignments.mockResolvedValueOnce(undefined as any);
         const res = await request(app).post(url).set(auth())
             .send({ assignments: [
-                { field_id: FID, student_id: SID },
-                { field_id: 'f2', student_id: 's2', witness_id: 'w1' },
-            ] });
+                    { field_id: FID, student_id: SID },
+                    { field_id: 'f2', student_id: 's2', witness_id: 'w1' },
+                ] });
         expect(res.status).toBe(200);
     });
 
     it('returns 409 when the round is locked', async () => {
         mockTeamAccess();
-        mockDbQuery.mockResolvedValueOnce({ rows: [{ locked: true }], rowCount: 1 } as any); // isPairingRoundLocked
+        mockIsPairingRoundLocked.mockResolvedValueOnce(true);
         const res = await request(app).post(url).set(auth())
             .send({ assignments: [{ field_id: FID, student_id: SID }] });
         expect(res.status).toBe(409);
@@ -447,8 +407,7 @@ describe('GET /api/coach/tournaments/:id/schedule — teamId query param', () =>
     });
 
     it('returns 200 empty when coach has no team in tournament', async () => {
-        // getTeamIdForCoach returns null
-        mockDbQuery.mockResolvedValueOnce({ rows: [], rowCount: 0 } as any);
+        mockGetTeamIdForCoach.mockResolvedValueOnce(null as any);
         const res = await request(app)
             .get(`/coach/tournaments/${TID}/schedule`)
             .set(auth());
@@ -457,8 +416,7 @@ describe('GET /api/coach/tournaments/:id/schedule — teamId query param', () =>
     });
 
     it('returns schedule when explicit teamId provided', async () => {
-        // getSchedule: rounds query
-        mockDbQuery.mockResolvedValueOnce({ rows: [], rowCount: 0 } as any);
+        mockGetSchedule.mockResolvedValueOnce([] as any);
         const res = await request(app)
             .get(`/coach/tournaments/${TID}/schedule?teamId=${TEAM}`)
             .set(auth());
