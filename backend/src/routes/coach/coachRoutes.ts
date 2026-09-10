@@ -1,7 +1,7 @@
 import { Router } from "express";
 import * as coach from "../../providers/coachProvider";
 import { getScoringCategories } from "../../providers/organizerProvider";
-import { getScoreSheet, getBallot } from "../../providers/scorerProvider";
+import {getBallot, getSheetFromBallot} from "../../providers/scorerProvider";
 import { uuidRegex } from "../../authUtils";
 import { authedHandler } from "../../types/handlers";
 import teamRoutes from "./coachTeamRoutes";
@@ -244,7 +244,7 @@ router.get("/tournaments/:teamId/pairings/:pairingId/ballots/:ballotId", authedH
 
     if (!await coach.isBallotInPairingWithPublicResults(ballotId, teamId))
         return res.status(404).json({ message: "Ballot not found" });
-    const sheet = await getScoreSheet(ballotId, { skipGuards: true }).catch(() => null);
+    const sheet = await getSheetFromBallot(ballotId, { skipGuards: true }).catch(() => null);
     const ballot = (await getBallot(ballotId))?.ballot_json ?? null;
 
     if (!sheet && !ballot) return res.status(404).json({ message: "Ballot not found" });

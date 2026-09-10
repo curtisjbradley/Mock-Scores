@@ -31,5 +31,7 @@ export interface IAwardNomination {
     pairing_id: string;
     round_id: string;
     round_name: string;
+    ballot_id: string;
+    tournament_id: string;
     rank: number;
 }

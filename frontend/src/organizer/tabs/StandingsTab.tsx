@@ -5,6 +5,7 @@ import { parseDsl } from '../blockly/standingsDsl'
 import type { IAwardNomination, IStandingsTeam } from '@mock-scores/shared'
 import AddButton from '../../shared/components/AddButton'
 import '../styles/standings.css'
+import {useNavigate} from "react-router-dom";
 
 const TiebreakerViewer = lazy(() => import('../blockly/TiebreakerViewer'))
 
@@ -460,6 +461,7 @@ export default function StandingsTab({ tournamentId }: { tournamentId: string })
 
 function AwardsSummary({ data, selectedRounds }: AwardsSummaryProps) {
     const safeData = Array.isArray(data) ? data : []
+    const navigate = useNavigate();
 
     const filteredNominations = useMemo(() => {
         if (!(selectedRounds instanceof Set)) return []
@@ -546,6 +548,7 @@ function AwardsSummary({ data, selectedRounds }: AwardsSummaryProps) {
                                 <th>Side</th>
                                 <th>Rank</th>
                                 <th>Scorer</th>
+                                <th>Ballot</th>
                             </tr>
                             </thead>
 
@@ -574,6 +577,7 @@ function AwardsSummary({ data, selectedRounds }: AwardsSummaryProps) {
                                     <td>{formatSide(nomination.side)}</td>
                                     <td>{nomination.rank}</td>
                                     <td>{nomination.scorer_name}</td>
+                                    <td><AddButton onClick={() => navigate(`/organizer/${nomination.tournament_id}/pairing/${nomination.pairing_id}/scoresheet/${nomination.ballot_id}`)}>View</AddButton></td>
                                 </tr>
                             ))}
                             </tbody>

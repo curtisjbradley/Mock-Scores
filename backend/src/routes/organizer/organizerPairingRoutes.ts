@@ -5,7 +5,7 @@ import {IPairingCreationPayload} from "@mock-scores/shared";
 import {DbError, NotFoundError} from "../../errors";
 const router = Router();
 import * as organizer from "../../providers/organizerProvider";
-import {getBallot, getPairingBallotFormat, getScoreSheet} from "../../providers/scorerProvider";
+import {getBallot, getPairingBallotFormat, getSheetFromBallot} from "../../providers/scorerProvider";
 import {listSubmittedBallots} from "../../providers/organizerProvider";
 
 
@@ -349,7 +349,7 @@ router.get('/scoresheets/:ballotId', pairingHandler(async (req, res) => {
     const ballotId = req.params.ballotId as string;
     if (!uuidRegex.test(ballotId)) return res.status(400).json({ message: 'Invalid ballot ID' });
     const [sheet, ballot, editLog] = await Promise.all([
-        getScoreSheet(ballotId, { skipGuards: true }).catch(() => null),
+        getSheetFromBallot(ballotId, { skipGuards: true }).catch(() => null),
         getBallot(ballotId),
         organizer.getBallotEditLog(ballotId),
     ]);

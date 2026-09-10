@@ -1709,7 +1709,8 @@ export async function getAwardsSummary(tournamentId: string): Promise<IAwardNomi
                                                         p.pairing_id,
                                                         p.round_id,
                                                         r.name                               AS round_name,
-
+                                                        b.ballot_id,
+                                                        t.tournament_id,
                                                         nominations.rank
 
                                                  FROM nominations
