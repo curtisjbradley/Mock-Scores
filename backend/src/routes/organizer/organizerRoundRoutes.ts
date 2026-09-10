@@ -80,7 +80,7 @@ router.patch("/", roundHandler(async (req, res) => {
         const wasPairingsPublic = req.round.teams_public;
         const updated = await organizer.updateRound(req.round.round_id, body);
         // Fire results-public emails only on the false→true transition
-        if (!wasPairingsPublic && updated.results_public) {
+        if (!wasPairingsPublic && updated.teams_public) {
             organizer.getRoundEmailContext(req.round.round_id).then(ctx => {
                 if (!ctx || ctx.coaches.length === 0) return;
                 return Promise.all(ctx.coaches.map(coach => {
