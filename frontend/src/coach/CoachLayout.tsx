@@ -190,7 +190,7 @@ export default function CoachLayout({ isOrganizerView = false }: Props) {
         const data: BallotDetail[] = res.ok ? await res.json() : []
         ballotCache.current.set(pairingId, data)
         return data
-    }, [tournamentId])
+    }, [teamId])
 
     // Base path for this dashboard's pages.
     const base = isOrganizerView
