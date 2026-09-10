@@ -18,7 +18,7 @@ router.get('/:assignmentId', async (req: Request, res: Response) => {
     if (!uuidRegex.test(assignmentId)) return res.status(400).json({ message: 'Invalid assignment ID' });
 
     try {
-        const sheet = await scorer.getScoreSheet(assignmentId);
+        const sheet = await scorer.getSheetFromAssignment(assignmentId);
         return res.status(200).json(sheet);
     } catch (e) {
         if (e instanceof AlreadySubmittedError) return res.status(410).json({ message: 'Ballot already submitted' });

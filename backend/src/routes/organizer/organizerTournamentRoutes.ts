@@ -23,7 +23,7 @@ function validateWitnessCounts(format: TournamentPayload['caseFormat'], witnesse
         return 'D witnesses called exceeds available witnesses';
     return null;
 }
-import {getTournament} from "../../providers/organizerProvider";
+import {getAwardsSummary, getTournament} from "../../providers/organizerProvider";
 
 const router = Router();
 
@@ -2216,64 +2216,7 @@ router.delete("/award-categories/:categoryId", tournamentHandler(async (req, res
  */
 router.get('/awards', tournamentHandler(async (req, res) => {
     try {
-        // Query aggregated nominations directly from the nominations table
-        const nominationsResult = await dbQuery<{
-            award_category_id: string;
-            student_id: string;
-            total_nominations: number;
-            average_rank: number;
-        }>(
-            `SELECT n.award_category_id, n.student_id,
-                    COUNT(*)::int AS total_nominations,
-                    ROUND(AVG(n.rank)::numeric, 2) AS average_rank
-             FROM nominations n
-             JOIN ballots b ON b.ballot_id = n.ballot_id
-             WHERE b.tournament_id = $1
-             GROUP BY n.award_category_id, n.student_id
-             ORDER BY n.award_category_id, COUNT(*) DESC, AVG(n.rank)`,
-            [req.tournament]
-        );
-
-        if (!nominationsResult || nominationsResult.rows.length === 0) {
-            return res.status(200).json([]);
-        }
-
-        // Fetch student and team info
-        const studentIds = [...new Set(nominationsResult.rows.map(r => r.student_id))];
-        const studentsResult = await dbQuery<{ student_id: string; student_name: string; team_name: string; team_code: string }>(
-            `SELECT s.student_id, s.student_name, t.name AS team_name, t.code AS team_code
-             FROM team_rostered_students s
-             JOIN teams t ON t.id = s.team_id
-             WHERE s.student_id = ANY($1)`,
-            [studentIds]
-        );
-
-        const studentInfo = new Map<string, { student_name: string; team_name: string; team_code: string }>();
-        if (studentsResult) {
-            for (const row of studentsResult.rows) {
-                studentInfo.set(row.student_id, { student_name: row.student_name, team_name: row.team_name, team_code: row.team_code });
-            }
-        }
-
-        // Fetch award category names
-        const awardCats = await organizer.getAwardCategories(req.tournament);
-        const catNameMap = new Map(awardCats.map(c => [c.id, c.name]));
-
-        // Build response array
-        const awards = nominationsResult.rows.map(entry => {
-            const info = studentInfo.get(entry.student_id);
-            return {
-                award_category_id: entry.award_category_id,
-                award_category_name: catNameMap.get(entry.award_category_id) ?? 'Uncategorized',
-                student_id: entry.student_id,
-                student_name: info?.student_name ?? 'Unknown',
-                team_name: info?.team_name ?? 'Unknown',
-                team_code: info?.team_code ?? '',
-                total_nominations: entry.total_nominations,
-                average_rank: Number(entry.average_rank),
-            };
-        });
-
+        const awards = await getAwardsSummary(req.tournament)
         return res.status(200).json(awards);
     } catch (e) {
         if (e instanceof DbError) return res.status(500).json({ message: 'Database error' });
@@ -2281,63 +2224,7 @@ router.get('/awards', tournamentHandler(async (req, res) => {
     }
 }));
 
-/**
- * @swagger
- * /organizer/tournament/{tournamentId}/awards/details:
- *   get:
- *     summary: Get raw nomination details with round and side info for client-side aggregation
- *     tags: [Organizer - Tournament]
- *     parameters:
- *       - in: path
- *         name: tournamentId
- *         required: true
- *         schema: { type: string, format: uuid }
- *     responses:
- *       200:
- *         description: Array of individual nominations with round_id and side
- *       500: { description: Database error }
- */
-router.get('/awards/details', tournamentHandler(async (req, res) => {
-    try {
-        // Return each nomination row with round_id and the side the student was on
-        const result = await dbQuery<{
-            award_category_id: string;
-            student_id: string;
-            student_name: string;
-            team_name: string;
-            team_code: string;
-            rank: number;
-            round_id: string;
-            side: 'P' | 'D';
-        }>(
-            `SELECT n.award_category_id, n.student_id, n.rank,
-                    s.student_name, t.name AS team_name, t.code AS team_code,
-                    p.round_id,
-                    CASE WHEN s.team_id = p.p_team THEN 'P' ELSE 'D' END AS side
-             FROM nominations n
-             JOIN ballots b ON b.ballot_id = n.ballot_id
-             JOIN team_rostered_students s ON s.student_id = n.student_id
-             JOIN teams t ON t.id = s.team_id
-             JOIN pairings p ON p.pairing_id = b.pairing_id
-             WHERE b.tournament_id = $1
-             ORDER BY n.award_category_id, n.student_id, n.rank`,
-            [req.tournament]
-        );
 
-        if (!result) return res.status(500).json({ message: 'Database error' });
-
-        // Also return award category names
-        const categories = await organizer.getAwardCategories(req.tournament);
-
-        return res.status(200).json({
-            nominations: result.rows,
-            categories,
-        });
-    } catch (e) {
-        if (e instanceof DbError) return res.status(500).json({ message: 'Database error' });
-        throw e;
-    }
-}));
 
 // ── Email delivery status ─────────────────────────────────────────────────────
 
