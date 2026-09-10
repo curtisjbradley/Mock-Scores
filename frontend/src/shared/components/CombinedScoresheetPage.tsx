@@ -105,7 +105,8 @@ function rowsFromLayout(layout: BallotLayoutSegment[]): SegmentRow[] {
         label: seg.witnessName ? `${seg.witnessName}: ${seg.assignmentName}` : seg.assignmentName,
         hasP: seg.side !== 'D',
         hasD: seg.side !== 'P',
-        student: seg.pStudentName ?? seg.dStudentName,
+        pStudent: seg.pStudentName,
+        dStudent: seg.dStudentName,
         // Layout snapshots don't capture the multiplier; default to 1 here and let
         // buildData overlay the live multiplier from the sheet when available.
         multiplier: 1,
@@ -147,7 +148,8 @@ function rowsFromSheet(sheet: IScoreSheetFormat): SegmentRow[] {
                 label: witnessName ? `${witnessName}: ${a.assignmentName}` : a.assignmentName,
                 hasP: a.side !== 'D',
                 hasD: a.side !== 'P',
-                student: pName ?? dName,
+                pStudent: pName,
+                dStudent: dName,
                 multiplier: Number(a.multiplier ?? 1) || 1,
             })
         }

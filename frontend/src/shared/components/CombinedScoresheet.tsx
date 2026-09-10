@@ -18,7 +18,8 @@ export interface SegmentRow {
     /** Whether this assignment is scored on the defense side. */
     hasD: boolean
     /** Student name associated with the row, if any (shown in the rightmost column). */
-    student: string | null
+    pStudent: string | null,
+    dStudent: string | null
     /**
      * Per-field score multiplier applied to this row's scores when totaling.
      * Defaults to 1 when unknown. Score cells display the raw entered value; the
@@ -148,7 +149,8 @@ export default function CombinedScoresheet({
                                         d={row.hasD ? (b.scores.get(`${row.key}:D`) ?? null) : null}
                                     />
                                 ))}
-                                <td className="cs-student-col">{row.student ?? ''}</td>
+                                <td className="cs-student-col">{row.pStudent ? <span className="cs-side-p">{row.pStudent}</span> : ""}
+                                    {row.dStudent ? <span className="cs-side-d">{row.dStudent}</span> : ""}</td>
                             </tr>
                         ))}
                     </tbody>
