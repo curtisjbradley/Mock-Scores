@@ -140,7 +140,7 @@ export async function getCoaches(teamId: string): Promise<ICoach[]> {
     return [...joined, ...invited];
 }
 
-export async function addCoach(teamId: string, email: string, isOwner?: false): Promise<ICoach> {
+export async function addCoach(teamId: string, email: string, isOwner: boolean = false): Promise<ICoach> {
     const user = (await dbQuery<{ user_id: string; first_name: string; last_name: string; email: string }>(
         `SELECT user_id, first_name, last_name, email FROM auth WHERE LOWER(email)=LOWER($1)`, [email]
     ))?.rows[0];
