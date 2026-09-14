@@ -1077,17 +1077,23 @@ function verifyTeamPayload(req: Request, res: Response, next: NextFunction) {
  *       409: { description: Team name already exists }
  *       500: { description: Database error }
  */
+
+async function sendCoachInviteEmail(tournamentID: string, teamName: string, teamId: string, coachEmail:string ){
+    getTournament(tournamentID).then(tournament => {
+        const template = teamAddedEmail(teamName, tournament.name, teamId)
+        sendTrackedEmail(coachEmail, template.subject, template.html, template.text,
+            { type: 'coach_invite', id: teamId })
+    }).catch(e => console.error(e))
+}
+
 router.post('/teams', verifyTeamPayload, teamHandler(async (req, res) => {
     const { name, coach_email, code } = req.selectedTeam;
     if (await organizer.teamNameExists(req.tournament, name)) return res.status(409).json({ message: 'A team with that name already exists' });
     try {
-        const newTeam = await organizer.addTeam(req.tournament, name, coach_email, code || name)
+        const newTeam = await organizer.addTeam(req.tournament, name, coach_email, code || name);
 
-        getTournament(req.tournament).then(tournament => {
-            const template = teamAddedEmail(name, tournament.name, newTeam.id)
-            sendTrackedEmail(coach_email, template.subject, template.html, template.text,
-                { type: 'coach_invite', id: newTeam.id })
-        }).catch(e => console.error(e))
+        //Fire and forget coach invite email
+        sendCoachInviteEmail(req.tournament, name, newTeam.id, coach_email)
 
         return res.status(201).json(newTeam);
     } catch (e) {
@@ -1137,7 +1143,13 @@ router.put('/teams', verifyTeamPayload, teamHandler(async (req, res) => {
     if (await organizer.teamNameExists(req.tournament, name, id))
         return res.status(409).json({ message: 'A team with that name already exists' });
     try {
-        return res.status(200).json(await organizer.updateTeam(id, name, coach_email, code || name));
+        const prev = await organizer.getTeam(id);
+        const updatedTeam = await organizer.updateTeam(id, name, coach_email, code || name);
+        if (prev.coach_email != updatedTeam.coach_email) {
+            //fire and forget coach invite
+            sendCoachInviteEmail(req.tournament, name, id, updatedTeam.coach_email)
+        }
+        return res.status(200).json(updatedTeam);
     } catch (e) {
         if (e instanceof NotFoundError) return res.status(404).json({ message: e.message });
         if (e instanceof DbError) return res.status(500).json({ message: 'Unable to update team' });

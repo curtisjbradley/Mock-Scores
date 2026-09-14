@@ -1039,9 +1039,10 @@ describe('PUT /api/organizer/tournament/:tournamentId/teams', () => {
         mockAccess();
         mockDbQuery
             .mockResolvedValueOnce({ rows: [], rowCount: 0 } as any) // teamNameExists
+            .mockResolvedValueOnce({ rows: [{id: ROUND_ID, tournament_id: TOURNAMENT_ID, name: base.name, code: base.code, }], rowCount: 1 } as any) // getTeam
             .mockResolvedValueOnce({ rows: [{ id: ROUND_ID, tournament_id: TOURNAMENT_ID }], rowCount: 1 } as any) // SELECT team
-            .mockResolvedValueOnce({ rows: [], rowCount: 1 } as any) // UPDATE teams
-            .mockResolvedValueOnce({ rows: [{ coach_id: 'u1' }], rowCount: 1 } as any); // SELECT coach
+            .mockResolvedValueOnce({ rows: [{ coach_id: 'u1' }], rowCount: 1 } as any) // SELECT coach
+            .mockResolvedValueOnce({ rows: [{id: ROUND_ID, team_id: ROUND_ID}], rowCount: 1 } as any) // UPDATE teams
         const res = await request(app).put(`/organizer/tournament/${TOURNAMENT_ID}/teams`).set(auth()).send({ team: { ...base, id: ROUND_ID } });
         expect(res.status).toBe(200);
     });

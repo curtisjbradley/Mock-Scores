@@ -29,7 +29,7 @@ import type {
     IRoundRow,
     IScoringCategoryRow,
     IScoringFieldRow,
-    IScoringTemplateFieldRow,
+    IScoringTemplateFieldRow, ITeamInviteRow,
     ITeamRow,
     ITournamentDelegateInviteRow,
     ITournamentFormatRow,
@@ -768,12 +768,47 @@ export async function addTeam(tournamentID: string, name: string, coachEmail: st
     await dbQuery('INSERT INTO team_coaches (coach_id, team_id, is_owner) VALUES ($1,$2,$3)', [user.user_id, teamId, true]);
     return {id: teamId, tournament_id: tournamentID, name, code, coach_email: user.email, has_joined: true};
 }
+export async function getTeam(teamId: string) : Promise<ITeam> {
+    const result = await dbQuery<ITeamRow>('SELECT * FROM teams WHERE id=$1', [teamId]);
+    if (!result) throw new DbError('getTeam');
+    const team = result.rows[0];
+    if (!team) throw new NotFoundError('team');
+
+    const coachId =  (await dbQuery<{
+        coach_id: string
+    }>('SELECT coach_id FROM team_coaches WHERE team_id=$1 AND is_owner=true LIMIT 1', [teamId]))?.rows[0]
+
+    if (!!coachId) {
+        const invite = (await dbQuery<ITeamInviteRow>(`Select *
+                                                       from team_invites
+                                                       where team_id = $1
+                                                         and is_owner = true
+                                                       limit 1`, [teamId]))?.rows[0] ?? null;
+        if (!invite) throw new NotFoundError('Could not found coach invite');
+        return {
+            ...team,
+            coach_email: invite.invite_email,
+            code: team.code || team.name,
+            has_joined: false
+        };
+    }
+
+    const coachEmail = (await dbQuery<{email : string}>(`select email from auth where user_id = $1`, [coachId]))?.rows[0]?.email;
+
+    if (!coachEmail) throw new DbError("coach does not have an email");
+
+    return {...team,
+    coach_email: coachEmail,
+        code: team.code || team.name,
+    has_joined: true}
+}
 
 export async function updateTeam(teamId: string, name: string, coachEmail: string, code: string): Promise<ITeam> {
     const result = await dbQuery<ITeamRow>('SELECT * FROM teams WHERE id=$1', [teamId]);
     if (!result) throw new DbError('updateTeam');
     const team = result.rows[0];
     if (!team) throw new NotFoundError('team');
+
     await dbQuery('UPDATE teams SET name=$1, code=$2 WHERE id=$3', [name, code || name, teamId]);
     const hasJoinedCoach = !!(await dbQuery<{
         coach_id: string
