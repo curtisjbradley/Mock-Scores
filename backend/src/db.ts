@@ -1,19 +1,92 @@
-import { Pool } from 'pg';
+import { Pool, type PoolClient, type QueryResultRow } from 'pg';
+import {
+    SecretsManagerClient,
+    GetSecretValueCommand,
+} from '@aws-sdk/client-secrets-manager';
+
+function requireEnv(name: string): string {
+    const value = process.env[name];
+
+    if (!value) {
+        throw new Error(`Missing required environment variable: ${name}`);
+    }
+
+    return value;
+}
+
+const DB_HOST = requireEnv('DB_HOST');
+const DB_PORT = Number(requireEnv('DB_PORT'));
+const DB_NAME = requireEnv('DB_NAME');
+const DB_USER = requireEnv('DB_USER');
+const DB_SSL = requireEnv('DB_SSL') === 'true';
+
+const USE_AWS_SECRET = requireEnv('USE_AWS_SECRET') === 'true';
+
+if (Number.isNaN(DB_PORT)) {
+    throw new Error('DB_PORT must be a valid number');
+}
+
+let password: string | (() => Promise<string>);
+
+if (USE_AWS_SECRET) {
+    const AWS_REGION = requireEnv('AWS_REGION');
+    const DB_SECRET_ID = requireEnv('DB_SECRET_ID');
+
+    const secretsManager = new SecretsManagerClient({
+        region: AWS_REGION,
+    });
+
+    password = async () => {
+        const response = await secretsManager.send(
+            new GetSecretValueCommand({
+                SecretId: DB_SECRET_ID,
+            }),
+        );
+
+        if (!response.SecretString) {
+            throw new Error(
+                `Secret ${DB_SECRET_ID} does not contain SecretString`,
+            );
+        }
+
+        const secret = JSON.parse(response.SecretString) as {
+            password?: string;
+        };
+
+        if (!secret.password) {
+            throw new Error(
+                `Secret ${DB_SECRET_ID} does not contain a password`,
+            );
+        }
+
+        return secret.password;
+    };
+} else {
+    password = requireEnv('DB_PWD');
+}
 
 const db = new Pool({
-    host: process.env.DB_HOST,
-    port: Number(process.env.DB_PORT ?? 5432),
-    database: process.env.DB_NAME,
-    user: process.env.DB_USER,
-    password: process.env.DB_PWD,
-    ssl: (process.env.DB_SSL ?? (process.env.NODE_ENV === 'production' ? 'true' : 'false')) === 'true'
+    host: DB_HOST,
+    port: DB_PORT,
+    database: DB_NAME,
+    user: DB_USER,
+    password,
+    ssl: DB_SSL
         ? { rejectUnauthorized: false }
         : false,
+
+    maxLifetimeSeconds: 300,
+    idleTimeoutMillis: 30_000,
+    connectionTimeoutMillis: 10_000,
+});
+
+db.on('error', err => {
+    console.error('Unexpected DB pool error:', err.message);
 });
 
 db.connect()
     .then(client => {
-        console.log(`DB connected: ${process.env.DB_NAME}@${process.env.DB_HOST}`);
+        console.log(`DB connected: ${DB_NAME}@${DB_HOST}`);
         client.release();
     })
     .catch(err => {
@@ -21,36 +94,25 @@ db.connect()
         process.exit(1);
     });
 
-export default db;
-
-import type { PoolClient, QueryResultRow } from 'pg';
-
-/** Runs a parameterized query and returns the result, or null on error. */
-export async function dbQuery<T extends QueryResultRow = QueryResultRow>(
+export async function dbQuery<
+    T extends QueryResultRow = QueryResultRow
+>(
     sql: string,
-    params?: unknown[]
+    params?: unknown[],
 ) {
     try {
-        return await db.query<T>(sql, params);
+        return db.query<T>(sql, params);
     } catch (err) {
         console.error('DB query error:', (err as Error).message, { sql });
         return null;
     }
 }
 
-/**
- * Runs `work` inside a single database transaction on one dedicated pooled
- * client. Commits if `work` resolves, rolls back if it throws.
- *
- * Unlike {@link dbQuery}, this does NOT swallow errors: any error thrown by
- * `work` (including raw `pg` errors such as unique-constraint violations,
- * `code === '23505'`) is re-thrown after rollback so callers can inspect it.
- * The client is always released back to the pool.
- */
 export async function withTransaction<T>(
     work: (client: PoolClient) => Promise<T>,
 ): Promise<T> {
     const client = await db.connect();
+
     try {
         await client.query('BEGIN');
         const result = await work(client);
@@ -60,8 +122,12 @@ export async function withTransaction<T>(
         try {
             await client.query('ROLLBACK');
         } catch (rollbackErr) {
-            console.error('DB rollback error:', (rollbackErr as Error).message);
+            console.error(
+                'DB rollback error:',
+                (rollbackErr as Error).message,
+            );
         }
+
         throw err;
     } finally {
         client.release();

@@ -4,19 +4,22 @@ concurrency:
   group: production-deploy
 
 on:
+  workflow_dispatch:
   push:
     branches: ["main"]
     paths:
-      - 'backend/**'
-      - 'shared/**'
-      - 'package.json'
-      - 'package-lock.json'
+      - "backend/**"
+      - "shared/**"
+      - "package.json"
+      - "package-lock.json"
+
+permissions:
+  contents: read
+  id-token: write
 
 jobs:
   deploy:
     runs-on: ubuntu-latest
-    permissions:
-      contents: read
 
     steps:
       - name: Checkout repo
@@ -35,20 +38,28 @@ jobs:
         run: npm run build -w shared && npm run build -w backend
 
       - name: Configure AWS credentials
-        uses: aws-actions/configure-aws-credentials@v2
+        uses: aws-actions/configure-aws-credentials@v6
         with:
-          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
-          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          role-to-assume: ${{ secrets.AWS_ROLE_ARN }}
           aws-region: ${{ secrets.AWS_REGION }}
+          role-session-name: github-actions-mock-scores-deploy
+
+      - name: Verify AWS identity
+        run: aws sts get-caller-identity
 
       - name: Get EC2 public IP
         id: ec2
         run: |
           IP=$(aws ec2 describe-instances \
-            --instance-ids ${{ secrets.EC2_INSTANCE_ID }} \
+            --instance-ids "${{ secrets.EC2_INSTANCE_ID }}" \
             --query "Reservations[0].Instances[0].PublicIpAddress" \
             --output text)
-
+          
+          if [ -z "$IP" ] || [ "$IP" = "None" ]; then
+            echo "Could not determine EC2 public IP"
+            exit 1
+          fi
+          
           echo "host=$IP" >> "$GITHUB_OUTPUT"
 
       - name: Prepare release directory
@@ -58,9 +69,11 @@ jobs:
           username: ${{ secrets.EC2_USER }}
           key: ${{ secrets.EC2_SSH_KEY }}
           script: |
+            set -e
+            
             sudo rm -rf /opt/mock-scores-release
             sudo mkdir -p /opt/mock-scores-release
-            sudo chown -R $USER:$USER /opt/mock-scores-release
+            sudo chown -R "$USER:$USER" /opt/mock-scores-release
 
       - name: Upload files to EC2
         uses: appleboy/scp-action@v0.1.7
@@ -79,43 +92,46 @@ jobs:
           key: ${{ secrets.EC2_SSH_KEY }}
           script: |
             set -e
-
+            
             APP_DIR=/opt/mock-scores
             RELEASE_DIR=/opt/mock-scores-release
             ENV_FILE=$APP_DIR/backend/.env
             START_SCRIPT=$APP_DIR/start.sh
             ENV_BACKUP=/tmp/mock-scores.env
             START_BACKUP=/tmp/mock-scores-start.sh
-
-            # Backup .env and start.sh
+            
+            # Backup machine-specific files
             if [ -f "$ENV_FILE" ]; then
               cp "$ENV_FILE" "$ENV_BACKUP"
             fi
+            
             if [ -f "$START_SCRIPT" ]; then
               cp "$START_SCRIPT" "$START_BACKUP"
             fi
-
+            
             # Swap release into place
             sudo rm -rf "$APP_DIR"
             sudo mv "$RELEASE_DIR" "$APP_DIR"
-            sudo chown -R $USER:$USER "$APP_DIR"
-
-            # Restore .env and start.sh
+            sudo chown -R "$USER:$USER" "$APP_DIR"
+            
+            # Restore machine-specific files
             if [ -f "$ENV_BACKUP" ]; then
+              mkdir -p "$APP_DIR/backend"
               cp "$ENV_BACKUP" "$APP_DIR/backend/.env"
               rm "$ENV_BACKUP"
             fi
+            
             if [ -f "$START_BACKUP" ]; then
               cp "$START_BACKUP" "$APP_DIR/start.sh"
               chmod +x "$APP_DIR/start.sh"
               rm "$START_BACKUP"
             fi
-
+            
             cd "$APP_DIR"
-
+            
             echo "Installing production dependencies..."
             NODE_ENV=production npm ci --omit=dev
-
+            
             echo "Restarting app..."
             pm2 restart mock-scores --update-env || pm2 start /opt/mock-scores/start.sh --name mock-scores
             pm2 save
