@@ -19,8 +19,8 @@ permissions:
   id-token: write
 
 env:
+  RELEASE_BUCKET: mock-scores-built-express-backend-333308930891-us-west-1-an
   APP_DIR: /opt/mock-scores
-  RELEASE_BUCKET: ${{ secrets.DEPLOY_BUCKET }}
 
 jobs:
   deploy:
@@ -51,6 +51,9 @@ jobs:
           aws-region: ${{ secrets.AWS_REGION }}
           role-session-name: github-actions-mock-scores-deploy
 
+      - name: Verify AWS identity
+        run: aws sts get-caller-identity
+
       - name: Package release
         run: |
           tar -czf release.tar.gz \
@@ -62,7 +65,7 @@ jobs:
             shared/dist \
             shared/package.json
 
-      - name: Upload release
+      - name: Upload release to S3
         run: |
           aws s3 cp \
             release.tar.gz \
@@ -74,70 +77,125 @@ jobs:
         run: |
           set -euo pipefail
 
+          RELEASE_KEY="mock-scores/${GITHUB_SHA}.tar.gz"
+          RELEASE_URI="s3://${RELEASE_BUCKET}/${RELEASE_KEY}"
+
+          DEPLOY_SCRIPT=$(cat <<EOF
+          set -euo pipefail
+
+          APP_DIR="/opt/mock-scores"
+          RELEASE_DIR="/opt/mock-scores-release"
+          ARCHIVE="/tmp/mock-scores-release.tar.gz"
+
+          ENV_BACKUP="/tmp/mock-scores.env"
+          START_BACKUP="/tmp/mock-scores-start.sh"
+
+          echo "Starting deployment..."
+
+          #
+          # Preserve machine-specific files
+          #
+          if [ -f "\$APP_DIR/backend/.env" ]; then
+            cp "\$APP_DIR/backend/.env" "\$ENV_BACKUP"
+          fi
+
+          if [ -f "\$APP_DIR/start.sh" ]; then
+            cp "\$APP_DIR/start.sh" "\$START_BACKUP"
+          fi
+
+          #
+          # Prepare release directory
+          #
+          rm -rf "\$RELEASE_DIR"
+          mkdir -p "\$RELEASE_DIR"
+
+          echo "Downloading release..."
+
+          aws s3 cp \
+            "${RELEASE_URI}" \
+            "\$ARCHIVE"
+
+          echo "Extracting release..."
+
+          tar -xzf "\$ARCHIVE" -C "\$RELEASE_DIR"
+
+          #
+          # Replace application
+          #
+          rm -rf "\$APP_DIR"
+          mv "\$RELEASE_DIR" "\$APP_DIR"
+
+          #
+          # Restore machine-specific files
+          #
+          if [ -f "\$ENV_BACKUP" ]; then
+            mkdir -p "\$APP_DIR/backend"
+            mv "\$ENV_BACKUP" "\$APP_DIR/backend/.env"
+          fi
+
+          if [ -f "\$START_BACKUP" ]; then
+            mv "\$START_BACKUP" "\$APP_DIR/start.sh"
+            chmod +x "\$APP_DIR/start.sh"
+          fi
+
+          cd "\$APP_DIR"
+
+          echo "Installing production dependencies..."
+
+          NODE_ENV=production npm ci --omit=dev
+
+          echo "Restarting application..."
+
+          pm2 restart mock-scores --update-env || \
+            pm2 start /opt/mock-scores/start.sh --name mock-scores
+
+          pm2 save
+
+          rm -f "\$ARCHIVE"
+
+          echo "Deployment complete."
+          EOF
+          )
+
+          PARAMETERS=$(jq -nc \
+            --arg script "$DEPLOY_SCRIPT" \
+            '{commands: [$script]}')
+
           COMMAND_ID=$(aws ssm send-command \
             --instance-ids "$INSTANCE_ID" \
             --document-name "AWS-RunShellScript" \
             --comment "Deploy mock-scores ${GITHUB_SHA}" \
-            --parameters commands="[
-              \"set -euo pipefail\",
-              \"APP_DIR=/opt/mock-scores\",
-              \"RELEASE_DIR=/opt/mock-scores-release\",
-              \"ARCHIVE=/tmp/mock-scores-${GITHUB_SHA}.tar.gz\",
-              \"ENV_BACKUP=/tmp/mock-scores.env\",
-              \"START_BACKUP=/tmp/mock-scores-start.sh\",
-              \"rm -rf \\\"\\\$RELEASE_DIR\\\"\",
-              \"mkdir -p \\\"\\\$RELEASE_DIR\\\"\",
-              \"aws s3 cp s3://${RELEASE_BUCKET}/mock-scores/${GITHUB_SHA}.tar.gz \\\"\\\$ARCHIVE\\\"\",
-              \"tar -xzf \\\"\\\$ARCHIVE\\\" -C \\\"\\\$RELEASE_DIR\\\"\",
-              \"if [ -f \\\"\\\$APP_DIR/backend/.env\\\" ]; then cp \\\"\\\$APP_DIR/backend/.env\\\" \\\"\\\$ENV_BACKUP\\\"; fi\",
-              \"if [ -f \\\"\\\$APP_DIR/start.sh\\\" ]; then cp \\\"\\\$APP_DIR/start.sh\\\" \\\"\\\$START_BACKUP\\\"; fi\",
-              \"rm -rf \\\"\\\$APP_DIR\\\"\",
-              \"mv \\\"\\\$RELEASE_DIR\\\" \\\"\\\$APP_DIR\\\"\",
-              \"if [ -f \\\"\\\$ENV_BACKUP\\\" ]; then mkdir -p \\\"\\\$APP_DIR/backend\\\" && mv \\\"\\\$ENV_BACKUP\\\" \\\"\\\$APP_DIR/backend/.env\\\"; fi\",
-              \"if [ -f \\\"\\\$START_BACKUP\\\" ]; then mv \\\"\\\$START_BACKUP\\\" \\\"\\\$APP_DIR/start.sh\\\" && chmod +x \\\"\\\$APP_DIR/start.sh\\\"; fi\",
-              \"cd \\\"\\\$APP_DIR\\\"\",
-              \"NODE_ENV=production npm ci --omit=dev\",
-              \"pm2 restart mock-scores --update-env || pm2 start /opt/mock-scores/start.sh --name mock-scores\",
-              \"pm2 save\",
-              \"rm -f \\\"\\\$ARCHIVE\\\"\"
-            ]" \
+            --parameters "$PARAMETERS" \
             --query "Command.CommandId" \
             --output text)
 
-          echo "SSM command: $COMMAND_ID"
+          echo "SSM command ID: $COMMAND_ID"
 
-          while true; do
-            STATUS=$(aws ssm get-command-invocation \
-              --command-id "$COMMAND_ID" \
-              --instance-id "$INSTANCE_ID" \
-              --query "Status" \
-              --output text 2>/dev/null || true)
+          echo "Waiting for deployment to finish..."
 
-            case "$STATUS" in
-              Success)
-                break
-                ;;
-              Failed|Cancelled|TimedOut)
-                echo "Deployment failed: $STATUS"
-
-                aws ssm get-command-invocation \
-                  --command-id "$COMMAND_ID" \
-                  --instance-id "$INSTANCE_ID" \
-                  --query '{Status:Status,Stdout:StandardOutputContent,Stderr:StandardErrorContent}'
-
-                exit 1
-                ;;
-            esac
-
-            sleep 5
-          done
-
-          aws ssm get-command-invocation \
+          aws ssm wait command-executed \
             --command-id "$COMMAND_ID" \
-            --instance-id "$INSTANCE_ID" \
-            --query '{Status:Status,Stdout:StandardOutputContent,Stderr:StandardErrorContent}'
+            --instance-id "$INSTANCE_ID" || true
 
-      - name: Delete release artifact
+          RESULT=$(aws ssm get-command-invocation \
+            --command-id "$COMMAND_ID" \
+            --instance-id "$INSTANCE_ID")
+
+          echo "$RESULT" | jq -r '.StandardOutputContent'
+
+          STATUS=$(echo "$RESULT" | jq -r '.Status')
+
+          if [ "$STATUS" != "Success" ]; then
+            echo "Deployment failed with status: $STATUS"
+            echo ""
+            echo "STDERR:"
+            echo "$RESULT" | jq -r '.StandardErrorContent'
+            exit 1
+          fi
+
+          echo "Deployment succeeded."
+
+      - name: Remove release from S3
         if: always()
         run: |
           aws s3 rm \
