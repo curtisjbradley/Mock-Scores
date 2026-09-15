@@ -42,7 +42,3 @@ export class ConflictReportedError extends Error {
 export class RoundNotLockedError extends Error {
     constructor() { super('Scoring is not open for this round yet'); }
 }
-
-// Legacy aliases kept for any existing catch blocks that reference the old names.
-export const DuplicateDelegateError = AlreadyExistsError;
-export const DuplicateTeamNameError = AlreadyExistsError;
