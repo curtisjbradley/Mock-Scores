@@ -2,13 +2,16 @@ name: Deploy Frontend to S3 + CloudFront
 
 concurrency:
   group: frontend-deploy
+  cancel-in-progress: false
 
 on:
   push:
     branches: ["main"]
     paths:
-      - "frontend/**"
+      - "landing/**"
       - "shared/**"
+      - "package.json"
+      - "package-lock.json"
 
 jobs:
   deploy:
@@ -36,20 +39,23 @@ jobs:
           VITE_API_URL: ${{ vars.VITE_API_URL }}
 
       - name: Configure AWS credentials
-        uses: aws-actions/configure-aws-credentials@v4
+        uses: aws-actions/configure-aws-credentials@v6
         with:
-          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
-          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          role-to-assume: ${{ secrets.AWS_ROLE_ARN }}
           aws-region: ${{ secrets.AWS_REGION }}
+          role-session-name: github-actions-mock-scores-deploy
 
-      - name: Sync to S3
+      - name: Verify AWS identity
+        run: aws sts get-caller-identity
+
+      - name: Sync hashed assets
         run: |
           aws s3 sync frontend/dist s3://${{ secrets.S3_BUCKET_NAME }} \
             --delete \
             --cache-control "public, max-age=31536000, immutable" \
             --exclude "index.html"
-
-          # index.html should not be cached long-term (it references hashed assets)
+      - name: Sync pages and metadata
+        run: |
           aws s3 cp frontend/dist/index.html s3://${{ secrets.S3_BUCKET_NAME }}/index.html \
             --cache-control "public, max-age=0, must-revalidate"
 
