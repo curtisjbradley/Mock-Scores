@@ -1,13 +1,13 @@
 ---
-title: Creating a tournament
+title: Creating a Tournament
 description: Creating a tournament in MockScores is easy and only requires a few clicks.
 ---
 The first step in preparing for your competition is creating your tournament in MockScores.
-Creating your tournament only takes a few steps to setup.
+Creating your tournament only takes a few steps to set up.
 
 # Creating a Tournament
 
-To create a tournament you must logged in to MockScores and in your [organizer dashboard.](https://app.mockscores.org/organizer)
+To create a tournament you must log in to MockScores and in your [organizer dashboard.](https://app.mockscores.org/organizer)
 
 The tournament creation wizard can be launched by selecting **New Tournament** at the top of the dashboard.
 

@@ -6,6 +6,8 @@ on:
     paths:
       - "backend/**"
       - "shared/**"
+      - "package.json"
+      - "package-lock.json"
 
 permissions:
   contents: read
