@@ -11,7 +11,7 @@ const HelpSubmitted = () => {
     </div>)
 }
 
-const Help =  () => {
+const ContactPage =  () => {
 
     const [helpSubmitted, setHelpSubmitted] = useState<boolean>(false);
 
@@ -28,4 +28,4 @@ const Help =  () => {
     </>)
 }
 
-export default Help;
+export default ContactPage;
