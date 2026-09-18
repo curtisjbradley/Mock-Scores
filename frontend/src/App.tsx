@@ -33,7 +33,7 @@ const ForgotPassword = lazy(() => import('./auth/ForgotPassword.tsx'));
 const ResetPassword = lazy(() => import('./auth/ResetPassword.tsx'));
 const VerifyEmail = lazy(() => import('./auth/VerifyEmail.tsx'));
 const ScoreSheetHome = lazy(() => import('./judges/components/ScoreSheetHome.tsx'));
-const Help = lazy(() => import('./help/Help.tsx'));
+const ContactPage = lazy(() => import('./help/./ContactPage'));
 
 
 function App() {
@@ -93,8 +93,8 @@ function App() {
                   <Route path=":teamId/*" element={<NotFound />} />
               </Route>
 
-                <Route path={"help"} element={<ProtectedRoute/>} >
-                    <Route index element={<Help />}/>
+                <Route path={"contact"} element={<ProtectedRoute/>} >
+                    <Route index element={<ContactPage />}/>
                 </Route>
 
 

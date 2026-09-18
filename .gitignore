@@ -36,5 +36,7 @@ backend/coverage
 frontend/cypress/videos
 frontend/cypress/screenshots
 
+landing/.astro
+
 # SSM parameter upload script (contains secrets)
 scripts/create-ssm-params.sh

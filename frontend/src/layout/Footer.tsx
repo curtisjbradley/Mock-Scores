@@ -2,6 +2,13 @@ import './styles/footer.css'
 
 const Footer = () => (
     <footer className="site-footer">
+        <a href="https://mockscores.org/docs/"
+           target="_blank"
+           className={"footer-link"}
+           rel="noopener noreferrer">
+            Guides
+        </a>
+
         <a
             href="https://github.com/curtisjbradley/Mock-Scores"
             target="_blank"
@@ -14,11 +21,13 @@ const Footer = () => (
             </svg>
         </a>
 
-        <a href="/help"
+
+
+        <a href="/contact"
            target="_blank"
            className={"footer-link"}
            rel="noopener noreferrer">
-            Help
+            Contact
         </a>
     </footer>
 )
