@@ -32,13 +32,8 @@ Whether you are preparing for your first tournament or managing a large competit
 * **Organizers** can create tournaments, configure scoring, manage teams, create pairings, assign courtrooms, define tiebreakers, manage awards and publish results.
 * **Coaches** can join tournaments, maintain team rosters, review pairings, and view published results.
 * **Scorers and judges** can open ballots from an emailed link, enter scores, and submit completed ballots online.
-
-## Get started
-
-If you are new to MockScores, begin by learning about the available roles and how to create a tournament.
-
+* 
 ## Need help during a tournament?
 
-Visit the troubleshooting guides for help with common issues, including missing teams, scorer access, and ballot submission problems.
-
-MockScores is built by a mock trial coach, to allow organizers to focus on running their tournaments smoothly.
+* Visit the documentation for help.
+* [Send a message](https://app.mockscores.org/contact)
