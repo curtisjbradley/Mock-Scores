@@ -68,4 +68,4 @@ jobs:
         run: |
           aws cloudfront create-invalidation \
             --distribution-id ${{ secrets.LANDING_CLOUDFRONT_DISTRIBUTION_ID }} \
-            --paths "/index.html" "/sitemap*.xml" "/docs*"
+            --paths "/index.html" "/sitemap*.xml" "/docs*" "/robots.txt"
