@@ -2,6 +2,8 @@
 import { defineConfig } from 'astro/config';
 import sitemap from '@astrojs/sitemap';
 
+import starlight from '@astrojs/starlight';
+
 // `site` is required for SEO: it sets the absolute base URL used for the
 // generated sitemap and for canonical/Open Graph URLs in the layout.
 // Point this at the marketing subdomain you want search engines to rank.
@@ -10,5 +12,21 @@ export default defineConfig({
   // Static HTML output — fully pre-rendered pages, ideal for crawlability
   // and Core Web Vitals. No client JS is shipped unless a component opts in.
   output: 'static',
-  integrations: [sitemap()],
+  integrations: [sitemap(), starlight({
+    title: 'MockScores Documentation',
+    description: "Help using MockScores to run mock trial tournaments.",
+    sidebar:  [{ slug: "docs", label: "Overview" },
+      { slug: "docs/getting-started" },
+
+      {
+        label: "Organizers",
+        items: [
+          { autogenerate: { directory: "docs/organizer" } },
+        ],
+      }],
+    components: {
+      SiteTitle: "./src/components/DocsSiteTitle.astro",
+    },
+    lastUpdated: true
+  })],
 });
