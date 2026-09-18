@@ -147,7 +147,7 @@ jobs:
           echo "Restarting application..."
 
           pm2 restart mock-scores --update-env || \
-            pm2 start /opt/mock-scores/start.sh --name mock-scores
+            cd /opt/mock-scores/backend && pm2 start npm --name 'mock-scores' -- start
 
           pm2 save
 
