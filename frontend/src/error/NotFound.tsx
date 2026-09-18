@@ -7,12 +7,15 @@ interface INotFoundProps  {
 
 }
 const NotFound = (props : INotFoundProps) => (
-    <main className="notfound-main">
-        <div className="notfound-code">404</div>
-        <h2>Page not found</h2>
-        <p>{props.message ?? "The page you're looking for doesn't exist."}</p>
-        <Link to={props.backlink ?? "/"}>{props.back_message ?? "Go home"}</Link>
-    </main>
+    <>
+        <title>Not Found</title>
+        <main className="notfound-main">
+            <div className="notfound-code">404</div>
+            <h2>Page not found</h2>
+            <p>{props.message ?? "The page you're looking for doesn't exist."}</p>
+            <Link to={props.backlink ?? "/"}>{props.back_message ?? "Go home"}</Link>
+        </main>
+    </>
 )
 
 export default NotFound

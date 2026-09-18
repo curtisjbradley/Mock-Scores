@@ -6,11 +6,15 @@ on:
     paths:
       - "backend/**"
       - "shared/**"
+      - "package.json"
+      - "package-lock.json"
   pull_request:
     branches: [main]
     paths:
       - "backend/**"
       - "shared/**"
+      - "package.json"
+      - "package-lock.json"
 
 jobs:
   test:
