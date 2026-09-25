@@ -101,4 +101,3 @@ Use the most recent assignment email you received. Links from an earlier assignm
 ### I opened the wrong dashboard
 
 Return to the [MockScores home screen](https://app.mockscores.org) and select the correct role.
-:::

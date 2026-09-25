@@ -4,7 +4,7 @@ description: Learn how to set up, manage, and run mock trial tournaments with Mo
 
 hero:
   title: MockScores Documentation
-  tagline: Step-by-step help for organizers, coaches, scorers, and judges.
+  tagline: Step-by-step help for organizers, coaches, and scorers.
   actions:
     - text: Get started
       link: /docs/getting-started/
@@ -19,21 +19,92 @@ sidebar:
   label: Overview
   order: 1
 ---
+
 # Welcome to MockScores
 
-MockScores is free, open-source software for running mock trial tournaments. 
-It helps organizers create tournaments, manage teams and rosters, assign courtrooms and scorers, collect ballots, and publish results.
-All these tasks can be done in one place.
+MockScores is free, open-source software for running mock trial tournaments.
 
-Whether you are preparing for your first tournament or managing a large competition, these guides will walk you through each step.
+It gives organizers one place to create tournaments, manage teams and rosters, assign courtrooms and scorers, collect
+ballots, calculate standings, and publish results.
 
-## What can I do with MockScores?
+Whether you are preparing your first tournament or managing a large competition, these guides will walk you through the
+process.
 
-* **Organizers** can create tournaments, configure scoring, manage teams, create pairings, assign courtrooms, define tiebreakers, manage awards and publish results.
-* **Coaches** can join tournaments, maintain team rosters, review pairings, and view published results.
-* **Scorers and judges** can open ballots from an emailed link, enter scores, and submit completed ballots online.
-* 
+## Start here
+
+### Organizers
+
+Organizers create and manage tournaments. They can:
+
+* Configure the case, witnesses, ballots, awards, and tiebreakers
+* Add teams, coaches, scorers, and courtrooms
+* Create rounds and pairings
+* Assign scorers and select presiders
+* Monitor ballot submissions
+* Review and publish results
+
+Start with [Getting Started](/docs/getting-started/), then learn how
+to [create a tournament](/docs/organizer/creating-a-tournament/).
+
+### Coaches
+
+Coaches join tournaments through an invitation from an organizer. They can:
+
+* Manage their team roster
+* Assign students to scoring roles
+* Select witness call orders
+* Review pairings and completed ballots
+* View published results
+
+See [Getting Started](/docs/getting-started/) for instructions on accessing an invited team.
+
+### Scorers and judges
+
+Scorers do not need to create an account. They receive an email containing a unique link to their assigned ballot.
+
+From the ballot, scorers can:
+
+* Enter scores
+* Select award nominations
+* Choose a tiebreaker winner when serving as the presider
+* Review and submit the completed ballot
+
+Scorers should bring a device with internet and email access to the tournament.
+
+## Tournament setup workflow
+
+A typical tournament setup follows these steps:
+
+1. Create the tournament.
+2. Configure the case, witnesses, and ballot.
+3. Choose or create the standings rules.
+4. Add teams and coaches.
+5. Add courtrooms and scorers.
+6. Create and publish rounds and pairings.
+7. Wait for teams to assign their call orders and student assignments.
+8. Assign scorers and select a presider for each trial.
+9. Lock rounds.
+10. Send out ballot links
+11. Collect and review ballots.
+12. Publish the results.
+
+Tournament requirements differ, so you can return to the tournament dashboard and update most settings as your
+competition takes shape.
+
+## Configurable standings
+
+MockScores supports custom standings and tiebreaker rules. Organizers can begin with a template or create their own
+configuration using a visual Blockly editor.
+
+Advanced users can work directly with the underlying Lisp-like DSL.
+
+See [Managing Tiebreakers](/docs/organizer/managing-tiebreakers/) for setup instructions and the complete DSL grammar.
+
 ## Need help during a tournament?
 
-* Visit the documentation for help.
-* [Send a message](https://app.mockscores.org/contact)
+* Search this documentation for instructions related to your task.
+* Return to the relevant tournament dashboard and check for validation or status messages.
+* [Send a message](https://app.mockscores.org/contact) if you cannot resolve the problem.
+
+When requesting help, include the tournament name, the page you were using, and a description of what happened. Do not
+include passwords or private ballot links.
