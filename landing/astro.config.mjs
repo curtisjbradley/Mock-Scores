@@ -17,13 +17,26 @@ export default defineConfig({
     description: "Help using MockScores to run mock trial tournaments.",
     sidebar:  [{ slug: "docs", label: "Overview" },
       { slug: "docs/getting-started" },
-
+      { slug: "docs/managing-your-account" },
       {
         label: "Organizers",
         items: [
           { autogenerate: { directory: "docs/organizer" } },
         ],
-      }],
+      },
+      {
+        label: "Coaches",
+        items: [
+          { autogenerate: { directory: "docs/coach" } },
+        ],
+      },
+      {
+        label: "Scorers",
+        items: [
+          { autogenerate: { directory: "docs/scorer" } },
+        ],
+      },
+    ],
     components: {
       SiteTitle: "./src/components/DocsSiteTitle.astro",
     },
