@@ -44,7 +44,7 @@ Organizers create and manage tournaments. They can:
 * Review and publish results
 
 Start with [Getting Started](/docs/getting-started/), then learn how
-to [create a tournament](/docs/organizer/creating-a-tournament/).
+to [create a tournament](/docs/organizer/creating-a-tournament/). The [Organizer Guide](/docs/organizer/) follows the complete setup and tournament-day workflow.
 
 ### Coaches
 
@@ -56,7 +56,7 @@ Coaches join tournaments through an invitation from an organizer. They can:
 * Review pairings and completed ballots
 * View published results
 
-See [Getting Started](/docs/getting-started/) for instructions on accessing an invited team.
+See [Getting Started](/docs/getting-started/) for instructions on accessing an invited team, then continue with the [Coach Guide](/docs/coach/).
 
 ### Scorers and judges
 
@@ -71,6 +71,8 @@ From the ballot, scorers can:
 
 Scorers should bring a device with internet and email access to the tournament.
 
+See the [Scorer Guide](/docs/scorer/) for step-by-step ballot instructions.
+
 ## Tournament setup workflow
 
 A typical tournament setup follows these steps:
@@ -84,7 +86,7 @@ A typical tournament setup follows these steps:
 7. Wait for teams to assign their call orders and student assignments.
 8. Assign scorers and select a presider for each trial.
 9. Lock rounds.
-10. Send out ballot links
+10. Send out ballot links.
 11. Collect and review ballots.
 12. Publish the results.
 

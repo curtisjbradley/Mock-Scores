@@ -1,8 +1,9 @@
 ---
-
 title: Getting Started
 description: Learn how organizers, coaches, and scorers access MockScores.
---------------------------------------------------------------------------
+sidebar:
+  order: 2
+---
 
 MockScores provides different tools depending on how you participate in a tournament:
 
@@ -40,7 +41,7 @@ To access your team:
 
 If you use Google to sign in, the Google account’s email address must match the address used for your invitation.
 
-From the coach dashboard, you can manage your roster, assign students to roles, select witness call orders, and view available ballots and results.
+From the coach dashboard, you can manage your roster, assign students to roles, select witness call orders, and view published pairings and results. See the [Coach Guide](/docs/coach/) for the full workflow.
 
 :::note
 Your tournament invitation is connected to your email address. Creating an account with a different address will not give you access to the invited team.
@@ -60,6 +61,8 @@ To score online, you will need:
 
 Open the link in the assignment email to access the ballot. During the trial, enter your scores, select any award nominations, and review the ballot before submitting it.
 
+See the [Scorer Guide](/docs/scorer/) for conflict checks, score validation, nominations, tiebreakers, and submission instructions.
+
 :::danger
 Your ballot link is unique to your assignment. Do not share or forward it to another person. If you were assigned to the wrong trial, contact the tournament organizer instead of using the link.
 :::
@@ -71,20 +74,24 @@ If you participate in more than one role, return to the [MockScores home screen]
 The organizer and coach dashboards contain different tools:
 
 
-| Role       | 	Dashboard tools                                                                          |
-|------------|-------------------------------------------------------------------------------------------|
-| Organizer	 | Tournaments, teams, scorers, courtrooms, rounds, pairings, ballots, and published results |
-| Coach	     | Team roster, student assignments, witness call orders, ballots, and team results          |
-| Scorer     | 	No dashboard; scorers use the unique ballot link sent by email                           |
+| Role      | Dashboard tools                                                                            |
+|-----------|--------------------------------------------------------------------------------------------|
+| Organizer | Tournaments, teams, scorers, courtrooms, rounds, pairings, ballots, and published results  |
+| Coach     | Team roster, student assignments, witness call orders, ballots, and team results           |
+| Scorer    | No dashboard; scorers use the unique ballot link sent by email                             |
 
 
 :::note
 The same account can be in the same tournament as both an organizer and a coach. Selecting the right dashboard will give you the tools you need to complete the given job.
 :::
+
+To change your password, sign out, or permanently delete your account, see [Managing Your Account](/docs/managing-your-account/).
+
 ## Troubleshooting
+
 ### I did not receive an account-verification email
 
-Check your spam or junk folder and confirm that you entered the correct email address. If necessary, request another verification email from the sign-in page.
+Check your spam or junk folder and confirm that you entered the correct email address. If the message still does not arrive, contact MockScores support.
 
 ### I've signed up as a coach but my team doesn't appear
 
