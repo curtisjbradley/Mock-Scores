@@ -1,45 +1,94 @@
 // @ts-check
 import { defineConfig } from 'astro/config';
 import sitemap from '@astrojs/sitemap';
-
 import starlight from '@astrojs/starlight';
 
-// `site` is required for SEO: it sets the absolute base URL used for the
-// generated sitemap and for canonical/Open Graph URLs in the layout.
-// Point this at the marketing subdomain you want search engines to rank.
 export default defineConfig({
   site: 'https://mockscores.org',
-  // Static HTML output — fully pre-rendered pages, ideal for crawlability
-  // and Core Web Vitals. No client JS is shipped unless a component opts in.
   output: 'static',
-  integrations: [sitemap(), starlight({
-    title: 'MockScores Documentation',
-    description: "Help using MockScores to run mock trial tournaments.",
-    sidebar:  [{ slug: "docs", label: "Overview" },
-      { slug: "docs/getting-started" },
-      { slug: "docs/managing-your-account" },
-      {
-        label: "Organizers",
-        items: [
-          { autogenerate: { directory: "docs/organizer" } },
-        ],
+
+  integrations: [
+    sitemap(),
+
+    starlight({
+      title: 'MockScores Documentation',
+      description:
+          'Help using MockScores to run mock trial tournaments.',
+
+      sidebar: [
+        {
+          label: 'Start Here',
+          items: [
+            {
+              slug: 'docs',
+              label: 'Overview',
+            },
+            {
+              slug: 'docs/getting-started',
+              label: 'Getting Started',
+            },
+            {
+              slug: 'docs/managing-your-account',
+              label: 'Managing Your Account',
+            },
+          ],
+        },
+
+        {
+          label: 'Organizers',
+          collapsed: true,
+          items: [
+            {
+              autogenerate: {
+                directory: 'docs/organizer',
+                collapsed: true,
+              },
+            },
+          ],
+        },
+
+        {
+          label: 'Coaches',
+          collapsed: true,
+          items: [
+            {
+              autogenerate: {
+                directory: 'docs/coach',
+                collapsed: true,
+              },
+            },
+          ],
+        },
+
+        {
+          label: 'Scorers',
+          collapsed: true,
+          items: [
+            {
+              autogenerate: {
+                directory: 'docs/scorer',
+                collapsed: true,
+              },
+            },
+          ],
+        },
+
+        {
+          label: 'MockScores Home',
+          link: '/',
+          attrs: {
+            class: 'back-to-home-btn',
+            'aria-label': 'Return to the MockScores website',
+          },
+        },
+      ],
+
+      components: {
+        SiteTitle: './src/components/DocsSiteTitle.astro',
       },
-      {
-        label: "Coaches",
-        items: [
-          { autogenerate: { directory: "docs/coach" } },
-        ],
-      },
-      {
-        label: "Scorers",
-        items: [
-          { autogenerate: { directory: "docs/scorer" } },
-        ],
-      },
-    ],
-    components: {
-      SiteTitle: "./src/components/DocsSiteTitle.astro",
-    },
-    lastUpdated: true
-  })],
+
+      customCss: ['./src/styles/starlight.css'],
+      lastUpdated: true,
+    }),
+  ],
 });
