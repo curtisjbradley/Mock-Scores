@@ -1,25 +1,24 @@
 ---
-
 title: MockScores Documentation
 description: Learn how to set up, manage, and run mock trial tournaments with MockScores.
 
 hero:
-title: MockScores Documentation
-tagline: Step-by-step help for organizers, coaches, and scorers.
-actions:
-- text: Get started
-link: /docs/getting-started/
-icon: right-arrow
-variant: primary
-- text: Open MockScores
-link: https://app.mockscores.org
-icon: external
-variant: minimal
+  title: MockScores Documentation
+  tagline: Step-by-step help for organizers, coaches, and scorers.
+  actions:
+    - text: Get started
+      link: /docs/getting-started/
+      icon: right-arrow
+      variant: primary
+    - text: Open MockScores
+      link: https://app.mockscores.org
+      icon: external
+      variant: minimal
 
 sidebar:
-label: Overview
-order: 1
---------
+  label: Overview
+  order: 1
+---
 
 # Welcome to MockScores
 
