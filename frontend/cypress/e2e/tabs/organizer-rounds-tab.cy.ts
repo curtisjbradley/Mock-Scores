@@ -5,6 +5,14 @@ const ROUNDS = [
   { round_id: 'r-2', tournament_id: 'tourney-1', name: 'Round 2', round_time: '2026-03-01T09:00:00Z', position: 2, teams_public: true, results_public: false },
 ]
 
+function failOnUnstubbedOrganizerRequest() {
+  cy.intercept('**/organizer/**', (req) => {
+    throw new Error(
+        `Unstubbed API request: ${req.method} ${req.url}`,
+    );
+  });
+}
+
 function stubRoundsTab(rounds = ROUNDS) {
   cy.intercept(
       'GET',
@@ -33,6 +41,7 @@ function stubRoundsTab(rounds = ROUNDS) {
 
 describe('Rounds Tab', () => {
   beforeEach(() => {
+    failOnUnstubbedOrganizerRequest();
     cy.loginAs(USER)
     stubRoundsTab()
     cy.visit('/organizer/tourney-1?page=rounds')
