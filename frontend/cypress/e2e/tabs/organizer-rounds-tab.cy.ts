@@ -6,8 +6,29 @@ const ROUNDS = [
 ]
 
 function stubRoundsTab(rounds = ROUNDS) {
-  cy.intercept('GET', '/organizer/tournament/tourney-1', { statusCode: 200, body: TOURNAMENT }).as('getTournament')
-  cy.intercept('GET', '/organizer/tournament/tourney-1/rounds', { statusCode: 200, body: rounds }).as('getRounds')
+  cy.intercept(
+      'GET',
+      '/organizer/tournament/tourney-1',
+      { statusCode: 200, body: TOURNAMENT },
+  ).as('getTournament');
+
+  cy.intercept(
+      'GET',
+      '/organizer/tournament/tourney-1/rounds',
+      { statusCode: 200, body: rounds },
+  ).as('getRounds');
+
+  cy.intercept(
+      'GET',
+      '/organizer/tournament/tourney-1/teams',
+      { statusCode: 200, body: [] },
+  ).as('getTeams');
+
+  cy.intercept(
+      'GET',
+      '/organizer/tournament/tourney-1/rounds/r-1/ballot-status',
+      { statusCode: 200, body: [] },
+  ).as('getBallotStatus');
 }
 
 describe('Rounds Tab', () => {
