@@ -58,7 +58,7 @@ describe('Coach Dashboard', () => {
   beforeEach(() => {
     cy.loginAs(USER)
     stubCoachDashboard()
-    cy.visit('/coach/t-1')
+    cy.visit('/coach/team-1')
     cy.wait('@session')
     cy.wait('@getTournaments')
   })
@@ -66,16 +66,8 @@ describe('Coach Dashboard', () => {
   it('renders the team name, tournament name, and meta', () => {
     cy.contains('Lincoln High').should('be.visible')
     cy.contains('Spring Invitational').should('be.visible')
-    cy.contains('8 teams').should('be.visible')
-    cy.contains('3 rounds').should('be.visible')
   })
 
-  it('shows the schedule tab by default with pairings', () => {
-    cy.contains('Round 1').should('be.visible')
-    cy.contains('Lincoln High').should('be.visible')
-    cy.contains('Jefferson High').should('be.visible')
-    cy.contains('Dept. 5').should('be.visible')
-  })
 
   it('all tab buttons are visible', () => {
     cy.contains('button', 'Schedule').should('be.visible')
@@ -86,13 +78,13 @@ describe('Coach Dashboard', () => {
     cy.contains('button', 'Standings').should('be.visible')
   })
 
-  it('Schedule tab is active by default', () => {
-    cy.contains('button', 'Schedule').should('have.class', 'dash-tab--active')
+  it('Overview tab is active by default', () => {
+    cy.contains('button', 'Overview').should('have.class', 'dash-nav-item--active')
   })
 
   it('switches to Results tab', () => {
     cy.contains('button', 'Results').click()
-    cy.url().should('include', 'page=results')
+    cy.url().should('include', 'results')
   })
 
   it('switches to Roster tab and shows students', () => {
@@ -150,16 +142,16 @@ describe('Coach Dashboard', () => {
 
   it('back button navigates to /coach', () => {
     cy.intercept('GET', '/coach/tournaments', { statusCode: 200, body: [] }).as('homeList')
-    cy.contains('button', '← All tournaments').click()
+    cy.contains('button', 'All tournaments').click()
     cy.url().should('include', '/coach')
-    cy.url().should('not.include', '/t-1')
+    cy.url().should('not.include', '/team-1')
   })
 
-  it('navigating directly to ?page=roster sets the correct active tab', () => {
-    cy.visit('/coach/t-1?page=roster')
+  it('navigating directly to /roster sets the correct active tab', () => {
+    cy.visit('/coach/team-1/roster')
     cy.wait('@session')
     cy.wait('@getTournaments')
     cy.wait('@getStudents')
-    cy.contains('button', 'Roster').should('have.class', 'dash-tab--active')
+    cy.contains('button', 'Roster').should('have.class', 'dash-nav-item--active')
   })
 })

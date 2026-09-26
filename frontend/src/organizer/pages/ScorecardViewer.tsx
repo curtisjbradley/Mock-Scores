@@ -446,7 +446,7 @@ const ScorecardViewer = () => {
         return (
             <main className="org-main">
                 <div className="org-container">
-                    <button className="org-back-btn" onClick={() => navigate(-1)}>← Back</button>
+                    <button className="org-back-btn" onClick={() => navigate(-1)}>Back</button>
                     <p>Loading scorecard…</p>
                 </div>
             </main>

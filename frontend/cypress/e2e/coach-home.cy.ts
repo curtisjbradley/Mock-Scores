@@ -39,7 +39,7 @@ describe('Coach Home', () => {
     cy.intercept('GET', '/coach/tournaments/t-1/schedule', { statusCode: 200, body: [] }).as('schedule')
     cy.intercept('GET', '/coach/tournaments/t-1/results', { statusCode: 200, body: [] }).as('results')
     cy.contains('Lincoln High - Spring Invitational').click()
-    cy.url().should('include', '/coach/t-1')
+    cy.url().should('include', '/coach/team-1')
   })
 
   it('shows empty state when no tournaments', () => {
