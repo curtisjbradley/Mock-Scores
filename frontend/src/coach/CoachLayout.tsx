@@ -204,8 +204,8 @@ export default function CoachLayout({ isOrganizerView = false }: Props) {
     if (!resolved) return null;
     if (!tournament) return <NotFound back_message={"View All Teams"} backlink={"/coach"} message={"The team you are looking for does not exist."}/>
 
-    const title = tournament.team_code || tournament.team_name || 'Team'
-    const subtitle = tournament.team_name
+    const title = tournament.team_name  || 'Team'
+    const subtitle = tournament.name
 
     const contextValue: CoachContextValue = {
         tournamentId,

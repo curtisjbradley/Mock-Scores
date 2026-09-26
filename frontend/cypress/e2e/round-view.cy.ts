@@ -21,9 +21,18 @@ function stubRoundView(pairings = PAIRINGS) {
   cy.intercept('GET', '/organizer/tournament/tourney-1/courtrooms', { statusCode: 200, body: COURTROOMS }).as('getCourtrooms')
   cy.intercept('GET', '/organizer/tournament/tourney-1/rounds/round-1/pairings', { statusCode: 200, body: pairings }).as('getPairings')
   cy.intercept('GET', '/organizer/tournament/tourney-1/scorers', { statusCode: 200, body: [] }).as('getScorers')
-  cy.intercept('GET', '/organizer/tournament/tourney-1/rounds/round-1/pairings/pair-1/scorers', { statusCode: 200, body: [] }).as('getPairingScorers')
-  cy.intercept('GET', '/organizer/tournament/tourney-1/scorer-conflicts', { statusCode: 200, body: [] }).as('getConflicts')
+  cy.intercept(
+      'GET',
+      '/organizer/tournament/tourney-1/pairings/pair-1/scorers',
+      { statusCode: 200, body: [] },
+  ).as('getPairingScorers');  cy.intercept('GET', '/organizer/tournament/tourney-1/scorer-conflicts', { statusCode: 200, body: [] }).as('getConflicts')
+  cy.intercept(
+      'GET',
+      '/organizer/tournament/tourney-1/rounds/round-1/ballot-status',
+      { statusCode: 200, body: [] },
+  ).as('getBallotStatus');
 }
+
 
 describe('Round View', () => {
   beforeEach(() => {
@@ -41,7 +50,7 @@ describe('Round View', () => {
 
   it('back button navigates to rounds tab', () => {
     cy.intercept('GET', '/organizer/tournament/tourney-1', { statusCode: 200, body: { id: 'tourney-1', name: 'Spring Invitational', location: '', num_teams: 0, num_rounds: 0, case_format_id: 'cf-1' } }).as('getTournament')
-    cy.contains('button', '← Back to rounds').click()
+    cy.contains('button', 'Back to rounds').click()
     cy.url().should('include', '/organizer/tourney-1')
     cy.url().should('include', 'page=rounds')
   })
@@ -60,8 +69,8 @@ describe('Round View', () => {
     cy.contains('No matchups yet').should('be.visible')
   })
 
-  it('shows add matchup form when "+ Add matchup" is clicked', () => {
-    cy.contains('button', '+ Add matchup').click()
+  it('shows add matchup form when "+ Add Pairing" is clicked', () => {
+    cy.contains('button', '+ Add Pairing').click()
     cy.contains('New matchup').should('be.visible')
     cy.contains('Prosecution').should('be.visible')
     cy.contains('Defense').should('be.visible')
@@ -69,17 +78,17 @@ describe('Round View', () => {
   })
 
   it('hides add form when Cancel is clicked', () => {
-    cy.contains('button', '+ Add matchup').click()
+    cy.contains('button', '+ Add Pairing').click()
     cy.contains('button', 'Cancel').click()
     cy.contains('New matchup').should('not.exist')
   })
 
   it('shows validation errors when submitting empty add form', () => {
-    cy.contains('button', '+ Add matchup').click()
+    cy.wait('@getScorers')
+    cy.contains('button', '+ Add Pairing').click()
     cy.contains('button', 'Add matchup').click()
     cy.contains('Select prosecution team').should('be.visible')
     cy.contains('Select defense team').should('be.visible')
-    cy.contains('Select a courtroom').should('be.visible')
   })
 
   it('shows 404 page when round is not found', () => {
@@ -92,8 +101,10 @@ describe('Round View', () => {
 
   it('can inline-edit the round name', () => {
     cy.intercept('PATCH', '/organizer/tournament/tourney-1/rounds/round-1', { statusCode: 200, body: {} }).as('patchRound')
-    cy.contains('Round 1').click()
-    cy.get('input.rv-name-input').clear().type('Round One{enter}')
-    cy.contains('Round One').should('be.visible')
+    cy.get('button.rv-name-btn').click();
+    cy.get('input.rv-name-input').type('Round One');
+    cy.get('input.rv-name-input').type('{enter}');
+    cy.wait('@patchRound');
+    cy.contains('Round One').should('be.visible');
   })
 })

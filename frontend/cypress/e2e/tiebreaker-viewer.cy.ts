@@ -29,7 +29,7 @@ const STANDINGS_RESPONSE = {
 
 function stubForStandings() {
   cy.intercept('GET', '/coach/tournaments', { statusCode: 200, body: [TOURNAMENT] }).as('getTournaments')
-  cy.intercept('GET', '/coach/tournaments/t-1/schedule', { statusCode: 200, body: [] }).as('getSchedule')
+  cy.intercept('GET', '/coach/tournaments/t-1/schedule?teamId=team-1', { statusCode: 200, body: [] }).as('getSchedule')
   cy.intercept('GET', '/coach/tournaments/t-1/results', { statusCode: 200, body: [] }).as('getResults')
   cy.intercept('GET', '/coach/tournaments/t-1/standings', { statusCode: 200, body: STANDINGS_RESPONSE }).as('getStandings')
 }
@@ -38,7 +38,7 @@ describe('TiebreakerViewer — via Coach Standings tab', () => {
   beforeEach(() => {
     cy.loginAs(USER)
     stubForStandings()
-    cy.visit('/coach/t-1?page=standings')
+    cy.visit('/coach/team-1/standings')
     cy.wait('@session')
     cy.wait('@getTournaments')
     cy.wait('@getStandings')
@@ -70,13 +70,13 @@ describe('TiebreakerViewer — no tiebreakers configured', () => {
     const emptyDsl = '(config (columns) (tiebreakers))'
     cy.loginAs(USER)
     cy.intercept('GET', '/coach/tournaments', { statusCode: 200, body: [TOURNAMENT] }).as('getTournaments')
-    cy.intercept('GET', '/coach/tournaments/t-1/schedule', { statusCode: 200, body: [] }).as('getSchedule')
+    cy.intercept('GET', '/coach/tournaments/t-1/schedule?teamId=team-1', { statusCode: 200, body: [] }).as('getSchedule')
     cy.intercept('GET', '/coach/tournaments/t-1/results', { statusCode: 200, body: [] }).as('getResults')
     cy.intercept('GET', '/coach/tournaments/t-1/standings', {
       statusCode: 200,
       body: { ...STANDINGS_RESPONSE, config: { dsl: emptyDsl } },
     }).as('getStandings')
-    cy.visit('/coach/t-1?page=standings')
+    cy.visit('/coach/team-1/standings')
     cy.wait('@session')
     cy.wait('@getTournaments')
     cy.wait('@getStandings')

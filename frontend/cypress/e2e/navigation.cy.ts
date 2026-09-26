@@ -29,7 +29,7 @@ describe('Protected routes', () => {
 
   it('allows authenticated users to access /coach', () => {
     cy.loginAs(TEST_USER)
-    cy.intercept('GET', '/coach*', { statusCode: 200, body: [] }).as('coachData')
+    cy.intercept('GET', '/coach/tournaments', { statusCode: 200, body: [] }).as('coachData')
     cy.visit('/coach')
     cy.wait('@session')
     cy.url().should('include', '/coach')
