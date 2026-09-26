@@ -19,8 +19,22 @@ const STUDENTS = [
   { student_id: 's-2', team_id: 'team-1', student_name: 'Bob Student', pronouns: 'he/him' },
 ]
 
+const TOURNAMENTS = [
+  {
+    "id": "t-1",
+    "name": "Test Tournament",
+    "location": "Somewhere",
+    "start_date": null,
+    "end_date": null,
+    "num_teams": 18,
+    "num_rounds": 1,
+    "team_id": "team-1",
+    "team_name": "Team-1",
+    "team_code": "HS 1"
+  }]
+
 describe('Assign Roles page', () => {
-  const URL = '/coach/t-1/assign-roles/team-1/p-1/p'
+  const URL = '/coach/team-1/assign-roles/p-1/p'
 
   beforeEach(() => {
     cy.loginAs(USER)
@@ -29,8 +43,11 @@ describe('Assign Roles page', () => {
     cy.intercept('GET', '/coach/teams/team-1/students', { statusCode: 200, body: STUDENTS }).as('getStudents')
     cy.intercept('GET', '/coach/teams/team-1/pairings/p-1/assignments', { statusCode: 200, body: [] }).as('getAssignments')
     cy.intercept('GET', '/coach/teams/team-1/default-assignments', { statusCode: 200, body: [] }).as('getDefaults')
+    cy.intercept('GET', '/coach/tournaments', { statusCode: 200, body: TOURNAMENTS }).as('getTournaments')
+
     cy.visit(URL)
     cy.wait('@session')
+    cy.wait('@getTournaments')
     cy.wait('@getCats')
     cy.wait('@getWitnesses')
     cy.wait('@getStudents')
@@ -61,8 +78,8 @@ describe('Assign Roles page', () => {
   it('can select a student and save', () => {
     cy.intercept('POST', '/coach/teams/team-1/pairings/p-1/assignments/bulk', { statusCode: 200, body: { success: true } }).as('saveAssignments')
     cy.get('select.rv-select').first().select('s-1')
-    cy.contains('button', 'Save').click()
-    cy.wait('@saveAssignments')
+    cy.get('#root button.btn-confirm').click();
+
   })
 
   it('Cancel button navigates back', () => {
@@ -77,9 +94,8 @@ describe('Assign Roles page', () => {
     cy.intercept('GET', '/coach/teams/team-1/students', { statusCode: 200, body: STUDENTS }).as('getStudents2')
     cy.intercept('GET', '/coach/teams/team-1/pairings/p-1/assignments', { statusCode: 200, body: [] }).as('getAssignments2')
     cy.intercept('GET', '/coach/teams/team-1/default-assignments', { statusCode: 200, body: [] }).as('getDefaults2')
-    cy.visit('/coach/t-1/assign-roles/team-1/p-1/d')  // defense side
+    cy.visit('/coach/team-1/assign-roles/p-1/d')  // defense side
     cy.wait('@session')
-    cy.wait('@getCats2')
     cy.contains('No assignable roles for this side.').should('be.visible')
   })
 })

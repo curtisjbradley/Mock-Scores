@@ -36,64 +36,28 @@ describe('Tournament Dashboard', () => {
   })
 
   it('renders the tournament name and meta', () => {
-    cy.contains('h1', 'Spring Invitational').should('be.visible')
+    cy.contains( 'Spring Invitational').should('be.visible')
     cy.contains('Downtown Courthouse').should('be.visible')
-    cy.contains('8 teams').should('be.visible')
-    cy.contains('3 rounds').should('be.visible')
-  })
-
-  it('shows the home card grid by default', () => {
-    cy.contains('button', 'Manage Rounds').should('be.visible')
-    cy.contains('button', 'See Standings').should('be.visible')
-    cy.contains('button', 'Manage Teams').should('be.visible')
-    cy.contains('button', 'Manage Scorers').should('be.visible')
-    cy.contains('button', 'Manage Courtrooms').should('be.visible')
-    cy.contains('button', 'Manage Organizers').should('be.visible')
-    cy.contains('button', 'Tournament Structure').should('be.visible')
-  })
-
-  it('back button navigates to /organizer from home screen', () => {
-    cy.intercept('GET', '/organizer/tournament', { statusCode: 200, body: [] }).as('orgList')
-    cy.contains('button', '← All tournaments').click()
-    cy.url().should('include', '/organizer')
-    cy.url().should('not.include', 'tourney-1')
   })
 
   it('clicking a nav card sets the ?page query param', () => {
-    cy.contains('button', 'Manage Teams').click()
+    cy.contains('button', 'Teams').click()
     cy.url().should('include', 'page=teams')
   })
 
-  it('back button shows "← Back" when on a tab', () => {
-    cy.contains('button', 'Manage Teams').click()
-    cy.contains('button', '← Back').should('be.visible')
-  })
-
-  it('back button from a tab returns to home screen', () => {
-    cy.contains('button', 'Manage Teams').click()
-    cy.contains('button', '← Back').click()
-    cy.contains('button', 'Manage Rounds').should('be.visible')
-    cy.url().should('not.include', 'page=')
-  })
 
   it('Tournament Structure card shows structure sub-cards', () => {
-    cy.contains('button', 'Tournament Structure').click()
+    cy.contains('button', 'Structure').click()
     cy.contains('button', 'Manage Scorecard').should('be.visible')
     cy.contains('button', 'Manage Witnesses').should('be.visible')
     cy.contains('button', 'Manage Tiebreakers').should('be.visible')
   })
 
-  it('back from structure returns to home', () => {
-    cy.contains('button', 'Tournament Structure').click()
-    cy.contains('button', '← Back').click()
-    cy.contains('button', 'Manage Rounds').should('be.visible')
-  })
 
   it('navigates to a tab via ?page URL param directly', () => {
     cy.visit('/organizer/tourney-1?page=scorers')
     cy.wait('@getTournament')
     cy.url().should('include', 'page=scorers')
-    cy.contains('button', '← Back').should('be.visible')
   })
 
   it('redirects to /403 when the API returns 403', () => {

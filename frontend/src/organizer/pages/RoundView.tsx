@@ -107,7 +107,7 @@ const RoundView = () => {
         <main className="org-main">
             <div className="org-container">
                 <button className="org-back-btn" onClick={() => navigate(`/organizer/${id}?page=rounds`)}>
-                    ← Back to rounds
+                     Back to rounds
                 </button>
 
                 {error && <p className="org-error">{error}</p>}

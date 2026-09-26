@@ -17,6 +17,7 @@ function stubScoringTab() {
   cy.intercept('GET', '/organizer/tournament/tourney-1', { statusCode: 200, body: TOURNAMENT }).as('getTournament')
   cy.intercept('GET', '/organizer/tournament/tourney-1/scoring-categories', { statusCode: 200, body: CATEGORIES }).as('getCategories')
   cy.intercept('GET', '/organizer/tournament/tourney-1/format', { statusCode: 200, body: FORMAT }).as('getFormat')
+  cy.intercept('GET', '/organizer/tournament/tourney-1/award-categories', { statusCode: 200, body: CATEGORIES }).as('getAwards')
 }
 
 describe('Scoring Tab', () => {
@@ -26,6 +27,7 @@ describe('Scoring Tab', () => {
     cy.visit('/organizer/tourney-1?page=scoring')
     cy.wait('@session')
     cy.wait('@getTournament')
+    cy.wait('@getAwards')
   })
 
 
