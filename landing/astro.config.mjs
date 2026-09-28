@@ -14,6 +14,7 @@ export default defineConfig({
       title: 'MockScores Documentation',
       description:
           'Help using MockScores to run mock trial tournaments.',
+      disable404Route: true,
 
       sidebar: [
         {
