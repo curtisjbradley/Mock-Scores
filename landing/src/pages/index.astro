@@ -4,10 +4,9 @@ import '../styles/index.css';
 
 const title = 'MockScores | Free Mock Trial Tournament Scoring & Tabulation';
 const description =
-  'Open-source scoring and tabulation software for high school and collegiate mock trial tournaments. Easy for judges, customizable for organizers, transparent for coaches.';
+  'Open-source scoring and tabulation software for high school and collegiate mock trial tournaments. Easy for judges, customizable for organizers, transparent for coaches. Easy to use application with lots of features tailored specifically to running mock trial tournaments.';
 
-// SoftwareApplication structured data helps Google render a rich result for
-// a product/app landing page. Adjust fields as the product evolves.
+
 const jsonLd = {
   '@context': 'https://schema.org',
   '@graph': [
@@ -21,7 +20,7 @@ const jsonLd = {
       '@type': 'SoftwareApplication',
       '@id': 'https://mockscores.org/#software',
       name: 'MockScores',
-      applicationCategory: 'Tournament Management Software',
+      applicationCategory: 'Mock Trial Tournament Management Software Application',
       operatingSystem: 'Web',
       description,
       url: 'https://mockscores.org/',
@@ -36,8 +35,6 @@ const jsonLd = {
 ---
 
 <BaseLayout title={title} description={description} jsonLd={jsonLd}>
-  <main>
-
     <section class="hero">
       <picture class="hero-media"><source srcset="/hero.webp" type="image/webp"><img alt="" class="home-hero-img" fetchpriority="high" aria-hidden="true" src="/hero.JPG"></picture>
       <div class="hero-content">
@@ -105,5 +102,4 @@ const jsonLd = {
       <p>Set up your first tournament in minutes - it's free.</p>
       <a class="btn-confirm" href="https://app.mockscores.org">Get started</a>
     </section>
-  </main>
 </BaseLayout>

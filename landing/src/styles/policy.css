@@ -1,0 +1,110 @@
+.page-container > main {
+    box-sizing: border-box;
+    margin-inline: auto;
+    padding-block: clamp(3rem, 7vw, 5rem) 6rem;
+    color: var(--text);
+    font-size: 1.05rem;
+    line-height: 1.75;
+    overflow-wrap: break-word;
+}
+
+.page-container > main h1 {
+    margin: 0;
+    color: var(--text);
+    font-size: clamp(2.2rem, 5vw, 3.4rem);
+    line-height: 1.15;
+    letter-spacing: -0.035em;
+}
+
+.page-container > main h1 + p {
+    margin: 0.85rem 0 2.5rem;
+    padding-bottom: 1.75rem;
+    border-bottom: 1px solid var(--border);
+    color: var(--text-muted);
+    font-size: 0.92rem;
+}
+
+.page-container > main h2 {
+    margin: 3.25rem 0 1rem;
+    padding-top: 1.25rem;
+    border-top: 1px solid var(--border);
+    color: var(--text);
+    font-size: clamp(1.35rem, 3vw, 1.65rem);
+    line-height: 1.3;
+    letter-spacing: -0.02em;
+    scroll-margin-top: 2rem;
+}
+
+.page-container > main h3 {
+    margin: 2rem 0 0.6rem;
+    color: var(--text);
+    font-size: 1.15rem;
+    line-height: 1.4;
+    scroll-margin-top: 2rem;
+}
+
+.page-container > main :is(h2, h3) strong {
+    font-weight: inherit;
+}
+
+.page-container > main p {
+    margin: 0 0 1.15rem;
+}
+
+.page-container > main :is(ul, ol) {
+    margin: 0.5rem 0 1.5rem;
+    padding-left: 1.5rem;
+}
+
+.page-container > main li {
+    margin-block: 0.45rem;
+    padding-left: 0.25rem;
+}
+
+.page-container > main li p {
+    margin: 0;
+}
+
+.page-container > main li::marker {
+    color: var(--primary);
+}
+
+.page-container > main a {
+    color: var(--primary-dark);
+    text-decoration-thickness: 1px;
+    text-underline-offset: 3px;
+}
+
+.page-container > main a:hover {
+    color: var(--primary);
+    text-decoration-thickness: 2px;
+}
+
+.page-container > main a:focus-visible {
+    outline: 2px solid var(--focus);
+    outline-offset: 3px;
+    border-radius: 2px;
+}
+
+.page-container > main mark {
+    padding: 0.1em 0.3em;
+    border-radius: 0.3rem;
+    background: var(--primary-subtle);
+    color: var(--text);
+}
+
+.page-container > main code {
+    font-size: 0.9em;
+}
+
+@media (max-width: 600px) {
+    .page-container > main {
+        width: min(100% - 2rem, 76ch);
+        font-size: 1rem;
+        line-height: 1.7;
+    }
+
+    .page-container > main h2 {
+        margin-top: 2.5rem;
+    }
+}

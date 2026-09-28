@@ -185,6 +185,12 @@ img {
     }
 }
 
+.page-container {
+    display: grid;
+    grid-template-rows: auto 1fr auto; /* Header, Main (fills space), Footer */
+    min-height: 100dvh;
+}
+
 /* ── Shared layout primitives (landing-specific) ───────────────────────── */
 main {
     max-width: var(--max-width);
@@ -201,7 +207,7 @@ header {
 header nav {
     max-width: var(--max-width);
     margin-inline: auto;
-    height: 3.75rem;
+    min-height: 3.75rem;
     padding: 0 2rem;
     display: flex;
     align-items: center;
@@ -250,14 +256,7 @@ header nav a:last-child:focus-visible {
     box-shadow: 0 0 0 0.1875rem var(--focus);
 }
 
-footer {
-    border-top: 1px solid var(--border);
-    margin-top: var(--space-2xl);
-    padding: var(--space-lg) var(--space-md);
-    text-align: center;
-    color: var(--text-muted);
-    font-size: 0.95rem;
-}
+
 
 /* ── Button classes (copied from frontend/src/styles/globals.css) ──────── */
 .btn-confirm {
@@ -306,3 +305,29 @@ footer {
     text-decoration: none;
 }
 .btn-secondary:disabled { opacity: 0.55; cursor: not-allowed; }
+
+@media(width < 560px) {
+    header > nav {
+        display: grid;
+        grid-template-rows: 1fr 1fr 1fr;
+        width: 100%;
+        padding-bottom: 1em;
+    }
+    header {
+        display: grid;
+    }
+    header nav a:last-child {
+        display: inline;
+        align-items: center;
+        background: var(--primary);
+        color: var(--primary-subtle);
+        font-size: 0.875rem;
+        font-weight: bold;
+        line-height: 1.6;
+        border: 1px solid var(--border);
+        border-radius: var(--radius);
+        transition: background 140ms ease, border-color 140ms ease, box-shadow 140ms ease;
+        width: 100%;
+        text-align: center;
+    }
+}
