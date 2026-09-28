@@ -24,8 +24,8 @@ const {
 import '../styles/global.css';
 import 'overlayscrollbars/overlayscrollbars.css';
 
-// Astro.site comes from `site` in astro.config.mjs.
-// Fall back defensively if it is not configured.
+import Footer from '../components/Footer.astro';
+
 const siteUrl = Astro.site ?? new URL('https://mockscores.org/');
 
 const canonicalURL = new URL(Astro.url.pathname, siteUrl);
@@ -85,44 +85,39 @@ const imageURL = new URL(image, siteUrl);
 </head>
 
 <body>
-<header>
-  <nav aria-label="Primary">
-    <a href="/">MockScores</a>
-    <a style="color: var(--text-muted)" href="/docs">Documentation</a>
-    <a href="https://app.mockscores.org">Log In</a>
-  </nav>
-</header>
+  <header>
+    <nav aria-label="Primary">
+      <a href="/">MockScores</a>
+      <a style="color: var(--text-muted)" href="/docs">Documentation</a>
+      <a href="https://app.mockscores.org">Log In</a>
+    </nav>
+  </header>
 
-<slot />
+  <div class="page-container">
+    <main>
+      <slot />
+    </main>
+    <Footer />
+  </div>
 
-<footer>
-  <p>
-    Open source on
-    {' '}
-    <a href="https://github.com/curtisjbradley/Mock-Scores">
-      GitHub
-    </a>.
-  </p>
-</footer>
+  <script>
+    import { OverlayScrollbars } from 'overlayscrollbars';
 
-<script>
-  import { OverlayScrollbars } from 'overlayscrollbars';
-
-  OverlayScrollbars(
-      {
-        target: document.body,
-        cancel: {
-          nativeScrollbarsOverlaid: true,
+    OverlayScrollbars(
+        {
+          target: document.body,
+          cancel: {
+            nativeScrollbarsOverlaid: true,
+          },
         },
-      },
-      {
-        scrollbars: {
-          theme: 'os-theme-dark',
-          autoHide: 'leave',
-          autoHideDelay: 600,
+        {
+          scrollbars: {
+            theme: 'os-theme-dark',
+            autoHide: 'leave',
+            autoHideDelay: 600,
+          },
         },
-      },
-  );
-</script>
+    );
+  </script>
 </body>
 </html>

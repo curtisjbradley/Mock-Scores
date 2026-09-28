@@ -150,6 +150,7 @@
 /* ── Features ──────────────────────────────────────────────────────────── */
 .features {
     padding-block: var(--space-2xl);
+    padding-top: var(--space-md);
 }
 
 .features ul {
