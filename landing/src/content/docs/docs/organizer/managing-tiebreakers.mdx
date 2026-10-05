@@ -3,9 +3,17 @@ title: Managing Tiebreakers
 description: MockScores allows for custom tiebreakers through use of a DSL. These tiebreakers can be programmed visually through Blockly or through a Lisp-like language.
 ---
 
+import StandingsPlaygroundIsland from '../../../../components/StandingsPlaygroundIsland.tsx';
+
 MockScores lets organizers control how teams are ranked when results are published. You can start with a template or build a custom ranking system using either the visual Blockly editor or through a text based editor.
 
 Both editors allow for the same levels of configuration. The visual editor is recommended for most organizers, while the text editor is useful for managing complex rules and copying over configurations.
+
+## Try it now
+
+The playground below is the same editor used in the app, running entirely in your browser on sample data. Drag blocks or edit the configuration text, and watch the standings re-rank in real time. Nothing here is saved.
+
+<StandingsPlaygroundIsland client:only="react" />
 
 ## Open the tiebreaker editor
 

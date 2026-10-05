@@ -1,11 +1,10 @@
 import { useEffect, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
 import * as Blockly from 'blockly';
-import { standingsBlockDefs, dynamicOptions } from './standingsBlocks';
-import { extractStandingsConfig } from './standingsGenerator';
+import { standingsBlockDefs, dynamicOptions } from './blocks.js';
+import { extractStandingsConfig, configToXml } from './workspace.js';
 import { serializeConfig, parseDsl, type StandingsConfig } from '@mock-scores/standings-dsl';
-import { configToXml } from './configToXml';
-import { getTheme, watchTheme } from './blocklyTheme';
+import { getTheme, watchTheme } from './theme.js';
 
 function buildStatOptions(statDefs: { name: string }[]): [string, string][] {
   const custom: [string, string][] = statDefs.map(d => [d.name, d.name]);
@@ -28,7 +27,10 @@ function updateDropdowns(ws: Blockly.WorkspaceSvg, statOptions: [string, string]
   const withNone = (opts: [string, string][]): [string, string][] => opts.length ? opts : [['(none)', '__none__']];
   // DSL reference rules:
   //   stat_ref / opponent  -> declared stats (not intermediates)
-  //   column / by / h2h    -> declared stats OR intermediates
+  //   column               -> declared stats OR intermediates
+  //   by                   -> declared stats only ("by" reads the team-level row)
+  //   h2h                  -> declared stats OR intermediates (h2h recomputes
+  //                           intermediates for the head-to-head pairing)
   //   intermediate_ref     -> intermediates only
   const refOptions = withNone(real(statOptions));
   const statOrInter = withNone([...real(statOptions), ...real(intermediateOptions)]);
@@ -49,7 +51,7 @@ function updateDropdowns(ws: Blockly.WorkspaceSvg, statOptions: [string, string]
       field.forceRerender();
     };
     if (block.type === 'standings_column')     setField('STAT', statOrInter);
-    if (block.type === 'standings_tiebreaker') setField('STAT', statOrInter);
+    if (block.type === 'standings_tiebreaker') setField('STAT', refOptions);
     if (block.type === 'stat_ref' || block.type === 'opponent_stat')
       setField('NAME', refOptions);
     if (block.type === 'intermediate_ref')
@@ -120,20 +122,26 @@ function loadXmlIntoWs(ws: Blockly.WorkspaceSvg, xml: string) {
   Blockly.Xml.domToWorkspace(Blockly.utils.xml.textToDom(xml), ws);
 }
 
-interface Props {
+export interface StandingsBuilderProps {
   onChange?: (config: StandingsConfig, dsl: string) => void;
   initialDsl?: string | null;
 }
 
-export default function StandingsBuilder({ onChange, initialDsl }: Props) {
+export default function StandingsBuilder({ onChange, initialDsl }: StandingsBuilderProps) {
   const statsDiv = useRef<HTMLDivElement>(null);
   const standingsDiv = useRef<HTMLDivElement>(null);
   const statsWs = useRef<Blockly.WorkspaceSvg | null>(null);
   const standingsWs = useRef<Blockly.WorkspaceSvg | null>(null);
   const [, setConfig] = useState<StandingsConfig>({ statDefs: [], columns: [], tiebreakers: { method: 'first', rules: [] } });
   const [dslSnapshot, setDslSnapshot] = useState('');
-  const [pasteValue, setPasteValue] = useState('');
-  const [pasteError, setPasteError] = useState('');
+
+  // Editable DSL box state. We validate on every (debounced) keystroke so the
+  // user gets immediate feedback while writing tiebreakers by hand, and only
+  // enable "Load into editor" once the DSL parses cleanly.
+  const [editorValue, setEditorValue] = useState('');
+  const [editorError, setEditorError] = useState<string | null>(null);
+  const [editorValid, setEditorValid] = useState(false);
+  const [loadMsg, setLoadMsg] = useState<string | null>(null);
 
   const [wsReady, setWsReady] = useState(0);
   const [fullscreen, setFullscreen] = useState<'stats' | 'standings' | null>(null);
@@ -244,20 +252,55 @@ export default function StandingsBuilder({ onChange, initialDsl }: Props) {
     setDslSnapshot(serializeConfig(extractStandingsConfig(statsWs.current, standingsWs.current)));
   }, [initialDsl, wsReady]);
 
-  function handlePaste() {
-    try {
-      const cfg = parseDsl(pasteValue);
-      const xml = configToXml(cfg);
-      loadXmlIntoWs(statsWs.current!, xml.statsXml);
-      // Repopulate dynamicOptions from freshly-loaded stats before loading standings
-      const loaded = extractStandingsConfig(statsWs.current!, standingsWs.current!);
-      populateDynamicOptions(loaded.statDefs);
-      loadXmlIntoWs(standingsWs.current!, xml.standingsXml);
-      setPasteError('');
-      setPasteValue('');
-    } catch (e) {
-      setPasteError((e as Error).message);
+  // Live-validate the editable DSL box (debounced) and reflect parse errors.
+  useEffect(() => {
+    if (editorValue.trim() === '') {
+      setEditorError(null);
+      setEditorValid(false);
+      return;
     }
+    const id = setTimeout(() => {
+      try {
+        parseDsl(editorValue);
+        setEditorError(null);
+        setEditorValid(true);
+      } catch (e) {
+        setEditorError((e as Error).message);
+        setEditorValid(false);
+      }
+    }, 300);
+    return () => clearTimeout(id);
+  }, [editorValue]);
+
+  function handleLoadIntoEditor() {
+    if (!statsWs.current || !standingsWs.current) return;
+    try {
+      const cfg = parseDsl(editorValue);
+      const xml = configToXml(cfg);
+      loadingRef.current = true;
+      loadXmlIntoWs(statsWs.current, xml.statsXml);
+      // Repopulate dynamicOptions from freshly-loaded stats before loading standings
+      const loaded = extractStandingsConfig(statsWs.current, standingsWs.current);
+      populateDynamicOptions(loaded.statDefs);
+      loadXmlIntoWs(standingsWs.current, xml.standingsXml);
+      loadingRef.current = false;
+      // Trigger a sync so onChange/preview update from the newly loaded blocks.
+      const synced = extractStandingsConfig(statsWs.current, standingsWs.current);
+      const dsl = serializeConfig(synced);
+      setConfig(synced);
+      setDslSnapshot(dsl);
+      onChange?.(synced, dsl);
+      setEditorError(null);
+      setLoadMsg('Loaded into the block editor.');
+    } catch (e) {
+      loadingRef.current = false;
+      setEditorError((e as Error).message);
+    }
+  }
+
+  function handleEditorChange(value: string) {
+    setEditorValue(value);
+    setLoadMsg(null);
   }
 
   // When entering/leaving fullscreen, move the Blockly workspace into the overlay div
@@ -286,39 +329,54 @@ export default function StandingsBuilder({ onChange, initialDsl }: Props) {
         <div>
           <div className="sb-workspace-header">
             <p className="sb-workspace-label">1. Define Stats</p>
-            <button className="sb-expand-btn" onClick={() => setFullscreen('stats')}>⛶ Expand</button>
+            <button type="button" className="sb-expand-btn" onClick={() => setFullscreen('stats')}>⛶ Expand</button>
           </div>
           <div ref={statsDiv} className="sb-workspace" />
         </div>
         <div>
           <div className="sb-workspace-header">
             <p className="sb-workspace-label">2. Columns &amp; Tiebreakers</p>
-            <button className="sb-expand-btn" onClick={() => setFullscreen('standings')}>⛶ Expand</button>
+            <button type="button" className="sb-expand-btn" onClick={() => setFullscreen('standings')}>⛶ Expand</button>
           </div>
           <div ref={standingsDiv} className="sb-workspace" />
         </div>
       </div>
       <details className="sb-config-details">
-        <summary className="sb-config-summary">Copy / Paste Config</summary>
+        <summary className="sb-config-summary">Config DSL (view &amp; edit)</summary>
         <div className="sb-config-body">
-          <textarea readOnly rows={6} className="sb-config-textarea" value={dslSnapshot} />
-          <p className="sb-config-hint">Paste a config below to load it:</p>
+          <label className="sb-config-hint" htmlFor="sb-generated-dsl">Generated from the blocks above:</label>
+          <textarea id="sb-generated-dsl" readOnly rows={6} className="sb-config-textarea" value={dslSnapshot} />
+
+          <label className="sb-config-hint" htmlFor="sb-edit-dsl">
+            Edit a config by hand — errors are shown as you type:
+          </label>
           <textarea
-            rows={4}
-            placeholder='(config (stat "Wins" sum (pairing ballots_won)) (columns (column "Wins" "Wins")) (tiebreakers (by "Wins" desc)))'
-            className="sb-config-textarea"
-            value={pasteValue}
-            onChange={e => setPasteValue(e.target.value)}
+            id="sb-edit-dsl"
+            rows={5}
+            spellCheck={false}
+            placeholder={'(config (stat "Wins" sum (pairing ballots_won)) (columns (column "Wins" "Wins")) (tiebreakers (by "Wins" desc)))'}
+            className={`sb-config-textarea${editorError ? ' sb-config-textarea--error' : editorValid ? ' sb-config-textarea--valid' : ''}`}
+            value={editorValue}
+            onChange={e => handleEditorChange(e.target.value)}
           />
-          {pasteError && <p className="sb-config-error">{pasteError}</p>}
-          {pasteValue && <button onClick={handlePaste} className="org-new-btn">Update Config</button>}
+          {editorError && <p className="sb-config-error" role="alert">⚠ {editorError}</p>}
+          {!editorError && editorValid && <p className="sb-config-ok">✓ Valid config</p>}
+          {loadMsg && <p className="sb-config-ok">{loadMsg}</p>}
+          <button
+            type="button"
+            onClick={handleLoadIntoEditor}
+            className="org-new-btn"
+            disabled={!editorValid}
+          >
+            Load into block editor
+          </button>
         </div>
       </details>
       {fullscreen === 'stats' && createPortal(
         <div className="sb-fullscreen-overlay">
           <div className="sb-fullscreen-header">
             <span>1. Define Stats</span>
-            <button className="sb-expand-btn" onClick={() => setFullscreen(null)}>✕ Close</button>
+            <button type="button" className="sb-expand-btn" onClick={() => setFullscreen(null)}>✕ Close</button>
           </div>
           <div ref={fsStatsDiv} className="sb-fullscreen-ws" />
         </div>,
@@ -328,7 +386,7 @@ export default function StandingsBuilder({ onChange, initialDsl }: Props) {
         <div className="sb-fullscreen-overlay">
           <div className="sb-fullscreen-header">
             <span>2. Columns &amp; Tiebreakers</span>
-            <button className="sb-expand-btn" onClick={() => setFullscreen(null)}>✕ Close</button>
+            <button type="button" className="sb-expand-btn" onClick={() => setFullscreen(null)}>✕ Close</button>
           </div>
           <div ref={fsStandingsDiv} className="sb-fullscreen-ws" />
         </div>,

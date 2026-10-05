@@ -1,14 +1,16 @@
 import { useMemo } from 'react';
-import { dummyTeams } from './dummyTeams';
+import { dummyTeams } from './dummyTeams.js';
+import { formatRank } from './formatRank.js';
 import { computeStandings, type StandingsConfig } from '@mock-scores/standings-dsl';
-import '../styles/standings.css';
 
-interface Props {
+export interface StandingsPreviewProps {
   config: StandingsConfig;
+  /** Optional override for the sample data; defaults to the built-in dummy teams. */
+  teams?: typeof dummyTeams;
 }
 
-export default function StandingsPreview({ config }: Props) {
-  const rows = useMemo(() => computeStandings(dummyTeams, config), [config]);
+export default function StandingsPreview({ config, teams = dummyTeams }: StandingsPreviewProps) {
+  const rows = useMemo(() => computeStandings(teams, config), [config, teams]);
   const cols = config.columns;
 
   return (
@@ -30,14 +32,14 @@ export default function StandingsPreview({ config }: Props) {
             <tbody>
               {rows.map((row, i) => (
                 <tr key={row.code}>
-                  <td>{i + 1}</td>
+                  <td>{formatRank(row.rank, i)}</td>
                   <td className="dash-team-code">{row.code}</td>
                   <td>{row.name}</td>
-                  {cols.map((c, i) => {
+                  {cols.map((c, j) => {
                     const val = row[c.stat];
                     const num = typeof val === 'number' ? val : NaN;
                     const display = isNaN(num) ? '—' : Number.isInteger(num) ? num : num.toFixed(3);
-                    return <td key={i}>{display}</td>;
+                    return <td key={j}>{display}</td>;
                   })}
                 </tr>
               ))}

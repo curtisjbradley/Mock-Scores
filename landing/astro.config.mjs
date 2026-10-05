@@ -2,6 +2,7 @@
 import { defineConfig } from 'astro/config';
 import sitemap from '@astrojs/sitemap';
 import starlight from '@astrojs/starlight';
+import react from '@astrojs/react';
 
 export default defineConfig({
   site: 'https://mockscores.org',
@@ -9,6 +10,7 @@ export default defineConfig({
 
   integrations: [
     sitemap(),
+    react(),
 
     starlight({
       title: 'MockScores Documentation',

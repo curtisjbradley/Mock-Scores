@@ -1,0 +1,150 @@
+/*
+ * Styles for the @mock-scores/standings-dsl/react components.
+ *
+ * Uses the host app's design tokens when present (var(--border) etc.) but falls
+ * back to sensible defaults so the components also render correctly in contexts
+ * that don't define those tokens (e.g. the Starlight docs playground).
+ */
+
+.sb-playground {
+  --sbp-border: var(--border, #d0d7de);
+  --sbp-surface: var(--surface, #ffffff);
+  --sbp-surface-muted: var(--surface-muted, #f6f8fa);
+  --sbp-text: var(--text, #1f2328);
+  --sbp-text-muted: var(--text-muted, #656d76);
+  --sbp-danger: var(--danger, #cf222e);
+  --sbp-ok: var(--green-text-alt, #1a7f37);
+  margin: 1.5rem 0;
+}
+
+@media (prefers-color-scheme: dark) {
+  .sb-playground {
+    --sbp-border: var(--border, #30363d);
+    --sbp-surface: var(--surface, #161b22);
+    --sbp-surface-muted: var(--surface-muted, #21262d);
+    --sbp-text: var(--text, #e6edf3);
+    --sbp-text-muted: var(--text-muted, #8b949e);
+    --sbp-ok: var(--green-text-alt, #3fb950);
+  }
+}
+
+/* ── Standings table ──────────────────────────────────────────────────────── */
+.dash-table-scroll { overflow-x: auto; }
+
+/* ── Standings table ──────────────────────────────────────────────────────── */
+/* The scroll container is what overflows — the table itself must stay a real
+   `table` so `thead`/`tbody` size their columns together. Starlight's docs CSS
+   sets `table { display: block; overflow: auto }` on Markdown tables, so we
+   reassert the table display model explicitly here to stay immune to it. */
+.dash-table-scroll {
+  overflow-x: auto;
+  max-width: 100%;
+}
+
+.dash-standings-table {
+  display: table;
+  width: 100%;
+  table-layout: auto;
+  border-collapse: separate;
+  border-spacing: 0;
+  border: 1px solid var(--sbp-border, #d0d7de);
+  border-radius: 1rem;
+  background: var(--sbp-surface, #fff);
+  font-size: 0.9rem;
+  overflow: visible;
+}
+
+.dash-standings-table thead { display: table-header-group; }
+.dash-standings-table tbody { display: table-row-group; }
+.dash-standings-table tr { display: table-row; }
+
+.dash-standings-table th,
+.dash-standings-table td {
+  display: table-cell;
+  padding: 0.65rem 0.9rem;
+  border-bottom: 1px solid var(--sbp-border, #d0d7de);
+  text-align: left;
+  white-space: nowrap;
+}
+
+.dash-standings-table thead th {
+  font-size: 0.75rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: var(--sbp-text-muted, #656d76);
+  background: var(--sbp-surface-muted, #f6f8fa);
+}
+.dash-standings-table thead th:first-child { border-top-left-radius: 1rem; }
+.dash-standings-table thead th:last-child { border-top-right-radius: 1rem; }
+
+.dash-standings-table tbody tr:last-child td { border-bottom: none; }
+.dash-standings-table tbody tr:hover td { background: var(--sbp-surface-muted, #f6f8fa); }
+.dash-team-code { font-weight: 700; }
+
+/* ── StandingsBuilder ─────────────────────────────────────────────────────── */
+.sb-workspaces { display: flex; flex-direction: column; gap: 1rem; }
+
+.sb-workspace-header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 0.25rem; }
+.sb-workspace-label { margin: 0; font-weight: 600; font-size: 0.8rem; }
+.sb-expand-btn { background: none; border: 1px solid var(--sbp-border, #d0d7de); border-radius: 0.25rem; padding: 0.125rem 0.375rem; font-size: 0.7rem; cursor: pointer; color: var(--sbp-text-muted, #656d76); }
+.sb-expand-btn:hover { background: var(--sbp-surface-muted, #f6f8fa); }
+
+.sb-workspace { height: 20rem; border: 1px solid var(--sbp-border, #d0d7de); }
+
+.sb-fullscreen-overlay {
+  position: fixed; inset: 0; z-index: 1000;
+  background: var(--bg, var(--sbp-surface, #fff));
+  display: flex; flex-direction: column;
+}
+.sb-fullscreen-header {
+  display: flex; align-items: center; justify-content: space-between;
+  padding: 0.5rem 0.75rem; border-bottom: 1px solid var(--sbp-border, #d0d7de);
+  font-weight: 600; font-size: 0.8rem;
+}
+.sb-fullscreen-ws { flex: 1; }
+
+.sb-config-details { margin-top: 0.5rem; }
+.sb-config-summary { cursor: pointer; font-size: 0.75rem; color: var(--sbp-text-muted, #656d76); }
+.sb-config-body { margin-top: 0.5rem; display: flex; flex-direction: column; gap: 0.5rem; }
+.sb-config-body .org-new-btn {
+  align-self: flex-start;
+  background: var(--accent, #2563eb);
+  color: #fff;
+  border: none;
+  border-radius: 0.375rem;
+  padding: 0.4rem 0.8rem;
+  font-size: 0.8rem;
+  cursor: pointer;
+}
+.sb-config-body .org-new-btn:disabled { opacity: 0.5; cursor: not-allowed; }
+
+.sb-config-textarea {
+  font-family: monospace;
+  font-size: 0.72rem;
+  width: 100%;
+  box-sizing: border-box;
+  background: var(--sbp-surface-muted, #f6f8fa);
+  color: var(--sbp-text, #1f2328);
+  border: 1px solid var(--sbp-border, #d0d7de);
+  border-radius: 0.25rem;
+  padding: 0.35rem 0.45rem;
+  resize: vertical;
+}
+.sb-config-textarea--error { border-color: var(--sbp-danger, #cf222e); }
+.sb-config-textarea--valid { border-color: var(--sbp-ok, #1a7f37); }
+
+.sb-config-hint { margin: 0; font-size: 0.75rem; color: var(--sbp-text-muted, #656d76); }
+.sb-config-error { margin: 0; font-size: 0.75rem; color: var(--sbp-danger, #cf222e); white-space: pre-wrap; }
+.sb-config-ok { margin: 0; font-size: 0.75rem; color: var(--sbp-ok, #1a7f37); }
+
+/* ── StandingsPreview ─────────────────────────────────────────────────────── */
+.sb-preview { margin-bottom: 1.5rem; }
+.sb-preview-title { margin: 0 0 0.5rem; font-size: 0.875rem; }
+.sb-preview-empty { font-size: 0.8125rem; color: var(--sbp-text-muted, #656d76); }
+
+/* ── TiebreakerViewer ─────────────────────────────────────────────────────── */
+.sb-tb-empty { font-size: 0.8125rem; color: var(--sbp-text-muted, #656d76); }
+.sb-tb-list { margin: 0.5rem 0 0; padding-left: 1.25rem; font-size: 0.8125rem; line-height: 1.8; }
+.sb-tb-method { margin: 0.5rem 0 0; font-size: 0.75rem; color: var(--sbp-text-muted, #656d76); font-style: italic; }
+.sb-tb-overlay-body { padding: 1rem; }
