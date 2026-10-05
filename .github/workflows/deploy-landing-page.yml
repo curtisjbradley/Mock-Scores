@@ -9,6 +9,8 @@ on:
     branches: ["main"]
     paths:
       - "landing/**"
+      - "shared/**"
+      - "standings-dsl/**"
       - "package.json"
       - "package-lock.json"
 
@@ -33,6 +35,12 @@ jobs:
 
       - name: Install dependencies
         run: npm ci
+
+      # The landing site imports `@mock-scores/standings-dsl/react`, which
+      # resolves to the package's compiled `dist/react/` output, so the
+      # workspace packages must be built before Astro bundles the site.
+      - name: Build workspace packages
+        run: npm run build --workspace=shared && npm run build --workspace=standings-dsl
 
       - name: Build landing page
         run: npm run build --workspace=landing
