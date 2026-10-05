@@ -6,11 +6,17 @@ const ROUNDS = [
 ]
 
 function failOnUnstubbedOrganizerRequest() {
-  cy.intercept('**/organizer/**', (req) => {
-    throw new Error(
-        `Unstubbed API request: ${req.method} ${req.url}`,
-    );
-  });
+  // Only guard actual API (xhr/fetch) calls — the SPA document navigation
+  // (e.g. GET /organizer/tourney-1?page=rounds) also contains "/organizer/"
+  // and must not be treated as an unstubbed API request.
+  cy.intercept(
+      { url: '**/organizer/**', resourceType: /xhr|fetch/ },
+      (req) => {
+        throw new Error(
+            `Unstubbed API request: ${req.method} ${req.url}`,
+        );
+      },
+  );
 }
 
 function stubRoundsTab(rounds = ROUNDS) {
@@ -34,7 +40,7 @@ function stubRoundsTab(rounds = ROUNDS) {
 
   cy.intercept(
       'GET',
-      '/organizer/tournament/tourney-1/rounds/r-1/ballot-status',
+      '/organizer/tournament/tourney-1/rounds/*/ballot-status',
       { statusCode: 200, body: [] },
   ).as('getBallotStatus');
 }
