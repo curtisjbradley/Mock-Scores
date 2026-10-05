@@ -1,5 +1,6 @@
 import { useMemo } from 'react'
-import { parseDsl } from './standingsDsl'
+import { parseDsl } from '@mock-scores/standings-dsl'
+import type { TiebreakerRule, RankMethod } from '@mock-scores/standings-dsl'
 import '../styles/standings.css'
 
 interface Props {
@@ -7,12 +8,33 @@ interface Props {
     onClose?: () => void
 }
 
+const METHOD_LABEL: Record<RankMethod, string> = {
+    first: 'sequential (no shared ranks)',
+    min: 'minimum rank for ties',
+    max: 'maximum rank for ties',
+    average: 'average rank for ties',
+    dense: 'dense (no rank gaps)',
+}
+
+function describeRule(t: TiebreakerRule): string {
+    switch (t.type) {
+        case 'stat':
+            return `Break ties by ${t.stat} (${t.order === 'desc' ? 'highest first' : 'lowest first'})`
+        case 'h2h_conditional':
+            return `Head-to-head on ${t.stat} (${t.order === 'desc' ? 'higher wins' : 'lower wins'})`
+        case 'alpha':
+            return `Alphabetical by team ${t.field} (${t.order === 'desc' ? 'Z→A' : 'A→Z'})`
+        case 'when_tied':
+            return `If ${t.min}–${t.max} teams tie: ${t.rules.map(describeRule).join('; then ')}`
+    }
+}
+
 export default function TiebreakerViewer({ dsl, onClose }: Props) {
     const tiebreakers = useMemo(() => {
         try {
             return parseDsl(dsl).tiebreakers
         } catch {
-            return []
+            return { method: 'first' as RankMethod, rules: [] }
         }
     }, [dsl])
 
@@ -22,19 +44,15 @@ export default function TiebreakerViewer({ dsl, onClose }: Props) {
                 <h4 className="sb-workspace-label">Tiebreakers</h4>
                 {onClose && <button className="sb-expand-btn" onClick={onClose}>✕ Close</button>}
             </div>
-            {tiebreakers.length === 0
+            {tiebreakers.rules.length === 0
                 ? <p className="sb-tb-empty">No tiebreakers configured.</p>
                 : <ol className="sb-tb-list">
-                    {tiebreakers.map((t, i) => (
-                        <li key={i}>
-                            {t.type === 'h2h_conditional'
-                                ? <>If 2-way tie: head-to-head <strong>{t.stat}</strong> ({t.order === 'desc' ? 'higher wins' : 'lower wins'})</>
-                                : <>Break ties by <strong>{t.stat}</strong> ({t.order === 'desc' ? 'highest first' : 'lowest first'})</>
-                            }
-                        </li>
+                    {tiebreakers.rules.map((t, i) => (
+                        <li key={i}>{describeRule(t)}</li>
                     ))}
                 </ol>
             }
+            <p className="sb-tb-method">Final ranking: {METHOD_LABEL[tiebreakers.method]}</p>
         </>
     )
 

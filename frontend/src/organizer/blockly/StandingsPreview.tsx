@@ -1,7 +1,6 @@
 import { useMemo } from 'react';
 import { dummyTeams } from './dummyTeams';
-import { computeStandings } from './standingsEngine';
-import type { StandingsConfig } from './standingsGenerator';
+import { computeStandings, type StandingsConfig } from '@mock-scores/standings-dsl';
 import '../styles/standings.css';
 
 interface Props {

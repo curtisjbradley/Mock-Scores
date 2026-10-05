@@ -1,5 +1,5 @@
 import { lazy, useEffect, useState } from 'react'
-import type { StandingsConfig } from '../blockly/standingsGenerator'
+import type { StandingsConfig } from '@mock-scores/standings-dsl'
 
 const StandingsBuilder = lazy(() => import('../blockly/StandingsBuilder'))
 const StandingsPreview = lazy(() => import('../blockly/StandingsPreview'))
@@ -11,7 +11,7 @@ interface Props {
 }
 
 export default function TiebreakersTab({ tournamentId, onConfigChange }: Props) {
-    const [config, setConfig] = useState<StandingsConfig>({ statDefs: [], columns: [], tiebreakers: [] })
+    const [config, setConfig] = useState<StandingsConfig>({ statDefs: [], columns: [], tiebreakers: { method: 'first', rules: [] } })
     const [dslSnapshot, setDslSnapshot] = useState<string | null>(null)
     const [initialDsl, setInitialDsl] = useState<string | null | undefined>(undefined)
     const [dirty, setDirty] = useState(false)

@@ -6,7 +6,7 @@ declare module 's-expression' {
    *   from atoms via `instanceof String`.
    * - Lists are arrays of nodes.
    */
-  export type SNode = string | string | SNode[];
+  export type SNode = string | String | SNode[];
 
   /**
    * Parse a single complete S-expression. Returns the parsed value, or an

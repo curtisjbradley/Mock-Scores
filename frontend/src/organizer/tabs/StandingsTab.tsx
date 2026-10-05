@@ -1,7 +1,6 @@
 import { lazy, Suspense, useEffect, useMemo, useState } from 'react'
 import { apiFetch } from '../../auth/auth'
-import { computeStandings } from '../blockly/standingsEngine'
-import { parseDsl } from '../blockly/standingsDsl'
+import { computeStandings, parseDsl } from '@mock-scores/standings-dsl'
 import type { IAwardNomination, IStandingsTeam } from '@mock-scores/shared'
 import AddButton from '../../shared/components/AddButton'
 import '../styles/standings.css'

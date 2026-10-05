@@ -2,8 +2,8 @@ import { useEffect, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
 import * as Blockly from 'blockly';
 import { standingsBlockDefs, dynamicOptions } from './standingsBlocks';
-import { extractStandingsConfig, type StandingsConfig } from './standingsGenerator';
-import { serializeConfig, parseDsl } from './standingsDsl';
+import { extractStandingsConfig } from './standingsGenerator';
+import { serializeConfig, parseDsl, type StandingsConfig } from '@mock-scores/standings-dsl';
 import { configToXml } from './configToXml';
 import { getTheme, watchTheme } from './blocklyTheme';
 
@@ -12,31 +12,50 @@ function buildStatOptions(statDefs: { name: string }[]): [string, string][] {
   return custom.length ? custom : [['(none)', '__none__']];
 }
 
-function buildTiebreakerOptions(statDefs: { name: string }[]): [string, string][] {
-  const custom: [string, string][] = statDefs.map(d => [d.name, d.name]);
-  return custom.length ? custom : [['(none)', '__none__']];
+/** Populate the shared dropdown-option registry from a config's stat defs. */
+function populateDynamicOptions(statDefs: { name: string; intermediate?: boolean }[]) {
+  const statOptions = buildStatOptions(statDefs.filter(d => !d.intermediate));
+  const intermediateOptions = buildStatOptions(statDefs.filter(d => d.intermediate));
+  const real = (opts: [string, string][]) => opts.filter(o => o[1] !== '__none__');
+  const statOrInter = [...real(statOptions), ...real(intermediateOptions)];
+  dynamicOptions.col = statOptions;
+  dynamicOptions.statOrInter = statOrInter.length ? statOrInter : [['(none)', '__none__']];
+  dynamicOptions.intermediate = intermediateOptions;
 }
 
-function updateDropdowns(ws: Blockly.WorkspaceSvg, colOptions: [string, string][], tbOptions: [string, string][], intermediateOptions: [string, string][]) {
+function updateDropdowns(ws: Blockly.WorkspaceSvg, statOptions: [string, string][], intermediateOptions: [string, string][]) {
+  const real = (opts: [string, string][]) => opts.filter(o => o[1] !== '__none__');
+  const withNone = (opts: [string, string][]): [string, string][] => opts.length ? opts : [['(none)', '__none__']];
+  // DSL reference rules:
+  //   stat_ref / opponent  -> declared stats (not intermediates)
+  //   column / by / h2h    -> declared stats OR intermediates
+  //   intermediate_ref     -> intermediates only
+  const refOptions = withNone(real(statOptions));
+  const statOrInter = withNone([...real(statOptions), ...real(intermediateOptions)]);
+
   for (const block of ws.getAllBlocks(false)) {
-    const setField = (fieldName: string, options: [string, string][]) => {
+    const setField = (fieldName: string, base: [string, string][]) => {
       const field = block.getField(fieldName) as Blockly.FieldDropdown | null;
       if (!field) return;
+      // Clone so a preservation-append below stays local to this field.
+      const options = base.map(o => [o[0], o[1]] as [string, string]);
       const currentValue = field.getValue() as string;
-      const validValues = options.map(o => o[1]);
-      if (validValues.length && !validValues.includes(currentValue)) {
-        (field as unknown as { value_: string }).value_ = validValues[0];
-        field.forceRerender();
+      // Round-trip safety: never silently reset an unrecognized value — doing so
+      // would lose data loaded from a valid DSL config. Keep it selectable by
+      // appending it to this field's options.
+      if (currentValue && currentValue !== '__none__' && !options.some(o => o[1] === currentValue)) {
+        options.push([currentValue, currentValue]);
       }
+      field.forceRerender();
     };
-    if (block.type === 'standings_column')     setField('STAT', colOptions);
-    if (block.type === 'standings_tiebreaker') setField('STAT', tbOptions);
+    if (block.type === 'standings_column')     setField('STAT', statOrInter);
+    if (block.type === 'standings_tiebreaker') setField('STAT', statOrInter);
     if (block.type === 'stat_ref' || block.type === 'opponent_stat')
-      setField('NAME', colOptions);
+      setField('NAME', refOptions);
     if (block.type === 'intermediate_ref')
-      setField('NAME', intermediateOptions);
+      setField('NAME', withNone(real(intermediateOptions)));
     if (block.type === 'standings_h2h_conditional')
-      setField('STAT', intermediateOptions);
+      setField('STAT', statOrInter);
   }
 }
 
@@ -75,6 +94,7 @@ const STATS_TOOLBOX = {
       contents: [
         { kind: 'block', type: 'math_number' },
         { kind: 'block', type: 'math_arithmetic' },
+        { kind: 'block', type: 'math_single' },
         { kind: 'block', type: 'logic_compare' },
         { kind: 'block', type: 'logic_operation' },
         { kind: 'block', type: 'logic_ternary' },
@@ -90,6 +110,8 @@ const STANDINGS_TOOLBOX = {
     { kind: 'block', type: 'tiebreaker_order' },
     { kind: 'block', type: 'standings_tiebreaker' },
     { kind: 'block', type: 'standings_h2h_conditional' },
+    { kind: 'block', type: 'standings_alpha' },
+    { kind: 'block', type: 'standings_when_tied' },
   ],
 };
 
@@ -108,7 +130,7 @@ export default function StandingsBuilder({ onChange, initialDsl }: Props) {
   const standingsDiv = useRef<HTMLDivElement>(null);
   const statsWs = useRef<Blockly.WorkspaceSvg | null>(null);
   const standingsWs = useRef<Blockly.WorkspaceSvg | null>(null);
-  const [, setConfig] = useState<StandingsConfig>({ statDefs: [], columns: [], tiebreakers: [] });
+  const [, setConfig] = useState<StandingsConfig>({ statDefs: [], columns: [], tiebreakers: { method: 'first', rules: [] } });
   const [dslSnapshot, setDslSnapshot] = useState('');
   const [pasteValue, setPasteValue] = useState('');
   const [pasteError, setPasteError] = useState('');
@@ -176,14 +198,11 @@ export default function StandingsBuilder({ onChange, initialDsl }: Props) {
       if (e.isUiEvent || e.type === Blockly.Events.FINISHED_LOADING) return;
       if (loadingRef.current) return;
       const cfg = extractStandingsConfig(sws, dws);
-      const colOptions = buildStatOptions(cfg.statDefs.filter(d => !d.intermediate));
-      const tbOptions = buildTiebreakerOptions(cfg.statDefs.filter(d => !d.intermediate));
+      const statOptions = buildStatOptions(cfg.statDefs.filter(d => !d.intermediate));
       const intermediateOptions = buildStatOptions(cfg.statDefs.filter(d => d.intermediate));
-      dynamicOptions.col = colOptions;
-      dynamicOptions.tb = tbOptions;
-      dynamicOptions.intermediate = intermediateOptions;
-      updateDropdowns(sws, colOptions, tbOptions, intermediateOptions);
-      updateDropdowns(dws, colOptions, tbOptions, intermediateOptions);
+      populateDynamicOptions(cfg.statDefs);
+      updateDropdowns(sws, statOptions, intermediateOptions);
+      updateDropdowns(dws, statOptions, intermediateOptions);
       const dsl = serializeConfig(cfg);
       setConfig(cfg);
       setDslSnapshot(dsl);
@@ -199,7 +218,7 @@ export default function StandingsBuilder({ onChange, initialDsl }: Props) {
       disposedRef.current = true; statsWs.current = null; standingsWs.current = null; sws.dispose(); dws.dispose();
       unwatchTheme();
       dynamicOptions.col = [['(none)', '__none__']];
-      dynamicOptions.tb = [['(none)', '__none__']];
+      dynamicOptions.statOrInter = [['(none)', '__none__']];
       dynamicOptions.intermediate = [['(none)', '__none__']];
     };
   // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -219,9 +238,7 @@ export default function StandingsBuilder({ onChange, initialDsl }: Props) {
     // Extract stat defs from the now-loaded stats workspace and populate dynamicOptions
     // so that when the standings workspace is parsed, dropdown validation passes.
     const cfg = extractStandingsConfig(statsWs.current, standingsWs.current);
-    dynamicOptions.col = buildStatOptions(cfg.statDefs.filter(d => !d.intermediate));
-    dynamicOptions.tb = buildTiebreakerOptions(cfg.statDefs.filter(d => !d.intermediate));
-    dynamicOptions.intermediate = buildStatOptions(cfg.statDefs.filter(d => d.intermediate));
+    populateDynamicOptions(cfg.statDefs);
     loadXmlIntoWs(standingsWs.current, xml.standingsXml);
     loadingRef.current = false;
     setDslSnapshot(serializeConfig(extractStandingsConfig(statsWs.current, standingsWs.current)));
@@ -234,9 +251,7 @@ export default function StandingsBuilder({ onChange, initialDsl }: Props) {
       loadXmlIntoWs(statsWs.current!, xml.statsXml);
       // Repopulate dynamicOptions from freshly-loaded stats before loading standings
       const loaded = extractStandingsConfig(statsWs.current!, standingsWs.current!);
-      dynamicOptions.col = buildStatOptions(loaded.statDefs.filter(d => !d.intermediate));
-      dynamicOptions.tb = buildTiebreakerOptions(loaded.statDefs.filter(d => !d.intermediate));
-      dynamicOptions.intermediate = buildStatOptions(loaded.statDefs.filter(d => d.intermediate));
+      populateDynamicOptions(loaded.statDefs);
       loadXmlIntoWs(standingsWs.current!, xml.standingsXml);
       setPasteError('');
       setPasteValue('');
