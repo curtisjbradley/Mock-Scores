@@ -1,0 +1,43 @@
+name: Standings DSL Testing
+
+on:
+  push:
+    branches: [main, dev]
+    paths:
+      - "standings-dsl/**"
+      - "shared/**"
+      - "package.json"
+      - "package-lock.json"
+  pull_request:
+    branches: [main]
+    paths:
+      - "standings-dsl/**"
+      - "shared/**"
+      - "package.json"
+      - "package-lock.json"
+
+jobs:
+  test:
+    name: Run Standings DSL Tests
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: npm
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Build shared workspace package
+        run: npm run build -w shared
+
+      - name: Run tests
+        run: npm run test -w standings-dsl

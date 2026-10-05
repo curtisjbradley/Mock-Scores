@@ -15,18 +15,18 @@
   "type": "commonjs",
   "main": "index.js",
   "scripts": {
-    "build": "npm run build -w shared  && npm run build -w frontend && npm run build -w backend && npm run build -w landing",
+    "build": "npm run build -w shared && npm run build -w standings-dsl && npm run build -w frontend && npm run build -w backend && npm run build -w landing",
     "lint": "npm run lint -w frontend && npm run lint -w backend && npm run lint -w landing",
     "start": "npm run start -w backend",
     "prepare": "node -e \"if(process.env.NODE_ENV !== 'production') require('child_process').execSync('husky', {stdio:'inherit'})\"",
     "backend-coverage": "npm run build -w shared && cd backend && npm run test:coverage",
-    "test": "npm run build -w shared && npm run test -w backend && npm run cy:run -w frontend"
+    "test": "npm run build -w shared && npm run build -w standings-dsl && npm run test -w standings-dsl && npm run test -w backend && npm run cy:run -w frontend"
   },
   "workspaces": [
     "frontend",
     "backend",
-    "blockly-integration",
     "shared",
+    "standings-dsl",
     "landing"
   ],
   "overrides": {

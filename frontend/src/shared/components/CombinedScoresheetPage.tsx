@@ -5,8 +5,7 @@ import type { IScoreSheetFormat, ScorecardPayload, BallotLayoutSegment, IPairing
 import CombinedScoresheet, { type CombinedBallot, type CombinedStat, type SegmentRow } from './CombinedScoresheet'
 import { downloadCombinedXlsx } from './combinedScoresheetXls'
 import { resolveCoachTournament } from '../../coach/coachApi'
-import { parseDsl } from '../../organizer/blockly/standingsDsl'
-import type { StandingsConfig } from '../../organizer/blockly/standingsGenerator'
+import { parseDsl, type StandingsConfig } from '@mock-scores/standings-dsl'
 import { computePairingStats, type PairingBallot } from '../../coach/pairingStats'
 import './combined-scoresheet.css'
 

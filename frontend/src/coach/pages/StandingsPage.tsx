@@ -1,7 +1,6 @@
 import { lazy, useMemo } from 'react'
 import type { IStandingsTeam } from '@mock-scores/shared'
-import { computeStandings } from '../../organizer/blockly/standingsEngine'
-import { parseDsl } from '../../organizer/blockly/standingsDsl'
+import { computeStandings, parseDsl } from '@mock-scores/standings-dsl'
 import { type StandingsApiPayload, useCoachContext } from '../CoachContext'
 import '../styles/standings.css'
 

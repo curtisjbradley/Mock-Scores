@@ -1,0 +1,13 @@
+{
+  "extends": "./tsconfig.json",
+  "compilerOptions": {
+    "module": "CommonJS",
+    "moduleResolution": "Node",
+    "ignoreDeprecations": "6.0",
+    "isolatedModules": true,
+    "esModuleInterop": true,
+    "declaration": false,
+    "noEmit": true
+  },
+  "include": ["src"]
+}

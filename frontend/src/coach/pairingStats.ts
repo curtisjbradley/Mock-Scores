@@ -1,5 +1,4 @@
-import type { StandingsConfig } from '../organizer/blockly/standingsGenerator'
-import { computeStandings } from '../organizer/blockly/standingsEngine'
+import { computeStandings, type StandingsConfig } from '@mock-scores/standings-dsl'
 
 /** A single scorer's ballot within a pairing, from the standings payload. */
 export interface PairingBallot {

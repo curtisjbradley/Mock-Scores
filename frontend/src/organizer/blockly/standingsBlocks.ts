@@ -12,9 +12,21 @@ const PAIRING_FIELDS: [string, string][] = [
   ['Won Presider Tiebreaker',  'won_presider_tb'],  // 1 or 0
 ];
 
-// Team-level fields — evaluated once per team (not per pairing)
+// Team-level fields — evaluated once per team (not per pairing). Mirrors the
+// DSL `TEAM_FIELDS` registry so every `(team ...)` reference is representable.
 const TEAM_FIELDS: [string, string][] = [
-  ['Number of Pairings', 'num_pairings'],
+  ['Ballots Won',             'ballots_won'],
+  ['Ballots Lost',            'ballots_lost'],
+  ['Ballots Tied',            'ballots_tied'],
+  ['Points For',              'points_for'],
+  ['Points Against',          'points_against'],
+  ['Won Presider Tiebreaker', 'won_presider_tb'],
+  ['Ballot Points For',       'ballot_pf'],
+  ['Ballot Points Against',   'ballot_pa'],
+  ['Ballot Point Diff',       'ballot_pd'],
+  ['Ballot Raw Total',        'ballot_raw'],
+  ['Number of Scorers',       'num_scorers'],
+  ['Number of Pairings',      'num_pairings'],
 ];
 
 // Per-ballot fields (aggregated within a pairing via sum)
@@ -96,7 +108,7 @@ const trimmedStat = {
     { type: 'field_input',    name: 'NAME',  text: 'Trimmed Stat' },
     { type: 'field_dropdown', name: 'AGG',   options: AGGREGATES },
     { type: 'input_value',    name: 'VALUE', check: 'Number' },
-    { type: 'field_number',   name: 'TRIM',  value: 1, min: 1, max: 10, precision: 1 },
+    { type: 'field_number',   name: 'TRIM',  value: 1, min: 0, max: 10, precision: 1 },
   ],
   colour: 260,
   tooltip: 'Aggregate after dropping the N highest and N lowest per-ballot values. Used for AMTA trimmed PD/raw points tiebreakers.',
@@ -104,9 +116,38 @@ const trimmedStat = {
 
 /** Shared mutable options — updated by StandingsBuilder after loading XML */
 export const dynamicOptions = {
+  /** Declared stats only — for stat_ref / opponent (DSL `resolvesAsStat`). */
   col: [['(none)', '__none__']] as [string, string][],
-  tb: [['(none)', '__none__']] as [string, string][],
+  /** Declared stats OR intermediates — for column / by / h2h selectors. */
+  statOrInter: [['(none)', '__none__']] as [string, string][],
   intermediate: [['(none)', '__none__']] as [string, string][],
+};
+
+// Unary math function — maps 1:1 to the DSL `call` node (MATH_FNS). We define
+// our own block (rather than Blockly's built-in math_single) so the dropdown
+// values match the DSL function set exactly, guaranteeing a lossless round-trip.
+const mathSingle = {
+  type: 'math_single',
+  message0: '%1 of %2',
+  args0: [
+    {
+      type: 'field_dropdown',
+      name: 'OP',
+      options: [
+        ['square root', 'ROOT'],
+        ['absolute value', 'ABS'],
+        ['negate', 'NEG'],
+        ['natural log (ln)', 'LN'],
+        ['log base 10', 'LOG10'],
+        ['e^x (exp)', 'EXP'],
+        ['10^x', 'POW10'],
+      ],
+    },
+    { type: 'input_value', name: 'NUM', check: 'Number' },
+  ],
+  output: 'Number',
+  colour: 230,
+  tooltip: 'Apply a unary math function (sqrt, abs, negate, ln, log10, exp, 10^x).',
 };
 
 // Reference a user-defined stat by name — returns Number
@@ -133,7 +174,7 @@ const standingsColumn = {
   type: 'standings_column',
   message0: 'show column %1 labeled %2',
   args0: [
-    { type: 'field_dropdown', name: 'STAT',  options: () => dynamicOptions.col },
+    { type: 'field_dropdown', name: 'STAT',  options: () => dynamicOptions.statOrInter },
     { type: 'field_input',    name: 'LABEL', text: '' },
   ],
   previousStatement: null,
@@ -146,7 +187,7 @@ const standingsTiebreaker = {
   type: 'standings_tiebreaker',
   message0: 'break ties by %1 %2',
   args0: [
-    { type: 'field_dropdown', name: 'STAT',  options: () => dynamicOptions.tb },
+    { type: 'field_dropdown', name: 'STAT',  options: () => dynamicOptions.statOrInter },
     { type: 'field_dropdown', name: 'ORDER', options: [['highest first', 'desc'], ['lowest first', 'asc']] },
   ],
   previousStatement: null,
@@ -159,21 +200,62 @@ const standingsH2h = {
   type: 'standings_h2h_conditional',
   message0: 'if 2-way tie: head-to-head %1 %2',
   args0: [
-    { type: 'field_dropdown', name: 'STAT',  options: () => dynamicOptions.intermediate },
+    { type: 'field_dropdown', name: 'STAT',  options: () => dynamicOptions.statOrInter },
     { type: 'field_dropdown', name: 'ORDER', options: [['higher wins', 'desc'], ['lower wins', 'asc']] },
   ],
   previousStatement: null,
   nextStatement: null,
   colour: 120,
-  tooltip: 'If exactly two teams are tied, compare their head-to-head value for the chosen intermediate stat.',
+  tooltip: 'If exactly two teams are tied, compare their head-to-head value for the chosen stat or intermediate.',
+};
+
+const standingsAlpha = {
+  type: 'standings_alpha',
+  message0: 'break ties alphabetically by team %1 %2',
+  args0: [
+    { type: 'field_dropdown', name: 'FIELD', options: [['code', 'code'], ['name', 'name']] },
+    { type: 'field_dropdown', name: 'ORDER', options: [['A \u2192 Z', 'asc'], ['Z \u2192 A', 'desc']] },
+  ],
+  previousStatement: null,
+  nextStatement: null,
+  colour: 290,
+  tooltip: 'Break remaining ties alphabetically by team code or name.',
+};
+
+const standingsWhenTied = {
+  type: 'standings_when_tied',
+  message0: 'if %1 to %2 teams are tied, then %3',
+  args0: [
+    { type: 'field_number', name: 'MIN', value: 2, min: 0, precision: 1 },
+    { type: 'field_number', name: 'MAX', value: 999, min: 0, precision: 1 },
+    { type: 'input_statement', name: 'RULES' },
+  ],
+  previousStatement: null,
+  nextStatement: null,
+  colour: 50,
+  tooltip: 'Apply the nested tiebreaker rules only when the number of tied teams is within the given range.',
 };
 
 const tiebreakerOrder = {
   type: 'tiebreaker_order',
-  message0: 'Define Tiebreaker Order',
+  message0: 'Define Tiebreaker Order %1 final ranking %2',
+  args0: [
+    { type: 'input_dummy' },
+    {
+      type: 'field_dropdown',
+      name: 'METHOD',
+      options: [
+        ['sequential (no ties)', 'first'],
+        ['min rank for ties', 'min'],
+        ['max rank for ties', 'max'],
+        ['average rank for ties', 'average'],
+        ['dense (no gaps)', 'dense'],
+      ],
+    },
+  ],
   nextStatement: null,
   colour: 20,
-  tooltip: 'Root block for tiebreaker priority. Only one may exist.',
+  tooltip: 'Root block for tiebreaker priority. Only one may exist. The "final ranking" method decides how still-tied teams are numbered (like pandas rank).',
 };
 
 const defineVisibleStats = {
@@ -222,9 +304,12 @@ export const standingsBlockDefs = Blockly.common.createBlockDefinitionsFromJsonA
   opponentStat,
   intermediateStatHat,
   intermediateRef,
+  mathSingle,
   standingsColumn,
   standingsTiebreaker,
   standingsH2h,
+  standingsAlpha,
+  standingsWhenTied,
   tiebreakerOrder,
   defineVisibleStats,
 ]);
