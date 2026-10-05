@@ -1,8 +1,9 @@
 import { lazy, useEffect, useState } from 'react'
 import type { StandingsConfig } from '@mock-scores/standings-dsl'
+import '@mock-scores/standings-dsl/react/styles.css'
 
-const StandingsBuilder = lazy(() => import('../blockly/StandingsBuilder'))
-const StandingsPreview = lazy(() => import('../blockly/StandingsPreview'))
+const StandingsBuilder = lazy(() => import('@mock-scores/standings-dsl/react').then(m => ({ default: m.StandingsBuilder })))
+const StandingsPreview = lazy(() => import('@mock-scores/standings-dsl/react').then(m => ({ default: m.StandingsPreview })))
 import { fetchStandingsConfig, saveStandingsConfig } from '../hooks/useTournamentData'
 
 interface Props {

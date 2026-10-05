@@ -348,7 +348,24 @@ function parseTiebreakerRule(tb: SNode, syms: SymbolTable): TiebreakerRule {
     case 'h2h': {
       // (by "Stat" ORDER) / (h2h "Stat" ORDER)
       const stat = nameOf(tb[1], 'tiebreaker stat');
-      if (!resolvesAsStat(stat, syms) && !syms.intermediates.has(stat)) {
+      // `by` sorts teams by a team-level stat value. Intermediates are
+      // per-pairing scratch values that are never aggregated onto the team row,
+      // so a `by` on an intermediate would read 0 for every team (a no-op) —
+      // reject it. `h2h` is different: `h2hWinner` recomputes intermediates for
+      // the specific head-to-head pairing, so an intermediate IS meaningful there.
+      const isStat = resolvesAsStat(stat, syms);
+      const isIntermediate = syms.intermediates.has(stat);
+      if (tbKind === 'by') {
+        if (!isStat) {
+          if (isIntermediate) {
+            throw new DslReferenceError(
+              `Tiebreaker (by "${stat}" ...) cannot reference intermediate "${stat}"; ` +
+              `"by" may only use defined stats. Aggregate it into a stat first, or use (h2h "${stat}" ...).`,
+            );
+          }
+          throw new DslReferenceError(`Tiebreaker references undefined stat "${stat}"`);
+        }
+      } else if (!isStat && !isIntermediate) {
         throw new DslReferenceError(`Tiebreaker references undefined stat "${stat}"`);
       }
       const order = parseOrder(tb[2]);

@@ -10,13 +10,20 @@
     "prepare": "node -e \"if(process.env.NODE_ENV !== 'production') { require('child_process').execSync('cd .. && husky', {stdio:'inherit'}) }\""
   },
   "dependencies": {
+    "@astrojs/react": "^4.2.0",
     "@astrojs/sitemap": "^3.7.3",
     "@astrojs/starlight": "^0.42.1",
+    "@mock-scores/standings-dsl": "*",
     "astro": "^7.2.10",
-    "overlayscrollbars": "^2.16.0"
+    "blockly": "^13.0.0",
+    "overlayscrollbars": "^2.16.0",
+    "react": "^19.0.0",
+    "react-dom": "^19.0.0"
   },
   "devDependencies": {
     "@astrojs/check": "^0.9.10",
+    "@types/react": "^19.0.0",
+    "@types/react-dom": "^19.0.0",
     "typescript": "~6.0.3"
   }
 }

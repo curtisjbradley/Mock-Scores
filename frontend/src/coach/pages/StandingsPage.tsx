@@ -2,9 +2,10 @@ import { lazy, useMemo } from 'react'
 import type { IStandingsTeam } from '@mock-scores/shared'
 import { computeStandings, parseDsl } from '@mock-scores/standings-dsl'
 import { type StandingsApiPayload, useCoachContext } from '../CoachContext'
+import { formatRank } from '../../shared/standings'
 import '../styles/standings.css'
 
-const TiebreakerViewer = lazy(() => import('../../organizer/blockly/TiebreakerViewer'))
+const TiebreakerViewer = lazy(() => import('@mock-scores/standings-dsl/react').then(m => ({ default: m.TiebreakerViewer })))
 
 interface ComputedStandings {
     rows: ReturnType<typeof computeStandings>
@@ -87,7 +88,7 @@ export default function StandingsPage() {
                 </tr></thead>
                 <tbody>{rows.map((row, i) => (
                     <tr key={row.code}>
-                        <td>{i + 1}</td>
+                        <td>{formatRank(row.rank, i)}</td>
                         <td className="dash-team-code">{row.code}</td>
                         <td>{row.name}</td>
                         {cols.map(c => {

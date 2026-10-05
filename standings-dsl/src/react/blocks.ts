@@ -118,7 +118,7 @@ const trimmedStat = {
 export const dynamicOptions = {
   /** Declared stats only — for stat_ref / opponent (DSL `resolvesAsStat`). */
   col: [['(none)', '__none__']] as [string, string][],
-  /** Declared stats OR intermediates — for column / by / h2h selectors. */
+  /** Declared stats OR intermediates — for column / h2h selectors. */
   statOrInter: [['(none)', '__none__']] as [string, string][],
   intermediate: [['(none)', '__none__']] as [string, string][],
 };
@@ -187,18 +187,18 @@ const standingsTiebreaker = {
   type: 'standings_tiebreaker',
   message0: 'break ties by %1 %2',
   args0: [
-    { type: 'field_dropdown', name: 'STAT',  options: () => dynamicOptions.statOrInter },
+    { type: 'field_dropdown', name: 'STAT',  options: () => dynamicOptions.col },
     { type: 'field_dropdown', name: 'ORDER', options: [['highest first', 'desc'], ['lowest first', 'asc']] },
   ],
   previousStatement: null,
   nextStatement: null,
   colour: 230,
-  tooltip: 'Stack tiebreaker blocks in priority order.',
+  tooltip: 'Stack tiebreaker blocks in priority order. Tiebreakers may only use defined stats, not intermediates.',
 };
 
 const standingsH2h = {
   type: 'standings_h2h_conditional',
-  message0: 'if 2-way tie: head-to-head %1 %2',
+  message0: 'break ties head-to-head by %1 %2',
   args0: [
     { type: 'field_dropdown', name: 'STAT',  options: () => dynamicOptions.statOrInter },
     { type: 'field_dropdown', name: 'ORDER', options: [['higher wins', 'desc'], ['lower wins', 'asc']] },
@@ -206,7 +206,7 @@ const standingsH2h = {
   previousStatement: null,
   nextStatement: null,
   colour: 120,
-  tooltip: 'If exactly two teams are tied, compare their head-to-head value for the chosen stat or intermediate.',
+  tooltip: 'Break ties by the head-to-head result on the chosen stat or intermediate (each pair of tied teams is compared by how they did against each other). Applies to a tie group of any size; wrap in an "if N to M teams are tied" block to limit it to two-way ties.',
 };
 
 const standingsAlpha = {

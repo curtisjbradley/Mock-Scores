@@ -211,6 +211,16 @@ describe('parseDsl — specific exceptions', () => {
     expect(() => parseDsl('(config (stat "X" sum (pairing points_for)) (tiebreakers (by "Ghost" desc)))')).toThrow(DslReferenceError);
   });
 
+  it('rejects (by ...) on an intermediate but allows (h2h ...) on one', () => {
+    const base = (tb: string) =>
+      `(config (intermediate "I" sum (pairing points_for)) (stat "W" sum (pairing ballots_won)) (columns) ${tb})`;
+    // `by` reads the team-level row; intermediates never land there -> reject.
+    expect(() => parseDsl(base('(tiebreakers (by "I" desc))'))).toThrow(DslReferenceError);
+    // `h2h` recomputes intermediates for the head-to-head pairing -> allowed.
+    const cfg = parseDsl(base('(tiebreakers (h2h "I" desc))'));
+    expect(cfg.tiebreakers.rules[0]).toEqual({ type: 'h2h_conditional', stat: 'I', order: 'desc' });
+  });
+
   it('throws DslDuplicateError on repeated definition names', () => {
     expect(() => parseDsl('(config (stat "X" sum (pairing points_for)) (stat "X" sum (pairing points_against)))')).toThrow(DslDuplicateError);
   });

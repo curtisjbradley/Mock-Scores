@@ -244,18 +244,14 @@ describe('tiebreakers', () => {
     expect(rows.map(r => r.code)).toEqual(['L', 'H']);
   });
 
-  it('falls back to 0 for a tiebreaker that references an intermediate (not on the row)', () => {
-    const teams: IStandingsTeam[] = [
-      { name: 'A', code: 'A', pairings: [{ opponent: 'B', ballots: [{ pointsFor: 200, pointsAgainst: 100 }], won_presider_tiebreaker: true, num_scorers: 1 }] },
-      { name: 'B', code: 'B', pairings: [{ opponent: 'A', ballots: [{ pointsFor: 100, pointsAgainst: 200 }], won_presider_tiebreaker: false, num_scorers: 1 }] },
-    ];
-    const rows = computeStandings(teams, parseDsl(`(config
+  it('rejects a (by ...) tiebreaker that references an intermediate', () => {
+    // `by` reads the team-level row, where intermediates never appear, so the
+    // parser now rejects it rather than silently treating every team as 0.
+    expect(() => parseDsl(`(config
       (intermediate "PD" sum (- (pairing points_for) (pairing points_against)))
       (stat "W" sum (pairing ballots_won))
       (columns)
-      (tiebreakers (by "PD" desc) (by "W" desc)))`));
-    // "PD" is an intermediate, absent from the row -> reads 0 (tie) -> W decides.
-    expect(rows.map(r => r.code)).toEqual(['A', 'B']);
+      (tiebreakers (by "PD" desc) (by "W" desc)))`)).toThrow(/cannot reference intermediate "PD"/)
   });
 });
 

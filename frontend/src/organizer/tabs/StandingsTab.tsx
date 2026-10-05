@@ -3,10 +3,11 @@ import { apiFetch } from '../../auth/auth'
 import { computeStandings, parseDsl } from '@mock-scores/standings-dsl'
 import type { IAwardNomination, IStandingsTeam } from '@mock-scores/shared'
 import AddButton from '../../shared/components/AddButton'
+import { formatRank } from '../../shared/standings'
 import '../styles/standings.css'
 import {useNavigate} from "react-router-dom";
 
-const TiebreakerViewer = lazy(() => import('../blockly/TiebreakerViewer'))
+const TiebreakerViewer = lazy(() => import('@mock-scores/standings-dsl/react').then(m => ({ default: m.TiebreakerViewer })))
 
 interface Round {
     round_id: string
@@ -155,7 +156,7 @@ function downloadStandingsCsv(
         })
 
         return [
-            String(i + 1),
+            formatRank(typeof team.rank === 'number' ? team.rank : undefined, i),
             escapeCsvField(String(team.code ?? '')),
             escapeCsvField(String(team.name ?? '')),
             ...vals,
@@ -418,7 +419,7 @@ export default function StandingsTab({ tournamentId }: { tournamentId: string })
 
                             {result.rows.map((team, i) => (
                                 <tr key={team.code}>
-                                    <td>{i + 1}</td>
+                                    <td>{formatRank(team.rank, i)}</td>
                                     <td className="dash-team-code">{team.code}</td>
                                     <td>{team.name}</td>
 
