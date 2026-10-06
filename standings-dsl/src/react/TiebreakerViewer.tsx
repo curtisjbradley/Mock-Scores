@@ -32,7 +32,7 @@ export default function TiebreakerViewer({ dsl, onClose }: TiebreakerViewerProps
     try {
       return parseDsl(dsl).tiebreakers;
     } catch {
-      return { method: 'first' as RankMethod, rules: [] };
+      return { method: 'min' as RankMethod, rules: [] };
     }
   }, [dsl]);
 
