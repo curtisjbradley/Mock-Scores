@@ -50,7 +50,7 @@ describe('parseDsl — AST shape', () => {
     expect(cfg.statDefs[3]).toMatchObject({ trim: 1, agg: 'avg' });
     expect(cfg.columns).toEqual([{ stat: 'SumPD', label: 'Diff' }]);
     expect(cfg.tiebreakers).toEqual({
-      method: 'first',
+      method: 'min',
       rules: [
         { type: 'stat', stat: 'SumPD', order: 'desc' },
         { type: 'h2h_conditional', stat: 'SumPD', order: 'desc' },
@@ -92,9 +92,9 @@ describe('parseDsl — tiebreaker methods, alpha, when-tied', () => {
   const base = (tb: string) =>
     `(config (stat "W" sum (pairing ballots_won)) (columns) ${tb})`;
 
-  it('defaults the rank method to "first" when none is given', () => {
+  it('defaults the rank method to "min" when none is given', () => {
     const cfg = parseDsl(base('(tiebreakers (by "W" desc))'));
-    expect(cfg.tiebreakers.method).toBe('first');
+    expect(cfg.tiebreakers.method).toBe('min');
     expect(cfg.tiebreakers.rules).toEqual([{ type: 'stat', stat: 'W', order: 'desc' }]);
   });
 
