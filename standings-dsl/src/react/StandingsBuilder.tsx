@@ -132,7 +132,7 @@ export default function StandingsBuilder({ onChange, initialDsl }: StandingsBuil
   const standingsDiv = useRef<HTMLDivElement>(null);
   const statsWs = useRef<Blockly.WorkspaceSvg | null>(null);
   const standingsWs = useRef<Blockly.WorkspaceSvg | null>(null);
-  const [, setConfig] = useState<StandingsConfig>({ statDefs: [], columns: [], tiebreakers: { method: 'first', rules: [] } });
+  const [, setConfig] = useState<StandingsConfig>({ statDefs: [], columns: [], tiebreakers: { method: 'min', rules: [] } });
   const [dslSnapshot, setDslSnapshot] = useState('');
 
   // Editable DSL box state. We validate on every (debounced) keystroke so the

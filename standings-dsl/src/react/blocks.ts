@@ -245,17 +245,17 @@ const tiebreakerOrder = {
       type: 'field_dropdown',
       name: 'METHOD',
       options: [
-        ['sequential (no ties)', 'first'],
         ['min rank for ties', 'min'],
         ['max rank for ties', 'max'],
         ['average rank for ties', 'average'],
+        ['sequential (no ties)', 'first'],
         ['dense (no gaps)', 'dense'],
       ],
     },
   ],
   nextStatement: null,
   colour: 20,
-  tooltip: 'Root block for tiebreaker priority. Only one may exist. The "final ranking" method decides how still-tied teams are numbered (like pandas rank).',
+  tooltip: 'Root block for tiebreaker priority. Only one may exist. The "final ranking" method decides how still-tied teams are numbered.',
 };
 
 const defineVisibleStats = {

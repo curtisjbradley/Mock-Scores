@@ -416,7 +416,7 @@ export function parseDsl(text: string): StandingsConfig {
   const statDefs: StatDef[] = [];
   const columns: ColumnConfig[] = [];
   const tiebreakerRules: TiebreakerRule[] = [];
-  let tiebreakerMethod: RankMethod = 'first';
+  let tiebreakerMethod: RankMethod = 'min';
 
   for (const form of entries) {
     if (!isList(form)) throw new DslStructureError('Each config entry must be a list');

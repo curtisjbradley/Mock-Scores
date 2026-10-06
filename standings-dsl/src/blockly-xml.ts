@@ -433,7 +433,7 @@ export function workspaceXmlToConfig(xml: { statsXml: string; standingsXml: stri
 
   // Tiebreakers: method on the hat + rule chain.
   const tbHat = findHat(standingsRoot, 'tiebreaker_order');
-  const method = ((tbHat && field(tbHat, 'METHOD')) as RankMethod) || 'first';
+  const method = ((tbHat && field(tbHat, 'METHOD')) as RankMethod) || 'min';
   const rules = chainToRules(tbHat ? nextBlock(tbHat) : undefined);
 
   return { statDefs, columns, tiebreakers: { method, rules } };

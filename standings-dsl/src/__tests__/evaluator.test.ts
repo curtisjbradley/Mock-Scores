@@ -414,7 +414,7 @@ describe('when-tied group-size targeting', () => {
 
   it('does NOT apply nested rules when the group size is outside the range', () => {
     // Only fire for exactly 2-way ties. The A,B,C tie is 3-way, so when-tied is
-    // skipped and they keep input order (method defaults to first => stable).
+    // skipped and they keep input order (method defaults to min => stable).
     const rows = computeStandings(teams(), parseDsl(`(config
       (stat "W" sum (pairing ballots_won))
       (stat "PF" sum (pairing points_for))
@@ -486,9 +486,9 @@ describe('final rank method (pandas-style)', () => {
     expect(rows.map(r => r.rank)).toEqual([1, 2, 2, 2]);
   });
 
-  it('defaults to first when no method is given', () => {
+  it('defaults to min when no method is given', () => {
     const rows = computeStandings(teams(), parseDsl('(config (stat "W" sum (pairing ballots_won)) (columns) (tiebreakers (by "W" desc)))'));
-    expect(rows.map(r => r.rank)).toEqual([1, 2, 3, 4]);
+    expect(rows.map(r => r.rank)).toEqual([1, 2, 2, 2]);
   });
 });
 

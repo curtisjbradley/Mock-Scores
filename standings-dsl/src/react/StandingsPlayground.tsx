@@ -6,7 +6,7 @@ import { AMTA_DEMO_DSL } from './demoConfigs.js';
 import type { StandingsConfig } from '@mock-scores/standings-dsl';
 import './styles.css';
 
-const EMPTY: StandingsConfig = { statDefs: [], columns: [], tiebreakers: { method: 'first', rules: [] } };
+const EMPTY: StandingsConfig = { statDefs: [], columns: [], tiebreakers: { method: 'min', rules: [] } };
 
 export interface StandingsPlaygroundProps {
   /** Initial DSL to load into the editor. Defaults to the AMTA demo config. */
