@@ -51,6 +51,9 @@ export const onRequest = defineMiddleware(async (context, next) => {
         .replace(/<title>.*?<\/title>/gi, `<title>${customTitle}</title>`)
         .replace(/<meta\s+property=["']og:title["']\s+content=["'].*?["']\s*\/?>/gi, `<meta property="og:title" content="${customTitle}"/>`)
         .replace(/<meta\s+name=["']twitter:title["']\s+content=["'].*?["']\s*\/?>/gi, `<meta name="twitter:title" content="${customTitle}"/>`)
+        .replace(/<meta\s+property=["']og:description["']\s+content=["'].*?["']\s*\/?>/gi, `<meta property="og:description" content="${description}"/>`)
+        .replace(/<meta\s+name=["']twitter:description["']\s+content=["'].*?["']\s*\/?>/gi, `<meta name="twitter:description" content="${description}"/>`)
+        .replace(/<meta\s+property=["']og:url["']\s+content=["'].*?["']\s*\/?>/gi, `<meta property="og:url" content="${context.url.href}"/>`)
         .replace('</head>', `${schemaScript}\n</head>`);
 
     // Return the modified HTML to the browser / static builder

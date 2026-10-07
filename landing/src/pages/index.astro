@@ -4,17 +4,25 @@ import '../styles/index.css';
 
 const title = 'MockScores | Free Mock Trial Tournament Scoring & Tabulation';
 const description =
-  'Open-source scoring and tabulation software for high school and collegiate mock trial tournaments. Easy for judges, customizable for organizers, transparent for coaches. Easy to use application with lots of features tailored specifically to running mock trial tournaments.';
+  'Open-source mock trial scoring and tabulation software for high school and collegiate tournaments. Judges score from an emailed link, organizers configure custom tiebreakers and standings (ballots won, combined strength, point differential), and coaches see pairings and results in real time. A free digital tab room for in-person, online, and hybrid tournaments.';
 
 
 const jsonLd = {
   '@context': 'https://schema.org',
   '@graph': [
     {
+      '@type': 'Organization',
+      '@id': 'https://mockscores.org/#organization',
+      name: 'San Luis Obispo County Mock Trial Committee',
+      url: 'https://mockscores.org/',
+      sameAs: ['https://github.com/curtisjbradley/Mock-Scores'],
+    },
+    {
       '@type': 'WebSite',
       '@id': 'https://mockscores.org/#website',
       url: 'https://mockscores.org/',
       name: 'MockScores',
+      publisher: { '@id': 'https://mockscores.org/#organization' },
     },
     {
       '@type': 'SoftwareApplication',
@@ -24,6 +32,7 @@ const jsonLd = {
       operatingSystem: 'Web',
       description,
       url: 'https://mockscores.org/',
+      publisher: { '@id': 'https://mockscores.org/#organization' },
       offers: {
         '@type': 'Offer',
         price: '0',
@@ -63,7 +72,7 @@ const jsonLd = {
         </li>
         <li>
           <h3>Customizable</h3>
-          <p>Configure case formats, witnesses, scoring fields and multipliers, and custom tiebreakers.</p>
+          <p>Configure case formats, witnesses, scoring fields and multipliers, and custom tiebreakers — ballots won, combined strength, point differential, and your own ranking rules.</p>
         </li>
         <li>
           <h3>Transparent</h3>
@@ -79,7 +88,7 @@ const jsonLd = {
         </li>
         <li>
           <h3>Instant tabulation</h3>
-          <p>Scores and awards are tabulated in real time. No more manual calculations on competition day.</p>
+          <p>A digital tab room that tabulates scores, standings, and awards in real time. No more manual calculations or tab-room spreadsheets on competition day.</p>
         </li>
       </ul>
     </section>

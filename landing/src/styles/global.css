@@ -214,6 +214,26 @@ header nav {
     gap: var(--space-md);
 }
 
+/* Skip-to-content link — visible only on keyboard focus */
+.skip-link {
+    position: absolute;
+    left: 0.5rem;
+    top: -3rem;
+    z-index: 1000;
+    padding: 0.5rem 0.875rem;
+    background: var(--primary);
+    color: var(--white);
+    border-radius: var(--radius);
+    font-weight: 600;
+    transition: top 140ms ease;
+}
+
+.skip-link:focus-visible {
+    top: 0.5rem;
+    outline: none;
+    box-shadow: 0 0 0 0.1875rem var(--focus);
+}
+
 /* Logo — mirrors the app's .site-logo */
 header nav a:first-child {
     font-size: 1.25rem;
