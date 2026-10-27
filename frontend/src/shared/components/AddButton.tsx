@@ -1,6 +1,6 @@
 import type { ButtonHTMLAttributes, ReactNode } from 'react'
 
-export type AddButtonVariant = 'primary' | 'dashed'
+type AddButtonVariant = 'primary' | 'dashed'
 
 interface AddButtonProps extends ButtonHTMLAttributes<HTMLButtonElement> {
     /**
