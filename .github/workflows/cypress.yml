@@ -42,18 +42,50 @@ jobs:
       - name: Build frontend
         run: npm run build -w shared && npm run build -w standings-dsl && npm run build -w frontend
 
+      - name: Start preview server
+        working-directory: frontend
+        shell: bash
+        run: |
+          nohup npm run preview > "$RUNNER_TEMP/preview.log" 2>&1 &
+          preview_pid=$!
+
+          for attempt in {1..60}; do
+            if curl --fail --silent --show-error \
+              --max-time 2 \
+              http://127.0.0.1:4173/ > /dev/null 2>&1; then
+              echo "Preview server is ready."
+              cat "$RUNNER_TEMP/preview.log"
+              exit 0
+            fi
+
+            if ! kill -0 "$preview_pid" 2>/dev/null; then
+              echo "Preview server exited before becoming ready."
+              cat "$RUNNER_TEMP/preview.log"
+              exit 1
+            fi
+
+            sleep 1
+          done
+
+          echo "Preview server did not become ready."
+          cat "$RUNNER_TEMP/preview.log"
+          curl --verbose --max-time 5 http://127.0.0.1:4173/ || true
+          exit 1
+
       - name: Cypress run
         uses: cypress-io/github-action@v6
         with:
           working-directory: frontend
-          # `npm run preview` serves the built dist/ with sirv (a static file
-          # server with SPA fallback). Unlike `vite preview`, sirv has no
-          # interactive stdin/keyboard-shortcut reader, so it never suspends
-          # (SIGTTIN) in this backgrounded CI context.
-          start: npm run preview
-          wait-on: http://127.0.0.1:4173
-          wait-on-timeout: 120
+          install: false
           config: baseUrl=http://127.0.0.1:4173
+
+      - name: Show preview server log on failure
+        if: failure()
+        shell: bash
+        run: |
+          if [ -f "$RUNNER_TEMP/preview.log" ]; then
+            cat "$RUNNER_TEMP/preview.log"
+          fi
 
       - name: Upload screenshots on failure
         if: failure()
