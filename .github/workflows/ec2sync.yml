@@ -12,6 +12,7 @@ on:
       - "shared/**"
       - "package.json"
       - "package-lock.json"
+      - ".github/workflows/ec2sync.yml"
 
 permissions:
   contents: read
@@ -32,7 +33,7 @@ jobs:
       - name: Setup Node
         uses: actions/setup-node@v4
         with:
-          node-version: 24
+          node-version: 22
           cache: npm
 
       - name: Install dependencies
@@ -143,12 +144,25 @@ jobs:
 
           NODE_ENV=production npm ci --omit=dev
 
-          echo "Restarting application..."
+                    echo "Restarting application as ec2-user..."
 
-          pm2 restart mock-scores --update-env || \
-            cd /opt/mock-scores/backend && pm2 start npm --name 'mock-scores' -- start
+          # The release was extracted and installed as root.
+          chown -R ec2-user:ec2-user "\$APP_DIR"
 
-          pm2 save
+          sudo -iu ec2-user bash -lc '
+            set -euo pipefail
+
+            export PM2_HOME=/home/ec2-user/.pm2
+            cd /opt/mock-scores/backend
+
+            if pm2 describe mock-scores >/dev/null 2>&1; then
+              pm2 restart mock-scores --update-env
+            else
+              pm2 start npm --name mock-scores -- start
+            fi
+
+            pm2 save
+          '
 
           rm -f "\$ARCHIVE"
 
