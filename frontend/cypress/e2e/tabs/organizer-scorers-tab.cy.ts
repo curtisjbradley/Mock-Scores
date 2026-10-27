@@ -1,8 +1,8 @@
 const USER = { userId: '1', email: 'org@example.com', firstName: 'Alice', lastName: 'Smith' }
 const TOURNAMENT = { id: 'tourney-1', name: 'Spring Invitational', location: 'Downtown', start_date: null, end_date: null, num_teams: 0, num_rounds: 0 }
 const SCORERS = [
-  { scorer_id: 's-1', first_name: 'Jane', last_name: 'Doe', email: 'jane@example.com' },
-  { scorer_id: 's-2', first_name: 'Bob', last_name: 'Smith', email: 'bob@example.com' },
+  { scorer_id: 's-1', name: 'Jane Doe', email: 'jane@example.com', is_paper: false, willing_to_preside: true, prefers_to_score_with: [] },
+  { scorer_id: 's-2', name: 'Bob Smith', email: 'bob@example.com', is_paper: false, willing_to_preside: true, prefers_to_score_with: [] },
 ]
 
 function stubScorersTab() {
@@ -29,8 +29,7 @@ describe('Scorers Tab', () => {
   it('opens Add scorer modal', () => {
     cy.contains('button', '+ Add scorer').click()
     cy.get('[role="dialog"]').should('be.visible')
-    cy.get('#first-name').should('exist')
-    cy.get('#last-name').should('exist')
+    cy.get('#scorer-name').should('exist')
     cy.get('#scorer-email').should('exist')
   })
 
@@ -57,8 +56,7 @@ describe('Scorers Tab', () => {
   it('opens Edit scorer modal pre-populated', () => {
     cy.contains('tr', 'Jane Doe').contains('button', 'Edit').click()
     cy.get('[role="dialog"]').should('be.visible')
-    cy.get('#first-name').should('have.value', 'Jane')
-    cy.get('#last-name').should('have.value', 'Doe')
+    cy.get('#scorer-name').should('have.value', 'Jane Doe')
     cy.get('#scorer-email').should('have.value', 'jane@example.com')
   })
 
