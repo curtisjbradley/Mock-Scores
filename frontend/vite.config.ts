@@ -47,11 +47,9 @@ function inlineCss(): Plugin {
 // https://vite.dev/config/
 export default defineConfig({
   server: {},
-  // Bind the preview server to an explicit IPv4 host + fixed port so CI
-  // (`wait-on` / Cypress) connects deterministically. Without this, Vite
-  // resolves `localhost` via DNS and may listen on IPv6 `::1` while the
-  // health check dials IPv4 `127.0.0.1`, producing
-  // "Socket closed before the connection was established".
+  // Applies only to `vite preview` (direct, non-CI use). CI serves the build
+  // with sirv instead — see the frontend "preview" npm script. Pinned to an
+  // explicit IPv4 host + fixed port so any preview is deterministic.
   preview: {
     host: '127.0.0.1',
     port: 4173,

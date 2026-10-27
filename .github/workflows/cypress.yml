@@ -46,6 +46,10 @@ jobs:
         uses: cypress-io/github-action@v6
         with:
           working-directory: frontend
+          # `npm run preview` serves the built dist/ with sirv (a static file
+          # server with SPA fallback). Unlike `vite preview`, sirv has no
+          # interactive stdin/keyboard-shortcut reader, so it never suspends
+          # (SIGTTIN) in this backgrounded CI context.
           start: npm run preview
           wait-on: http://127.0.0.1:4173
           wait-on-timeout: 120
