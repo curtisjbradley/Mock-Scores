@@ -10,7 +10,7 @@
     "dev": "nodemon",
     "build": "npx tsc",
     "lint": "eslint .",
-    "start": "node dist/app.js",
+    "start": "node --env-file=.env dist/app.js",
     "test": "jest",
     "test:coverage": "jest --coverage"
   },
