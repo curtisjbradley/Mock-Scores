@@ -6,7 +6,7 @@ import * as coachProvider from "../../providers/coachProvider";
 import roundRoutes from "./organizerRoundRoutes";
 import pairingRoutes from "./organizerPairingRoutes";
 import { uuidRegex } from "../../authUtils";
-import { transferOwnership } from "../../providers/coachProvider";
+import { replaceTeamOwner, transferOwnership } from "../../providers/coachProvider";
 import { TournamentRequest } from "../../types/express";
 import { tournamentHandler, scorerHandler, organizerHandler, teamHandler } from "../../types/handlers";
 import {EmailTemplate, isValidEmail, organizerAddedEmail, sendTrackedEmail, teamAddedEmail} from "../../email";
@@ -1686,6 +1686,22 @@ router.get("/rounds", tournamentHandler(async (req, res) => {
         throw e;
     }
 }));
+
+/** Replace a joined team's owner by email, optionally retaining the former owner as a coach. */
+router.put('/teams/:teamId/owner-email', async (req: Request, res: Response) => {
+    const teamId = req.params.teamId as string;
+    const { email, retainPreviousOwner } = req.body as { email?: string; retainPreviousOwner?: boolean };
+    if (!uuidRegex.test(teamId)) return res.status(400).json({ message: 'Invalid team ID' });
+    if (!email || !isValidEmail(email)) return res.status(400).json({ message: 'Invalid owner email address' });
+    if (typeof retainPreviousOwner !== 'boolean') return res.status(400).json({ message: 'Missing retainPreviousOwner' });
+    try {
+        await replaceTeamOwner(teamId, email, retainPreviousOwner);
+        return res.status(204).send();
+    } catch (e) {
+        if (e instanceof NotFoundError) return res.status(404).json({ message: e.message });
+        throw e;
+    }
+});
 
 /**
  * @swagger

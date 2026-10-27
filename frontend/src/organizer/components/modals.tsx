@@ -25,6 +25,28 @@ export function ConfirmRemoveModal({ message, onCancel, onConfirm, confirmLabel 
     )
 }
 
+export function ChangeTeamOwnerModal({ currentEmail, newEmail, onCancel, onKeepPrevious, onRemovePrevious }: {
+    currentEmail: string
+    newEmail: string
+    onCancel: () => void
+    onKeepPrevious: () => void
+    onRemovePrevious: () => void
+}) {
+    return (
+        <ModalBackdrop onClose={onCancel}>
+            <div className="confirm-modal" role="dialog" aria-modal="true" aria-labelledby="change-owner-title">
+                <h2 id="change-owner-title">Change team owner?</h2>
+                <p><strong>{newEmail}</strong> will become the team owner instead of <strong>{currentEmail}</strong>.</p>
+                <button type="button" className="btn-cancel" onClick={onCancel}>Cancel</button>
+                <div className="confirm-actions">
+                    <button type="button" className="btn-secondary" onClick={onKeepPrevious}>Add as new coach</button>
+                    <button type="button" className="confirm-btn" onClick={onRemovePrevious}>Replace Coach</button>
+                </div>
+            </div>
+        </ModalBackdrop>
+    )
+}
+
 export function AddOrganizerModal({ onClose, onAdd, title = 'Add organizer', description = 'They will be added as a co-organizer for this tournament.', submitLabel = 'Add organizer' }: {
     onClose: () => void
     onAdd: (name: string, email: string) => void

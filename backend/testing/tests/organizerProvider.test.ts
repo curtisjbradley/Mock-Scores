@@ -104,11 +104,19 @@ describe('createTournament', () => {
 // ─── deleteTournament ─────────────────────────────────────────────────────────
 describe('deleteTournament', () => {
     it('resolves when deleted', async () => {
-        mockDbQuery.mockResolvedValueOnce(ok([{ id: 't1' }]));
+        mockDbQuery
+            .mockResolvedValueOnce(ok()) // ballots
+            .mockResolvedValueOnce(ok()) // presider assignments
+            .mockResolvedValueOnce(ok()) // custom roster fields
+            .mockResolvedValueOnce(ok([{ id: 't1' }]));
         await expect(provider.deleteTournament('t1')).resolves.toBeUndefined();
     });
     it('throws NotFoundError when nothing deleted', async () => {
-        mockDbQuery.mockResolvedValueOnce(ok([]));
+        mockDbQuery
+            .mockResolvedValueOnce(ok())
+            .mockResolvedValueOnce(ok())
+            .mockResolvedValueOnce(ok())
+            .mockResolvedValueOnce(ok([]));
         await expect(provider.deleteTournament('t1')).rejects.toThrow(NotFoundError);
     });
 });
@@ -493,6 +501,30 @@ describe('addTeam', () => {
     });
 });
 
+describe('getTeam', () => {
+    it('returns the pending invite address when the team has no joined owner', async () => {
+        mockDbQuery
+            .mockResolvedValueOnce(ok([{ id: 'tm1', tournament_id: 't1', name: 'Eagles', code: 'E' }]))
+            .mockResolvedValueOnce(ok([]))
+            .mockResolvedValueOnce(ok([{ invite_email: 'pending@example.com' }]));
+
+        await expect(provider.getTeam('tm1')).resolves.toMatchObject({
+            coach_email: 'pending@example.com', has_joined: false,
+        });
+    });
+
+    it('returns the joined owner email when the team has an owner', async () => {
+        mockDbQuery
+            .mockResolvedValueOnce(ok([{ id: 'tm1', tournament_id: 't1', name: 'Eagles', code: 'E' }]))
+            .mockResolvedValueOnce(ok([{ coach_id: 'owner-1' }]))
+            .mockResolvedValueOnce(ok([{ email: 'owner@example.com' }]));
+
+        await expect(provider.getTeam('tm1')).resolves.toMatchObject({
+            coach_email: 'owner@example.com', has_joined: true,
+        });
+    });
+});
+
 describe('updateTeam', () => {
     it('throws NotFoundError when team not found', async () => {
         mockDbQuery.mockResolvedValueOnce(ok([]));
@@ -518,11 +550,17 @@ describe('updateTeam', () => {
 
 describe('deleteTeam', () => {
     it('resolves when deleted', async () => {
-        mockDbQuery.mockResolvedValueOnce(ok([{ id: 'tm1' }]));
+        mockDbQuery
+            .mockResolvedValueOnce(ok()) // ballots
+            .mockResolvedValueOnce(ok()) // presider assignments
+            .mockResolvedValueOnce(ok([{ id: 'tm1' }]));
         await expect(provider.deleteTeam('tm1')).resolves.toBeUndefined();
     });
     it('throws NotFoundError when not found', async () => {
-        mockDbQuery.mockResolvedValueOnce(ok([]));
+        mockDbQuery
+            .mockResolvedValueOnce(ok())
+            .mockResolvedValueOnce(ok())
+            .mockResolvedValueOnce(ok([]));
         await expect(provider.deleteTeam('tm1')).rejects.toThrow(NotFoundError);
     });
 });

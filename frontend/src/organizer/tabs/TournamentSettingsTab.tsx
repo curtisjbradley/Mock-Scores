@@ -68,7 +68,11 @@ export default function TournamentSettingsTab({ tournamentId }: { tournamentId: 
     const handleDelete = async () => {
         const res = await apiFetch(`/organizer/tournament/${tournamentId}`, { method: 'DELETE' })
         if (res.ok) navigate('/organizer', { replace: true })
-        else { setSaveError('Failed to delete tournament.'); setShowDeleteModal(false) }
+        else {
+            const body = await res.json().catch(() => null) as { message?: string } | null
+            setSaveError(body?.message ?? 'Failed to delete tournament.')
+            setShowDeleteModal(false)
+        }
     }
 
     if (loading) return <p className="dash-saving">Loading…</p>

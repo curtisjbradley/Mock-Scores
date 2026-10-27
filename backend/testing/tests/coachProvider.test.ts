@@ -122,6 +122,40 @@ describe('removeCoach', () => {
     });
 });
 
+describe('replaceTeamOwner', () => {
+    it('makes an existing account the owner and retains the former owner as a coach', async () => {
+        mockDbQuery
+            .mockResolvedValueOnce(ok([{ coach_id: UID }])) // current owner
+            .mockResolvedValueOnce(ok([{ user_id: 'new-owner', first_name: 'New', last_name: 'Owner', email: 'new@example.com' }]))
+            .mockResolvedValueOnce(ok()) // add replacement coach
+            .mockResolvedValueOnce(ok([{ coach_id: 'new-owner' }])) // transfer: membership exists
+            .mockResolvedValueOnce(ok()) // transfer: demote all owners
+            .mockResolvedValueOnce(ok()); // transfer: promote replacement
+
+        await expect(provider.replaceTeamOwner(TEAM, 'new@example.com', true)).resolves.toBeUndefined();
+        expect(mockDbQuery).toHaveBeenCalledWith(
+            'UPDATE team_coaches SET is_owner=true WHERE team_id=$1 AND coach_id=$2',
+            [TEAM, 'new-owner'],
+        );
+    });
+
+    it('removes the former owner when requested', async () => {
+        mockDbQuery
+            .mockResolvedValueOnce(ok([{ coach_id: UID }]))
+            .mockResolvedValueOnce(ok([{ user_id: 'new-owner', first_name: 'New', last_name: 'Owner', email: 'new@example.com' }]))
+            .mockResolvedValueOnce(ok())
+            .mockResolvedValueOnce(ok([{ coach_id: 'new-owner' }]))
+            .mockResolvedValueOnce(ok())
+            .mockResolvedValueOnce(ok())
+            .mockResolvedValueOnce(ok());
+
+        await provider.replaceTeamOwner(TEAM, 'new@example.com', false);
+        expect(mockDbQuery).toHaveBeenLastCalledWith(
+            'DELETE FROM team_coaches WHERE team_id=$1 AND coach_id=$2', [TEAM, UID],
+        );
+    });
+});
+
 describe('getStudents', () => {
     it('returns students', async () => {
         mockDbQuery.mockResolvedValueOnce({ rows: [{ student_id: SID, student_name: 'Bob', pronouns: 'he/him' }], rowCount: 1 } as any);

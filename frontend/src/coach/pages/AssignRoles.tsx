@@ -21,15 +21,17 @@ interface RoleRow {
 }
 
 export default function AssignRoles() {
-    const { teamId, pairingId, side } = useParams<{
-        teamId: string; pairingId: string; side: 'p' | 'd'
+    const { teamId, pairingId, side, id: organizerTournamentId } = useParams<{
+        teamId: string; pairingId: string; side: 'p' | 'd'; id?: string
     }>()
     const navigate = useNavigate()
 
     const [categories, setCategories] = useState<IScoringCategory[]>([])
     const [witnesses, setWitnesses] = useState<Witness[]>([])
     const [students, setStudents] = useState<IStudent[]>([])
-    const [pending, setPending] = useState<Map<string, string>>(new Map())
+    const [pending, setPending] = useState<{ scope: string; assignments: Map<string, string> }>({
+        scope: '', assignments: new Map(),
+    })
     const [saving, setSaving] = useState(false)
     const [error, setError] = useState<string | null>(null)
 
@@ -37,7 +39,9 @@ export default function AssignRoles() {
         if (!teamId || !pairingId) return
         let active = true
         // Tournament-scoped endpoints query by tournament id; resolve it from the team.
-        resolveCoachTournament(teamId, false, undefined).then(info => {
+        // Organizers can open this page for any team, including teams they do
+        // not coach; use the tournament id present in the organizer route.
+        resolveCoachTournament(teamId, Boolean(organizerTournamentId), organizerTournamentId).then(info => {
             if (!active || !info) return
             const tid = info.tournamentId
             return Promise.all([
@@ -62,13 +66,17 @@ export default function AssignRoles() {
                     const key = a.witness_id ? `${a.field_id}:${a.witness_id}` : a.field_id
                     map.set(key, a.student_id)
                 }
-                setPending(map)
+                setPending({ scope: `${teamId}:${pairingId}:${side}`, assignments: map })
             })
         }).catch(() => {})
         return () => { active = false }
-    }, [teamId, pairingId])
+    }, [teamId, pairingId, side, organizerTournamentId])
 
     const isP = side === 'p'
+    // Assignment data loaded for a previous team or side must not be displayed
+    // while the current route's request is still in flight.
+    const assignmentScope = `${teamId}:${pairingId}:${side}`
+    const activeAssignments = pending.scope === assignmentScope ? pending.assignments : undefined
 
     const ownSideWitnesses   = witnesses.filter(w => w.side === (isP ? 'P' : 'D') || w.side === 'S')
     const oppSideWitnesses   = witnesses.filter(w => w.side === (isP ? 'D' : 'P') || w.side === 'S')
@@ -126,8 +134,8 @@ export default function AssignRoles() {
         setError(null)
         // Send all assigned rows in one request
         const assignments = rows
-            .filter(r => pending.get(r.key))
-            .map(r => ({ field_id: r.fieldId, student_id: pending.get(r.key)!, witness_id: r.witnessId ?? null }))
+            .filter(r => activeAssignments?.get(r.key))
+            .map(r => ({ field_id: r.fieldId, student_id: activeAssignments!.get(r.key)!, witness_id: r.witnessId ?? null }))
         const res = await apiFetch(`/coach/teams/${teamId}/pairings/${pairingId}/assignments/bulk`, {
             method: 'POST',
             body: JSON.stringify({ assignments }),
@@ -161,9 +169,12 @@ export default function AssignRoles() {
                                     <td>
                                         <select
                                             className="rv-select"
-                                            value={pending.get(r.key) ?? ''}
+                                            value={activeAssignments?.get(r.key) ?? ''}
                                             disabled={saving}
-                                            onChange={e => setPending(prev => new Map(prev).set(r.key, e.target.value))}
+                                            onChange={e => setPending(prev => ({
+                                                scope: assignmentScope,
+                                                assignments: new Map(prev.scope === assignmentScope ? prev.assignments : []).set(r.key, e.target.value),
+                                            }))}
                                         >
                                             <option value="">-unassigned-</option>
                                             {students.map(s => (
