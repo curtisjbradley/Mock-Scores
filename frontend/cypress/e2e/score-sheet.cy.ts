@@ -19,8 +19,7 @@ const SCORE_SHEET_RESPONSE = {
   },
   "pairingID": "7a019e58-3487-4bd3-b0d1-3a49f3885a2e",
   "scorer": {
-    "firstName": "Dana",
-    "lastName": "Mitchell",
+    "name": "Dana Mitchell",
     "scorerID": SCORER_ID,
     "isPaper": false
   },
