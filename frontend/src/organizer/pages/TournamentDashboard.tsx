@@ -93,6 +93,7 @@ export default function TournamentDashboard() {
                     onChange={onNavSelect}
                     title={tournament?.name ?? 'Tournament'}
                     subtitle={tournament?.location ?? undefined}
+                    storageKey="organizer-sidebar-collapsed"
                     ariaLabel="Tournament dashboard sections"
                 />
 

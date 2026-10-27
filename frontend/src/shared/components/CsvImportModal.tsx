@@ -18,11 +18,19 @@ export default function CsvImportModal({ title, description, columns, exampleRow
     const [importing, setImporting] = useState(false)
     const [result, setResult] = useState<{ created: number; errors: { row: number; message: string }[] } | null>(null)
     const [fileName, setFileName] = useState<string | null>(null)
+    const [fileError, setFileError] = useState<string | null>(null)
     const fileRef = useRef<HTMLInputElement>(null)
 
     const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
         const file = e.target.files?.[0]
         if (!file) return
+        if (file.size > 5 * 1024 * 1024) {
+            setFileError('Choose a CSV smaller than 5 MB, or paste a smaller batch.')
+            setFileName(null)
+            e.target.value = ''
+            return
+        }
+        setFileError(null)
         setFileName(file.name)
         const reader = new FileReader()
         reader.onload = () => {
@@ -34,26 +42,30 @@ export default function CsvImportModal({ title, description, columns, exampleRow
     }
 
     const parsePreview = (text: string) => {
-        const lines = text.replace(/\r\n/g, '\n').replace(/\r/g, '\n').split('\n').filter(l => l.trim())
-        const rows = lines.slice(0, 6).map(line => {
-            const fields: string[] = []
-            let current = ''
-            let inQuotes = false
-            for (let i = 0; i < line.length; i++) {
-                const ch = line[i]
-                if (inQuotes) {
-                    if (ch === '"' && line[i + 1] === '"') { current += '"'; i++ }
-                    else if (ch === '"') inQuotes = false
-                    else current += ch
-                } else {
-                    if (ch === '"') inQuotes = true
-                    else if (ch === ',') { fields.push(current.trim()); current = '' }
-                    else current += ch
-                }
-            }
-            fields.push(current.trim())
-            return fields
-        })
+        const rows: string[][] = []
+        let row: string[] = []
+        let field = ''
+        let inQuotes = false
+        for (let i = 0; i < text.length; i++) {
+            const ch = text[i]
+            if (inQuotes) {
+                if (ch === '"' && text[i + 1] === '"') { field += '"'; i++ }
+                else if (ch === '"') inQuotes = false
+                else field += ch
+            } else if (ch === '"') inQuotes = true
+            else if (ch === ',') { row.push(field.trim()); field = '' }
+            else if (ch === '\n' || ch === '\r') {
+                if (ch === '\r' && text[i + 1] === '\n') i++
+                row.push(field.trim())
+                if (row.some(cell => cell)) rows.push(row)
+                row = []; field = ''
+                if (rows.length === 6) break
+            } else field += ch
+        }
+        if (rows.length < 6 && (field || row.length)) {
+            row.push(field.trim())
+            if (row.some(cell => cell)) rows.push(row)
+        }
         setPreview(rows)
     }
 
@@ -109,6 +121,7 @@ export default function CsvImportModal({ title, description, columns, exampleRow
                                     {fileName ?? 'No file chosen'}
                                 </span>
                             </div>
+                            {fileError && <p className="csv-import-error-heading" role="alert">{fileError}</p>}
                         </div>
 
                         <div className="tc-field">

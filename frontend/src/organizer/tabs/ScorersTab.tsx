@@ -97,11 +97,12 @@ const EMPTY_DRAFT: ScorerDraft = { name: '', email: '', isPaper: false, willingT
  * (offline, no email) judges, plus the judge profile: willingness to preside and
  * a "prefers to score with" multi-select over the other scorers in the tournament.
  */
-function ScorerFormModal({ editingScorer, allScorers, onClose, onSave }: {
+function ScorerFormModal({ editingScorer, allScorers, onClose, onSave, saving }: {
     editingScorer: IScorer | null
     allScorers: IScorer[]
     onClose: () => void
     onSave: (draft: ScorerDraft) => void
+    saving: boolean
 }) {
     const [draft, setDraft] = useState<ScorerDraft>(() => editingScorer
         ? {
@@ -184,9 +185,9 @@ function ScorerFormModal({ editingScorer, allScorers, onClose, onSave }: {
                     </div>
 
                     <div className="confirm-actions">
-                        <button type="button" onClick={onClose}>Cancel</button>
-                        <button type="submit" disabled={!canSave}>
-                            {editingScorer ? 'Save' : 'Add scorer'}
+                        <button type="button" onClick={onClose} disabled={saving}>Cancel</button>
+                        <button type="submit" disabled={!canSave || saving}>
+                            {saving ? 'Saving…' : editingScorer ? 'Save' : 'Add scorer'}
                         </button>
                     </div>
                 </form>
@@ -203,6 +204,8 @@ export default function ScorersTab({ tournamentId }: { tournamentId: string }) {
     const [conflictsScorer, setConflictsScorer] = useState<IScorer | null>(null)
     const [bouncedEmails, setBouncedEmails] = useState<Set<string>>(new Set())
     const [showImport, setShowImport] = useState(false)
+    const [error, setError] = useState<string | null>(null)
+    const [saving, setSaving] = useState(false)
 
     const loadScorers = useCallback(() => apiFetch(`/organizer/tournament/${tournamentId}/scorers`)
         .then(r => r.ok ? r.json() : [])
@@ -222,7 +225,7 @@ export default function ScorersTab({ tournamentId }: { tournamentId: string }) {
     const openAddModal = () => { setEditingScorer(null); setShowForm(true) }
     const openEditModal = (scorer: IScorer) => { setEditingScorer(scorer); setShowForm(true) }
 
-    const handleSave = (draft: ScorerDraft) => {
+    const handleSave = async (draft: ScorerDraft) => {
         const base = {
             name: draft.name.trim(),
             email: draft.isPaper ? null : draft.email.trim(),
@@ -230,27 +233,48 @@ export default function ScorersTab({ tournamentId }: { tournamentId: string }) {
             willing_to_preside: draft.willingToPreside,
             prefers_to_score_with: draft.prefersToScoreWith,
         }
+        setSaving(true)
+        setError(null)
+        try {
         if (editingScorer) {
             const payload: IScorer = { ...editingScorer, ...base }
+            const res = await apiFetch(`/organizer/tournament/${tournamentId}/scorers`, { method: 'PUT', body: JSON.stringify(payload) })
+            if (!res.ok) throw new Error('Unable to save scorer.')
             setScorers(prev => prev.map(s => s.scorer_id === editingScorer.scorer_id ? payload : s))
-            apiFetch(`/organizer/tournament/${tournamentId}/scorers`, { method: 'PUT', body: JSON.stringify(payload) }).catch(console.error)
         } else {
             const payload: IScorer = { scorer_id: randomUUID(), ...base }
+            const res = await apiFetch(`/organizer/tournament/${tournamentId}/scorers`, { method: 'POST', body: JSON.stringify(payload) })
+            if (!res.ok) throw new Error('Unable to add scorer.')
             setScorers(prev => [...prev, payload])
-            apiFetch(`/organizer/tournament/${tournamentId}/scorers`, { method: 'POST', body: JSON.stringify(payload) }).catch(console.error)
         }
         setShowForm(false)
+        } catch (e) {
+            setError(e instanceof Error ? e.message : 'Unable to save scorer.')
+        } finally {
+            setSaving(false)
+        }
     }
 
-    const handleRemove = () => {
+    const handleRemove = async () => {
         if (!confirmRemove.pending) return
-        apiFetch(`/organizer/tournament/${tournamentId}/scorers`, { method: 'DELETE', body: JSON.stringify({ scorer_id: confirmRemove.pending.scorer_id }) }).catch(console.error)
-        setScorers(prev => prev.filter(s => s.scorer_id !== confirmRemove.pending!.scorer_id))
-        confirmRemove.clear()
+        setSaving(true)
+        setError(null)
+        try {
+            const scorerId = confirmRemove.pending.scorer_id
+            const res = await apiFetch(`/organizer/tournament/${tournamentId}/scorers`, { method: 'DELETE', body: JSON.stringify({ scorer_id: scorerId }) })
+            if (!res.ok) throw new Error('Unable to remove scorer.')
+            setScorers(prev => prev.filter(s => s.scorer_id !== scorerId))
+            confirmRemove.clear()
+        } catch (e) {
+            setError(e instanceof Error ? e.message : 'Unable to remove scorer.')
+        } finally {
+            setSaving(false)
+        }
     }
 
     return (
         <Section title="Scorers" description="Manage available scorers, including paper (offline) judges, their conflicts, and preferences">
+            {error && <p className="org-error" role="alert">{error}</p>}
             <div className="tab-actions">
                 <AddButton onClick={openAddModal}>+ Add scorer</AddButton>
                 <button className="btn-primary tab-actions-import" onClick={() => setShowImport(true)}>Import CSV</button>
@@ -298,7 +322,8 @@ export default function ScorersTab({ tournamentId }: { tournamentId: string }) {
                     editingScorer={editingScorer}
                     allScorers={scorers}
                     onClose={() => setShowForm(false)}
-                    onSave={handleSave}
+                    onSave={draft => { void handleSave(draft) }}
+                    saving={saving}
                 />
             )}
 
@@ -306,7 +331,7 @@ export default function ScorersTab({ tournamentId }: { tournamentId: string }) {
                 <ConfirmRemoveModal
                     message={`Remove ${confirmRemove.pending.name} from the scorer list?`}
                     onCancel={confirmRemove.clear}
-                    onConfirm={handleRemove}
+                    onConfirm={() => { void handleRemove() }}
                 />
             )}
 

@@ -17,6 +17,8 @@ export default function CourtroomsTab({ tournamentId }: { tournamentId: string }
     const confirmRemove = useConfirmRemove<ICourtroom>()
     const [name, setName] = useState('')
     const [location, setLocation] = useState('')
+    const [error, setError] = useState<string | null>(null)
+    const [saving, setSaving] = useState(false)
     const nameRef = useAutoFocus<HTMLInputElement>(showModal)
 
     useEffect(() => {
@@ -28,24 +30,48 @@ export default function CourtroomsTab({ tournamentId }: { tournamentId: string }
     const openAddModal = () => { setEditingId(null); setName(''); setLocation(''); setShowModal(true) }
     const openEditModal = (c: ICourtroom) => { setEditingId(c.id); setName(c.name); setLocation(c.location ?? ''); setShowModal(true) }
 
-    const handleSave = () => {
+    const handleSave = async () => {
         if (!name.trim()) return
+        setSaving(true)
+        setError(null)
+        try {
         if (editingId) {
             const modified: ICourtroom = { id: editingId, name: name.trim(), location: location.trim() }
-            apiFetch(`/organizer/tournament/${tournamentId}/courtrooms`, { method: 'PUT', body: JSON.stringify(modified) })
-                .then(res => { if (!res.ok) throw new Error('Courtroom not found.') }).catch(console.error)
+            const res = await apiFetch(`/organizer/tournament/${tournamentId}/courtrooms`, { method: 'PUT', body: JSON.stringify(modified) })
+            if (!res.ok) throw new Error('Unable to save courtroom.')
             setCourtrooms(prev => prev.map(c => c.id === editingId ? modified : c))
         } else {
             const created: ICourtroom = { id: randomUUID(), name: name.trim(), location: location.trim() }
-            apiFetch(`/organizer/tournament/${tournamentId}/courtrooms`, { method: 'POST', body: JSON.stringify(created) })
-                .then(res => { if (!res.ok) throw new Error('Courtroom not found.') }).catch(console.error)
+            const res = await apiFetch(`/organizer/tournament/${tournamentId}/courtrooms`, { method: 'POST', body: JSON.stringify(created) })
+            if (!res.ok) throw new Error('Unable to add courtroom.')
             setCourtrooms(prev => [...prev, created])
         }
         setShowModal(false)
+        } catch (e) {
+            setError(e instanceof Error ? e.message : 'Unable to save courtroom.')
+        } finally {
+            setSaving(false)
+        }
+    }
+
+    const handleRemove = async (courtroom: ICourtroom) => {
+        setSaving(true)
+        setError(null)
+        try {
+            const res = await apiFetch(`/organizer/tournament/${tournamentId}/courtrooms`, { method: 'DELETE', body: JSON.stringify(courtroom) })
+            if (!res.ok) throw new Error('Unable to remove courtroom.')
+            setCourtrooms(prev => prev.filter(c => c.id !== courtroom.id))
+            confirmRemove.clear()
+        } catch (e) {
+            setError(e instanceof Error ? e.message : 'Unable to remove courtroom.')
+        } finally {
+            setSaving(false)
+        }
     }
 
     return (
         <Section title="Courtrooms" description="Manage available courtrooms">
+            {error && <p className="org-error" role="alert">{error}</p>}
             <div className="tab-actions">
                 <AddButton onClick={openAddModal}>+ Add courtroom</AddButton>
             </div>
@@ -86,8 +112,8 @@ export default function CourtroomsTab({ tournamentId }: { tournamentId: string }
                                     value={location} onChange={e => setLocation(e.target.value)} placeholder="e.g. 2nd Floor" />
                             </div>
                             <div className="confirm-actions">
-                                <button type="button" onClick={() => setShowModal(false)}>Cancel</button>
-                                <button type="submit" disabled={!name.trim()}>{editingId ? 'Save' : 'Add courtroom'}</button>
+                                <button type="button" onClick={() => setShowModal(false)} disabled={saving}>Cancel</button>
+                                <button type="submit" disabled={!name.trim() || saving}>{saving ? 'Saving…' : editingId ? 'Save' : 'Add courtroom'}</button>
                             </div>
                         </form>
                     </div>
@@ -98,12 +124,7 @@ export default function CourtroomsTab({ tournamentId }: { tournamentId: string }
                 <ConfirmRemoveModal
                     message={`Remove ${confirmRemove.pending.name} from the courtroom list?`}
                     onCancel={confirmRemove.clear}
-                    onConfirm={() => {
-                        apiFetch(`/organizer/tournament/${tournamentId}/courtrooms`, { method: 'DELETE', body: JSON.stringify(confirmRemove.pending) })
-                            .then(res => { if (!res.ok) throw new Error('Courtroom not found.') }).catch(console.error)
-                        setCourtrooms(prev => prev.filter(c => c.id !== confirmRemove.pending!.id))
-                        confirmRemove.clear()
-                    }}
+                    onConfirm={() => { void handleRemove(confirmRemove.pending!) }}
                 />
             )}
         </Section>

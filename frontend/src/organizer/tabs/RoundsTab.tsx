@@ -121,22 +121,26 @@ export default function RoundsTab({ tournamentId }: { tournamentId: string }) {
         }).catch(() => setError('Failed to add round.'))
     }
 
-    const handleSave = (updated: IRound) => {
-        apiFetch(`/organizer/tournament/${tournamentId}/rounds/${updated.round_id}`, {
+    const handleSave = async (updated: IRound) => {
+        setError(null)
+        try {
+        const res = await apiFetch(`/organizer/tournament/${tournamentId}/rounds/${updated.round_id}`, {
             method: 'PATCH',
             body: JSON.stringify(updated),
-        }).then(res => {
-            if (!res.ok) throw new Error()
-        }).catch(() => setError('Failed to save round.'))
+        })
+        if (!res.ok) throw new Error()
         setRounds(prev => prev.map(r => r.round_id === updated.round_id ? updated : r))
+        } catch { setError('Failed to save round.') }
     }
 
-    const handleRemove = (id: string) => {
-        apiFetch(`/organizer/tournament/${tournamentId}/rounds/${id}`, { method: 'DELETE' })
-            .then(res => { if (!res.ok) throw new Error() })
-            .catch(() => setError('Failed to remove round.'))
-        setRounds(prev => prev.filter(r => r.round_id !== id))
-        confirmRemove.clear()
+    const handleRemove = async (id: string) => {
+        setError(null)
+        try {
+            const res = await apiFetch(`/organizer/tournament/${tournamentId}/rounds/${id}`, { method: 'DELETE' })
+            if (!res.ok) throw new Error()
+            setRounds(prev => prev.filter(r => r.round_id !== id))
+            confirmRemove.clear()
+        } catch { setError('Failed to remove round.') }
     }
 
     const confirmRound = rounds.find(r => r.round_id === confirmRemove.pending)
@@ -151,14 +155,14 @@ export default function RoundsTab({ tournamentId }: { tournamentId: string }) {
                     <RoundRow key={round.round_id} round={round} tournamentId={tournamentId}
                         ballotSummary={ballotStatusByRound[round.round_id] ?? null}
                         onRemove={id => confirmRemove.open(id)}
-                        onSave={handleSave} />
+                        onSave={updated => { void handleSave(updated) }} />
                 ))}
             </Section>
             {confirmRemove.pending !== null && (
                 <ConfirmRemoveModal
                     message={`Remove ${confirmRound?.name ?? 'this round'} and all its matchups?`}
                     onCancel={confirmRemove.clear}
-                    onConfirm={() => handleRemove(confirmRemove.pending!)}
+                    onConfirm={() => { void handleRemove(confirmRemove.pending!) }}
                 />
             )}
         </>
