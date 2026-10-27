@@ -4,13 +4,16 @@ import Header from './Header'
 import Footer from './Footer'
 import {Suspense} from "react";
 import LoadingPage from "./LoadingPage.tsx";
+import ErrorBoundary from "./ErrorBoundary.tsx";
 
 const Layout = () => (
     <>
         <Header />
-        <Suspense fallback={<LoadingPage loadingText={'Loading Page...'} />}>
+        <ErrorBoundary>
+            <Suspense fallback={<LoadingPage loadingText={'Loading Page...'} />}>
                 <Outlet />
             </Suspense>
+        </ErrorBoundary>
         <Footer />
     </>
 )

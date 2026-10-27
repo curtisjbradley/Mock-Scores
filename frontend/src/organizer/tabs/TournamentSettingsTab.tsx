@@ -154,19 +154,19 @@ export default function TournamentSettingsTab({ tournamentId }: { tournamentId: 
                     </p>
                     <div className="tc-status-actions">
                         {currentStatus !== 'active' && (
-                            <button type="button" className="org-new-btn" disabled={statusSaving}
+                            <button type="button" className="btn-primary" disabled={statusSaving}
                                 onClick={() => handleStatusChange('active')}>
                                 Reactivate
                             </button>
                         )}
                         {currentStatus !== 'completed' && (
-                            <button type="button" className="org-new-btn" disabled={statusSaving}
+                            <button type="button" className="btn-primary" disabled={statusSaving}
                                 onClick={() => handleStatusChange('completed')}>
                                 Mark completed
                             </button>
                         )}
                         {currentStatus !== 'archived' && (
-                            <button type="button" className="org-new-btn org-new-btn--archive" disabled={statusSaving}
+                            <button type="button" className="btn-primary btn-primary--archive" disabled={statusSaving}
                                 onClick={() => handleStatusChange('archived')}>
                                 Archive
                             </button>

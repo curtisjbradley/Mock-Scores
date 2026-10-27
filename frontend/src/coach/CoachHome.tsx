@@ -39,7 +39,12 @@ const CoachHome = () => {
                             </div>
                         </button>
                     ))}
-                    {tournaments.length === 0 && <EmptyState message="No tournaments found." />}
+                    {tournaments.length === 0 && (
+                        <EmptyState
+                            message="No tournaments found."
+                            hint="Coaches are added by a tournament organizer. Ask your organizer to invite you using the email address on this account, then check your inbox for the invite."
+                        />
+                    )}
                 </div>
             </div>
         </main>

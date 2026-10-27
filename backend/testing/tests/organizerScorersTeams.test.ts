@@ -37,7 +37,7 @@ describe('POST /scorers — DbError', () => {
         mockAccess();
         mockDbQuery.mockResolvedValueOnce(null);
         const res = await request(app).post(`/organizer/tournament/${T}/scorers`).set(auth())
-            .send({ scorer_id: SCORER, first_name: 'A', last_name: 'B', email: 'a@b.com' });
+            .send({ scorer_id: SCORER, name: 'A B', email: 'a@b.com' });
         expect(res.status).toBe(500);
     });
 });
@@ -46,7 +46,7 @@ describe('POST /scorers — invalid email', () => {
     it('returns 400 for invalid email', async () => {
         mockAccess();
         const res = await request(app).post(`/organizer/tournament/${T}/scorers`).set(auth())
-            .send({ scorer_id: SCORER, first_name: 'A', last_name: 'B', email: 'not-email' });
+            .send({ scorer_id: SCORER, name: 'A B', email: 'not-email' });
         expect(res.status).toBe(400);
     });
 });
@@ -56,7 +56,7 @@ describe('PUT /scorers', () => {
         mockAccess();
         mockDbQuery.mockResolvedValueOnce({ rows: [], rowCount: 0 } as any);
         const res = await request(app).put(`/organizer/tournament/${T}/scorers`).set(auth())
-            .send({ scorer_id: SCORER, first_name: 'A', last_name: 'B', email: 'a@b.com' });
+            .send({ scorer_id: SCORER, name: 'A B', email: 'a@b.com' });
         expect(res.status).toBe(404);
     });
 
@@ -64,7 +64,7 @@ describe('PUT /scorers', () => {
         mockAccess();
         mockDbQuery.mockResolvedValueOnce(null);
         const res = await request(app).put(`/organizer/tournament/${T}/scorers`).set(auth())
-            .send({ scorer_id: SCORER, first_name: 'A', last_name: 'B', email: 'a@b.com' });
+            .send({ scorer_id: SCORER, name: 'A B', email: 'a@b.com' });
         expect(res.status).toBe(500);
     });
 });
@@ -100,6 +100,23 @@ describe('GET /scorer-conflicts', () => {
         mockAccess();
         mockDbQuery.mockResolvedValueOnce(null);
         const res = await request(app).get(`/organizer/tournament/${T}/scorer-conflicts`).set(auth());
+        expect(res.status).toBe(500);
+    });
+});
+
+describe('GET /scorer-history', () => {
+    it('returns 200 with scorer/team history pairs', async () => {
+        mockAccess();
+        mockDbQuery.mockResolvedValueOnce({ rows: [{ scorer_id: SCORER, team_id: TEAM_ID }], rowCount: 1 } as any);
+        const res = await request(app).get(`/organizer/tournament/${T}/scorer-history`).set(auth());
+        expect(res.status).toBe(200);
+        expect(res.body).toEqual([{ scorer_id: SCORER, team_id: TEAM_ID }]);
+    });
+
+    it('returns 500 on db failure', async () => {
+        mockAccess();
+        mockDbQuery.mockResolvedValueOnce(null);
+        const res = await request(app).get(`/organizer/tournament/${T}/scorer-history`).set(auth());
         expect(res.status).toBe(500);
     });
 });

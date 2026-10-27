@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react'
+import { useCallback, useEffect, useState } from 'react'
 import type { IScorer, ITeam, IConflict } from '@mock-scores/shared'
 import { apiFetch } from '../../auth/auth'
 import { isValidEmail } from '../../utils/validation'
@@ -47,7 +47,7 @@ function ManageConflictsModal({ scorer, tournamentId, onClose }: {
     return (
         <ModalBackdrop onClose={onClose}>
             <div className="confirm-modal" role="dialog" aria-modal="true" aria-labelledby="conflicts-title">
-                <h2 id="conflicts-title">Conflicts — {scorer.first_name} {scorer.last_name}</h2>
+                <h2 id="conflicts-title">Conflicts — {scorer.name}</h2>
                 {conflicts.length > 0 && (
                     <ul className="sc-conflict-list">
                         {conflicts.map(c => (
@@ -82,55 +82,164 @@ function ManageConflictsModal({ scorer, tournamentId, onClose }: {
     )
 }
 
+interface ScorerDraft {
+    name: string
+    email: string
+    isPaper: boolean
+    willingToPreside: boolean
+    prefersToScoreWith: string[]
+}
+
+const EMPTY_DRAFT: ScorerDraft = { name: '', email: '', isPaper: false, willingToPreside: true, prefersToScoreWith: [] }
+
+/**
+ * Add/Edit form for a scorer. Handles both online (email required) and paper
+ * (offline, no email) judges, plus the judge profile: willingness to preside and
+ * a "prefers to score with" multi-select over the other scorers in the tournament.
+ */
+function ScorerFormModal({ editingScorer, allScorers, onClose, onSave }: {
+    editingScorer: IScorer | null
+    allScorers: IScorer[]
+    onClose: () => void
+    onSave: (draft: ScorerDraft) => void
+}) {
+    const [draft, setDraft] = useState<ScorerDraft>(() => editingScorer
+        ? {
+            name: editingScorer.name,
+            email: editingScorer.email ?? '',
+            isPaper: editingScorer.is_paper,
+            willingToPreside: editingScorer.willing_to_preside,
+            prefersToScoreWith: editingScorer.prefers_to_score_with ?? [],
+        }
+        : EMPTY_DRAFT)
+    const nameRef = useAutoFocus<HTMLInputElement>(true)
+
+    // A paper scorer needs no email; an online scorer requires a valid one.
+    const emailValid = draft.isPaper || isValidEmail(draft.email)
+    const canSave = draft.name.trim().length > 0 && emailValid
+
+    // Candidate co-scorers: everyone except the scorer being edited.
+    const coScorerOptions = allScorers.filter(s => s.scorer_id !== editingScorer?.scorer_id)
+
+    const togglePref = (id: string) => setDraft(d => ({
+        ...d,
+        prefersToScoreWith: d.prefersToScoreWith.includes(id)
+            ? d.prefersToScoreWith.filter(x => x !== id)
+            : [...d.prefersToScoreWith, id],
+    }))
+
+    return (
+        <ModalBackdrop onClose={onClose}>
+            <div className="confirm-modal" role="dialog" aria-modal="true" aria-labelledby="scorer-form-title">
+                <h2 id="scorer-form-title">{editingScorer ? 'Edit scorer' : 'Add scorer'}</h2>
+                <form className="tc-form" onSubmit={e => { e.preventDefault(); if (canSave) onSave(draft) }} noValidate>
+                    <div className="tc-field">
+                        <label className="tc-label" htmlFor="scorer-name">Name</label>
+                        <input id="scorer-name" type="text" className="tc-input" required ref={nameRef}
+                            value={draft.name} onChange={e => setDraft(d => ({ ...d, name: e.target.value }))}
+                            placeholder="Jane Smith" />
+                    </div>
+
+                    <label className="sc-checkbox-label">
+                        <input type="checkbox" checked={draft.isPaper}
+                            onChange={e => setDraft(d => ({ ...d, isPaper: e.target.checked }))} />
+                        Paper (offline) scorer — no email, scores on paper
+                    </label>
+
+                    {!draft.isPaper && (
+                        <div className="tc-field">
+                            <label className="tc-label" htmlFor="scorer-email">Email</label>
+                            <input id="scorer-email" type="email" required
+                                className={`tc-input${draft.email && !isValidEmail(draft.email) ? ' tc-input--invalid' : ''}`}
+                                value={draft.email} onChange={e => setDraft(d => ({ ...d, email: e.target.value }))}
+                                placeholder="scorer@example.com" />
+                            {draft.email && !isValidEmail(draft.email) && <span className="tc-field-error">Invalid email address</span>}
+                        </div>
+                    )}
+
+                    <label className="sc-checkbox-label">
+                        <input type="checkbox" checked={draft.willingToPreside}
+                            onChange={e => setDraft(d => ({ ...d, willingToPreside: e.target.checked }))} />
+                        Willing to preside
+                    </label>
+
+                    <div className="tc-field">
+                        <span className="tc-label">Prefers to score with</span>
+                        {coScorerOptions.length === 0 ? (
+                            <p className="sc-conflict-empty">No other scorers yet.</p>
+                        ) : (
+                            <ul className="sc-pref-list">
+                                {coScorerOptions.map(s => (
+                                    <li key={s.scorer_id}>
+                                        <label className="sc-checkbox-label">
+                                            <input type="checkbox"
+                                                checked={draft.prefersToScoreWith.includes(s.scorer_id)}
+                                                onChange={() => togglePref(s.scorer_id)} />
+                                            {s.name}{s.is_paper ? ' (paper)' : ''}
+                                        </label>
+                                    </li>
+                                ))}
+                            </ul>
+                        )}
+                    </div>
+
+                    <div className="confirm-actions">
+                        <button type="button" onClick={onClose}>Cancel</button>
+                        <button type="submit" disabled={!canSave}>
+                            {editingScorer ? 'Save' : 'Add scorer'}
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </ModalBackdrop>
+    )
+}
+
 export default function ScorersTab({ tournamentId }: { tournamentId: string }) {
     const [scorers, setScorers] = useState<IScorer[]>([])
-    const [showModal, setShowModal] = useState(false)
-    const [editingId, setEditingId] = useState<string | null>(null)
+    const [showForm, setShowForm] = useState(false)
+    const [editingScorer, setEditingScorer] = useState<IScorer | null>(null)
     const confirmRemove = useConfirmRemove<IScorer>()
     const [conflictsScorer, setConflictsScorer] = useState<IScorer | null>(null)
-    const [firstName, setFirstName] = useState('')
-    const [lastName, setLastName] = useState('')
-    const [email, setEmail] = useState('')
     const [bouncedEmails, setBouncedEmails] = useState<Set<string>>(new Set())
     const [showImport, setShowImport] = useState(false)
-    const firstNameRef = useAutoFocus<HTMLInputElement>(showModal)
+
+    const loadScorers = useCallback(() => apiFetch(`/organizer/tournament/${tournamentId}/scorers`)
+        .then(r => r.ok ? r.json() : [])
+        .then((data: IScorer[]) => setScorers(Array.isArray(data) ? data : []))
+        .catch(() => setScorers([])), [tournamentId])
 
     useEffect(() => {
-        apiFetch(`/organizer/tournament/${tournamentId}/scorers`)
-            .then(r => r.ok ? r.json() : [])
-            .then((data: IScorer[]) => setScorers(Array.isArray(data) ? data : []))
-            .catch(() => setScorers([]))
+        loadScorers()
         apiFetch(`/organizer/tournament/${tournamentId}/bounced-emails`)
             .then(r => r.ok ? r.json() : [])
             .then((emails: string[]) => setBouncedEmails(new Set(emails.map(e => e.toLowerCase()))))
             .catch(() => {})
-    }, [tournamentId])
+    }, [tournamentId, loadScorers])
 
-    const openAddModal = () => {
-        setEditingId(null); setFirstName(''); setLastName(''); setEmail('')
-        setShowModal(true)
-    }
+    const scorerName = (id: string) => scorers.find(s => s.scorer_id === id)?.name ?? '—'
 
-    const openEditModal = (scorer: IScorer) => {
-        setEditingId(scorer.scorer_id)
-        setFirstName(scorer.first_name); setLastName(scorer.last_name); setEmail(scorer.email ?? '')
-        setShowModal(true)
-    }
+    const openAddModal = () => { setEditingScorer(null); setShowForm(true) }
+    const openEditModal = (scorer: IScorer) => { setEditingScorer(scorer); setShowForm(true) }
 
-    const handleSave = () => {
-        if (!firstName.trim() || !lastName.trim() || !isValidEmail(email)) return
-        if (editingId) {
-            const updated = scorers.find(s => s.scorer_id === editingId)
-            if (!updated) return
-            const payload = { ...updated, first_name: firstName.trim(), last_name: lastName.trim(), email: email.trim() }
-            setScorers(prev => prev.map(s => s.scorer_id === editingId ? payload : s))
+    const handleSave = (draft: ScorerDraft) => {
+        const base = {
+            name: draft.name.trim(),
+            email: draft.isPaper ? null : draft.email.trim(),
+            is_paper: draft.isPaper,
+            willing_to_preside: draft.willingToPreside,
+            prefers_to_score_with: draft.prefersToScoreWith,
+        }
+        if (editingScorer) {
+            const payload: IScorer = { ...editingScorer, ...base }
+            setScorers(prev => prev.map(s => s.scorer_id === editingScorer.scorer_id ? payload : s))
             apiFetch(`/organizer/tournament/${tournamentId}/scorers`, { method: 'PUT', body: JSON.stringify(payload) }).catch(console.error)
         } else {
-            const newScorer: IScorer = { scorer_id: randomUUID(), first_name: firstName.trim(), last_name: lastName.trim(), email: email.trim() }
-            setScorers(prev => [...prev, newScorer])
-            apiFetch(`/organizer/tournament/${tournamentId}/scorers`, { method: 'POST', body: JSON.stringify(newScorer) }).catch(console.error)
+            const payload: IScorer = { scorer_id: randomUUID(), ...base }
+            setScorers(prev => [...prev, payload])
+            apiFetch(`/organizer/tournament/${tournamentId}/scorers`, { method: 'POST', body: JSON.stringify(payload) }).catch(console.error)
         }
-        setShowModal(false)
+        setShowForm(false)
     }
 
     const handleRemove = () => {
@@ -141,24 +250,35 @@ export default function ScorersTab({ tournamentId }: { tournamentId: string }) {
     }
 
     return (
-        <Section title="Scorers" description="Manage available scorers">
+        <Section title="Scorers" description="Manage available scorers, including paper (offline) judges, their conflicts, and preferences">
             <div className="tab-actions">
                 <AddButton onClick={openAddModal}>+ Add scorer</AddButton>
-                <button className="org-new-btn tab-actions-import" onClick={() => setShowImport(true)}>Import CSV</button>
+                <button className="btn-primary tab-actions-import" onClick={() => setShowImport(true)}>Import CSV</button>
             </div>
 
             <div className="dash-table-scroll">
                 <table className="dash-standings-table">
-                    <thead><tr><th>Name</th><th>Email</th><th></th></tr></thead>
+                    <thead><tr><th>Name</th><th>Type</th><th>Email</th><th>Preside</th><th>Prefers</th><th></th></tr></thead>
                     <tbody>
                         {scorers.map(scorer => (
                             <tr key={scorer.scorer_id}>
-                                <td>{scorer.first_name} {scorer.last_name}</td>
+                                <td>{scorer.name}</td>
+                                <td>
+                                    <span className={`sc-type-badge ${scorer.is_paper ? 'sc-type-badge--paper' : 'sc-type-badge--online'}`}>
+                                        {scorer.is_paper ? 'Paper' : 'Online'}
+                                    </span>
+                                </td>
                                 <td className="dash-judge-name">
                                     {scorer.email ?? '—'}
                                     {scorer.email && bouncedEmails.has(scorer.email.toLowerCase()) && (
                                         <span title="Email delivery failed" className="dash-bounced-badge">⚠ BOUNCED</span>
                                     )}
+                                </td>
+                                <td>{scorer.willing_to_preside ? '✓' : '—'}</td>
+                                <td>
+                                    {scorer.prefers_to_score_with && scorer.prefers_to_score_with.length > 0
+                                        ? scorer.prefers_to_score_with.map(scorerName).join(', ')
+                                        : '—'}
                                 </td>
                                 <td>
                                     <div className="dash-actions-cell">
@@ -173,42 +293,18 @@ export default function ScorersTab({ tournamentId }: { tournamentId: string }) {
                 </table>
             </div>
 
-            {showModal && (
-                <ModalBackdrop onClose={() => setShowModal(false)}>
-                    <div className="confirm-modal" role="dialog" aria-modal="true">
-                        <h2>{editingId ? 'Edit scorer' : 'Add scorer'}</h2>
-                        <form className="tc-form" onSubmit={e => { e.preventDefault(); handleSave() }} noValidate>
-                            <div className="tc-field">
-                                <label className="tc-label" htmlFor="first-name">First name</label>
-                                <input id="first-name" type="text" className="tc-input" required ref={firstNameRef}
-                                    value={firstName} onChange={e => setFirstName(e.target.value)} placeholder="First name" />
-                            </div>
-                            <div className="tc-field">
-                                <label className="tc-label" htmlFor="last-name">Last name</label>
-                                <input id="last-name" type="text" className="tc-input" required
-                                    value={lastName} onChange={e => setLastName(e.target.value)} placeholder="Last name" />
-                            </div>
-                            <div className="tc-field">
-                                <label className="tc-label" htmlFor="scorer-email">Email</label>
-                                <input id="scorer-email" type="email" required
-                                    className={`tc-input${email && !isValidEmail(email) ? ' tc-input--invalid' : ''}`}
-                                    value={email} onChange={e => setEmail(e.target.value)} placeholder="scorer@example.com" />
-                                {email && !isValidEmail(email) && <span className="tc-field-error">Invalid email address</span>}
-                            </div>
-                            <div className="confirm-actions">
-                                <button type="button" onClick={() => setShowModal(false)}>Cancel</button>
-                                <button type="submit" disabled={!firstName.trim() || !lastName.trim() || !isValidEmail(email)}>
-                                    {editingId ? 'Save' : 'Add scorer'}
-                                </button>
-                            </div>
-                        </form>
-                    </div>
-                </ModalBackdrop>
+            {showForm && (
+                <ScorerFormModal
+                    editingScorer={editingScorer}
+                    allScorers={scorers}
+                    onClose={() => setShowForm(false)}
+                    onSave={handleSave}
+                />
             )}
 
             {confirmRemove.pending && (
                 <ConfirmRemoveModal
-                    message={`Remove ${confirmRemove.pending.first_name} ${confirmRemove.pending.last_name} from the scorer list?`}
+                    message={`Remove ${confirmRemove.pending.name} from the scorer list?`}
                     onCancel={confirmRemove.clear}
                     onConfirm={handleRemove}
                 />
@@ -225,17 +321,10 @@ export default function ScorersTab({ tournamentId }: { tournamentId: string }) {
             {showImport && (
                 <CsvImportModal
                     title="Import Scorers"
-                    description="Upload a CSV file with scorer information. Each row will be added as a new scorer."
-                    columns={['first_name', 'last_name', 'email']}
-                    exampleRow="Jane,Smith,jane.smith@example.com"
-                    onClose={() => {
-                        setShowImport(false)
-                        // Refresh scorers list after import
-                        apiFetch(`/organizer/tournament/${tournamentId}/scorers`)
-                            .then(r => r.ok ? r.json() : [])
-                            .then((data: IScorer[]) => setScorers(Array.isArray(data) ? data : []))
-                            .catch(() => {})
-                    }}
+                    description="Upload a CSV file with scorer information. Include a header row to set optional fields. Online scorers need an email; paper scorers (is_paper=true) may omit it."
+                    columns={['name', 'email', 'is_paper', 'willing_to_preside']}
+                    exampleRow="Jane Smith,jane.smith@example.com,false,true"
+                    onClose={() => { setShowImport(false); loadScorers() }}
                     onImport={async (csv) => {
                         const res = await apiFetch(`/organizer/tournament/${tournamentId}/import/scorers`, {
                             method: 'POST',

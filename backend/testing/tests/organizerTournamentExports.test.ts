@@ -117,8 +117,7 @@ describe('POST /api/organizer/tournament/:id/import/scorers', () => {
         expect(addScorer).toHaveBeenNthCalledWith(
             1,
             expect.objectContaining({
-                first_name: 'Alice',
-                last_name: 'Smith',
+                name: 'Alice Smith',
                 email: 'alice@test.com',
                 scorer_id: expect.any(String),
             }),
@@ -146,16 +145,16 @@ describe('POST /api/organizer/tournament/:id/import/scorers', () => {
         mockAccess();
 
         const csv =
-            'first_name,last_name,email\n' +
-            ',Smith,a@b.com\n' +
-            'Bob,,b@c.com';
+            'name,email\n' +
+            ',a@b.com\n' +
+            '   ,b@c.com';
 
         const res = await request(app).post(url).set(auth()).send({ csv });
 
         expect(res.status).toBe(200);
         expect(res.body.created).toBe(0);
         expect(res.body.errors).toHaveLength(2);
-        expect(res.body.errors[0].message).toMatch(/missing first or last name/i);
+        expect(res.body.errors[0].message).toMatch(/missing name/i);
     });
 
     it('reports errors for rows with invalid email', async () => {
@@ -218,12 +217,105 @@ describe('POST /api/organizer/tournament/:id/import/scorers', () => {
         expect(res.body.created).toBe(1);
         expect(addScorer).toHaveBeenCalledWith(
             expect.objectContaining({
-                first_name: 'Smith, Jr.',
-                last_name: 'Bob',
+                name: 'Smith, Jr. Bob',
                 email: 'bob@test.com',
             }),
             T
         );
+    });
+
+    it('imports new-format columns (name,email,is_paper,willing_to_preside) by header', async () => {
+        mockAccess();
+        const addScorer = jest
+            .spyOn(organizer, 'addScorer')
+            .mockResolvedValue(undefined as any);
+
+        const csv =
+            'name,email,is_paper,willing_to_preside\n' +
+            'Jane Smith,jane@test.com,false,true\n' +
+            'Paper Judge,,true,false';
+
+        const res = await request(app).post(url).set(auth()).send({ csv });
+
+        expect(res.status).toBe(200);
+        expect(res.body.created).toBe(2);
+        expect(res.body.errors).toHaveLength(0);
+        expect(addScorer).toHaveBeenNthCalledWith(
+            1,
+            expect.objectContaining({
+                name: 'Jane Smith',
+                email: 'jane@test.com',
+                is_paper: false,
+                willing_to_preside: true,
+            }),
+            T
+        );
+        // Paper scorer: email omitted (null), is_paper true, preside false.
+        expect(addScorer).toHaveBeenNthCalledWith(
+            2,
+            expect.objectContaining({
+                name: 'Paper Judge',
+                email: null,
+                is_paper: true,
+                willing_to_preside: false,
+            }),
+            T
+        );
+    });
+
+    it('maps header columns regardless of order', async () => {
+        mockAccess();
+        const addScorer = jest
+            .spyOn(organizer, 'addScorer')
+            .mockResolvedValue(undefined as any);
+
+        const csv =
+            'willing_to_preside,email,name\n' +
+            'no,amy@test.com,Amy Jones';
+
+        const res = await request(app).post(url).set(auth()).send({ csv });
+
+        expect(res.status).toBe(200);
+        expect(res.body.created).toBe(1);
+        expect(addScorer).toHaveBeenCalledWith(
+            expect.objectContaining({
+                name: 'Amy Jones',
+                email: 'amy@test.com',
+                is_paper: false,
+                willing_to_preside: false,
+            }),
+            T
+        );
+    });
+
+    it('rejects an online (non-paper) scorer missing an email', async () => {
+        mockAccess();
+
+        const csv =
+            'name,email,is_paper\n' +
+            'No Email,,false';
+
+        const res = await request(app).post(url).set(auth()).send({ csv });
+
+        expect(res.status).toBe(200);
+        expect(res.body.created).toBe(0);
+        expect(res.body.errors).toHaveLength(1);
+        expect(res.body.errors[0].message).toMatch(/invalid email/i);
+    });
+
+    it('rejects a paper scorer with a malformed email', async () => {
+        mockAccess();
+
+        const csv =
+            'name,email,is_paper\n' +
+            'Paper Bad,not-an-email,true';
+
+        const res = await request(app).post(url).set(auth()).send({ csv });
+
+        expect(res.status).toBe(200);
+        expect(res.body.created).toBe(0);
+        expect(res.body.errors).toHaveLength(1);
+        expect(res.body.errors[0].message).toMatch(/invalid email/i);
     });
 });
 

@@ -1,4 +1,4 @@
 {
-  "frontend/**/*.{ts,tsx}": "eslint --fix",
-  "backend/**/*.ts": "eslint --fix"
+  "frontend/**/*.{ts,tsx}": "eslint --fix --no-warn-ignored",
+  "backend/**/*.ts": "eslint --fix --no-warn-ignored"
 }

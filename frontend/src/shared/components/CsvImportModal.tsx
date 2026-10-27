@@ -17,11 +17,13 @@ export default function CsvImportModal({ title, description, columns, exampleRow
     const [preview, setPreview] = useState<string[][] | null>(null)
     const [importing, setImporting] = useState(false)
     const [result, setResult] = useState<{ created: number; errors: { row: number; message: string }[] } | null>(null)
+    const [fileName, setFileName] = useState<string | null>(null)
     const fileRef = useRef<HTMLInputElement>(null)
 
     const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
         const file = e.target.files?.[0]
         if (!file) return
+        setFileName(file.name)
         const reader = new FileReader()
         reader.onload = () => {
             const text = reader.result as string
@@ -89,18 +91,24 @@ export default function CsvImportModal({ title, description, columns, exampleRow
                         </div>
 
                         <div className="tc-field">
-                            <label className="tc-label csv-import-upload-label" htmlFor="csv-file-upload">
-                                <Icon name="Upload" size={0.9} />
-                                Upload CSV file
-                            </label>
-                            <input
-                                id="csv-file-upload"
-                                ref={fileRef}
-                                type="file"
-                                accept=".csv,text/csv"
-                                onChange={handleFileChange}
-                                className="csv-import-file"
-                            />
+                            <span className="tc-label">Upload CSV file</span>
+                            <div className="csv-import-upload-row">
+                                <input
+                                    id="csv-file-upload"
+                                    ref={fileRef}
+                                    type="file"
+                                    accept=".csv,text/csv"
+                                    onChange={handleFileChange}
+                                    className="csv-import-file"
+                                />
+                                <label className="csv-import-upload-btn" htmlFor="csv-file-upload">
+                                    <Icon name="Upload" size={0.9} />
+                                    Choose file
+                                </label>
+                                <span className="csv-import-filename">
+                                    {fileName ?? 'No file chosen'}
+                                </span>
+                            </div>
                         </div>
 
                         <div className="tc-field">

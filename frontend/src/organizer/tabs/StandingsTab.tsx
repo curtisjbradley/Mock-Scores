@@ -370,7 +370,7 @@ export default function StandingsTab({ tournamentId }: { tournamentId: string })
             {payload.ballots.length > 0 && (
                 <div className="st-export-row">
                     <button
-                        className="org-new-btn"
+                        className="btn-primary"
                         disabled={!result}
                         onClick={() => result && downloadStandingsCsv(result.rows, result.cols)}
                     >
@@ -378,7 +378,7 @@ export default function StandingsTab({ tournamentId }: { tournamentId: string })
                     </button>
 
                     <button
-                        className="org-new-btn"
+                        className="btn-primary"
                         onClick={() => void downloadCsv(tournamentId, 'results')}
                     >
                         Download Results CSV

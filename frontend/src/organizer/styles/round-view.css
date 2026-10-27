@@ -251,3 +251,10 @@
 .rv-done-btn:hover { background: var(--surface-hover); }
 
 .rv-date-input--time { width: 7.5rem; }
+
+.rv-bottom-actions {
+    display: flex;
+    gap: 0.5rem;
+    flex-wrap: wrap;
+    margin-top: 0.5rem;
+}

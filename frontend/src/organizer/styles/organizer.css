@@ -30,22 +30,6 @@
     color: var(--text-muted);
 }
 
-.org-new-btn {
-    height: 2.5rem;
-    padding: 0 1.25rem;
-    border: 0;
-    border-radius: var(--radius);
-    background: var(--primary);
-    color: var(--white);
-    font-size: 0.95rem;
-    font-weight: 600;
-    font-family: inherit;
-    cursor: pointer;
-    transition: background 140ms ease;
-}
-
-.org-new-btn:hover { background: var(--primary-dark); }
-
 .org-back-btn {
     align-self: flex-start;
     background: var(--primary-subtle);
@@ -75,7 +59,7 @@
     gap: 1rem;
     padding: 1rem 1.25rem;
     border: 1px solid var(--border);
-    border-radius: 1rem;
+    border-radius: var(--radius);
     background: var(--surface);
     box-shadow: var(--shadow);
     text-align: left;
@@ -150,7 +134,7 @@
 }
 
 .org-status--upcoming  { background: var(--surface-muted); color: var(--text-muted); }
-.org-status--active    { background: var(--green-bg); color: var(--green-text); }
+.org-status--active    { background: var(--success-subtle-bg); color: var(--success-fg); }
 .org-status--completed { background: var(--primary-subtle); color: var(--primary-dark); }
 
 /* Status filter bar */
@@ -159,8 +143,8 @@
     gap: 4px;
     margin-bottom: 16px;
     padding: 4px;
-    background: var(--surface-muted, #f3f4f6);
-    border-radius: 8px;
+    background: var(--surface-muted);
+    border-radius: 0.6rem;
     width: fit-content;
 }
 
@@ -168,10 +152,10 @@
     padding: 6px 14px;
     border: none;
     background: transparent;
-    border-radius: 6px;
+    border-radius: 0.5rem;
     font-size: 0.85rem;
     font-weight: 500;
-    color: var(--text-muted, #666);
+    color: var(--text-muted);
     cursor: pointer;
     transition: background 0.15s, color 0.15s;
 }
@@ -181,9 +165,9 @@
 }
 
 .org-status-filter-btn--active {
-    background: #fff;
+    background: var(--surface);
     color: var(--text);
-    box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+    box-shadow: var(--shadow-sm);
 }
 
 .org-status-filter-count {
@@ -191,14 +175,14 @@
     margin-left: 4px;
     padding: 0 5px;
     font-size: 0.75rem;
-    background: var(--surface-muted, #e5e7eb);
-    border-radius: 8px;
+    background: var(--surface-muted);
+    border-radius: 0.5rem;
     min-width: 16px;
     text-align: center;
 }
 
 .org-status-filter-btn--active .org-status-filter-count {
-    background: var(--primary-subtle, #e0e7ff);
+    background: var(--primary-subtle);
 }
 
 /* Tournament card status badge */
@@ -214,13 +198,13 @@
 }
 
 .org-tournament-status--completed {
-    background: var(--primary-subtle, #e0e7ff);
-    color: var(--primary-dark, #1e40af);
+    background: var(--primary-subtle);
+    color: var(--primary-dark);
 }
 
 .org-tournament-status--archived {
-    background: var(--surface-muted, #f3f4f6);
-    color: var(--text-muted, #888);
+    background: var(--surface-muted);
+    color: var(--text-muted);
 }
 
 .org-tournament-card--archived {
@@ -244,7 +228,7 @@
 .org-dashboard-card {
     padding: 1.25rem;
     border: 1px solid var(--border);
-    border-radius: 1rem;
+    border-radius: var(--radius);
     background: var(--surface);
     box-shadow: var(--shadow);
 }
@@ -276,7 +260,7 @@
     gap: 0.5rem;
     padding: 1.25rem;
     border: 1px solid var(--border);
-    border-radius: 1rem;
+    border-radius: var(--radius);
     background: var(--surface);
     box-shadow: var(--shadow);
 }
@@ -289,6 +273,16 @@
 .coach-empty {
     color: var(--text-muted);
     font-size: 0.9rem;
+}
+
+.coach-empty-message {
+    margin: 0;
+}
+
+.coach-empty-hint {
+    margin: 0.35rem 0 0;
+    font-size: 0.85rem;
+    opacity: 0.85;
 }
 
 .coach-view-banner {
@@ -545,7 +539,7 @@
 }
 
 .roster-add-form input,
-.roster-add-form .org-new-btn {
+.roster-add-form .btn-primary {
     height: 2.25rem;
     border-radius: 0.6rem;
     white-space: nowrap;

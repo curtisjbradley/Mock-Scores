@@ -48,7 +48,7 @@ function baseSheetRow(overrides: Record<string, unknown> = {}) {
     return {
         assignment_id: ASSIGNMENT,
         pairing_id: PAIRING,
-        paper_scorer_id: null,
+        scorer_is_paper: false,
         p_team: P_TEAM,
         d_team: D_TEAM,
         courtroom_name: 'Room 1',
@@ -57,12 +57,8 @@ function baseSheetRow(overrides: Record<string, unknown> = {}) {
         show_scores: null,
         conflict_reported: false,
         locked: true,
-        scorer_first_name: 'Jane',
-        scorer_last_name: 'Judge',
-        paper_scorer_name: null,
-        presider_first_name: null,
-        presider_last_name: null,
-        presider_paper_name: null,
+        scorer_name: 'Jane Judge',
+        presider_name: null,
         ...overrides,
     };
 }
@@ -205,11 +201,7 @@ describe('scoresheet construction', () => {
             rowCount: 1,
         } as any);
         mockDbQuery.mockResolvedValueOnce({
-            rows: [{ registered_scorer_id: 'scorer-presider', paper_scorer_id: null }],
-            rowCount: 1,
-        } as any);
-        mockDbQuery.mockResolvedValueOnce({
-            rows: [{ first_name: 'Alex', last_name: 'Presider' }],
+            rows: [{ name: 'Alex Presider' }],
             rowCount: 1,
         } as any);
 
@@ -228,7 +220,7 @@ describe('scoresheet construction', () => {
 
         const sheet = await getPairingBallotFormat(PAIRING);
         expect(sheet.presiderName).toBe('Alex Presider');
-        expect(sheet.scorer).toEqual({ firstName: '', lastName: '', scorerID: '', isPaper: true });
+        expect(sheet.scorer).toEqual({ name: '', scorerID: '', isPaper: true });
         expect(sheet.ballotOptions).toEqual({ fillableScores: true, showTiebreaker: false });
         expect(sheet.roundLocked).toBe(true);
         expect(sheet.scoringCategories.cat1.categoryAssignments[0]).toEqual(expect.objectContaining({
@@ -248,10 +240,6 @@ describe('scoresheet construction', () => {
                 tournament_id: TOURNAMENT,
                 locked: false,
             }],
-            rowCount: 1,
-        } as any);
-        mockDbQuery.mockResolvedValueOnce({
-            rows: [{ registered_scorer_id: null, paper_scorer_id: 'paper-presider' }],
             rowCount: 1,
         } as any);
         mockDbQuery.mockResolvedValueOnce({ rows: [{ name: 'Paper Presider' }], rowCount: 1 } as any);
@@ -374,18 +362,18 @@ describe('getSheetFromBallot', () => {
         mockDbQuery.mockResolvedValueOnce({
             rows: [baseSheetRow({
                 conflict_reported: true,
-                paper_scorer_id: 'paper-1',
-                paper_scorer_name: 'Paper Pat',
+                scorer_is_paper: true,
+                scorer_name: 'Paper Pat',
                 presider_scorer_assignment_id: ASSIGNMENT,
                 show_scores: false,
-                presider_paper_name: 'Paper Pat',
+                presider_name: 'Paper Pat',
             })],
             rowCount: 1,
         } as any);
         queueBuildQueries();
 
         const sheet = await getSheetFromBallot(BALLOT, { skipGuards: true });
-        expect(sheet.scorer).toEqual({ firstName: 'Paper Pat', lastName: '', scorerID: ASSIGNMENT, isPaper: true });
+        expect(sheet.scorer).toEqual({ name: 'Paper Pat', scorerID: ASSIGNMENT, isPaper: true });
         expect(sheet.presiderName).toBe('Paper Pat');
         expect(sheet.ballotOptions).toEqual({ fillableScores: false, showTiebreaker: true });
     });
@@ -414,8 +402,7 @@ describe('getSheetFromAssignment', () => {
             rows: [baseSheetRow({
                 presider_scorer_assignment_id: ASSIGNMENT,
                 show_scores: true,
-                presider_first_name: 'Alex',
-                presider_last_name: 'Presider',
+                presider_name: 'Alex Presider',
             })],
             rowCount: 1,
         } as any);
@@ -423,8 +410,7 @@ describe('getSheetFromAssignment', () => {
         queueBuildQueries();
 
         const sheet = await getSheetFromAssignment(ASSIGNMENT);
-        expect(sheet.scorer.firstName).toBe('Jane');
-        expect(sheet.scorer.lastName).toBe('Judge');
+        expect(sheet.scorer.name).toBe('Jane Judge');
         expect(sheet.presiderName).toBe('Alex Presider');
         expect(sheet.ballotOptions).toEqual({ fillableScores: true, showTiebreaker: true });
     });
@@ -566,7 +552,7 @@ describe('getConflictReportContext', () => {
         mockDbQuery.mockResolvedValueOnce({ rows: [], rowCount: 1 } as any);
         mockDbQuery.mockResolvedValueOnce({
             rows: [{
-                scorer_first_name: 'Jane', scorer_last_name: 'Judge', paper_name: null,
+                scorer_name: 'Jane Judge',
                 tournament_name: 'State', round_name: 'Round 1', courtroom_name: '101',
                 owner_email: 'owner@example.com', owner_first_name: 'Alex',
             }],
@@ -583,11 +569,11 @@ describe('getConflictReportContext', () => {
         });
     });
 
-    it('prefers the paper scorer name', async () => {
+    it('resolves a paper scorer name from first/last', async () => {
         mockDbQuery.mockResolvedValueOnce({ rows: [], rowCount: 1 } as any);
         mockDbQuery.mockResolvedValueOnce({
             rows: [{
-                scorer_first_name: '', scorer_last_name: '', paper_name: 'Paper Pat',
+                scorer_name: 'Paper Pat',
                 tournament_name: 'State', round_name: null, courtroom_name: null,
                 owner_email: 'owner@example.com', owner_first_name: 'Alex',
             }],

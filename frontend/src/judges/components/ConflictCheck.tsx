@@ -53,7 +53,7 @@ function ConflictCheck({ details, onProceed }: ConflictCheckProps) {
                 <dl className="conflict-info">
                     <div className="conflict-info-row">
                         <dt>Your Name</dt>
-                        <dd>{details.scorer.firstName} {details.scorer.lastName}</dd>
+                        <dd>{details.scorer.name}</dd>
                     </div>
                     <div className="conflict-info-row">
                         <dt>Presider</dt>

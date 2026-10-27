@@ -13,23 +13,44 @@
     --primary-dark: #1d3ecf;
     --primary-subtle: #eaf0ff;
 
-    --danger: #e61c1c;
-    --danger-bg: rgb(159 19 19 / 0.27);
+    /* Danger — errors, destructive actions, negative values */
+    --danger: #e61c1c;          /* primary danger (text, borders, solid fills) */
+    --danger-bg: rgb(159 19 19 / 0.27); /* translucent danger wash (hover, "missing") */
+    --danger-subtle-bg: #fee2e2; /* opaque soft danger fill (badges) */
+    --danger-strong: #991b1b;   /* high-contrast danger text on light fills */
 
-    --success: #d4edda;
-    --success-text: #155724;
-    --success-border: #c3e6cb;
+    /* Success — confirmations, published/active state, positive values */
+    --success-bg: #d4edda;      /* soft success fill (banners, badges) */
+    --success-fg: #155724;      /* success text on soft fill */
+    --success-border: #c3e6cb;  /* success banner border */
+    --success-subtle-bg: #d1fae5; /* lighter success fill (status pills) */
+    --success-strong: #059669;  /* vivid success text/accent (messages, positive diffs) */
 
-    --green-bg: #d1fae5;
-    --green-text: #065f46;
-    --green-text-alt: #059669;
-    --red-bg: #fee2e2;
-    --red-text: #991b1b;
+    /* Warning — paper scorers, capacity shortfalls, caution */
+    --warning-fg: #9a6700;      /* warning text/border */
+    --warning-bg: #fdf3e2;      /* soft warning fill */
+
+    /* Info — informational badges (e.g. online scorer), neutral emphasis */
+    --info: #1d4ed8;            /* info text/border */
+    --info-bg: #e0edff;         /* soft info fill */
+
+    /* Positive capacity hint (auto-assign "enough scorers") */
+    --ok-bg: #e6f6ec;
 
     --focus: #9bb8ff;
 
+    /* Surface variants */
+    --surface-hover: #ecebff;
+    --border-muted: #e8eaf6;
+
+    /* Spacing scale */
+    --space-sm: 0.5rem;
+    --space-md: 1rem;
+    --space-lg: 1.5rem;
+
     --radius: 0.9rem;
     --shadow: 0 16px 40px rgba(17, 24, 39, 0.08);
+    --shadow-sm: 0 1px 3px rgba(17, 24, 39, 0.12);
     --shadow-primary: 0 8px 18px rgba(47, 91, 255, 0.2);
     --shadow-primary-lg: 0 10px 22px rgba(31, 94, 255, 0.22);
     --overlay-bg: rgba(15, 23, 42, 0.5);
@@ -58,20 +79,30 @@
 
         --danger: #ff8080;
         --danger-bg: #4a2020;
+        --danger-subtle-bg: #450a0a;
+        --danger-strong: #fca5a5;
 
-        --success: #1e3a2a;
-        --success-text: #6fcf97;
+        --success-bg: #1e3a2a;
+        --success-fg: #6fcf97;
         --success-border: #2d6a4f;
+        --success-subtle-bg: #064e3b;
+        --success-strong: #6ee7b7;
 
-        --green-bg: #064e3b;
-        --green-text: #6ee7b7;
-        --green-text-alt: #6ee7b7;
-        --red-bg: #450a0a;
-        --red-text: #fca5a5;
+        --warning-fg: #fbbf24;
+        --warning-bg: #3a2f16;
+
+        --info: #93b4ff;
+        --info-bg: #1e2d5a;
+
+        --ok-bg: #16301f;
 
         --focus: #3d5aff;
 
+        --surface-hover: #262b42;
+        --border-muted: #262b42;
+
         --shadow: 0 16px 40px rgba(0, 0, 0, 0.4);
+        --shadow-sm: 0 1px 3px rgba(0, 0, 0, 0.5);
         --shadow-primary: 0 8px 18px rgba(47, 91, 255, 0.15);
         --shadow-primary-lg: 0 10px 22px rgba(31, 94, 255, 0.18);
         --overlay-bg: rgba(0, 0, 0, 0.6);
@@ -110,6 +141,10 @@ body {
     }
 }
 
+/* Primary action button — solid, filled. Used for the main action in a
+   context: dashboard/toolbar actions (formerly `.org-new-btn`) and form /
+   modal / wizard submit buttons (`.btn-confirm`). Both names share one style. */
+.btn-primary,
 .btn-confirm {
     height: 2.5rem;
     padding: 0 1.25rem;
@@ -124,7 +159,9 @@ body {
     transition: background 140ms ease;
 }
 
+.btn-primary:hover:not(:disabled),
 .btn-confirm:hover:not(:disabled) { background: var(--primary-dark); }
+.btn-primary:disabled,
 .btn-confirm:disabled { opacity: 0.55; cursor: not-allowed; }
 
 .btn-cancel {

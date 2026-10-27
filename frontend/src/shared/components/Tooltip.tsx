@@ -30,7 +30,7 @@ interface Props {
  *
  * @example
  * <Tooltip content="Publish results to coaches">
- *   <button className="org-new-btn">Publish</button>
+ *   <button className="btn-primary">Publish</button>
  * </Tooltip>
  */
 export default function Tooltip({

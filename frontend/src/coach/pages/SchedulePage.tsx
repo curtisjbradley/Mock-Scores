@@ -63,10 +63,10 @@ export default function SchedulePage() {
                                         <td className="coach-schedule-actions">
                                             {round.locked ? (
                                                 <>
-                                                    <button className="org-new-btn coach-btn-submitted" disabled>
+                                                    <button className="btn-primary coach-btn-submitted" disabled>
                                                         {p.has_assignments ? 'Roles Assigned' : 'Copied Default Roles'}
                                                     </button>
-                                                    <button className="org-new-btn coach-btn-submitted" disabled>
+                                                    <button className="btn-primary coach-btn-submitted" disabled>
                                                         {p.has_call_order ? 'Call Order Set' : 'Copied Default Call Order'}
                                                     </button>
                                                 </>
@@ -76,13 +76,13 @@ export default function SchedulePage() {
                                                 // clickable even after an initial entry has been saved.
                                                 <>
                                                     <button
-                                                        className={`org-new-btn${p.has_assignments ? ' coach-btn-set' : ''}`}
+                                                        className={`btn-primary${p.has_assignments ? ' coach-btn-set' : ''}`}
                                                         onClick={() => onAssignRoles(p.pairing_id, side)}
                                                     >
                                                         {p.has_assignments ? 'Edit roles' : 'Assign Roles'}
                                                     </button>
                                                     <button
-                                                        className={`org-new-btn${p.has_call_order ? ' coach-btn-set' : ''}`}
+                                                        className={`btn-primary${p.has_call_order ? ' coach-btn-set' : ''}`}
                                                         onClick={() => onWitnessOrder(p.pairing_id)}
                                                     >
                                                         {p.has_call_order ? 'Edit call order' : 'Assign Call Order'}

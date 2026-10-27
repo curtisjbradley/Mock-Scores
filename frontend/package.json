@@ -12,7 +12,7 @@
     "prepare": "node -e \"if(process.env.NODE_ENV !== 'production') { require('child_process').execSync('cd .. && husky', {stdio:'inherit'}) }\""
   },
   "lint-staged": {
-    "*.{ts,tsx}": "eslint --fix"
+    "*.{ts,tsx}": "eslint --fix --no-warn-ignored"
   },
   "dependencies": {
     "@mock-scores/shared": "*",

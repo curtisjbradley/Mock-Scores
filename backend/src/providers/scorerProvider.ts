@@ -15,8 +15,7 @@ interface PairingFormatContext {
     presiderName: string;
     /** assignment_id to embed as scorerID; empty string for a blank/pairing-level ballot. */
     scorerAssignmentId: string;
-    scorerFirstName: string;
-    scorerLastName: string;
+    scorerName: string;
     isPaper: boolean;
     fillableScores: boolean;
     /** Whether to show the tiebreaker selection — true only for the presider's ballot. */
@@ -344,8 +343,7 @@ async function buildScoreSheetForPairing(ctx: PairingFormatContext): Promise<ISc
         ballotOptions: { fillableScores: ctx.fillableScores, showTiebreaker: ctx.showTiebreaker, },
         pairingID: pairing_id,
         scorer: {
-            firstName: ctx.scorerFirstName,
-            lastName: ctx.scorerLastName,
+            name: ctx.scorerName,
             scorerID: ctx.scorerAssignmentId,
             isPaper: ctx.isPaper,
         },
@@ -396,28 +394,14 @@ export async function getPairingBallotFormat(pairingId: string): Promise<IScoreS
 
     // Resolve the currently assigned presider's name, if any.
     let presiderName = '';
-    const pres = (await dbQuery<{
-        registered_scorer_id: string | null;
-        paper_scorer_id: string | null;
-    }>(`
-        SELECT spa.registered_scorer_id, spa.paper_scorer_id
+    const pres = (await dbQuery<{ name: string }>(`
+        SELECT s.name
         FROM scorer_presider_assignment pa
                  JOIN scorer_pairing_assignments spa ON spa.assignment_id = pa.scorer_assignment_id
+                 JOIN scorers s                      ON s.scorer_id       = spa.scorer_id
         WHERE pa.pairing_id = $1
     `, [pairingId]))?.rows[0];
-    if (pres?.registered_scorer_id) {
-        const pr = (await dbQuery<{ first_name: string; last_name: string }>(
-            'SELECT first_name, last_name FROM scorers WHERE scorer_id = $1',
-            [pres.registered_scorer_id],
-        ))?.rows[0];
-        if (pr) presiderName = `${pr.first_name} ${pr.last_name}`;
-    } else if (pres?.paper_scorer_id) {
-        const pr = (await dbQuery<{ name: string }>(
-            'SELECT name FROM paper_scorers WHERE scorer_id = $1',
-            [pres.paper_scorer_id],
-        ))?.rows[0];
-        if (pr) presiderName = pr.name;
-    }
+    if (pres) presiderName = pres.name.trim();
 
     return buildScoreSheetForPairing({
         pairingId,
@@ -427,8 +411,7 @@ export async function getPairingBallotFormat(pairingId: string): Promise<IScoreS
         courtroomName: pairing.courtroom_name,
         presiderName,
         scorerAssignmentId: '',
-        scorerFirstName: '',
-        scorerLastName: '',
+        scorerName: '',
         isPaper: true,
         fillableScores: true,
         showTiebreaker: false,
@@ -441,7 +424,7 @@ export async function getPairingBallotFormat(pairingId: string): Promise<IScoreS
 interface ScorerSheetRow {
     assignment_id: string;
     pairing_id: string;
-    paper_scorer_id: string | null;
+    scorer_is_paper: boolean;
     p_team: string;
     d_team: string;
     courtroom_name: string | null;
@@ -450,12 +433,8 @@ interface ScorerSheetRow {
     show_scores: boolean | null;
     conflict_reported: boolean;
     locked: boolean;
-    scorer_first_name: string | null;
-    scorer_last_name: string | null;
-    paper_scorer_name: string | null;
-    presider_first_name: string | null;
-    presider_last_name: string | null;
-    presider_paper_name: string | null;
+    scorer_name: string | null;
+    presider_name: string | null;
 }
 
 /**
@@ -473,7 +452,7 @@ export async function getSheetFromBallot(
         SELECT
             spa.assignment_id,
             spa.pairing_id,
-            spa.paper_scorer_id,
+            scorer.is_paper AS scorer_is_paper,
             p.p_team,
             p.d_team,
             cr.name AS courtroom_name,
@@ -482,12 +461,8 @@ export async function getSheetFromBallot(
             pres.scorer_assignment_id AS presider_scorer_assignment_id,
             pres.show_scores,
             spa.conflict_reported,
-            scorer.first_name AS scorer_first_name,
-            scorer.last_name AS scorer_last_name,
-            paper.name AS paper_scorer_name,
-            presider_scorer.first_name AS presider_first_name,
-            presider_scorer.last_name AS presider_last_name,
-            presider_paper.name AS presider_paper_name
+            scorer.name AS scorer_name,
+            presider_scorer.name AS presider_name
         FROM ballots b
         JOIN scorer_pairing_assignments spa
              ON spa.assignment_id = b.scorer_assignment_id
@@ -501,14 +476,10 @@ export async function getSheetFromBallot(
              ON pres.pairing_id = spa.pairing_id
         LEFT JOIN scorer_pairing_assignments presider_assignment
              ON presider_assignment.assignment_id = pres.scorer_assignment_id
-        LEFT JOIN scorers scorer
-             ON scorer.scorer_id = spa.registered_scorer_id
-        LEFT JOIN paper_scorers paper
-             ON paper.scorer_id = spa.paper_scorer_id
+        JOIN scorers scorer
+             ON scorer.scorer_id = spa.scorer_id
         LEFT JOIN scorers presider_scorer
-             ON presider_scorer.scorer_id = presider_assignment.registered_scorer_id
-        LEFT JOIN paper_scorers presider_paper
-             ON presider_paper.scorer_id = presider_assignment.paper_scorer_id
+             ON presider_scorer.scorer_id = presider_assignment.scorer_id
         WHERE b.ballot_id = $1
     `, [ballotId]))?.rows[0];
 
@@ -520,10 +491,8 @@ export async function getSheetFromBallot(
 
     const isPresider = asg.presider_scorer_assignment_id === asg.assignment_id;
 
-    const scorerFirstName = asg.paper_scorer_name ?? asg.scorer_first_name ?? '';
-    const scorerLastName = asg.paper_scorer_name ? '' : asg.scorer_last_name ?? '';
-    const presiderName = asg.presider_paper_name ??
-        [asg.presider_first_name, asg.presider_last_name].filter(Boolean).join(' ');
+    const scorerName = asg.scorer_name ?? '';
+    const presiderName = asg.presider_name ?? '';
 
     return buildScoreSheetForPairing({
         pairingId: asg.pairing_id,
@@ -533,9 +502,8 @@ export async function getSheetFromBallot(
         courtroomName: asg.courtroom_name,
         presiderName,
         scorerAssignmentId: asg.assignment_id,
-        scorerFirstName,
-        scorerLastName,
-        isPaper: asg.paper_scorer_id != null,
+        scorerName,
+        isPaper: asg.scorer_is_paper,
         fillableScores: !isPresider || asg.show_scores === true,
         showTiebreaker: isPresider,
         roundLocked: asg.locked,
@@ -556,7 +524,7 @@ export async function getSheetFromAssignment(
         SELECT
             spa.assignment_id,
             spa.pairing_id,
-            spa.paper_scorer_id,
+            scorer.is_paper AS scorer_is_paper,
             p.p_team,
             p.d_team,
             cr.name AS courtroom_name,
@@ -565,12 +533,8 @@ export async function getSheetFromAssignment(
             pres.scorer_assignment_id AS presider_scorer_assignment_id,
             pres.show_scores,
             spa.conflict_reported,
-            scorer.first_name AS scorer_first_name,
-            scorer.last_name AS scorer_last_name,
-            paper.name AS paper_scorer_name,
-            presider_scorer.first_name AS presider_first_name,
-            presider_scorer.last_name AS presider_last_name,
-            presider_paper.name AS presider_paper_name
+            scorer.name AS scorer_name,
+            presider_scorer.name AS presider_name
         FROM scorer_pairing_assignments spa
         JOIN pairings p
              ON p.pairing_id = spa.pairing_id
@@ -582,14 +546,10 @@ export async function getSheetFromAssignment(
              ON pres.pairing_id = spa.pairing_id
         LEFT JOIN scorer_pairing_assignments presider_assignment
              ON presider_assignment.assignment_id = pres.scorer_assignment_id
-        LEFT JOIN scorers scorer
-             ON scorer.scorer_id = spa.registered_scorer_id
-        LEFT JOIN paper_scorers paper
-             ON paper.scorer_id = spa.paper_scorer_id
+        JOIN scorers scorer
+             ON scorer.scorer_id = spa.scorer_id
         LEFT JOIN scorers presider_scorer
-             ON presider_scorer.scorer_id = presider_assignment.registered_scorer_id
-        LEFT JOIN paper_scorers presider_paper
-             ON presider_paper.scorer_id = presider_assignment.paper_scorer_id
+             ON presider_scorer.scorer_id = presider_assignment.scorer_id
         WHERE spa.assignment_id = $1
     `, [assignmentId]))?.rows[0];
 
@@ -610,10 +570,8 @@ export async function getSheetFromAssignment(
 
     const isPresider = asg.presider_scorer_assignment_id === asg.assignment_id;
 
-    const scorerFirstName = asg.paper_scorer_name ?? asg.scorer_first_name ?? '';
-    const scorerLastName = asg.paper_scorer_name ? '' : asg.scorer_last_name ?? '';
-    const presiderName = asg.presider_paper_name ??
-        [asg.presider_first_name, asg.presider_last_name].filter(Boolean).join(' ');
+    const scorerName = asg.scorer_name ?? '';
+    const presiderName = asg.presider_name ?? '';
 
     return buildScoreSheetForPairing({
         pairingId: asg.pairing_id,
@@ -623,9 +581,8 @@ export async function getSheetFromAssignment(
         courtroomName: asg.courtroom_name,
         presiderName,
         scorerAssignmentId: asg.assignment_id,
-        scorerFirstName,
-        scorerLastName,
-        isPaper: asg.paper_scorer_id != null,
+        scorerName,
+        isPaper: asg.scorer_is_paper,
         fillableScores: !isPresider || asg.show_scores === true,
         showTiebreaker: isPresider,
         roundLocked: asg.locked,
@@ -737,9 +694,7 @@ export async function getConflictReportContext(assignmentId: string): Promise<{
     }
 
     const row = (await dbQuery<{
-        scorer_first_name: string;
-        scorer_last_name: string;
-        paper_name: string | null;
+        scorer_name: string;
         tournament_name: string;
         round_name: string;
         courtroom_name: string | null;
@@ -747,9 +702,7 @@ export async function getConflictReportContext(assignmentId: string): Promise<{
         owner_first_name: string;
     }>(`
         SELECT
-            s.first_name        AS scorer_first_name,
-            s.last_name         AS scorer_last_name,
-            ps.name             AS paper_name,
+            s.name              AS scorer_name,
             t.name              AS tournament_name,
             r.name              AS round_name,
             cr.name             AS courtroom_name,
@@ -762,9 +715,7 @@ export async function getConflictReportContext(assignmentId: string): Promise<{
                  JOIN tournament_owners tow
                       ON tow.tournament_id = t.id AND tow.role = 'owner'
                  JOIN auth a         ON a.user_id     = tow.delegate_id
-                 LEFT JOIN scorers s ON s.scorer_id   = spa.registered_scorer_id
-                 LEFT JOIN paper_scorers ps
-                           ON ps.scorer_id  = spa.paper_scorer_id
+                 JOIN scorers s      ON s.scorer_id   = spa.scorer_id
                  LEFT JOIN courtrooms cr ON cr.id     = p.courtroom
         WHERE spa.assignment_id = $1
         LIMIT 1
@@ -773,7 +724,7 @@ export async function getConflictReportContext(assignmentId: string): Promise<{
     if (!row) return null;
 
     return {
-        scorerName: row.paper_name ?? `${row.scorer_first_name} ${row.scorer_last_name}`,
+        scorerName: row.scorer_name.trim(),
         tournamentName: row.tournament_name,
         roundName: row.round_name,
         courtroomName: row.courtroom_name,

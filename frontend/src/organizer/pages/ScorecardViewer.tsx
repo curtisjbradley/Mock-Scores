@@ -506,7 +506,7 @@ const ScorecardViewer = () => {
 
                     <div className="coach-section">
                         <div className="sv-header">
-                            <h2>Scorecard{sheet.scorer.firstName ? ` - ${sheet.scorer.firstName} ${sheet.scorer.lastName}` : ''}</h2>
+                            <h2>Scorecard{sheet.scorer.name ? ` - ${sheet.scorer.name}` : ''}</h2>
                             {ballot && (
                                 <div className="sv-header-actions">
                                     <AddButton onClick={() => {

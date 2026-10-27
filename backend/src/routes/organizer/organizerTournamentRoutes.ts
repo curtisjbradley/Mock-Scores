@@ -445,10 +445,24 @@ router.get("/scorers", tournamentHandler(async (req, res) => {
 
 function verifyScorer(req: Request, res: Response, next: NextFunction) {
     const scorer: IScorer = req.body;
-    if (!scorer?.email || !scorer?.first_name || !scorer?.last_name || !scorer?.scorer_id)
+    if (!scorer?.name?.trim() || !scorer?.scorer_id)
         return res.status(409).json({ message: 'Missing required field(s)' });
-    if (!isValidEmail(scorer.email)) return res.status(400).json({ message: 'Invalid email address' });
-    req.scorer = scorer;
+
+    const isPaper = scorer.is_paper === true;
+    // Online scorers must have a valid email; paper (offline) scorers need none.
+    if (!isPaper) {
+        if (!scorer.email) return res.status(409).json({ message: 'Missing required field(s)' });
+        if (!isValidEmail(scorer.email)) return res.status(400).json({ message: 'Invalid email address' });
+    }
+
+    // Normalize optional profile fields so older clients and paper scorers persist cleanly.
+    req.scorer = {
+        ...scorer,
+        name: scorer.name.trim(),
+        email: isPaper ? (scorer.email?.trim() || null) : scorer.email,
+        is_paper: isPaper,
+        willing_to_preside: scorer.willing_to_preside ?? true,
+    };
     next();
 }
 
@@ -469,11 +483,12 @@ function verifyScorer(req: Request, res: Response, next: NextFunction) {
  *         application/json:
  *           schema:
  *             type: object
- *             required: [email, first_name, last_name, scorer_id]
+ *             required: [name, scorer_id]
  *             properties:
- *               email: { type: string, format: email }
- *               first_name: { type: string }
- *               last_name: { type: string }
+ *               name: { type: string }
+ *               email: { type: string, format: email, nullable: true }
+ *               is_paper: { type: boolean }
+ *               willing_to_preside: { type: boolean }
  *               scorer_id: { type: string, format: uuid }
  *     responses:
  *       200: { description: Scorer added }
@@ -483,6 +498,9 @@ function verifyScorer(req: Request, res: Response, next: NextFunction) {
 router.post("/scorers", verifyScorer, scorerHandler(async (req, res) => {
     try {
         await organizer.addScorer(req.scorer, req.tournament);
+        if (req.scorer.prefers_to_score_with) {
+            await organizer.setCoscoringPreferences(req.scorer.scorer_id, req.scorer.prefers_to_score_with);
+        }
         return res.status(200).json(req.scorer);
     } catch (e) {
         if (e instanceof DbError) return res.status(500).json({ message: 'Unable to communicate with database' });
@@ -507,11 +525,12 @@ router.post("/scorers", verifyScorer, scorerHandler(async (req, res) => {
  *         application/json:
  *           schema:
  *             type: object
- *             required: [email, first_name, last_name, scorer_id]
+ *             required: [name, scorer_id]
  *             properties:
- *               email: { type: string, format: email }
- *               first_name: { type: string }
- *               last_name: { type: string }
+ *               name: { type: string }
+ *               email: { type: string, format: email, nullable: true }
+ *               is_paper: { type: boolean }
+ *               willing_to_preside: { type: boolean }
  *               scorer_id: { type: string, format: uuid }
  *     responses:
  *       200: { description: Updated }
@@ -521,6 +540,9 @@ router.post("/scorers", verifyScorer, scorerHandler(async (req, res) => {
 router.put("/scorers", verifyScorer, scorerHandler(async (req, res) => {
     try {
         await organizer.updateScorer(req.scorer, req.tournament);
+        if (req.scorer.prefers_to_score_with) {
+            await organizer.setCoscoringPreferences(req.scorer.scorer_id, req.scorer.prefers_to_score_with);
+        }
         return res.status(200).json(req.scorer);
     } catch (e) {
         if (e instanceof NotFoundError) return res.status(404).json({ message: e.message });
@@ -586,6 +608,34 @@ router.delete("/scorers", tournamentHandler(async (req, res) => {
 router.get('/scorer-conflicts', tournamentHandler(async (req, res) => {
     try {
         return res.status(200).json(await organizer.getAllConflicts(req.tournament));
+    } catch (e) {
+        if (e instanceof DbError) return res.status(500).json({ message: 'Database error' });
+        throw e;
+    }
+}));
+
+/**
+ * @swagger
+ * /organizer/tournament/{tournamentId}/scorer-history:
+ *   get:
+ *     summary: Get which teams each scorer has already seen across all rounds
+ *     description: >
+ *       Returns flat (scorer_id, team_id) pairs for every team a scorer has
+ *       already scored in any round of this tournament. Powers the auto-assign
+ *       "avoid repeat matchups" option.
+ *     tags: [Organizer - Scorers]
+ *     parameters:
+ *       - in: path
+ *         name: tournamentId
+ *         required: true
+ *         schema: { type: string, format: uuid }
+ *     responses:
+ *       200: { description: Scorer/team history pairs }
+ *       500: { description: Database error }
+ */
+router.get('/scorer-history', tournamentHandler(async (req, res) => {
+    try {
+        return res.status(200).json(await organizer.getScorerTeamHistory(req.tournament));
     } catch (e) {
         if (e instanceof DbError) return res.status(500).json({ message: 'Database error' });
         throw e;
@@ -1748,7 +1798,7 @@ function parseCsv(text: string): string[][] {
  *             type: object
  *             required: [csv]
  *             properties:
- *               csv: { type: string, description: "Raw CSV text with columns: first_name, last_name, email" }
+ *               csv: { type: string, description: "Raw CSV text. With a header row, columns are mapped by name: name, email, is_paper, willing_to_preside (is_paper/willing_to_preside optional, boolean-ish). Without a header, falls back to positional name,email (or legacy first,last,email)." }
  *     responses:
  *       200: { description: Import results with created count and errors }
  *       400: { description: Missing CSV or invalid format }
@@ -1760,30 +1810,88 @@ router.post('/import/scorers', tournamentHandler(async (req, res) => {
     const rows = parseCsv(csv);
     if (rows.length === 0) return res.status(400).json({ message: 'CSV is empty' });
 
-    // Detect header row — if first row looks like headers, skip it
-    const firstRow = rows[0].map(f => f.toLowerCase());
-    const hasHeader = firstRow.includes('first_name') || firstRow.includes('first name') ||
-                      firstRow.includes('email') || firstRow.includes('lastname');
+    // New scorer format columns: name, email, is_paper, willing_to_preside.
+    // When a header row names these columns we map by column name (any order,
+    // extra columns ignored). The legacy "first_name,last_name,email" header
+    // (and headerless rows) fall back to positional parsing so older CSVs and
+    // the two-column "name,email" shape keep working.
+    const headerCells = rows[0].map(f => f.toLowerCase().trim());
+    const hasLegacyNameHeader = headerCells.includes('first_name') ||
+                                headerCells.includes('first name') ||
+                                headerCells.includes('last_name') ||
+                                headerCells.includes('lastname');
+    const NEW_HEADERS = new Set(['name', 'email', 'is_paper', 'paper', 'willing_to_preside', 'preside']);
+    const hasNewHeader = !hasLegacyNameHeader && headerCells.some(c => NEW_HEADERS.has(c));
+    // A legacy header row still needs to be skipped even though we parse positionally.
+    const hasHeader = hasNewHeader || hasLegacyNameHeader;
+
+    const colIndex = (...names: string[]): number => {
+        for (const n of names) {
+            const idx = headerCells.indexOf(n);
+            if (idx !== -1) return idx;
+        }
+        return -1;
+    };
+    const nameCol = hasNewHeader ? colIndex('name') : -1;
+    const emailCol = hasNewHeader ? colIndex('email') : -1;
+    const paperCol = hasNewHeader ? colIndex('is_paper', 'paper') : -1;
+    const presideCol = hasNewHeader ? colIndex('willing_to_preside', 'preside') : -1;
+
     const dataRows = hasHeader ? rows.slice(1) : rows;
 
     const results: { created: number; errors: { row: number; message: string }[] } = { created: 0, errors: [] };
 
+    // Parse a boolean-ish cell. Empty cells fall back to the provided default.
+    const parseBool = (value: string | undefined, fallback: boolean): boolean => {
+        const v = (value ?? '').trim().toLowerCase();
+        if (!v) return fallback;
+        return ['true', 'yes', 'y', '1', 'x'].includes(v);
+    };
+
     for (let i = 0; i < dataRows.length; i++) {
         const row = dataRows[i];
-        const [firstName, lastName, email] = row;
         const rowNum = i + (hasHeader ? 2 : 1); // 1-indexed, accounting for header
 
-        if (!firstName?.trim() || !lastName?.trim()) {
-            results.errors.push({ row: rowNum, message: 'Missing first or last name' });
+        let name: string;
+        let email: string;
+        let isPaper: boolean;
+        let willingToPreside: boolean;
+
+        if (hasNewHeader) {
+            name = (nameCol !== -1 ? row[nameCol] ?? '' : '').trim();
+            email = (emailCol !== -1 ? row[emailCol] ?? '' : '').trim();
+            isPaper = parseBool(paperCol !== -1 ? row[paperCol] : undefined, false);
+            willingToPreside = parseBool(presideCol !== -1 ? row[presideCol] : undefined, true);
+        } else {
+            // No new header: accept "name,email" (2 cols) or legacy "first,last,email" (3+ cols).
+            email = ((row.length >= 3 ? row[2] : row[1]) ?? '').trim();
+            name = (row.length >= 3 ? `${row[0] ?? ''} ${row[1] ?? ''}` : row[0] ?? '').trim();
+            isPaper = false;
+            willingToPreside = true;
+        }
+
+        if (!name) {
+            results.errors.push({ row: rowNum, message: 'Missing name' });
             continue;
         }
-        if (!email?.trim() || !isValidEmail(email.trim())) {
-            results.errors.push({ row: rowNum, message: `Invalid email: ${email ?? '(empty)'}` });
+        // Online scorers must have a valid email; paper scorers may omit it.
+        if (!isPaper && (!email || !isValidEmail(email))) {
+            results.errors.push({ row: rowNum, message: `Invalid email: ${email || '(empty)'}` });
+            continue;
+        }
+        if (isPaper && email && !isValidEmail(email)) {
+            results.errors.push({ row: rowNum, message: `Invalid email: ${email}` });
             continue;
         }
 
         try {
-            const scorer: IScorer = { scorer_id: crypto.randomUUID(), first_name: firstName.trim(), last_name: lastName.trim(), email: email.trim() };
+            const scorer: IScorer = {
+                scorer_id: crypto.randomUUID(),
+                name,
+                email: email ? email : null,
+                is_paper: isPaper,
+                willing_to_preside: willingToPreside,
+            };
             await organizer.addScorer(scorer, req.tournament);
             results.created++;
         } catch (e) {
@@ -2257,7 +2365,7 @@ router.get('/bounced-emails', tournamentHandler(async (req, res) => {
     const result = await dbQuery<{ email: string }>(
         `SELECT DISTINCT be.email FROM bounced_emails be
          WHERE be.email IN (
-             SELECT email FROM scorers WHERE tournament_id = $1
+             SELECT email FROM scorers WHERE tournament_id = $1 AND email IS NOT NULL
              UNION SELECT coach_email FROM (
                  SELECT a.email AS coach_email FROM teams t
                  JOIN team_coaches tc ON tc.team_id = t.id

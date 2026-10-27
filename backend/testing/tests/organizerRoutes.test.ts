@@ -127,17 +127,18 @@ describe('GET /api/organizer/tournament/:tournamentId', () => {
 describe('GET /api/organizer/tournament/:tournamentId/scorers', () => {
     it('returns 200 with scorers', async () => {
         mockAccess();
-        const scorers = [{ scorer_id: SCORER_ID, first_name: 'A', last_name: 'B', email: 'a@b.com' }];
-        mockDbQuery.mockResolvedValueOnce({ rows: scorers, rowCount: 1 } as any);
+        const scorers = [{ scorer_id: SCORER_ID, name: 'A B', email: 'a@b.com', is_paper: false, willing_to_preside: true }];
+        mockDbQuery.mockResolvedValueOnce({ rows: scorers, rowCount: 1 } as any);   // SELECT scorers
+        mockDbQuery.mockResolvedValueOnce({ rows: [], rowCount: 0 } as any);         // SELECT co-scoring preferences
         const res = await request(app).get(`/organizer/tournament/${TOURNAMENT_ID}/scorers`).set(auth());
         expect(res.status).toBe(200);
-        expect(res.body).toEqual(scorers);
+        expect(res.body).toEqual([{ ...scorers[0], prefers_to_score_with: [] }]);
     });
 });
 
 // ─── POST /api/organizer/tournament/:tournamentId/scorers ─────────────────────
 describe('POST /api/organizer/tournament/:tournamentId/scorers', () => {
-    const scorer = { scorer_id: SCORER_ID, first_name: 'A', last_name: 'B', email: 'a@b.com' };
+    const scorer = { scorer_id: SCORER_ID, name: 'A B', email: 'a@b.com', is_paper: false, willing_to_preside: true };
 
     it('returns 409 when scorer fields missing', async () => {
         mockAccess();
@@ -440,7 +441,7 @@ describe('GET /api/organizer/tournament/:tournamentId/scoring-categories', () =>
 
 // ─── PUT /api/organizer/tournament/:tournamentId/scorers ──────────────────────
 describe('PUT /api/organizer/tournament/:tournamentId/scorers', () => {
-    const scorer = { scorer_id: SCORER_ID, first_name: 'A', last_name: 'B', email: 'a@b.com' };
+    const scorer = { scorer_id: SCORER_ID, name: 'A B', email: 'a@b.com', is_paper: false, willing_to_preside: true };
 
     it('returns 409 when scorer fields missing', async () => {
         mockAccess();
@@ -492,7 +493,7 @@ describe('POST /api/organizer/tournament/duplicate/:tournamentId', () => {
             .mockResolvedValueOnce({ rows: [source], rowCount: 1 } as any)  // getTournament
             .mockResolvedValueOnce({ rows: [], rowCount: 1 } as any)         // INSERT format
             .mockResolvedValueOnce({ rows: [], rowCount: 1 } as any)         // INSERT tournament
-            .mockResolvedValueOnce({ rows: [{ scorer_id: 's1', first_name: 'A', last_name: 'B', email: 'a@b.com' }], rowCount: 1 } as any) // SELECT scorers
+            .mockResolvedValueOnce({ rows: [{ scorer_id: 's1', name: 'A B', email: 'a@b.com', is_paper: false, willing_to_preside: true }], rowCount: 1 } as any) // SELECT scorers
             .mockResolvedValueOnce({ rows: [], rowCount: 1 } as any)         // INSERT scorer
             .mockResolvedValueOnce({ rows: [newT], rowCount: 1 } as any)     // SELECT new tournament
             .mockResolvedValueOnce({ rows: [], rowCount: 1 } as any);        // addTournamentOrganizer
@@ -763,7 +764,8 @@ describe('POST /api/organizer/tournament/:tournamentId/pairings/:pairingId/score
     it('returns 201 when assigning by paper_name', async () => {
         mockPairingAccess();
         mockDbQuery
-            .mockResolvedValueOnce({ rows: [{ scorer_id: 'ps-id-000-0000-0000-000000000000' }], rowCount: 1 } as any) // INSERT paper_scorers
+            .mockResolvedValueOnce({ rows: [{ tournament_id: TOURNAMENT_ID }], rowCount: 1 } as any) // resolve tournament from pairing
+            .mockResolvedValueOnce({ rows: [{ scorer_id: 'ps-id-000-0000-0000-000000000000' }], rowCount: 1 } as any) // INSERT scorers (is_paper)
             .mockResolvedValueOnce({ rows: [{ assignment_id: SCORER_ASSIGN_ID, scorer_id: 'ps-id-000-0000-0000-000000000000' }], rowCount: 1 } as any); // INSERT assignment
         const res = await request(app).post(`${PAIRING_URL}/scorers`).set(auth()).send({ paper_name: 'Judge Smith' });
         expect(res.status).toBe(201);
@@ -780,7 +782,7 @@ describe('DELETE /api/organizer/tournament/:tournamentId/pairings/:pairingId/sco
     it('returns 204 on success', async () => {
         mockPairingAccess();
         mockDbQuery.mockResolvedValueOnce({ rows: [], rowCount: 0 } as any); // DELETE ballots
-        mockDbQuery.mockResolvedValueOnce({ rows: [{ paper_scorer_id: null }], rowCount: 1 } as any); // DELETE assignment
+        mockDbQuery.mockResolvedValueOnce({ rows: [{ assignment_id: SCORER_ASSIGN_ID }], rowCount: 1 } as any); // DELETE assignment
         const res = await request(app).delete(`${PAIRING_URL}/scorers/${SCORER_ASSIGN_ID}`).set(auth());
         expect(res.status).toBe(204);
     });

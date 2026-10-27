@@ -118,7 +118,7 @@
 
 .account-form-success {
     font-size: 0.85rem;
-    color: var(--green-text-alt);
+    color: var(--success-strong);
     margin: 0 0 0.5rem;
 }
 

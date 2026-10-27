@@ -114,9 +114,10 @@ export interface ITournamentDelegateInviteRow {
 export interface IScorerRow {
     scorer_id: string;
     tournament_id: string;
-    first_name: string;
-    last_name: string;
-    email: string;
+    name: string;
+    email: string | null;
+    is_paper: boolean;
+    willing_to_preside: boolean;
 }
 
 export interface ICourtroomRow {
@@ -167,16 +168,9 @@ export interface IPairingRow {
     courtroom: string | null;
 }
 
-export interface IPaperScorerRow {
-    scorer_id: string;
-    pairing_id: string;
-    name: string;
-}
-
 export interface IScorerPairingAssignmentRow {
     assignment_id: string;
-    registered_scorer_id: string | null;
-    paper_scorer_id: string | null;
+    scorer_id: string;
     pairing_id: string;
     conflict_reported: boolean;
 }

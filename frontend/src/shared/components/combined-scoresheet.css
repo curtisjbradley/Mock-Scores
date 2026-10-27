@@ -14,7 +14,7 @@
 }
 
 .cs-message {
-    color: var(--text-muted, #4b5563);
+    color: var(--text-muted);
     margin-top: 1rem;
 }
 
@@ -35,16 +35,16 @@
     padding: 0.45rem 0.9rem;
     border-radius: 0.5rem;
     cursor: pointer;
-    border: 1px solid var(--border-strong, #cbd5e1);
-    background: var(--surface, #fff);
-    color: var(--text-primary, #1a1a2e);
+    border: 1px solid var(--border-strong);
+    background: var(--surface);
+    color: var(--text);
     transition: background 120ms ease, border-color 120ms ease;
 }
-.cs-back-btn:hover { background: var(--surface-muted, #f1f5f9); }
+.cs-back-btn:hover { background: var(--surface-muted); }
 .cs-print-btn {
-    border-color: var(--primary, #2563eb);
-    background: var(--primary, #2563eb);
-    color: #fff;
+    border-color: var(--primary);
+    background: var(--primary);
+    color: var(--white);
 }
 .cs-print-btn:hover { filter: brightness(0.95); }
 

@@ -207,6 +207,7 @@
     margin-top: 1.25rem;
 }
 
+
 .confirm-actions button {
     min-height: 2.75rem;
     border: 0;
@@ -215,7 +216,9 @@
     font-weight: 800;
     cursor: pointer;
     transition: background 140ms ease, transform 140ms ease;
+    width: 100%;
 }
+
 
 .confirm-actions button:first-child {
     color: var(--nav-btn-text);
@@ -469,4 +472,8 @@
 .nomination-rank-arrows button:disabled {
     opacity: 0.3;
     cursor: not-allowed;
+}
+
+.confirm-actions button:disabled {
+    opacity: 50%;
 }
