@@ -81,88 +81,63 @@ jobs:
           RELEASE_URI="s3://${RELEASE_BUCKET}/${RELEASE_KEY}"
 
           DEPLOY_SCRIPT=$(cat <<EOF
+          #!/bin/bash
           set -euo pipefail
 
-          APP_DIR="/opt/mock-scores"
+          APP_DIR="${APP_DIR}"
           RELEASE_DIR="/opt/mock-scores-release"
           ARCHIVE="/tmp/mock-scores-release.tar.gz"
 
-          ENV_BACKUP="/tmp/mock-scores.env"
-          START_BACKUP="/tmp/mock-scores-start.sh"
-
           echo "Starting deployment..."
 
-          #
-          # Preserve machine-specific files
-          #
-          if [ -f "\$APP_DIR/backend/.env" ]; then
-            cp "\$APP_DIR/backend/.env" "\$ENV_BACKUP"
-          fi
-
-          if [ -f "\$APP_DIR/start.sh" ]; then
-            cp "\$APP_DIR/start.sh" "\$START_BACKUP"
-          fi
-
-          #
-          # Prepare release directory
-          #
+          # Prepare the release without removing the running application.
           rm -rf "\$RELEASE_DIR"
           mkdir -p "\$RELEASE_DIR"
 
           echo "Downloading release..."
-
-          aws s3 cp \
-            "${RELEASE_URI}" \
-            "\$ARCHIVE"
+          aws s3 cp "${RELEASE_URI}" "\$ARCHIVE"
 
           echo "Extracting release..."
-
           tar -xzf "\$ARCHIVE" -C "\$RELEASE_DIR"
 
-          #
-          # Replace application
-          #
+          echo "Installing production dependencies..."
+          cd "\$RELEASE_DIR"
+          NODE_ENV=production npm ci --omit=dev
+
+          # Preserve machine-specific files in the prepared release.
+          if [ -f "\$APP_DIR/backend/.env" ]; then
+            cp -p "\$APP_DIR/backend/.env" "\$RELEASE_DIR/backend/.env"
+          fi
+
+          if [ -f "\$APP_DIR/start.sh" ]; then
+            cp -p "\$APP_DIR/start.sh" "\$RELEASE_DIR/start.sh"
+            chmod +x "\$RELEASE_DIR/start.sh"
+          fi
+
+          chown -R ec2-user:ec2-user "\$RELEASE_DIR"
+
+          echo "Replacing application..."
+          cd /opt
           rm -rf "\$APP_DIR"
           mv "\$RELEASE_DIR" "\$APP_DIR"
 
-          #
-          # Restore machine-specific files
-          #
-          if [ -f "\$ENV_BACKUP" ]; then
-            mkdir -p "\$APP_DIR/backend"
-            mv "\$ENV_BACKUP" "\$APP_DIR/backend/.env"
+          echo "Restarting application as ec2-user..."
+
+          sudo -H -u ec2-user bash -s <<'PM2_SCRIPT'
+          set -euo pipefail
+
+          export PM2_HOME=/home/ec2-user/.pm2
+          export NODE_ENV=production
+          cd /opt/mock-scores
+
+          if pm2 describe mock-scores >/dev/null 2>&1; then
+            pm2 restart mock-scores --update-env
+          else
+            pm2 start npm --name mock-scores -- start
           fi
 
-          if [ -f "\$START_BACKUP" ]; then
-            mv "\$START_BACKUP" "\$APP_DIR/start.sh"
-            chmod +x "\$APP_DIR/start.sh"
-          fi
-
-          cd "\$APP_DIR"
-
-          echo "Installing production dependencies..."
-
-          NODE_ENV=production npm ci --omit=dev
-
-                    echo "Restarting application as ec2-user..."
-
-          # The release was extracted and installed as root.
-          chown -R ec2-user:ec2-user "\$APP_DIR"
-
-          sudo -iu ec2-user bash -lc '
-            set -euo pipefail
-
-            export PM2_HOME=/home/ec2-user/.pm2
-            cd /opt/mock-scores/backend
-
-            if pm2 describe mock-scores >/dev/null 2>&1; then
-              pm2 restart mock-scores --update-env
-            else
-              pm2 start npm --name mock-scores -- start
-            fi
-
-            pm2 save
-          '
+          pm2 save
+          PM2_SCRIPT
 
           rm -f "\$ARCHIVE"
 
@@ -183,7 +158,6 @@ jobs:
             --output text)
 
           echo "SSM command ID: $COMMAND_ID"
-
           echo "Waiting for deployment to finish..."
 
           aws ssm wait command-executed \
