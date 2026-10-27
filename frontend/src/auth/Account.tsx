@@ -25,11 +25,12 @@ export function Account() {
     } = useChangePasswordForm()
 
     useEffect(() => {
+        // Route is already gated by ProtectedRoute, so a session exists;
+        // we only need the email to display.
         getSession().then(s => {
-            if (!s) navigate('/login', { replace: true })
-            else setEmail(s.email)
+            if (s) setEmail(s.email)
         })
-    }, [navigate])
+    }, [])
 
     const handleLogout = () => {
         logout()

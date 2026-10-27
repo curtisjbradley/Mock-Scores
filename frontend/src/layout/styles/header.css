@@ -35,6 +35,24 @@
     transition: background 140ms ease, border-color 140ms ease, box-shadow 140ms ease;
 }
 
+.site-auth-nav {
+    margin-left: auto;
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    font-size: 0.875rem;
+    font-weight: 600;
+}
+
+.site-signup-link {
+    padding: 0.45rem 0.75rem;
+    border-radius: 999px;
+    background: var(--primary);
+    color: var(--white) !important;
+}
+
+.site-signup-link:hover { background: var(--primary-dark); }
+
 .account-button:hover {
     background: var(--primary-subtle);
     border-color: var(--primary);

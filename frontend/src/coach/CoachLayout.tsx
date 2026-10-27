@@ -241,6 +241,7 @@ export default function CoachLayout({ isOrganizerView = false }: Props) {
                     onChange={(tab) => navigate(`${base}/${tab}`)}
                     title={title}
                     subtitle={subtitle}
+                    storageKey="coach-sidebar-collapsed"
                     ariaLabel="Coach dashboard sections"
                 />
 

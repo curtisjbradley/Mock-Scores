@@ -81,12 +81,16 @@ export default function AwardCategoriesTab({ tournamentId }: Props) {
         }
     }
 
-    const handleDelete = (cat: IIndividualAwardCategory) => {
-        apiFetch(`/organizer/tournament/${tournamentId}/award-categories/${cat.id}`, { method: 'DELETE' })
-            .then(r => { if (!r.ok && r.status !== 204) throw new Error() })
-            .catch(console.error)
-        setCategories(prev => prev.filter(c => c.id !== cat.id))
-        confirmRemove.clear()
+    const handleDelete = async (cat: IIndividualAwardCategory) => {
+        setError(null)
+        try {
+            const response = await apiFetch(`/organizer/tournament/${tournamentId}/award-categories/${cat.id}`, { method: 'DELETE' })
+            if (!response.ok && response.status !== 204) throw new Error()
+            setCategories(prev => prev.filter(c => c.id !== cat.id))
+            confirmRemove.clear()
+        } catch {
+            setError('Failed to remove award category.')
+        }
     }
 
     if (loading) return <p className="dash-saving">Loading…</p>
@@ -166,7 +170,7 @@ export default function AwardCategoriesTab({ tournamentId }: Props) {
                 <ConfirmRemoveModal
                     message={`Remove "${confirmRemove.pending.name}" award category? Any scoring fields linked to it will become unlinked.`}
                     onCancel={confirmRemove.clear}
-                    onConfirm={() => handleDelete(confirmRemove.pending!)}
+                    onConfirm={() => { void handleDelete(confirmRemove.pending!) }}
                 />
             )}
         </Section>

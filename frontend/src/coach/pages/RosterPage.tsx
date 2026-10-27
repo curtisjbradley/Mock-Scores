@@ -346,10 +346,10 @@ export default function RosterPage() {
             {students.length > 0 && <p className="org-header-sub">{students.length} student{students.length !== 1 ? 's' : ''}</p>}
 
             <div className="coach-roster-actions">
-                <button className="org-new-btn" onClick={() => setOpenSide('p')}>
+                <button className="btn-primary" onClick={() => setOpenSide('p')}>
                     Set {prosecutionLabel} Call Order &amp; Assignments
                 </button>
-                <button className="org-new-btn" onClick={() => setOpenSide('d')}>
+                <button className="btn-primary" onClick={() => setOpenSide('d')}>
                     Set Defense Call Order &amp; Assignments
                 </button>
             </div>

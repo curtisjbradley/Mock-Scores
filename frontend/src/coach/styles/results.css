@@ -15,8 +15,8 @@
     font-weight: 700;
 }
 
-.coach-diff-cell--pos { color: var(--green-text); }
-.coach-diff-cell--neg { color: var(--red-text); }
+.coach-diff-cell--pos { color: var(--success-fg); }
+.coach-diff-cell--neg { color: var(--danger-strong); }
 .coach-diff-cell--tie { color: var(--text-muted); }
 
 /* Expanded ballot-detail cell. */

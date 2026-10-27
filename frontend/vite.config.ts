@@ -47,6 +47,14 @@ function inlineCss(): Plugin {
 // https://vite.dev/config/
 export default defineConfig({
   server: {},
+  // Applies only to `vite preview` (direct, non-CI use). CI serves the build
+  // with sirv instead — see the frontend "preview" npm script. Pinned to an
+  // explicit IPv4 host + fixed port so any preview is deterministic.
+  preview: {
+    host: '127.0.0.1',
+    port: 4173,
+    strictPort: true,
+  },
   plugins: [
     react(),
     babel({ presets: [reactCompilerPreset()] }),

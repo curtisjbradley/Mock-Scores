@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react'
-import { useNavigate } from 'react-router-dom'
+import { Link, useNavigate } from 'react-router-dom'
 import '../styles/organizer.css'
 import type { ITournament, IDuplicateOptions } from '@mock-scores/shared'
 import { apiFetch } from '../../auth/auth'
@@ -49,12 +49,11 @@ const OrganizerHome = () => {
                     </AddButton>
                 </div>
 
-                <div className="org-status-filter" role="tablist" aria-label="Filter by status">
+                <div className="org-status-filter" aria-label="Filter by status">
                     {(['all', 'active', 'completed', 'archived'] as const).map(s => (
                         <button
                             key={s}
-                            role="tab"
-                            aria-selected={statusFilter === s}
+                            aria-pressed={statusFilter === s}
                             className={`org-status-filter-btn${statusFilter === s ? ' org-status-filter-btn--active' : ''}`}
                             onClick={() => setStatusFilter(s)}
                         >
@@ -74,9 +73,7 @@ const OrganizerHome = () => {
                             key={t.id}
                             className={`org-tournament-card${(t.status ?? 'active') === 'archived' ? ' org-tournament-card--archived' : ''}`}
                         >
-                            <div className="org-tournament-info" role="button" tabIndex={0}
-                                onClick={() => navigate(`/organizer/${t.id}`)}
-                                onKeyDown={e => e.key === 'Enter' && navigate(`/organizer/${t.id}`)}>
+                            <Link className="org-tournament-info" to={`/organizer/${t.id}`}>
                                 <span className="org-tournament-name">
                                     {t.name}
                                     {(t.status ?? 'active') !== 'active' && (
@@ -90,7 +87,7 @@ const OrganizerHome = () => {
                                     {' · '}{t.location}
                                     {' · '}{t.num_teams} teams · {t.num_rounds} rounds
                                 </span>
-                            </div>
+                            </Link>
                             <button
                                 className="org-duplicate-btn"
                                 aria-label={`Duplicate ${t.name}`}

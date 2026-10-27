@@ -413,18 +413,53 @@ export async function addTournamentOrganizer(tournamentID: string, userId: strin
 }
 
 export async function getScorers(tournamentID: string): Promise<IScorer[]> {
-    const result = await dbQuery<IScorer>('SELECT * FROM scorers WHERE tournament_id = $1', [tournamentID]);
+    const result = await dbQuery<{
+        scorer_id: string;
+        name: string;
+        email: string | null;
+        is_paper: boolean;
+        willing_to_preside: boolean;
+    }>('SELECT scorer_id, name, email, is_paper, willing_to_preside FROM scorers WHERE tournament_id = $1', [tournamentID]);
     if (!result) throw new DbError('getScorers');
-    return result.rows;
+
+    // Attach each scorer's co-scoring preferences (preferred_scorer_id list).
+    const prefs = (await dbQuery<{ scorer_id: string; preferred_scorer_id: string }>(
+        `SELECT csp.scorer_id, csp.preferred_scorer_id
+         FROM scorer_coscoring_preferences csp
+                  JOIN scorers s ON s.scorer_id = csp.scorer_id
+         WHERE s.tournament_id = $1`,
+        [tournamentID],
+    ))?.rows ?? [];
+    const prefsByScorer = new Map<string, string[]>();
+    for (const p of prefs) {
+        const list = prefsByScorer.get(p.scorer_id) ?? [];
+        list.push(p.preferred_scorer_id);
+        prefsByScorer.set(p.scorer_id, list);
+    }
+
+    return result.rows.map(r => ({
+        scorer_id: r.scorer_id,
+        name: r.name,
+        email: r.email,
+        is_paper: r.is_paper,
+        willing_to_preside: r.willing_to_preside,
+        prefers_to_score_with: prefsByScorer.get(r.scorer_id) ?? [],
+    }));
 }
 
 export async function addScorer(scorer: IScorer, tournamentId: string): Promise<void> {
-    const result = await dbQuery('INSERT INTO scorers (scorer_id, tournament_id, first_name, last_name, email) VALUES ($1,$2,$3,$4,$5)', [scorer.scorer_id, tournamentId, scorer.first_name, scorer.last_name, scorer.email]);
+    const result = await dbQuery(
+        'INSERT INTO scorers (scorer_id, tournament_id, name, email, is_paper, willing_to_preside) VALUES ($1,$2,$3,$4,$5,$6)',
+        [scorer.scorer_id, tournamentId, scorer.name, scorer.email, scorer.is_paper, scorer.willing_to_preside],
+    );
     if (!result) throw new DbError('addScorer');
 }
 
 export async function updateScorer(scorer: IScorer, tournamentId: string): Promise<void> {
-    const result = await dbQuery('UPDATE scorers SET tournament_id=$1, first_name=$2, last_name=$3, email=$4 WHERE scorer_id=$5', [tournamentId, scorer.first_name, scorer.last_name, scorer.email, scorer.scorer_id]);
+    const result = await dbQuery(
+        'UPDATE scorers SET tournament_id=$1, name=$2, email=$3, is_paper=$4, willing_to_preside=$5 WHERE scorer_id=$6',
+        [tournamentId, scorer.name, scorer.email, scorer.is_paper, scorer.willing_to_preside, scorer.scorer_id],
+    );
     if (!result) throw new DbError('updateScorer');
     if ((result.rowCount ?? 0) === 0) throw new NotFoundError('scorer');
 }
@@ -486,6 +521,44 @@ export async function removeConflict(scorerId: string, teamId: string): Promise<
     const result = await dbQuery('DELETE FROM scorer_conflicts WHERE scorer_id=$1 AND team_id=$2 RETURNING scorer_id', [scorerId, teamId]);
     if (!result) throw new DbError('removeConflict');
     if (!result.rows[0]) throw new NotFoundError('scorer conflict');
+}
+
+/**
+ * Replaces a scorer's full "wants to score with" preference list. Self-references
+ * are ignored (the DB check constraint also forbids them). Preference rows are
+ * directional; the auto-assign algorithm treats them as a soft hint.
+ */
+export async function setCoscoringPreferences(scorerId: string, preferredIds: string[]): Promise<void> {
+    const unique = [...new Set(preferredIds)].filter(id => id && id !== scorerId);
+    await dbQuery('DELETE FROM scorer_coscoring_preferences WHERE scorer_id=$1', [scorerId]);
+    if (unique.length === 0) return;
+    await Promise.all(unique.map(pid => dbQuery(
+        `INSERT INTO scorer_coscoring_preferences (scorer_id, preferred_scorer_id)
+         VALUES ($1, $2) ON CONFLICT DO NOTHING`,
+        [scorerId, pid],
+    )));
+}
+
+/**
+ * Returns, for every scorer in the tournament who has an assignment, the set of
+ * team IDs that scorer has already seen (scored on either side of a pairing)
+ * across ALL rounds of the tournament. Powers the auto-assign "avoid repeat
+ * matchups" option so a judge is not put on a team they have already scored.
+ *
+ * Returned as flat (scorer_id, team_id) pairs.
+ */
+export async function getScorerTeamHistory(tournamentId: string): Promise<{ scorer_id: string; team_id: string }[]> {
+    const result = await dbQuery<{ scorer_id: string; team_id: string }>(
+        `SELECT DISTINCT spa.scorer_id, team_id
+         FROM scorer_pairing_assignments spa
+                  JOIN pairings p ON p.pairing_id = spa.pairing_id
+                  JOIN rounds r ON r.round_id = p.round_id
+                  CROSS JOIN LATERAL (VALUES (p.p_team), (p.d_team)) AS t(team_id)
+         WHERE r.tournament_id = $1`,
+        [tournamentId],
+    );
+    if (!result) throw new DbError('getScorerTeamHistory');
+    return result.rows;
 }
 
 export async function getOrganizers(tournamentID: string): Promise<IOrganizer[]> {
@@ -907,11 +980,11 @@ export async function getPairingScorers(pairingID: string): Promise<{
     }>('SELECT scorer_assignment_id, show_scores FROM scorer_presider_assignment WHERE pairing_id=$1', [pairingID]))?.rows[0];
     const presiderAssignmentId = presiderRow?.scorer_assignment_id ?? null;
     const presiderOnlyTiebreaker = presiderRow ? presiderRow.show_scores === false : false;
-    const registered = (await dbQuery<{
+    const rows = (await dbQuery<{
         assignment_id: string;
         scorer_id: string;
-        first_name: string;
-        last_name: string;
+        name: string;
+        is_paper: boolean;
         conflict_reported: boolean;
         p_points: number | null;
         d_points: number | null;
@@ -919,15 +992,15 @@ export async function getPairingScorers(pairingID: string): Promise<{
         ballot_id: string | null
     }>(`SELECT spa.assignment_id,
                s.scorer_id,
-               s.first_name,
-               s.last_name,
+               s.name,
+               s.is_paper,
                spa.conflict_reported,
                b.p_points,
                b.d_points,
                em.status AS email_status,
                b.ballot_id
         FROM scorer_pairing_assignments spa
-                 JOIN scorers s ON spa.registered_scorer_id = s.scorer_id
+                 JOIN scorers s ON s.scorer_id = spa.scorer_id
                  LEFT JOIN ballots b ON b.scorer_assignment_id = spa.assignment_id
                  LEFT JOIN LATERAL (
             SELECT status
@@ -937,53 +1010,21 @@ export async function getPairingScorers(pairingID: string): Promise<{
             ORDER BY sent_at DESC
             LIMIT 1
             ) em ON true
-        WHERE spa.pairing_id = $1
-          AND spa.registered_scorer_id IS NOT NULL`, [pairingID]))?.rows ?? [];
-    const paper = (await dbQuery<{
-        assignment_id: string;
-        scorer_id: string;
-        name: string;
-        conflict_reported: boolean;
-        p_points: number | null;
-        d_points: number | null,
-        ballot_id: string | null
-    }>(`SELECT spa.assignment_id,
-               ps.scorer_id,
-               ps.name,
-               spa.conflict_reported,
-               b.p_points,
-               b.d_points,
-               b.ballot_id
-        FROM scorer_pairing_assignments spa
-                 JOIN paper_scorers ps ON spa.paper_scorer_id = ps.scorer_id
-                 LEFT JOIN ballots b ON b.scorer_assignment_id = spa.assignment_id
-        WHERE spa.pairing_id = $1
-          AND spa.paper_scorer_id IS NOT NULL`, [pairingID]))?.rows ?? [];
-    return [...registered.map(r => ({
+        WHERE spa.pairing_id = $1`, [pairingID]))?.rows ?? [];
+    return rows.map(r => ({
         assignment_id: r.assignment_id,
-        type: 'registered' as const,
+        type: (r.is_paper ? 'paper' : 'registered') as 'registered' | 'paper',
         scorer_id: r.scorer_id,
-        name: `${r.first_name} ${r.last_name}`,
+        name: r.name.trim(),
         is_presider: r.assignment_id === presiderAssignmentId,
         presider_only_tiebreaker: r.assignment_id === presiderAssignmentId && presiderOnlyTiebreaker,
         conflict_reported: r.conflict_reported,
         p_points: r.p_points,
         d_points: r.d_points,
-        email_status: r.email_status,
+        // Paper scorers are never emailed a scoring link, so suppress any status.
+        email_status: r.is_paper ? null : r.email_status,
         ballot_id: r.ballot_id
-    })), ...paper.map(p => ({
-        assignment_id: p.assignment_id,
-        type: 'paper' as const,
-        scorer_id: p.scorer_id,
-        name: p.name,
-        is_presider: p.assignment_id === presiderAssignmentId,
-        presider_only_tiebreaker: p.assignment_id === presiderAssignmentId && presiderOnlyTiebreaker,
-        conflict_reported: p.conflict_reported,
-        p_points: p.p_points,
-        d_points: p.d_points,
-        email_status: null,
-        ballot_id: p.ballot_id
-    })),];
+    }));
 }
 
 
@@ -1043,29 +1084,26 @@ export async function getRoundEmailContext(roundID: string): Promise<{
 
 /** Returns the data needed to send scorer invite emails for every registered scorer in a round. */
 export async function getScorerInviteContextsForRound(roundId: string): Promise<{
-    email: string; firstName: string; lastName: string; tournamentName: string; assignmentId: string;
+    email: string; tournamentName: string; assignmentId: string;
 }[]> {
     const rows = (await dbQuery<{
-        email: string; first_name: string; last_name: string; tournament_name: string; assignment_id: string;
+        email: string; tournament_name: string; assignment_id: string;
     }>(`
         SELECT s.email,
-               s.first_name,
-               s.last_name,
                t.name AS tournament_name,
                spa.assignment_id
         FROM scorer_pairing_assignments spa
-                 JOIN scorers s ON s.scorer_id = spa.registered_scorer_id
+                 JOIN scorers s ON s.scorer_id = spa.scorer_id
                  JOIN pairings p ON p.pairing_id = spa.pairing_id
                  JOIN rounds r ON r.round_id = p.round_id
                  JOIN tournaments t ON t.id = r.tournament_id
         WHERE r.round_id = $1
-          AND spa.registered_scorer_id IS NOT NULL
+          AND s.is_paper = false
+          AND s.email IS NOT NULL
     `, [roundId]))?.rows ?? [];
 
     return rows.map(r => ({
         email: r.email,
-        firstName: r.first_name,
-        lastName: r.last_name,
         tournamentName: r.tournament_name,
         assignmentId: r.assignment_id,
     }));
@@ -1091,29 +1129,26 @@ export async function hasSentScoringLinksForRound(roundId: string): Promise<bool
 
 /** Returns the data needed to send scorer invite email for a single assignment. */
 export async function getScorerInviteContextForAssignment(assignmentId: string): Promise<{
-    email: string; firstName: string; lastName: string; tournamentName: string; assignmentId: string;
+    email: string; tournamentName: string; assignmentId: string;
 } | null> {
     const rows = (await dbQuery<{
-        email: string; first_name: string; last_name: string; tournament_name: string; assignment_id: string;
+        email: string; tournament_name: string; assignment_id: string;
     }>(`
         SELECT s.email,
-               s.first_name,
-               s.last_name,
                t.name AS tournament_name,
                spa.assignment_id
         FROM scorer_pairing_assignments spa
-                 JOIN scorers s ON s.scorer_id = spa.registered_scorer_id
+                 JOIN scorers s ON s.scorer_id = spa.scorer_id
                  JOIN pairings p ON p.pairing_id = spa.pairing_id
                  JOIN rounds r ON r.round_id = p.round_id
                  JOIN tournaments t ON t.id = r.tournament_id
         WHERE spa.assignment_id = $1
-          AND spa.registered_scorer_id IS NOT NULL
+          AND s.is_paper = false
+          AND s.email IS NOT NULL
     `, [assignmentId]))?.rows ?? [];
 
     return rows.map(r => ({
         email: r.email,
-        firstName: r.first_name,
-        lastName: r.last_name,
         tournamentName: r.tournament_name,
         assignmentId: r.assignment_id,
     }))[0] ?? null;
@@ -1122,23 +1157,43 @@ export async function getScorerInviteContextForAssignment(assignmentId: string):
 export async function assignScorerToPairing(pairingID: string, scorerID: string): Promise<{ assignment_id: string }> {
     const row = (await dbQuery<{
         assignment_id: string
-    }>('INSERT INTO scorer_pairing_assignments (pairing_id, registered_scorer_id) VALUES ($1,$2) RETURNING assignment_id', [pairingID, scorerID]))?.rows[0];
+    }>('INSERT INTO scorer_pairing_assignments (pairing_id, scorer_id) VALUES ($1,$2) RETURNING assignment_id', [pairingID, scorerID]))?.rows[0];
     if (!row) throw new DbError('assignScorerToPairing');
     return row;
 }
 
+/**
+ * Creates a persistent tournament-level paper (offline) scorer from a single
+ * display name and assigns them to the pairing. The scorer survives removal from
+ * the pairing and can be reused / given conflicts / preferences like any scorer.
+ * The name is split on the first space into first/last.
+ */
 export async function addPaperScorer(pairingID: string, name: string): Promise<{
     assignment_id: string;
     scorer_id: string
 }> {
+    const tourney = (await dbQuery<{ tournament_id: string }>(
+        `SELECT r.tournament_id
+         FROM pairings p
+                  JOIN rounds r ON r.round_id = p.round_id
+         WHERE p.pairing_id = $1`,
+        [pairingID],
+    ))?.rows[0];
+    if (!tourney) throw new NotFoundError('pairing');
+
     const ps = (await dbQuery<{
         scorer_id: string
-    }>('INSERT INTO paper_scorers (pairing_id, name) VALUES ($1,$2) RETURNING scorer_id', [pairingID, name]))?.rows[0];
+    }>(
+        `INSERT INTO scorers (tournament_id, name, email, is_paper, willing_to_preside)
+         VALUES ($1,$2,NULL,true,true) RETURNING scorer_id`,
+        [tourney.tournament_id, name.trim()],
+    ))?.rows[0];
     if (!ps) throw new DbError('addPaperScorer');
+
     const row = (await dbQuery<{
         assignment_id: string;
         scorer_id: string
-    }>('INSERT INTO scorer_pairing_assignments (pairing_id, paper_scorer_id) VALUES ($1,$2) RETURNING assignment_id, $2::uuid AS scorer_id', [pairingID, ps.scorer_id]))?.rows[0];
+    }>('INSERT INTO scorer_pairing_assignments (pairing_id, scorer_id) VALUES ($1,$2) RETURNING assignment_id, $2::uuid AS scorer_id', [pairingID, ps.scorer_id]))?.rows[0];
     if (!row) throw new DbError('addPaperScorer assignment');
     return row;
 }
@@ -1146,11 +1201,12 @@ export async function addPaperScorer(pairingID: string, name: string): Promise<{
 export async function removeScorerAssignment(assignmentID: string): Promise<void> {
     // Delete any submitted ballot first (FK constraint prevents assignment deletion otherwise)
     await dbQuery('DELETE FROM ballots WHERE scorer_assignment_id=$1', [assignmentID]);
+    // Paper scorers are now persistent tournament-level `scorers` rows, so removing an
+    // assignment only detaches the scorer from this pairing — it never deletes the scorer.
     const row = (await dbQuery<{
-        paper_scorer_id: string | null
-    }>('DELETE FROM scorer_pairing_assignments WHERE assignment_id=$1 RETURNING paper_scorer_id', [assignmentID]))?.rows[0];
+        assignment_id: string
+    }>('DELETE FROM scorer_pairing_assignments WHERE assignment_id=$1 RETURNING assignment_id', [assignmentID]))?.rows[0];
     if (!row) throw new NotFoundError('scorer assignment');
-    if (row.paper_scorer_id) await dbQuery('DELETE FROM paper_scorers WHERE scorer_id=$1', [row.paper_scorer_id]);
 }
 
 export async function setPresider(pairingID: string, assignmentID: string, showScores = true): Promise<void> {
@@ -1227,9 +1283,9 @@ async function duplicateScoringCategories(sourceTournamentID: string, newTournam
 }
 
 async function duplicateScorers(sourceTournamentID: string, newTournamentID: string): Promise<void> {
-    const scorers = await dbQuery<IScorer>('SELECT scorer_id, first_name, last_name, email FROM scorers WHERE tournament_id=$1', [sourceTournamentID]);
+    const scorers = await dbQuery<IScorer>('SELECT scorer_id, name, email, is_paper, willing_to_preside FROM scorers WHERE tournament_id=$1', [sourceTournamentID]);
     if (scorers?.rows.length) {
-        await Promise.all(scorers.rows.map(s => dbQuery('INSERT INTO scorers (scorer_id, tournament_id, first_name, last_name, email) VALUES ($1,$2,$3,$4,$5)', [randomUUID(), newTournamentID, s.first_name, s.last_name, s.email])));
+        await Promise.all(scorers.rows.map(s => dbQuery('INSERT INTO scorers (scorer_id, tournament_id, name, email, is_paper, willing_to_preside) VALUES ($1,$2,$3,$4,$5,$6)', [randomUUID(), newTournamentID, s.name, s.email, s.is_paper, s.willing_to_preside])));
     }
 }
 
@@ -1501,7 +1557,9 @@ export async function getTournamentSummary(tournamentId: string): Promise<ITourn
                                               FROM scorer_pairing_assignments spa
                                                        JOIN tournament_pairings tp
                                                             ON tp.pairing_id = spa.pairing_id
-                                              WHERE spa.paper_scorer_id IS NOT NULL
+                                                       JOIN scorers s
+                                                            ON s.scorer_id = spa.scorer_id
+                                              WHERE s.is_paper = true
                                                 AND NOT EXISTS (SELECT 1
                                                                 FROM ballots b
                                                                 WHERE b.scorer_assignment_id = spa.assignment_id)),
@@ -1757,11 +1815,8 @@ export async function getAwardsSummary(tournamentId: string): Promise<IAwardNomi
                                                         iac.name                             AS award_name,
                                                         iac.id                               AS award_category_id,
 
-                                                        COALESCE(ps.scorer_id, sc.scorer_id) AS scorer_id,
-                                                        COALESCE(
-                                                                ps.name,
-                                                                sc.first_name || ' ' || sc.last_name
-                                                        )                                    AS scorer_name,
+                                                        sc.scorer_id                         AS scorer_id,
+                                                        sc.name                              AS scorer_name,
 
                                                         CASE
                                                             WHEN t.id = p.p_team THEN 'P'
@@ -1792,11 +1847,8 @@ export async function getAwardsSummary(tournamentId: string): Promise<IAwardNomi
                                                           JOIN scorer_pairing_assignments spa
                                                                ON b.scorer_assignment_id = spa.assignment_id
 
-                                                          LEFT JOIN paper_scorers ps
-                                                                    ON spa.paper_scorer_id = ps.scorer_id
-
-                                                          LEFT JOIN scorers sc
-                                                                    ON sc.scorer_id = spa.registered_scorer_id
+                                                          JOIN scorers sc
+                                                                    ON sc.scorer_id = spa.scorer_id
 
                                                           JOIN pairings p
                                                                ON b.pairing_id = p.pairing_id

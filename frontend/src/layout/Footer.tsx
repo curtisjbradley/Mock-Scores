@@ -1,4 +1,5 @@
 import './styles/footer.css'
+import { Link } from 'react-router-dom'
 
 const Footer = () => (
     <footer className="site-footer">
@@ -36,12 +37,9 @@ const Footer = () => (
                 Guides
             </a>
 
-            <a href="/contact"
-               target="_blank"
-               className={"footer-link"}
-               rel="noopener noreferrer">
+            <Link to="/contact" className="footer-link">
                 Contact
-            </a>
+            </Link>
         </div>
 
     </footer>

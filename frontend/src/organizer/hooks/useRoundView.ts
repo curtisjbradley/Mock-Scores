@@ -155,6 +155,24 @@ export function useRoundView(id: string | undefined, roundId: string | undefined
     const onScorerAssigned = (pairingId: string, scorer: IPairingScorer) =>
         setPairingScorers(prev => ({ ...prev, [pairingId]: [...(prev[pairingId] ?? []), scorer] }))
 
+    /** Re-fetches every pairing's scorers + ballot status. Used after a bulk operation (auto-assign). */
+    const reloadPairingScorers = () => {
+        if (!id || !roundId) return
+        Promise.all([
+            Promise.all(pairings.map(p =>
+                apiFetch(`/organizer/tournament/${id}/pairings/${p.pairing_id}/scorers`)
+                    .then(r => r.json())
+                    .then((s: IPairingScorer[]) => [p.pairing_id, s] as [string, IPairingScorer[]])
+            )),
+            apiFetch(`/organizer/tournament/${id}/rounds/${roundId}/ballot-status`).then(r => r.ok ? r.json() : []),
+        ]).then(([entries, ballotStatuses]) => {
+            setPairingScorers(Object.fromEntries(entries as [string, IPairingScorer[]][]))
+            const statusMap: Record<string, IBallotStatus> = {}
+            for (const s of ballotStatuses as IBallotStatus[]) statusMap[s.pairing_id] = s
+            setBallotStatus(statusMap)
+        }).catch(() => setError('Failed to refresh scorer assignments.'))
+    }
+
     const onScorerRemoved = (pairingId: string, assignmentId: string) =>
         setPairingScorers(prev => ({ ...prev, [pairingId]: (prev[pairingId] ?? []).filter(s => s.assignment_id !== assignmentId) }))
 
@@ -173,6 +191,6 @@ export function useRoundView(id: string | undefined, roundId: string | undefined
         error, notFound,
         saveName, addMatchup, updatePairing, removePairing, setPairings,
         setRoundLocked, setPairingsPublished, setResultsPublished,
-        onScorerAssigned, onScorerRemoved, onPresiderChanged,
+        onScorerAssigned, onScorerRemoved, onPresiderChanged, reloadPairingScorers,
     }
 }

@@ -102,7 +102,7 @@ describe('Accessibility', () => {
                         isCriminal: true,
                         ballotOptions: { showTiebreaker: true, fillableScores: true },
                         pairingID: 'p1',
-                        scorer: { firstName: 'Jane', lastName: 'Judge', scorerID: 'j1', isPaper: false },
+                        scorer: { name: 'Jane Judge', scorerID: 'j1', isPaper: false },
                         presiderName: 'Hon. Smith',
                         courtroomNumber: '101',
                         caseName: 'State v. Doe',

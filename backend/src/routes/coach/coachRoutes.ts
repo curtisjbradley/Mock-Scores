@@ -251,7 +251,7 @@ router.get("/tournaments/:teamId/pairings/:pairingId/ballots/:ballotId", authedH
 
     // Redact scorer identity from the sheet
     if (sheet) {
-        sheet.scorer = { firstName: '', lastName: '', scorerID: '', isPaper: false };
+        sheet.scorer = { name: '', scorerID: '', isPaper: false };
         sheet.presiderName = '';
     }
 

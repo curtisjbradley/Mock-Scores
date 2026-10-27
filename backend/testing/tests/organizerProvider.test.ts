@@ -127,10 +127,20 @@ describe('addTournamentOrganizer', () => {
 
 // ─── getScorers ───────────────────────────────────────────────────────────────
 describe('getScorers', () => {
-    it('returns rows', async () => {
-        const rows = [{ scorer_id: 's1' }];
-        mockDbQuery.mockResolvedValueOnce(ok(rows));
-        expect(await provider.getScorers('t1')).toEqual(rows);
+    it('returns scorers with their co-scoring preferences attached', async () => {
+        mockDbQuery
+            .mockResolvedValueOnce(ok([
+                { scorer_id: 's1', name: 'Alex Judge', email: 'a@b.com', is_paper: false, willing_to_preside: true },
+                { scorer_id: 's2', name: 'Paper Pat', email: null, is_paper: true, willing_to_preside: false },
+            ]))
+            .mockResolvedValueOnce(ok([
+                { scorer_id: 's1', preferred_scorer_id: 's2' },
+            ]));
+        const result = await provider.getScorers('t1');
+        expect(result).toEqual([
+            { scorer_id: 's1', name: 'Alex Judge', email: 'a@b.com', is_paper: false, willing_to_preside: true, prefers_to_score_with: ['s2'] },
+            { scorer_id: 's2', name: 'Paper Pat', email: null, is_paper: true, willing_to_preside: false, prefers_to_score_with: [] },
+        ]);
     });
     it('throws DbError when query fails', async () => {
         mockDbQuery.mockResolvedValueOnce(null);
@@ -140,7 +150,7 @@ describe('getScorers', () => {
 
 // ─── addScorer ────────────────────────────────────────────────────────────────
 describe('addScorer', () => {
-    const scorer = { scorer_id: 's1', first_name: 'A', last_name: 'B', email: 'a@b.com' } as any;
+    const scorer = { scorer_id: 's1', name: 'A B', email: 'a@b.com', is_paper: false, willing_to_preside: true } as any;
     it('resolves on success', async () => {
         mockDbQuery.mockResolvedValueOnce(ok([]));
         await expect(provider.addScorer(scorer, 't1')).resolves.toBeUndefined();
@@ -153,7 +163,7 @@ describe('addScorer', () => {
 
 // ─── updateScorer ─────────────────────────────────────────────────────────────
 describe('updateScorer', () => {
-    const scorer = { scorer_id: 's1', first_name: 'A', last_name: 'B', email: 'a@b.com' } as any;
+    const scorer = { scorer_id: 's1', name: 'A B', email: 'a@b.com', is_paper: false, willing_to_preside: true } as any;
     it('resolves on success', async () => {
         mockDbQuery.mockResolvedValueOnce(ok([], 1));
         await expect(provider.updateScorer(scorer, 't1')).resolves.toBeUndefined();
@@ -216,6 +226,36 @@ describe('removeConflict', () => {
     it('throws NotFoundError when not found', async () => {
         mockDbQuery.mockResolvedValueOnce(ok([]));
         await expect(provider.removeConflict('s1', 'tm1')).rejects.toThrow(NotFoundError);
+    });
+});
+
+// ─── setCoscoringPreferences ──────────────────────────────────────────────────
+describe('setCoscoringPreferences', () => {
+    it('clears then inserts the deduped, self-filtered preference list', async () => {
+        mockDbQuery.mockResolvedValue(ok([]));
+        await provider.setCoscoringPreferences('s1', ['s2', 's2', 's1', 's3']);
+        // 1 DELETE + 2 INSERTs (s2 deduped, s1 self-ref dropped -> s2, s3).
+        expect(mockDbQuery).toHaveBeenCalledTimes(3);
+        const deleteCall = mockDbQuery.mock.calls[0][0] as string;
+        expect(deleteCall).toMatch(/DELETE FROM scorer_coscoring_preferences/i);
+    });
+    it('only issues the DELETE when the list is empty', async () => {
+        mockDbQuery.mockResolvedValue(ok([]));
+        await provider.setCoscoringPreferences('s1', []);
+        expect(mockDbQuery).toHaveBeenCalledTimes(1);
+    });
+});
+
+// ─── getScorerTeamHistory ─────────────────────────────────────────────────────
+describe('getScorerTeamHistory', () => {
+    it('returns scorer/team history pairs', async () => {
+        const rows = [{ scorer_id: 's1', team_id: 'tA' }, { scorer_id: 's1', team_id: 'tB' }];
+        mockDbQuery.mockResolvedValueOnce(ok(rows));
+        expect(await provider.getScorerTeamHistory('t1')).toEqual(rows);
+    });
+    it('throws DbError when the query fails', async () => {
+        mockDbQuery.mockResolvedValueOnce(null);
+        await expect(provider.getScorerTeamHistory('t1')).rejects.toThrow(DbError);
     });
 });
 
@@ -542,13 +582,18 @@ describe('deletePairing', () => {
 describe('getPairingScorers', () => {
     it('returns scorers with presider flag', async () => {
         mockDbQuery
-            .mockResolvedValueOnce(ok([{ scorer_assignment_id: 'a1' }]))
-            .mockResolvedValueOnce(ok([{ assignment_id: 'a1', scorer_id: 's1', first_name: 'A', last_name: 'B' }]))
-            .mockResolvedValueOnce(ok([{ assignment_id: 'a2', scorer_id: 'ps1', name: 'Paper' }]));
+            .mockResolvedValueOnce(ok([{ scorer_assignment_id: 'a1' }])) // presider row
+            .mockResolvedValueOnce(ok([
+                { assignment_id: 'a1', scorer_id: 's1', name: 'Alex Judge', is_paper: false, conflict_reported: false, p_points: null, d_points: null, email_status: null, ballot_id: null },
+                { assignment_id: 'a2', scorer_id: 'ps1', name: 'Paper', is_paper: true, conflict_reported: false, p_points: null, d_points: null, email_status: null, ballot_id: null },
+            ]));
         const result = await provider.getPairingScorers('p1');
         expect(result).toHaveLength(2);
         expect(result.find(r => r.assignment_id === 'a1')?.is_presider).toBe(true);
+        expect(result.find(r => r.assignment_id === 'a1')?.type).toBe('registered');
         expect(result.find(r => r.assignment_id === 'a2')?.is_presider).toBe(false);
+        expect(result.find(r => r.assignment_id === 'a2')?.type).toBe('paper');
+        expect(result.find(r => r.assignment_id === 'a2')?.name).toBe('Paper');
     });
 });
 
@@ -565,29 +610,29 @@ describe('assignScorerToPairing', () => {
 });
 
 describe('addPaperScorer', () => {
-    it('returns assignment and scorer id', async () => {
+    it('creates a persistent paper scorer and returns the assignment', async () => {
         mockDbQuery
-            .mockResolvedValueOnce(ok([{ scorer_id: 'ps1' }]))
-            .mockResolvedValueOnce(ok([{ assignment_id: 'a1', scorer_id: 'ps1' }]));
-        expect(await provider.addPaperScorer('p1', 'Paper')).toEqual({ assignment_id: 'a1', scorer_id: 'ps1' });
+            .mockResolvedValueOnce(ok([{ tournament_id: 't1' }])) // resolve tournament from pairing
+            .mockResolvedValueOnce(ok([{ scorer_id: 'ps1' }]))     // INSERT scorers (is_paper)
+            .mockResolvedValueOnce(ok([{ assignment_id: 'a1', scorer_id: 'ps1' }])); // INSERT assignment
+        expect(await provider.addPaperScorer('p1', 'Paper Pat')).toEqual({ assignment_id: 'a1', scorer_id: 'ps1' });
     });
-    it('throws DbError when paper scorer insert fails', async () => {
-        mockDbQuery.mockResolvedValueOnce(null);
+    it('throws NotFoundError when the pairing does not exist', async () => {
+        mockDbQuery.mockResolvedValueOnce(ok([])); // tournament lookup returns nothing
+        await expect(provider.addPaperScorer('p1', 'Paper')).rejects.toThrow(NotFoundError);
+    });
+    it('throws DbError when the scorer insert fails', async () => {
+        mockDbQuery
+            .mockResolvedValueOnce(ok([{ tournament_id: 't1' }]))
+            .mockResolvedValueOnce(null);
         await expect(provider.addPaperScorer('p1', 'Paper')).rejects.toThrow(DbError);
     });
 });
 
 describe('removeScorerAssignment', () => {
-    it('resolves for registered scorer', async () => {
+    it('detaches the scorer from the pairing without deleting the scorer', async () => {
         mockDbQuery.mockResolvedValueOnce(ok([])); // DELETE ballots
-        mockDbQuery.mockResolvedValueOnce(ok([{ paper_scorer_id: null }]));
-        await expect(provider.removeScorerAssignment('a1')).resolves.toBeUndefined();
-    });
-    it('cleans up paper scorer row', async () => {
-        mockDbQuery
-            .mockResolvedValueOnce(ok([])) // DELETE ballots
-            .mockResolvedValueOnce(ok([{ paper_scorer_id: 'ps1' }]))
-            .mockResolvedValueOnce(ok([]));
+        mockDbQuery.mockResolvedValueOnce(ok([{ assignment_id: 'a1' }])); // DELETE assignment
         await expect(provider.removeScorerAssignment('a1')).resolves.toBeUndefined();
     });
     it('throws NotFoundError when assignment not found', async () => {
@@ -1366,8 +1411,6 @@ describe('getScorerInviteContextsForRound', () => {
         mockDbQuery.mockResolvedValueOnce(ok([
             {
                 email: 'judge@example.com',
-                first_name: 'Jane',
-                last_name: 'Judge',
                 tournament_name: 'State Championship',
                 assignment_id: AID,
             },
@@ -1376,8 +1419,6 @@ describe('getScorerInviteContextsForRound', () => {
         await expect(provider.getScorerInviteContextsForRound('r1')).resolves.toEqual([
             {
                 email: 'judge@example.com',
-                firstName: 'Jane',
-                lastName: 'Judge',
                 tournamentName: 'State Championship',
                 assignmentId: AID,
             },
@@ -1416,8 +1457,6 @@ describe('getScorerInviteContextForAssignment', () => {
         mockDbQuery.mockResolvedValueOnce(ok([
             {
                 email: 'judge@example.com',
-                first_name: 'Jane',
-                last_name: 'Judge',
                 tournament_name: 'State Championship',
                 assignment_id: AID,
             },
@@ -1425,8 +1464,6 @@ describe('getScorerInviteContextForAssignment', () => {
 
         await expect(provider.getScorerInviteContextForAssignment(AID)).resolves.toEqual({
             email: 'judge@example.com',
-            firstName: 'Jane',
-            lastName: 'Judge',
             tournamentName: 'State Championship',
             assignmentId: AID,
         });

@@ -73,8 +73,7 @@ export interface IScoreSheetFormat {
 }
 
 export interface IScoringUser {
-    firstName: string;
-    lastName: string;
+    name: string;
     scorerID: string;
     isPaper: boolean;
 }

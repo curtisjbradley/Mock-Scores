@@ -109,7 +109,7 @@ export default function PairingCard({ pairing, teams, courtrooms, scorers, assig
                 })
                 onPresiderChanged(data.assignment_id)
             }
-            onScorerAssigned({ assignment_id: data.assignment_id, type: 'registered', scorer_id: scorerDraft, name: `${scorer.first_name} ${scorer.last_name}`, is_presider: isFirst, presider_only_tiebreaker: false, conflict_reported: false, p_points: null, d_points: null, ballot_id: null})
+            onScorerAssigned({ assignment_id: data.assignment_id, type: 'registered', scorer_id: scorerDraft, name: scorer.name, is_presider: isFirst, presider_only_tiebreaker: false, conflict_reported: false, p_points: null, d_points: null, ballot_id: null})
             setScorerDraft('')
             setScorerQuery('')
             setShowScorerAdd(false)
@@ -359,7 +359,7 @@ export default function PairingCard({ pairing, teams, courtrooms, scorers, assig
                                     const matches = q === '' || scorerDraft
                                         ? availableScorers
                                         : availableScorers.filter(s =>
-                                            `${s.first_name} ${s.last_name}`.toLowerCase().includes(q)
+                                            s.name.toLowerCase().includes(q)
                                         )
                                     if (matches.length === 0) {
                                         return <p className="pc-scorer-results-empty">No matching scorers</p>
@@ -373,9 +373,9 @@ export default function PairingCard({ pairing, teams, courtrooms, scorers, assig
                                                         <button
                                                             type="button"
                                                             className={`pc-scorer-option${selected ? ' pc-scorer-option--selected' : ''}`}
-                                                            onClick={() => { setScorerDraft(s.scorer_id); setScorerQuery(`${s.first_name} ${s.last_name}`) }}
+                                                            onClick={() => { setScorerDraft(s.scorer_id); setScorerQuery(s.name) }}
                                                         >
-                                                            {s.first_name} {s.last_name}
+                                                            {s.name}
                                                         </button>
                                                     </li>
                                                 )

@@ -379,8 +379,7 @@ const SCORECARD_RESPONSE = {
     },
     pairingID: '4fc5873c-1276-4852-a650-9cdf8c14182d',
     scorer: {
-      firstName: 'FirstName',
-      lastName: 'LastName',
+      name: 'FirstName LastName',
       scorerID: '15622afa-c718-4272-badb-c28cbb85d8cf',
       isPaper: false,
     },

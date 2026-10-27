@@ -10,7 +10,7 @@
     "type": "git",
     "url": "git+https://github.com/curtisjbradley/Mock-Scores.git"
   },
-  "license": "ISC",
+  "license": "GPL-3.0-or-later",
   "author": "",
   "type": "commonjs",
   "main": "index.js",
@@ -20,7 +20,7 @@
     "start": "npm run start -w backend",
     "prepare": "node -e \"if(process.env.NODE_ENV !== 'production') require('child_process').execSync('husky', {stdio:'inherit'})\"",
     "backend-coverage": "npm run build -w shared && cd backend && npm run test:coverage",
-    "test": "npm run build -w shared && npm run build -w standings-dsl && npm run test -w standings-dsl && npm run test -w backend && npm run cy:run -w frontend"
+    "test": "npm run build -w shared && npm run test -w shared && npm run build -w standings-dsl && npm run test -w standings-dsl && npm run test -w backend && npm run cy:run -w frontend"
   },
   "workspaces": [
     "frontend",

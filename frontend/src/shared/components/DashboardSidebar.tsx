@@ -18,6 +18,8 @@ interface Props<T extends string> {
     /** Title shown at the top of the sidebar (e.g. team code or tournament name). */
     title: string
     subtitle?: string
+    /** Persisted independently for each dashboard type. */
+    storageKey: string
     /** Accessible label for the nav landmark. */
     ariaLabel?: string
 }
@@ -34,18 +36,14 @@ interface Props<T extends string> {
  * lives in the shared `styles/dashboard.css` (`.dash-sidebar*` / `.dash-nav-*`).
  */
 
-const SIDEBAR_STORAGE_KEY = 'sidebar-storage-state'
-
-
-
 export default function DashboardSidebar<T extends string>({
     items, active, onChange, title, subtitle,
-    ariaLabel = 'Dashboard sections',
+    ariaLabel = 'Dashboard sections', storageKey,
 }: Props<T>) {
 
     const [collapsed, setCollapsed] = useState<boolean>(() => {
         try {
-            return localStorage.getItem(SIDEBAR_STORAGE_KEY) === 'true'
+            return localStorage.getItem(storageKey) === 'true'
         } catch {
             return false
         }
@@ -53,7 +51,7 @@ export default function DashboardSidebar<T extends string>({
     const toggleCollapsed = () => {
         setCollapsed(prev => {
             const next = !prev
-            try { localStorage.setItem(SIDEBAR_STORAGE_KEY, String(next)) } catch { /* ignore */ }
+            try { localStorage.setItem(storageKey, String(next)) } catch { /* ignore */ }
             return next
         })
     }
@@ -90,7 +88,7 @@ export default function DashboardSidebar<T extends string>({
                         title={collapsed ? item.label : undefined}
                     >
                         <Icon name={item.icon} className="dash-nav-icon" />
-                        {!collapsed && <span className="dash-nav-label">{item.label}</span>}
+                        <span className="dash-nav-label">{item.label}</span>
                     </button>
                 ))}
             </nav>

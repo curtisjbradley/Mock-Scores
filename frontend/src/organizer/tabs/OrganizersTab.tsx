@@ -18,6 +18,7 @@ export default function OrganizersTab({ tournamentId }: { tournamentId: string }
     const confirmRemove = useConfirmRemove<IOrganizer>()
     const [editingId, setEditingId] = useState<string | null>(null)
     const [editEmail, setEditEmail] = useState('')
+    const [error, setError] = useState<string | null>(null)
 
     useEffect(() => {
         apiFetch(`/organizer/tournament/${tournamentId}/organizers`)
@@ -25,27 +26,49 @@ export default function OrganizersTab({ tournamentId }: { tournamentId: string }
             .then(setOrganizers).catch(console.error)
     }, [tournamentId])
 
-    const saveEmail = (org: IOrganizer) => {
+    const saveEmail = async (org: IOrganizer) => {
         const updated = { ...org, email: editEmail }
-        apiFetch(`/organizer/tournament/${tournamentId}/organizers`, {
+        setError(null)
+        try {
+        const res = await apiFetch(`/organizer/tournament/${tournamentId}/organizers`, {
             method: 'PUT', body: JSON.stringify({ organizer: updated }),
-        }).catch(console.error)
+        })
+        if (!res.ok) throw new Error()
         setOrganizers(prev => prev.map(o => o.id === org.id ? updated : o))
         setEditingId(null)
+        } catch { setError('Unable to update organizer email.') }
     }
 
-    const removeOrganizer = (org: IOrganizer) => {
-        apiFetch(`/organizer/tournament/${tournamentId}/organizers`, {
+    const removeOrganizer = async (org: IOrganizer) => {
+        setError(null)
+        try {
+        const res = await apiFetch(`/organizer/tournament/${tournamentId}/organizers`, {
             method: 'DELETE', body: JSON.stringify({ organizer: org }),
-        }).catch(console.error)
+        })
+        if (!res.ok) throw new Error()
         setOrganizers(prev => prev.filter(o => o.id !== org.id))
         confirmRemove.clear()
+        } catch { setError('Unable to remove organizer.') }
+    }
+
+    const addOrganizer = async (name: string, email: string) => {
+        setError(null)
+        try {
+            const response = await apiFetch(`/organizer/tournament/${tournamentId}/organizers`, {
+                method: 'POST', body: JSON.stringify({ organizer: { name, email, role: 'delegate' } }),
+            })
+            if (!response.ok) throw new Error()
+            const created: IOrganizer = await response.json()
+            setOrganizers(prev => [...prev, created])
+            setShowModal(false)
+        } catch { setError('Unable to add organizer.') }
     }
 
     const isReadOnly = (org: IOrganizer) => org.email === session?.email || org.role === 'owner'
 
     return (
         <Section title="Organizers" description="Manage your organizers">
+            {error && <p className="org-error" role="alert">{error}</p>}
             <div className="tab-actions">
                 <AddButton onClick={() => setShowModal(true)}>+ Add Organizer</AddButton>
             </div>
@@ -61,7 +84,7 @@ export default function OrganizersTab({ tournamentId }: { tournamentId: string }
                                         ? <InlineEmailEdit
                                             value={editEmail}
                                             onChange={setEditEmail}
-                                            onSave={() => saveEmail(org)}
+                                            onSave={() => { void saveEmail(org) }}
                                             onCancel={() => setEditingId(null)}
                                           />
                                         : <span className="dash-judge-name">
@@ -90,14 +113,7 @@ export default function OrganizersTab({ tournamentId }: { tournamentId: string }
             {showModal && (
                 <AddOrganizerModal
                     onClose={() => setShowModal(false)}
-                    onAdd={(name, email) => {
-                        apiFetch(`/organizer/tournament/${tournamentId}/organizers`, {
-                            method: 'POST', body: JSON.stringify({ organizer: { name, email, role: 'delegate' } }),
-                        }).then(r => r.ok ? r.json() : Promise.reject())
-                        .then((created: IOrganizer) => setOrganizers(prev => [...prev, created]))
-                        .catch(console.error)
-                        setShowModal(false)
-                    }}
+                    onAdd={(name, email) => { void addOrganizer(name, email) }}
                 />
             )}
 
@@ -105,7 +121,7 @@ export default function OrganizersTab({ tournamentId }: { tournamentId: string }
                 <ConfirmRemoveModal
                     message={`Remove ${confirmRemove.pending.name} as an organizer?`}
                     onCancel={confirmRemove.clear}
-                    onConfirm={() => removeOrganizer(confirmRemove.pending!)}
+                    onConfirm={() => { void removeOrganizer(confirmRemove.pending!) }}
                 />
             )}
         </Section>

@@ -47,13 +47,13 @@
 }
 
 .dash-publish-label--active {
-    color: var(--green-text);
+    color: var(--success-fg);
     font-size: 0.78rem;
     font-weight: 600;
 }
 
 .dash-publish-checkbox:has(input:checked) .dash-publish-label {
-    color: var(--green-text);
+    color: var(--success-fg);
 }
 
 .dash-open-round-btn {
@@ -147,8 +147,8 @@
 }
 
 .dash-round-card-badge--published {
-    background: var(--green-bg);
-    color: var(--green-text);
+    background: var(--success-subtle-bg);
+    color: var(--success-fg);
 }
 
 .dash-round-card-badge--results {

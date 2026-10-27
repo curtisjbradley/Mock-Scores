@@ -91,15 +91,19 @@ export const CustomRosterFields = ({ tournamentId }: Props) => {
         }
     };
 
-    const handleDelete = (col: ICustomRosterColumn) => {
-        apiFetch(`/organizer/tournament/${tournamentId}/roster-columns`, {
+    const handleDelete = async (col: ICustomRosterColumn) => {
+        setError(null)
+        try {
+        const response = await apiFetch(`/organizer/tournament/${tournamentId}/roster-columns`, {
             method: 'DELETE',
             body: JSON.stringify({ field: col.field }),
         })
-            .then(r => { if (!r.ok && r.status !== 204) throw new Error() })
-            .catch(console.error);
+        if (!response.ok && response.status !== 204) throw new Error()
         setColumns(prev => prev.filter(c => c.field !== col.field));
         confirmRemove.clear();
+        } catch {
+            setError('Failed to remove custom roster field.')
+        }
     };
 
     if (loading) {
@@ -175,7 +179,7 @@ export const CustomRosterFields = ({ tournamentId }: Props) => {
                 <ConfirmRemoveModal
                     message={`Remove the "${confirmRemove.pending.field}" custom roster field? Any values coaches entered for it will be lost.`}
                     onCancel={confirmRemove.clear}
-                    onConfirm={() => handleDelete(confirmRemove.pending!)}
+                    onConfirm={() => { void handleDelete(confirmRemove.pending!) }}
                 />
             )}
         </Section>

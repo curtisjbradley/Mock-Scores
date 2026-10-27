@@ -49,7 +49,9 @@ function App() {
               <Route path="forgot-password" element={<ForgotPassword />} />
               <Route path="reset-password" element={<ResetPassword />} />
               <Route path="verify-email" element={<VerifyEmail />} />
-              <Route path="account" element={<Account />} />
+              <Route path="account" element={<ProtectedRoute />}>
+                  <Route index element={<Account />} />
+              </Route>
 
               <Route path="organizer" element={<ProtectedRoute />}>
                   <Route index element={<OrganizerHome />} />

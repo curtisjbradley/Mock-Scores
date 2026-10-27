@@ -24,6 +24,12 @@ const Header = () => {
                     </svg>
                 </Link>
             )}
+            {!session && (
+                <nav className="site-auth-nav" aria-label="Account">
+                    <Link to="/login">Log in</Link>
+                    <Link className="site-signup-link" to="/register">Create account</Link>
+                </nav>
+            )}
         </header>
     )
 }

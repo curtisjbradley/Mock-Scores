@@ -113,8 +113,7 @@ describe('GET /api/score/:assignmentId', () => {
             prosecutionCode: '101',
             defenseCode: '202',
             scorer: {
-                firstName: 'Jane',
-                lastName: 'Judge',
+                name: 'Jane Judge',
                 scorerID: 's1',
                 isPaper: false,
             },
@@ -424,8 +423,7 @@ describe('GET /api/score/:assignmentId — provider-composed sheet variants', ()
     it('passes through a paper scorer sheet', async () => {
         const sheet = {
             scorer: {
-                firstName: 'Paper Pat',
-                lastName: '',
+                name: 'Paper Pat',
                 scorerID: 'ps1',
                 isPaper: true,
             },
@@ -435,8 +433,7 @@ describe('GET /api/score/:assignmentId — provider-composed sheet variants', ()
         const res = await request(testApp).get(`/score/${VALID_UUID}`);
 
         expect(res.status).toBe(200);
-        expect(res.body.scorer.firstName).toBe('Paper Pat');
-        expect(res.body.scorer.lastName).toBe('');
+        expect(res.body.scorer.name).toBe('Paper Pat');
         expect(res.body.scorer.isPaper).toBe(true);
     });
 

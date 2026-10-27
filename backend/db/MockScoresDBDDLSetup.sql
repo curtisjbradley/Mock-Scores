@@ -258,9 +258,12 @@ create table scorers
     tournament_id uuid                           not null
         references tournaments
             on delete cascade,
-    first_name    text                           not null,
-    last_name     text                           not null,
-    email         text                           not null
+    name          text                           not null,
+    email         text,
+    is_paper           boolean default false not null,
+    willing_to_preside boolean default true  not null,
+    constraint scorers_email_required_when_online
+        check (is_paper or email is not null)
 );
 
 create index scorers_tournament_id_idx on scorers (tournament_id);
@@ -358,36 +361,20 @@ create table pairings
 
 create index pairings_round_id_idx on pairings (round_id);
 
-create table paper_scorers
-(
-    scorer_id  uuid default gen_random_uuid() not null
-        primary key,
-    pairing_id uuid                           not null
-        references pairings
-            on delete cascade,
-    name       text                           not null
-);
-
-create index paper_scorers_pairing_id_idx on paper_scorers (pairing_id);
-
 create table scorer_pairing_assignments
 (
-    assignment_id        uuid    default gen_random_uuid() not null
+    assignment_id     uuid    default gen_random_uuid() not null
         primary key,
-    registered_scorer_id uuid
+    scorer_id         uuid                              not null
         references scorers
             on delete cascade,
-    paper_scorer_id      uuid
-        references paper_scorers
-            on delete cascade,
-    pairing_id           uuid                              not null
+    pairing_id        uuid                              not null
         references pairings
             on delete cascade,
-    conflict_reported    boolean default false             not null,
-    constraint scorer_pairing_assignments_check
-        check (((registered_scorer_id IS NOT NULL) AND (paper_scorer_id IS NULL)) OR
-               ((registered_scorer_id IS NULL) AND (paper_scorer_id IS NOT NULL)))
+    conflict_reported boolean default false             not null
 );
+
+create index scorer_pairing_assignments_scorer_id_idx on scorer_pairing_assignments (scorer_id);
 
 create index scorer_pairing_assignments_pairing_id_idx on scorer_pairing_assignments (pairing_id);
 
@@ -521,6 +508,20 @@ create table scorer_conflicts
         references teams (id) on delete cascade,
     unique (scorer_id, team_id)
 );
+
+create table scorer_coscoring_preferences
+(
+    id                  uuid default gen_random_uuid() not null primary key,
+    scorer_id           uuid                           not null
+        references scorers (scorer_id) on delete cascade,
+    preferred_scorer_id uuid                           not null
+        references scorers (scorer_id) on delete cascade,
+    unique (scorer_id, preferred_scorer_id),
+    constraint scorer_coscoring_preferences_distinct check (scorer_id <> preferred_scorer_id)
+);
+
+create index scorer_coscoring_preferences_scorer_id_idx on scorer_coscoring_preferences (scorer_id);
+create index scorer_coscoring_preferences_preferred_scorer_id_idx on scorer_coscoring_preferences (preferred_scorer_id);
 
 create table witness_call_order
 (

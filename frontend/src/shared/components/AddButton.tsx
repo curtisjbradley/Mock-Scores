@@ -5,7 +5,7 @@ export type AddButtonVariant = 'primary' | 'dashed'
 interface AddButtonProps extends ButtonHTMLAttributes<HTMLButtonElement> {
     /**
      * Visual style:
-     * - `primary` — solid primary dashboard action button (`org-new-btn`),
+     * - `primary` — solid primary dashboard action button (`btn-primary`),
      *   used for list "+ Add X" actions on dashboards.
      * - `dashed`  — dashed outline add button (`tc-add-btn`), used inside the
      *   tournament creation wizard to add rows/categories.
@@ -17,11 +17,11 @@ interface AddButtonProps extends ButtonHTMLAttributes<HTMLButtonElement> {
 }
 
 /**
- * Shared button for "add / create" actions. Consolidates the `org-new-btn`
+ * Shared button for "add / create" actions. Consolidates the `btn-primary`
  * and `tc-add-btn` buttons duplicated across the app.
  *
  * Renders the existing CSS class names so contextual style overrides
- * (e.g. `.roster-add-form .org-new-btn`) keep working. Forwards all native
+ * (e.g. `.roster-add-form .btn-primary`) keep working. Forwards all native
  * button props and defaults `type` to "button" so it never accidentally
  * submits a form (pass `type="submit"` when needed).
  *
@@ -36,7 +36,7 @@ export default function AddButton({
     children,
     ...rest
 }: AddButtonProps) {
-    const base = variant === 'dashed' ? 'tc-add-btn' : 'org-new-btn'
+    const base = variant === 'dashed' ? 'tc-add-btn' : 'btn-primary'
     const classes = `${base}${className ? ` ${className}` : ''}`
     return (
         <button type={type} className={classes} {...rest}>

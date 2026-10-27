@@ -81,8 +81,8 @@ export default function TeamsTab({ tournamentId }: { tournamentId: string }) {
         <Section title="Teams" description="Manage invited teams">
             <div className="tab-actions">
                 <AddButton onClick={() => setShowModal(true)}>+ Add team</AddButton>
-                <button className="org-new-btn tab-actions-import" onClick={() => setShowImport(true)}>Import CSV</button>
-                <button className="org-new-btn tab-actions-import" onClick={() => { void exportRosters() }}>Export All Rosters</button>
+                <button className="btn-primary tab-actions-import" onClick={() => setShowImport(true)}>Import CSV</button>
+                <button className="btn-secondary tab-actions-import" onClick={() => { void exportRosters() }}>Export All Rosters</button>
             </div>
 
             <div className="dash-table-scroll">

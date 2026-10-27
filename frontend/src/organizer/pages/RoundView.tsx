@@ -7,6 +7,7 @@ import '../../judges/styles/modal.css'
 import PairingCard from '../components/PairingCard'
 import RoundNameEditor from '../components/RoundNameEditor'
 import AddMatchupForm from '../components/AddMatchupForm'
+import AutoAssignWizard from '../components/AutoAssignWizard'
 import { ConfirmRemoveModal } from '../components/modals'
 import { useConfirmRemove } from '../../shared/hooks/useConfirmRemove'
 import AddButton from '../../shared/components/AddButton'
@@ -36,7 +37,7 @@ const RoundView = () => {
         error, notFound,
         saveName, addMatchup, updatePairing, removePairing, setRoundLocked,
         setPairingsPublished, setResultsPublished,
-        onScorerAssigned, onScorerRemoved, onPresiderChanged,
+        onScorerAssigned, onScorerRemoved, onPresiderChanged, reloadPairingScorers,
     } = useRoundView(id, roundId)
 
     const confirmRemove = useConfirmRemove<IPairing>()
@@ -44,6 +45,7 @@ const RoundView = () => {
     const [sendMsg, setSendMsg] = useState<string | null>(null)
     const [linksSent, setLinksSent] = useState(false)
     const [showLockConfirm, setShowLockConfirm] = useState(false)
+    const [showAutoAssign, setShowAutoAssign] = useState(false)
 
     const handleSendScoringLinks = () => {
         if (!id || !roundId || sending || linksSent) return
@@ -224,11 +226,36 @@ const RoundView = () => {
                         onSubmit={handleAddMatchup}
                     />
                 )}
-                <AddButton onClick={toggleForm}>
-                    {showAddForm ? 'Cancel' : '+ Add Pairing'}
-                </AddButton>
+                <div className="rv-bottom-actions">
+                    <AddButton onClick={toggleForm}>
+                        {showAddForm ? 'Cancel' : '+ Add Pairing'}
+                    </AddButton>
+                    {!showAddForm && !(pairings.length === 0) && (
+                        <AddButton
+                            title={pairings.length === 0
+                                    ? 'Add at least one pairing first.'
+                                    : 'Automatically distribute available scorers across pairings.'}
+                            onClick={() => setShowAutoAssign(true)}
+                        >
+                            Auto-assign scorers
+                        </AddButton>
+                    )}
+                </div>
 
             </div>
+
+            {showAutoAssign && (
+                <AutoAssignWizard
+                    tournamentId={id!}
+                    pairings={pairings}
+                    teams={teams}
+                    scorers={scorers}
+                    pairingScorers={pairingScorers}
+                    conflictSet={conflictSet}
+                    onClose={() => setShowAutoAssign(false)}
+                    onApplied={reloadPairingScorers}
+                />
+            )}
 
             {confirmRemove.pending && (
                 <ConfirmRemoveModal

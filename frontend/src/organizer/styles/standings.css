@@ -29,7 +29,7 @@
 .dash-standings-table tbody tr:hover td { background: var(--surface-muted); }
 
 .dash-team-code { font-weight: 700; }
-.dash-diff--pos { color: var(--green-text-alt); font-weight: 600; }
+.dash-diff--pos { color: var(--success-strong); font-weight: 600; }
 .dash-diff--neg { color: var(--danger); font-weight: 600; }
 
 /* ── StandingsBuilder ─────────────────────────────────────────────────────── */
@@ -60,7 +60,7 @@
 
 .sb-config-body { margin-top: 0.5rem; display: flex; flex-direction: column; gap: 0.5rem; }
 
-.sb-config-body .org-new-btn { align-self: flex-start; }
+.sb-config-body .btn-primary { align-self: flex-start; }
 
 .sb-config-textarea {
     font-family: monospace;
@@ -93,7 +93,7 @@
 }
 
 .tb-save-msg { font-size: 0.8rem; }
-.tb-save-msg--ok  { color: var(--green-text-alt); }
+.tb-save-msg--ok  { color: var(--success-strong); }
 .tb-save-msg--err { color: var(--danger); }
 
 .tb-unsaved { font-size: 0.8rem; color: var(--text-muted); margin-left: auto; }

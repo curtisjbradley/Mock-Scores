@@ -144,6 +144,10 @@
     padding: 0.6rem 0;
 }
 
+.dash-sidebar--collapsed .dash-nav-label {
+    display: none;
+}
+
 .dash-nav-item:hover {
     background: var(--surface-muted);
     color: var(--text);

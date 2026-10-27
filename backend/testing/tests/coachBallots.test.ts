@@ -163,7 +163,7 @@ describe('GET /api/coach/tournaments/:id/pairings/:pairingId/ballots/:ballotId',
         // isBallotInPairingWithPublicResults -> true
         mockIsBallotInPairingWithPublicResults.mockResolvedValueOnce(true);
         mockGetSheetFromBallot.mockResolvedValueOnce({
-            scorer: { firstName: 'Jane', lastName: 'Judge', scorerID: 's1', isPaper: false },
+            scorer: { name: 'Jane Judge', scorerID: 's1', isPaper: false },
             presiderName: 'Presider',
         } as any);
         mockGetBallot.mockResolvedValueOnce({
@@ -175,8 +175,7 @@ describe('GET /api/coach/tournaments/:id/pairings/:pairingId/ballots/:ballotId',
         const res = await request(app).get(url).set(auth());
         expect(res.status).toBe(200);
         expect(res.body.sheet).toBeTruthy();
-        expect(res.body.sheet.scorer.firstName).toBe('');
-        expect(res.body.sheet.scorer.lastName).toBe('');
+        expect(res.body.sheet.scorer.name).toBe('');
         expect(res.body.ballot).toBeTruthy();
     });
 
@@ -184,7 +183,7 @@ describe('GET /api/coach/tournaments/:id/pairings/:pairingId/ballots/:ballotId',
         // isBallotInPairingWithPublicResults -> true
         mockIsBallotInPairingWithPublicResults.mockResolvedValueOnce(true);
         mockGetSheetFromBallot.mockResolvedValueOnce({
-            scorer: { firstName: 'Jane', lastName: 'Judge', scorerID: 's1', isPaper: false },
+            scorer: { name: 'Jane Judge', scorerID: 's1', isPaper: false },
             presiderName: 'Presider',
         } as any);
         mockGetBallot.mockResolvedValueOnce({
