@@ -39,7 +39,7 @@
     }
   },
   "devDependencies": {
-    "fallow": "^2.102.0"
+    "fallow": "^3.34.0"
   },
   "dependencies": {
     "cypress-axe": "^1.7.0"
