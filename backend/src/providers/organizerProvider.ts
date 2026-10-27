@@ -369,8 +369,35 @@ export async function copyScoringTemplateToTournament(templateID: string, tourna
 }
 
 export async function deleteTournament(tournamentID: string): Promise<void> {
-    const row = (await dbQuery('DELETE FROM tournaments  WHERE id=$1 RETURNING id', [tournamentID]))?.rows[0];
-    if (!row) throw new NotFoundError('tournament');
+    await withTransaction(async client => {
+        // These references intentionally preserve historical data under normal
+        // operation, so they are not all database cascades. A tournament
+        // deletion is the explicit destructive operation that removes them.
+        await client.query(
+            `DELETE FROM ballots
+             WHERE tournament_id=$1
+                OR pairing_id IN (
+                    SELECT p.pairing_id FROM pairings p
+                    JOIN rounds r ON r.round_id=p.round_id
+                    WHERE r.tournament_id=$1
+                )
+                OR p_team_id IN (SELECT id FROM teams WHERE tournament_id=$1)
+                OR d_team_id IN (SELECT id FROM teams WHERE tournament_id=$1)`,
+            [tournamentID],
+        );
+        await client.query(
+            `DELETE FROM scorer_presider_assignment
+             WHERE pairing_id IN (
+                 SELECT p.pairing_id FROM pairings p
+                 JOIN rounds r ON r.round_id=p.round_id
+                 WHERE r.tournament_id=$1
+             )`,
+            [tournamentID],
+        );
+        await client.query('DELETE FROM custom_roster_column_definitions WHERE tournament_id=$1', [tournamentID]);
+        const row = (await client.query('DELETE FROM tournaments WHERE id=$1 RETURNING id', [tournamentID])).rows[0];
+        if (!row) throw new NotFoundError('tournament');
+    });
 }
 
 export async function getTournaments(userId: string): Promise<ITournament[]> {
@@ -851,7 +878,10 @@ export async function getTeam(teamId: string) : Promise<ITeam> {
         coach_id: string
     }>('SELECT coach_id FROM team_coaches WHERE team_id=$1 AND is_owner=true LIMIT 1', [teamId]))?.rows[0]
 
-    if (!!coachId) {
+    // A team without an owner in team_coaches is still pending an invite.  In
+    // that case its contact address lives in team_invites; a joined team gets
+    // it from auth through the owner record instead.
+    if (!coachId) {
         const invite = (await dbQuery<ITeamInviteRow>(`Select *
                                                        from team_invites
                                                        where team_id = $1
@@ -866,7 +896,7 @@ export async function getTeam(teamId: string) : Promise<ITeam> {
         };
     }
 
-    const coachEmail = (await dbQuery<{email : string}>(`select email from auth where user_id = $1`, [coachId]))?.rows[0]?.email;
+    const coachEmail = (await dbQuery<{email : string}>(`select email from auth where user_id = $1`, [coachId.coach_id]))?.rows[0]?.email;
 
     if (!coachEmail) throw new DbError("coach does not have an email");
 
@@ -913,8 +943,24 @@ export async function updateTeam(teamId: string, name: string, coachEmail: strin
 }
 
 export async function deleteTeam(teamId: string): Promise<void> {
-    const row = (await dbQuery('DELETE FROM teams WHERE id=$1 RETURNING id', [teamId]))?.rows[0];
-    if (!row) throw new NotFoundError('team');
+    await withTransaction(async client => {
+        // Ballots deliberately do not cascade from a team or pairing. Remove
+        // them first, along with presider links that otherwise reference the
+        // pairings being cascaded away by the team deletion.
+        await client.query(
+            `DELETE FROM ballots
+             WHERE p_team_id=$1 OR d_team_id=$1
+                OR pairing_id IN (SELECT pairing_id FROM pairings WHERE p_team=$1 OR d_team=$1)`,
+            [teamId],
+        );
+        await client.query(
+            `DELETE FROM scorer_presider_assignment
+             WHERE pairing_id IN (SELECT pairing_id FROM pairings WHERE p_team=$1 OR d_team=$1)`,
+            [teamId],
+        );
+        const row = (await client.query('DELETE FROM teams WHERE id=$1 RETURNING id', [teamId])).rows[0];
+        if (!row) throw new NotFoundError('team');
+    });
 }
 
 export async function createRoundPairing(roundID: string, prosecution: string, defense: string, courtroomID: string | null): Promise<IPairingRow> {

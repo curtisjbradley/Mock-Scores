@@ -64,7 +64,7 @@ function getCsrfToken(): string | null {
  * Uses a shared promise so concurrent calls during a refresh window coalesce
  * into one network request.
  */
-export function refreshAccessToken(): Promise<boolean> {
+function refreshAccessToken(): Promise<boolean> {
     if (_refreshing) return _refreshing;
 
     _refreshing = fetch(`${API_BASE}/auth/refresh`, {

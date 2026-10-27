@@ -194,6 +194,32 @@ export async function transferOwnership(teamId: string, newOwnerCoachId: string)
     await dbQuery(`UPDATE team_coaches SET is_owner=true WHERE team_id=$1 AND coach_id=$2`, [teamId, newOwnerCoachId]);
 }
 
+/**
+ * Replaces a joined team's owner by email.  The replacement may be an
+ * existing account or an invited future account.  The former owner can stay
+ * on the team as a non-owner coach or be removed entirely.
+ */
+export async function replaceTeamOwner(teamId: string, email: string, retainPreviousOwner: boolean): Promise<void> {
+    const previousOwner = (await dbQuery<{ coach_id: string }>(
+        'SELECT coach_id FROM team_coaches WHERE team_id=$1 AND is_owner=true LIMIT 1',
+        [teamId],
+    ))?.rows[0];
+    if (!previousOwner) throw new NotFoundError('team owner');
+
+    const replacement = await addCoach(teamId, email, true);
+    if (replacement.has_joined) {
+        await transferOwnership(teamId, replacement.coach_id);
+    } else {
+        // An invitation can be designated as the owner before its recipient
+        // creates an account.  Demote the current joined owner in the interim.
+        await dbQuery('UPDATE team_coaches SET is_owner=false WHERE team_id=$1', [teamId]);
+    }
+
+    if (!retainPreviousOwner && previousOwner.coach_id !== replacement.coach_id) {
+        await dbQuery('DELETE FROM team_coaches WHERE team_id=$1 AND coach_id=$2', [teamId, previousOwner.coach_id]);
+    }
+}
+
 export async function getStudents(teamId: string): Promise<IStudent[]> {
     return (await dbQuery<IStudent>(
         `SELECT student_id, team_id, student_name, pronouns, COALESCE(custom_data, '[]'::jsonb) AS custom_data

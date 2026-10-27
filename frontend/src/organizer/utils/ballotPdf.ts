@@ -262,29 +262,6 @@ export function buildBallotInner(fmt: IScoreSheetFormat, meta: BallotMeta = {}):
     </div>`
 }
 
-/**
- * Builds the full self-contained HTML document for a printable one-page ballot.
- * Exported for testing / preview; consumers normally call {@link downloadBallot}.
- */
-export function buildBallotHtml(fmt: IScoreSheetFormat, meta: BallotMeta = {}): string {
-    const pCode = esc(meta.prosecutionCode ?? fmt.prosecutionCode)
-    const dCode = esc(meta.defenseCode ?? fmt.defenseCode)
-    const title = `Ballot - ${pCode} v. ${dCode}`
-
-    return `<!DOCTYPE html>
-<html lang="en">
-<head>
-<meta charset="utf-8" />
-<title>${esc(title)}</title>
-<style>${BALLOT_STYLES}</style>
-</head>
-<body>
-${buildBallotInner(fmt, meta)}
-</body>
-</html>`
-}
-
-
 /** CSS pixels per inch (browser standard for layout units). */
 const PX_PER_IN = 96
 
@@ -292,7 +269,7 @@ const PX_PER_IN = 96
  * Usable printable area of a Letter portrait page after the 0.4in @page
  * margins on all sides: 8.5in × 11in minus 0.4in × 2.
  */
-export const BALLOT_PAGE = {
+const BALLOT_PAGE = {
     /** Usable content width in CSS pixels (7.7in). */
     width: (8.5 - 0.4 * 2) * PX_PER_IN,
     /** Usable content height in CSS pixels (10.2in). */

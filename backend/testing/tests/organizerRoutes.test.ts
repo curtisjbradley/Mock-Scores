@@ -93,7 +93,11 @@ describe('DELETE /api/organizer/tournament/:tournamentId', () => {
 
     it('returns 204 on success', async () => {
         mockOwnerAccess();
-        mockDbQuery.mockResolvedValueOnce({ rows: [{ id: TOURNAMENT_ID }], rowCount: 1 } as any);
+        mockDbQuery
+            .mockResolvedValueOnce({ rows: [], rowCount: 0 } as any) // ballots
+            .mockResolvedValueOnce({ rows: [], rowCount: 0 } as any) // presider assignments
+            .mockResolvedValueOnce({ rows: [], rowCount: 0 } as any) // roster fields
+            .mockResolvedValueOnce({ rows: [{ id: TOURNAMENT_ID }], rowCount: 1 } as any);
         const res = await request(app).delete(`/organizer/tournament/${TOURNAMENT_ID}`).set(auth());
         expect(res.status).toBe(204);
     });
@@ -1042,9 +1046,11 @@ describe('PUT /api/organizer/tournament/:tournamentId/teams', () => {
         mockDbQuery
             .mockResolvedValueOnce({ rows: [], rowCount: 0 } as any) // teamNameExists
             .mockResolvedValueOnce({ rows: [{id: ROUND_ID, tournament_id: TOURNAMENT_ID, name: base.name, code: base.code, }], rowCount: 1 } as any) // getTeam
+            .mockResolvedValueOnce({ rows: [{ coach_id: 'u1' }], rowCount: 1 } as any) // joined owner
+            .mockResolvedValueOnce({ rows: [{ email: base.coach_email }], rowCount: 1 } as any) // owner email
             .mockResolvedValueOnce({ rows: [{ id: ROUND_ID, tournament_id: TOURNAMENT_ID }], rowCount: 1 } as any) // SELECT team
-            .mockResolvedValueOnce({ rows: [{ coach_id: 'u1' }], rowCount: 1 } as any) // SELECT coach
             .mockResolvedValueOnce({ rows: [{id: ROUND_ID, team_id: ROUND_ID}], rowCount: 1 } as any) // UPDATE teams
+            .mockResolvedValueOnce({ rows: [{ coach_id: 'u1' }], rowCount: 1 } as any) // SELECT coach
         const res = await request(app).put(`/organizer/tournament/${TOURNAMENT_ID}/teams`).set(auth()).send({ team: { ...base, id: ROUND_ID } });
         expect(res.status).toBe(200);
     });
@@ -1066,14 +1072,20 @@ describe('DELETE /api/organizer/tournament/:tournamentId/teams', () => {
 
     it('returns 404 when team not found', async () => {
         mockAccess();
-        mockDbQuery.mockResolvedValueOnce({ rows: [], rowCount: 0 } as any);
+        mockDbQuery
+            .mockResolvedValueOnce({ rows: [], rowCount: 0 } as any) // ballots
+            .mockResolvedValueOnce({ rows: [], rowCount: 0 } as any) // presider assignments
+            .mockResolvedValueOnce({ rows: [], rowCount: 0 } as any); // team
         const res = await request(app).delete(`/organizer/tournament/${TOURNAMENT_ID}/teams`).set(auth()).send({ id: ROUND_ID });
         expect(res.status).toBe(404);
     });
 
     it('returns 204 on success', async () => {
         mockAccess();
-        mockDbQuery.mockResolvedValueOnce({ rows: [{ id: ROUND_ID }], rowCount: 1 } as any);
+        mockDbQuery
+            .mockResolvedValueOnce({ rows: [], rowCount: 0 } as any) // ballots
+            .mockResolvedValueOnce({ rows: [], rowCount: 0 } as any) // presider assignments
+            .mockResolvedValueOnce({ rows: [{ id: ROUND_ID }], rowCount: 1 } as any);
         const res = await request(app).delete(`/organizer/tournament/${TOURNAMENT_ID}/teams`).set(auth()).send({ id: ROUND_ID });
         expect(res.status).toBe(204);
     });

@@ -1,7 +1,7 @@
 import type { ButtonHTMLAttributes, ReactNode } from 'react'
 import './styles/danger-button.css'
 
-export type DangerButtonVariant = 'subtle' | 'outline' | 'solid' | 'icon'
+type DangerButtonVariant = 'subtle' | 'outline' | 'solid' | 'icon'
 
 interface DangerButtonProps extends ButtonHTMLAttributes<HTMLButtonElement> {
     /**

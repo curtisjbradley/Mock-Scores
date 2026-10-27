@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react'
 import { Link } from 'react-router-dom'
 import type { ITeam } from '@mock-scores/shared'
-import { ConfirmRemoveModal, EditTeamModal } from '../components/modals'
+import { ChangeTeamOwnerModal, ConfirmRemoveModal, EditTeamModal } from '../components/modals'
 import Section from './Section'
 import AddTeamModal from '../components/AddTeamModal'
 import CsvImportModal from '../../shared/components/CsvImportModal'
@@ -22,6 +22,8 @@ export default function TeamsTab({ tournamentId }: { tournamentId: string }) {
     const [editingEmailId, setEditingEmailId] = useState<string | null>(null)
     const [editEmail, setEditEmail] = useState('')
     const [showImport, setShowImport] = useState(false)
+    const [error, setError] = useState<string | null>(null)
+    const [ownerChange, setOwnerChange] = useState<{ team: ITeam; email: string } | null>(null)
 
     useEffect(() => {
         apiFetch(`/organizer/tournament/${tournamentId}/teams`)
@@ -36,7 +38,11 @@ export default function TeamsTab({ tournamentId }: { tournamentId: string }) {
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ team: { ...team, ...patch } }),
         })
-        if (!res.ok) return false
+        if (!res.ok) {
+            const body = await res.json().catch(() => null) as { message?: string } | null
+            setError(body?.message ?? 'Unable to update the team. Please try again.')
+            return false
+        }
         const updated: ITeam = await res.json()
         setTeams(prev => prev.map(t => t.id === team.id ? updated : t))
         return true
@@ -48,7 +54,11 @@ export default function TeamsTab({ tournamentId }: { tournamentId: string }) {
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ team: { name, coach_email: email, code } }),
         })
-        if (!res.ok) return
+        if (!res.ok) {
+            const body = await res.json().catch(() => null) as { message?: string } | null
+            setError(body?.message ?? 'Unable to add the team. Please try again.')
+            return
+        }
         const team: ITeam = await res.json()
         setTeams(prev => [...prev, team])
         setShowModal(false)
@@ -60,9 +70,31 @@ export default function TeamsTab({ tournamentId }: { tournamentId: string }) {
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ id: team.id }),
         })
-        if (!res.ok) return
+        if (!res.ok) {
+            const body = await res.json().catch(() => null) as { message?: string } | null
+            setError(body?.message ?? 'Unable to remove the team. Please try again.')
+            return
+        }
         setTeams(prev => prev.filter(t => t.id !== team.id))
         confirmRemove.clear()
+    }
+
+    const changeOwner = async (retainPreviousOwner: boolean) => {
+        if (!ownerChange) return
+        const { team, email } = ownerChange
+        const res = await apiFetch(`/organizer/tournament/${tournamentId}/teams/${team.id}/owner-email`, {
+            method: 'PUT',
+            body: JSON.stringify({ email, retainPreviousOwner }),
+        })
+        if (!res.ok) {
+            const body = await res.json().catch(() => null) as { message?: string } | null
+            setError(body?.message ?? 'Unable to change the team owner. Please try again.')
+            return
+        }
+        const refreshed = await apiFetch(`/organizer/tournament/${tournamentId}/teams`)
+        if (refreshed.ok) setTeams(await refreshed.json() as ITeam[])
+        setEditingEmailId(null)
+        setOwnerChange(null)
     }
 
     const exportRosters = async () => {
@@ -79,6 +111,7 @@ export default function TeamsTab({ tournamentId }: { tournamentId: string }) {
 
     return (
         <Section title="Teams" description="Manage invited teams">
+            {error && <p className="coach-save-error" role="alert">{error}</p>}
             <div className="tab-actions">
                 <AddButton onClick={() => setShowModal(true)}>+ Add team</AddButton>
                 <button className="btn-primary tab-actions-import" onClick={() => setShowImport(true)}>Import CSV</button>
@@ -99,6 +132,10 @@ export default function TeamsTab({ tournamentId }: { tournamentId: string }) {
                                             value={editEmail}
                                             onChange={setEditEmail}
                                             onSave={async () => {
+                                                if (team.has_joined && editEmail.trim().toLowerCase() !== team.coach_email.toLowerCase()) {
+                                                    setOwnerChange({ team, email: editEmail.trim() })
+                                                    return
+                                                }
                                                 const ok = await putTeam(team, { coach_email: editEmail })
                                                 if (ok) setEditingEmailId(null)
                                             }}
@@ -114,7 +151,7 @@ export default function TeamsTab({ tournamentId }: { tournamentId: string }) {
                                 <td>
                                     <div className="dash-actions-cell">
                                         <button className="dash-remove-btn" onClick={() => setEditingTeam(team)}>Edit</button>
-                                        {!team.has_joined && editingEmailId !== team.id && (
+                                        {editingEmailId !== team.id && (
                                             <button className="dash-remove-btn" onClick={() => { setEditingEmailId(team.id); setEditEmail(team.coach_email) }}>Edit email</button>
                                         )}
                                         <DangerButton onClick={() => confirmRemove.open(team)}>Remove</DangerButton>
@@ -148,6 +185,16 @@ export default function TeamsTab({ tournamentId }: { tournamentId: string }) {
                     message="Remove this team from the tournament?"
                     onCancel={confirmRemove.clear}
                     onConfirm={() => { void handleRemove(confirmRemove.pending!) }}
+                />
+            )}
+
+            {ownerChange && (
+                <ChangeTeamOwnerModal
+                    currentEmail={ownerChange.team.coach_email}
+                    newEmail={ownerChange.email}
+                    onCancel={() => setOwnerChange(null)}
+                    onKeepPrevious={() => { void changeOwner(true) }}
+                    onRemovePrevious={() => { void changeOwner(false) }}
                 />
             )}
 
