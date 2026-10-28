@@ -3,6 +3,7 @@ import { useNavigate, useParams } from 'react-router-dom'
 import '../styles/organizer.css'
 import '../styles/round-view.css'
 import '../styles/pairings.css'
+import '../../shared/styles/dashboard.css'
 import '../../judges/styles/modal.css'
 import PairingCard from '../components/PairingCard'
 import RoundNameEditor from '../components/RoundNameEditor'
@@ -18,6 +19,19 @@ import type { IPairing } from '@mock-scores/shared'
 import NotFound from '../../error/NotFound'
 import { apiFetch } from '../../auth/auth'
 import Tooltip from "../../shared/components/Tooltip"
+import DashboardSidebar, { type DashboardNavItem } from '../../shared/components/DashboardSidebar'
+import { type OrganizerScreen } from '../constants'
+
+const NAV_ITEMS: DashboardNavItem<OrganizerScreen>[] = [
+    { key: 'overview',   label: 'Overview',   icon: 'Overview' },
+    { key: 'rounds',     label: 'Rounds',     icon: 'Rounds' },
+    { key: 'standings',  label: 'Standings',  icon: 'Standings' },
+    { key: 'teams',      label: 'Teams',      icon: 'Teams' },
+    { key: 'scorers',    label: 'Scorers',    icon: 'Scorers' },
+    { key: 'courtrooms', label: 'Courtrooms', icon: 'Courtrooms' },
+    { key: 'organizers', label: 'Organizers', icon: 'Organizers' },
+    { key: 'structure',  label: 'Structure',  icon: 'Settings' },
+]
 
 /**
  * Displays all pairings for a single round and allows the organizer to
@@ -33,7 +47,7 @@ const RoundView = () => {
     const navigate = useNavigate()
 
     const {
-        round, teams, courtrooms, pairings, scorers, pairingScorers, ballotStatus, conflictSet,
+        round, teams, courtrooms, pairings, scorers, pairingScorers, ballotStatus, rosterStatus, conflictSet,
         error, notFound,
         saveName, addMatchup, updatePairing, removePairing, setRoundLocked,
         setPairingsPublished, setResultsPublished,
@@ -105,8 +119,24 @@ const RoundView = () => {
 
     if (notFound) return <NotFound />
 
+    const navigateToDashboard = (screen: OrganizerScreen) => {
+        if (!id) return
+        navigate(`/organizer/${id}${screen === 'overview' ? '' : `?page=${screen}`}`)
+    }
+
     return (
-        <main className="org-main">
+        <div className="dash-shell">
+            <DashboardSidebar
+                items={NAV_ITEMS}
+                active="rounds"
+                onChange={navigateToDashboard}
+                title="Tournament"
+                subtitle="Round management"
+                storageKey="organizer-sidebar-collapsed"
+                ariaLabel="Tournament dashboard sections"
+            />
+            <main className="dash-content">
+            <div className="org-main">
             <div className="org-container">
                 <button className="org-back-btn" onClick={() => navigate(`/organizer/${id}?page=rounds`)}>
                      Back to rounds
@@ -188,15 +218,17 @@ const RoundView = () => {
                             <p className="rv-empty">No matchups yet. Add them manually.</p>
                         </div>
                     )}
-                    {pairings.map(pairing => (
+                    {pairings.map((pairing, index) => (
                         <PairingCard
                             key={pairing.pairing_id}
                             pairing={pairing}
+                            pairingNumber={index + 1}
                             teams={teams}
                             courtrooms={courtrooms}
                             scorers={scorers}
                             assignedScorers={pairingScorers[pairing.pairing_id] ?? []}
                             ballotStatus={ballotStatus[pairing.pairing_id]}
+                            rosterStatuses={rosterStatus[pairing.pairing_id] ?? {}}
                             linksSent={linksAlreadySent}
                             tournamentId={id!}
                             roundId={roundId!}
@@ -275,7 +307,9 @@ const RoundView = () => {
             )}
 
 
-        </main>
+            </div>
+            </main>
+        </div>
     )
 }
 

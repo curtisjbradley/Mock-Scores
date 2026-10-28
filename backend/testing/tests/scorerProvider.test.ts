@@ -274,8 +274,8 @@ describe('scoresheet construction', () => {
                 { team_id: D_TEAM, witness_id: 'wd', position: 1 },
             ],
             assignments: [
-                { field_id: 'direct', witness_id: 'wp', student_id: 'stu-p', team_id: P_TEAM },
-                { field_id: 'cross', witness_id: 'wp', student_id: 'stu-d', team_id: D_TEAM },
+                { field_id: 'direct', side: 'P', witness_id: 'wp', student_id: 'stu-p', team_id: P_TEAM },
+                { field_id: 'cross', side: 'D', witness_id: 'wp', student_id: 'stu-d', team_id: D_TEAM },
             ],
             students: [
                 { student_id: 'stu-p', student_name: 'Pat P', pronouns: 'she/her', team_id: P_TEAM },

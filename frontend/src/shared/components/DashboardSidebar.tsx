@@ -88,7 +88,7 @@ export default function DashboardSidebar<T extends string>({
                         title={collapsed ? item.label : undefined}
                     >
                         <Icon name={item.icon} className="dash-nav-icon" />
-                        <span className="dash-nav-label">{item.label}</span>
+                        <span className="dash-nav-label handwritting">{item.label}</span>
                     </button>
                 ))}
             </nav>

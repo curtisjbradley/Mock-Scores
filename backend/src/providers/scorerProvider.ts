@@ -202,11 +202,12 @@ async function buildScoreSheetForPairing(ctx: PairingFormatContext): Promise<ISc
     // ── 8. Student assignments for this pairing ───────────────────────────────
     const studentAsgRows = (await dbQuery<{
         field_id: string;
+        side: 'P' | 'D';
         witness_id: string | null;
         student_id: string;
         team_id: string;
     }>(
-        `SELECT field_id, witness_id, student_id, team_id
+        `SELECT field_id, side, witness_id, student_id, team_id
          FROM student_assignments
          WHERE pairing_id = $1`,
         [pairing_id],
@@ -216,8 +217,8 @@ async function buildScoreSheetForPairing(ctx: PairingFormatContext): Promise<ISc
     for (const sa of studentAsgRows) {
         const key = sa.witness_id ? `${sa.field_id}:${sa.witness_id}` : sa.field_id;
         const existing = studentByField.get(key) ?? { pStudentId: null, dStudentId: null };
-        if (sa.team_id === p_team) existing.pStudentId = sa.student_id;
-        else if (sa.team_id === d_team) existing.dStudentId = sa.student_id;
+        if (sa.team_id === p_team && sa.side === 'P') existing.pStudentId = sa.student_id;
+        else if (sa.team_id === d_team && sa.side === 'D') existing.dStudentId = sa.student_id;
         studentByField.set(key, existing);
     }
 

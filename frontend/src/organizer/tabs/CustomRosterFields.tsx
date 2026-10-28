@@ -149,7 +149,7 @@ export const CustomRosterFields = ({ tournamentId }: Props) => {
 
             {showModal && (
                 <ModalBackdrop onClose={() => setShowModal(false)}>
-                    <div className="confirm-modal" role="dialog" aria-modal="true">
+                    <div className="confirm-modal crf-modal" role="dialog" aria-modal="true">
                         <h2>{editingField !== null ? 'Edit custom field' : 'Add custom field'}</h2>
                         {formError && <div className="tc-error-banner">{formError}</div>}
                         <form className="tc-form" onSubmit={e => { e.preventDefault(); handleSave() }} noValidate>

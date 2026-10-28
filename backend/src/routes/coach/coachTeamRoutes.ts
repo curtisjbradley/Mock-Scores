@@ -364,7 +364,9 @@ router.put("/pairings/:pairingId/witness-order", authedHandler(async (req, res) 
 router.get("/pairings/:pairingId/assignments", authedHandler(async (req, res) => {
     const pairingId = req.params.pairingId as string;
     if (!uuidRegex.test(pairingId)) return res.status(400).json({ message: "Invalid pairing ID" });
-    return res.status(200).json(await coach.getStudentAssignments(pairingId, req.params.teamId as string));
+    const side = req.query.side;
+    if (side !== undefined && side !== 'P' && side !== 'D') return res.status(400).json({ message: "side must be P or D" });
+    return res.status(200).json(await coach.getStudentAssignments(pairingId, req.params.teamId as string, side));
 }));
 
 /**
@@ -401,11 +403,11 @@ router.get("/pairings/:pairingId/assignments", authedHandler(async (req, res) =>
 router.put("/pairings/:pairingId/assignments", authedHandler(async (req, res) => {
     const pairingId = req.params.pairingId as string;
     if (!uuidRegex.test(pairingId)) return res.status(400).json({ message: "Invalid pairing ID" });
-    const { field_id, student_id, witness_id } = req.body as { field_id?: string; student_id?: string; witness_id?: string };
-    if (!field_id || !student_id) return res.status(400).json({ message: "Missing field_id or student_id" });
+    const { field_id, student_id, witness_id, side } = req.body as { field_id?: string; student_id?: string; witness_id?: string; side?: 'P' | 'D' };
+    if (!field_id || !student_id || (side !== 'P' && side !== 'D')) return res.status(400).json({ message: "field_id, student_id, and side (P or D) are required" });
     if (await coach.isPairingRoundLocked(pairingId)) return res.status(409).json({ message: "This round is locked; role assignments can no longer be edited." });
     try {
-        return res.status(200).json(await coach.upsertStudentAssignment(pairingId, req.params.teamId as string, field_id, student_id, witness_id ?? null));
+        return res.status(200).json(await coach.upsertStudentAssignment(pairingId, req.params.teamId as string, field_id, student_id, side, witness_id ?? null));
     } catch (e) {
         if (e instanceof DbError) return res.status(500).json({ message: 'Unable to save assignment' });
         throw e;
@@ -415,8 +417,11 @@ router.put("/pairings/:pairingId/assignments", authedHandler(async (req, res) =>
 router.post("/pairings/:pairingId/assignments/bulk", authedHandler(async (req, res) => {
     const pairingId = req.params.pairingId as string;
     if (!uuidRegex.test(pairingId)) return res.status(400).json({ message: "Invalid pairing ID" });
-    const { assignments } = req.body as { assignments?: { field_id: string; student_id: string; witness_id?: string | null }[] };
+    const { assignments } = req.body as { assignments?: { field_id: string; student_id: string; side: 'P' | 'D'; witness_id?: string | null }[] };
     if (!Array.isArray(assignments)) return res.status(400).json({ message: "assignments must be an array" });
+    if (assignments.some(a => !a.field_id || !a.student_id || (a.side !== 'P' && a.side !== 'D'))) {
+        return res.status(400).json({ message: "Each assignment requires field_id, student_id, and side (P or D)" });
+    }
     if (await coach.isPairingRoundLocked(pairingId)) return res.status(409).json({ message: "This round is locked; role assignments can no longer be edited." });
     try {
         await coach.bulkUpsertStudentAssignments(pairingId, req.params.teamId as string, assignments);
@@ -430,33 +435,51 @@ router.post("/pairings/:pairingId/assignments/bulk", authedHandler(async (req, r
 // ── Default witness call order ────────────────────────────────────────────────
 
 router.get('/default-witness-order', authedHandler(async (req, res) => {
-    return res.status(200).json(await coach.getDefaultWitnessCallOrder(req.params.teamId as string));
+    const side = req.query.side;
+    if (side !== undefined && side !== 'P' && side !== 'D') return res.status(400).json({ message: 'side must be P or D' });
+    return res.status(200).json(await coach.getDefaultWitnessCallOrder(req.params.teamId as string, side));
 }));
 
 router.put('/default-witness-order', authedHandler(async (req, res) => {
-    const { witness_ids } = req.body as { witness_ids?: string[] };
-    if (!Array.isArray(witness_ids)) return res.status(400).json({ message: 'witness_ids must be an array' });
-    await coach.setDefaultWitnessCallOrder(req.params.teamId as string, witness_ids);
+    const { witness_ids, side } = req.body as { witness_ids?: string[]; side?: 'P' | 'D' };
+    if (!Array.isArray(witness_ids) || (side !== 'P' && side !== 'D')) return res.status(400).json({ message: 'witness_ids must be an array and side must be P or D' });
+    await coach.setDefaultWitnessCallOrder(req.params.teamId as string, side, witness_ids);
     return res.status(200).json({ success: true });
 }));
 
 // ── Default student assignments ────────────────────────────────────────────────
 
 router.get('/default-assignments', authedHandler(async (req, res) => {
-    return res.status(200).json(await coach.getDefaultStudentAssignments(req.params.teamId as string));
+    const side = req.query.side;
+    if (side !== undefined && side !== 'P' && side !== 'D') return res.status(400).json({ message: 'side must be P or D' });
+    return res.status(200).json(await coach.getDefaultStudentAssignments(req.params.teamId as string, side));
 }));
 
 router.put('/default-assignments', authedHandler(async (req, res) => {
-    const { field_id, student_id, witness_id } = req.body as { field_id?: string; student_id?: string; witness_id?: string };
-    if (!field_id || !student_id) return res.status(400).json({ message: 'Missing field_id or student_id' });
-    await coach.upsertDefaultStudentAssignment(req.params.teamId as string, field_id, student_id, witness_id ?? null);
+    const { field_id, student_id, witness_id, side } = req.body as { field_id?: string; student_id?: string; witness_id?: string; side?: 'P' | 'D' };
+    if (!field_id || !student_id || (side !== 'P' && side !== 'D')) return res.status(400).json({ message: 'field_id, student_id, and side (P or D) are required' });
+    await coach.upsertDefaultStudentAssignment(req.params.teamId as string, field_id, student_id, side, witness_id ?? null);
     return res.status(200).json({ success: true });
 }));
 
 router.delete('/default-assignments', authedHandler(async (req, res) => {
-    const { field_id, witness_id } = req.body as { field_id?: string; witness_id?: string };
-    if (!field_id) return res.status(400).json({ message: 'Missing field_id' });
-    await coach.deleteDefaultStudentAssignment(req.params.teamId as string, field_id, witness_id ?? null);
+    const { field_id, witness_id, side } = req.body as { field_id?: string; witness_id?: string; side?: 'P' | 'D' };
+    if (!field_id || (side !== 'P' && side !== 'D')) return res.status(400).json({ message: 'field_id and side (P or D) are required' });
+    await coach.deleteDefaultStudentAssignment(req.params.teamId as string, field_id, side, witness_id ?? null);
+    return res.status(200).json({ success: true });
+}));
+
+router.put('/default-configuration', authedHandler(async (req, res) => {
+    const { side, witness_ids, assignments } = req.body as {
+        side?: 'P' | 'D';
+        witness_ids?: string[];
+        assignments?: { field_id: string; student_id: string; witness_id?: string | null }[];
+    };
+    if ((side !== 'P' && side !== 'D') || !Array.isArray(witness_ids) || !Array.isArray(assignments)
+        || assignments.some(a => !a.field_id || !a.student_id)) {
+        return res.status(400).json({ message: 'side, witness_ids, and valid assignments are required' });
+    }
+    await coach.setDefaultTeamConfiguration(req.params.teamId as string, side, witness_ids, assignments);
     return res.status(200).json({ success: true });
 }));
 

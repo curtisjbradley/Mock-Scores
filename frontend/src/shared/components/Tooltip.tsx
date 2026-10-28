@@ -1,4 +1,5 @@
-import { useId, useState, type ReactNode } from 'react'
+import { useId, useLayoutEffect, useRef, useState, type CSSProperties, type ReactNode } from 'react'
+import { createPortal } from 'react-dom'
 import './styles/tooltip.css'
 
 type TooltipPlacement = 'top' | 'bottom' | 'left' | 'right'
@@ -38,6 +39,30 @@ export default function Tooltip({
 }: Props) {
     const [open, setOpen] = useState(false)
     const tooltipId = useId()
+    const triggerRef = useRef<HTMLSpanElement>(null)
+    const [position, setPosition] = useState({ left: 0, top: 0 })
+
+    useLayoutEffect(() => {
+        if (!open) return
+        const updatePosition = () => {
+            const rect = triggerRef.current?.getBoundingClientRect()
+            if (!rect) return
+            switch (placement) {
+                case 'top': setPosition({ left: rect.left + rect.width / 2, top: rect.top - 8 }); break
+                case 'bottom': setPosition({ left: rect.left + rect.width / 2, top: rect.bottom + 8 }); break
+                case 'left': setPosition({ left: rect.left - 8, top: rect.top + rect.height / 2 }); break
+                case 'right': setPosition({ left: rect.right + 8, top: rect.top + rect.height / 2 }); break
+            }
+        }
+        updatePosition()
+        window.addEventListener('resize', updatePosition)
+        // Capture scroll events from nested scroll containers as well as the page.
+        window.addEventListener('scroll', updatePosition, true)
+        return () => {
+            window.removeEventListener('resize', updatePosition)
+            window.removeEventListener('scroll', updatePosition, true)
+        }
+    }, [open, placement])
 
     if (disabled || content == null || content === '') {
         return <>{children}</>
@@ -59,16 +84,20 @@ export default function Tooltip({
             onBlur={hide}
             onKeyDown={e => { if (e.key === 'Escape') hide() }}
         >
-            <span className="tooltip-trigger" aria-describedby={open ? tooltipId : undefined}>
+            <span ref={triggerRef} className="tooltip-trigger" aria-describedby={open ? tooltipId : undefined}>
                 {children}
             </span>
-            <span
-                id={tooltipId}
-                role="tooltip"
-                className={`tooltip-bubble tooltip-bubble--${placement}${open ? ' tooltip-bubble--visible' : ''}`}
-            >
-                {content}
-            </span>
+            {open && createPortal(
+                <span
+                    id={tooltipId}
+                    role="tooltip"
+                    className={`tooltip-bubble tooltip-bubble--${placement} tooltip-bubble--visible`}
+                    style={{ left: position.left, top: position.top } as CSSProperties}
+                >
+                    {content}
+                </span>,
+                document.body,
+            )}
         </span>
     )
 }

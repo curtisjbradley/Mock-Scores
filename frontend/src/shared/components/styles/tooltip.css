@@ -17,7 +17,7 @@
 }
 
 .tooltip-bubble {
-    position: absolute;
+    position: fixed;
     z-index: 2147483000; /* Float above modals (10000) and everything else. */
     max-width: 18rem;
     width: max-content;
@@ -50,29 +50,21 @@
 
 /* ── Placement ───────────────────────────────────────────────────────────── */
 .tooltip-bubble--top {
-    bottom: calc(100% + 0.5rem);
-    left: 50%;
     transform-origin: bottom center;
-    translate: -50% 0;
+    translate: -50% -100%;
 }
 
 .tooltip-bubble--bottom {
-    top: calc(100% + 0.5rem);
-    left: 50%;
     transform-origin: top center;
     translate: -50% 0;
 }
 
 .tooltip-bubble--left {
-    right: calc(100% + 0.5rem);
-    top: 50%;
     transform-origin: center right;
-    translate: 0 -50%;
+    translate: -100% -50%;
 }
 
 .tooltip-bubble--right {
-    left: calc(100% + 0.5rem);
-    top: 50%;
     transform-origin: center left;
     translate: 0 -50%;
 }

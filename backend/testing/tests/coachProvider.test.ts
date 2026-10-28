@@ -485,7 +485,7 @@ describe('PUT /api/coach/teams/:teamId/pairings/:pairingId/assignments', () => {
         mockTeamAccess();
         mockDbQuery.mockResolvedValueOnce({ rows: [{ locked: false }], rowCount: 1 } as any); // isPairingRoundLocked
         mockDbQuery.mockResolvedValueOnce({ rows: [], rowCount: 0 } as any);
-        const res = await request(app).put(`/coach/teams/${TEAM}/pairings/${PID}/assignments`).set(auth()).send({ field_id: FID, student_id: SID });
+        const res = await request(app).put(`/coach/teams/${TEAM}/pairings/${PID}/assignments`).set(auth()).send({ field_id: FID, student_id: SID, side: 'P' });
         expect(res.status).toBe(500);
     });
     it('returns 200 on success', async () => {
@@ -493,13 +493,13 @@ describe('PUT /api/coach/teams/:teamId/pairings/:pairingId/assignments', () => {
         mockDbQuery.mockResolvedValueOnce({ rows: [{ locked: false }], rowCount: 1 } as any); // isPairingRoundLocked
         const assignment = { id: 'a1', pairing_id: PID, team_id: TEAM, field_id: FID, student_id: SID };
         mockDbQuery.mockResolvedValueOnce({ rows: [assignment], rowCount: 1 } as any);
-        const res = await request(app).put(`/coach/teams/${TEAM}/pairings/${PID}/assignments`).set(auth()).send({ field_id: FID, student_id: SID });
+        const res = await request(app).put(`/coach/teams/${TEAM}/pairings/${PID}/assignments`).set(auth()).send({ field_id: FID, student_id: SID, side: 'P' });
         expect(res.status).toBe(200);
     });
     it('returns 409 when the round is locked', async () => {
         mockTeamAccess();
         mockDbQuery.mockResolvedValueOnce({ rows: [{ locked: true }], rowCount: 1 } as any); // isPairingRoundLocked
-        const res = await request(app).put(`/coach/teams/${TEAM}/pairings/${PID}/assignments`).set(auth()).send({ field_id: FID, student_id: SID });
+        const res = await request(app).put(`/coach/teams/${TEAM}/pairings/${PID}/assignments`).set(auth()).send({ field_id: FID, student_id: SID, side: 'P' });
         expect(res.status).toBe(409);
     });
 });
@@ -721,20 +721,20 @@ describe('bulkUpsertStudentAssignments', () => {
         mockDbQuery.mockResolvedValue(ok([], 1));
 
         await provider.bulkUpsertStudentAssignments('p1', 'team1', [
-            { field_id: 'f1', student_id: 's1' },
-            { field_id: 'f2', student_id: 's2', witness_id: 'w1' },
+            { field_id: 'f1', student_id: 's1', side: 'P' },
+            { field_id: 'f2', student_id: 's2', side: 'D', witness_id: 'w1' },
         ]);
 
         expect(mockDbQuery).toHaveBeenCalledTimes(2);
         expect(mockDbQuery).toHaveBeenNthCalledWith(
             1,
             expect.stringMatching(/INSERT INTO student_assignments/i),
-            ['p1', 'team1', 'f1', null, 's1'],
+            ['p1', 'team1', 'f1', 'P', null, 's1'],
         );
         expect(mockDbQuery).toHaveBeenNthCalledWith(
             2,
             expect.stringMatching(/INSERT INTO student_assignments/i),
-            ['p1', 'team1', 'f2', 'w1', 's2'],
+            ['p1', 'team1', 'f2', 'D', 'w1', 's2'],
         );
     });
 });
@@ -763,30 +763,30 @@ describe('setDefaultWitnessCallOrder', () => {
     it('deletes existing defaults and stops when the new order is empty', async () => {
         mockDbQuery.mockResolvedValueOnce(ok([]));
 
-        await provider.setDefaultWitnessCallOrder('team1', []);
+        await provider.setDefaultWitnessCallOrder('team1', 'P', []);
 
         expect(mockDbQuery).toHaveBeenCalledTimes(1);
         expect(mockDbQuery).toHaveBeenCalledWith(
             expect.stringMatching(/DELETE FROM default_witness_call_order/i),
-            ['team1'],
+            ['team1', 'P'],
         );
     });
 
     it('deletes existing defaults and inserts each witness in order', async () => {
         mockDbQuery.mockResolvedValue(ok([], 1));
 
-        await provider.setDefaultWitnessCallOrder('team1', ['w1', 'w2']);
+        await provider.setDefaultWitnessCallOrder('team1', 'P', ['w1', 'w2']);
 
         expect(mockDbQuery).toHaveBeenCalledTimes(3);
         expect(mockDbQuery).toHaveBeenNthCalledWith(
             2,
             expect.stringMatching(/INSERT INTO default_witness_call_order/i),
-            ['team1', 'w1', 1],
+            ['team1', 'P', 'w1', 1],
         );
         expect(mockDbQuery).toHaveBeenNthCalledWith(
             3,
             expect.stringMatching(/INSERT INTO default_witness_call_order/i),
-            ['team1', 'w2', 2],
+            ['team1', 'P', 'w2', 2],
         );
     });
 });
@@ -821,22 +821,22 @@ describe('upsertDefaultStudentAssignment', () => {
     it('stores a null witness id when none is provided', async () => {
         mockDbQuery.mockResolvedValueOnce(ok([], 1));
 
-        await provider.upsertDefaultStudentAssignment('team1', 'f1', 's1');
+        await provider.upsertDefaultStudentAssignment('team1', 'f1', 's1', 'P');
 
         expect(mockDbQuery).toHaveBeenCalledWith(
             expect.stringMatching(/INSERT INTO default_student_assignments/i),
-            ['team1', 'f1', null, 's1'],
+            ['team1', 'f1', 'P', null, 's1'],
         );
     });
 
     it('passes through an explicit witness id', async () => {
         mockDbQuery.mockResolvedValueOnce(ok([], 1));
 
-        await provider.upsertDefaultStudentAssignment('team1', 'f1', 's1', 'w1');
+        await provider.upsertDefaultStudentAssignment('team1', 'f1', 's1', 'P', 'w1');
 
         expect(mockDbQuery).toHaveBeenCalledWith(
             expect.stringMatching(/INSERT INTO default_student_assignments/i),
-            ['team1', 'f1', 'w1', 's1'],
+            ['team1', 'f1', 'P', 'w1', 's1'],
         );
     });
 });
@@ -845,22 +845,22 @@ describe('deleteDefaultStudentAssignment', () => {
     it('deletes using null witness matching when witnessId is omitted', async () => {
         mockDbQuery.mockResolvedValueOnce(ok([], 1));
 
-        await provider.deleteDefaultStudentAssignment('team1', 'f1');
+        await provider.deleteDefaultStudentAssignment('team1', 'f1', 'P');
 
         expect(mockDbQuery).toHaveBeenCalledWith(
             expect.stringMatching(/DELETE FROM default_student_assignments/i),
-            ['team1', 'f1', null],
+            ['team1', 'f1', 'P', null],
         );
     });
 
     it('passes through an explicit witness id', async () => {
         mockDbQuery.mockResolvedValueOnce(ok([], 1));
 
-        await provider.deleteDefaultStudentAssignment('team1', 'f1', 'w1');
+        await provider.deleteDefaultStudentAssignment('team1', 'f1', 'P', 'w1');
 
         expect(mockDbQuery).toHaveBeenCalledWith(
             expect.stringMatching(/DELETE FROM default_student_assignments/i),
-            ['team1', 'f1', 'w1'],
+            ['team1', 'f1', 'P', 'w1'],
         );
     });
 });

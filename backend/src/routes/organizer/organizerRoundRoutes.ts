@@ -162,6 +162,16 @@ router.get('/pairings', roundHandler(async (req, res) => {
     }
 }));
 
+/** Returns each competing team's roster/call-order readiness for this round. */
+router.get('/roster-status', roundHandler(async (req, res) => {
+    try {
+        return res.status(200).json(await organizer.getRoundPairingRosterStatuses(req.round.round_id));
+    } catch (e) {
+        if (e instanceof DbError) return res.status(500).json({ message: 'Database error' });
+        throw e;
+    }
+}));
+
 /**
  * @swagger
  * /organizer/tournament/{tournamentId}/rounds/{round}/pairings:

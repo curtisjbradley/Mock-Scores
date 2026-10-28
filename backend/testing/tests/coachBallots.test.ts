@@ -9,6 +9,7 @@ jest.mock('../../src/providers/coachProvider', () => {
         sharesIndividualRankings: jest.fn(),
         getDefaultWitnessCallOrder: jest.fn(),
         setDefaultWitnessCallOrder: jest.fn(),
+        setDefaultTeamConfiguration: jest.fn(),
         getDefaultStudentAssignments: jest.fn(),
         upsertDefaultStudentAssignment: jest.fn(),
         deleteDefaultStudentAssignment: jest.fn(),
@@ -41,6 +42,7 @@ import {
     isBallotInPairingWithPublicResults,
     isPairingRoundLocked,
     setDefaultWitnessCallOrder,
+    setDefaultTeamConfiguration,
     sharesIndividualRankings,
     upsertDefaultStudentAssignment,
 } from '../../src/providers/coachProvider';
@@ -56,6 +58,7 @@ const mockIsBallotInPairingWithPublicResults = isBallotInPairingWithPublicResult
 const mockSharesIndividualRankings = sharesIndividualRankings as jest.MockedFunction<typeof sharesIndividualRankings>;
 const mockGetDefaultWitnessCallOrder = getDefaultWitnessCallOrder as jest.MockedFunction<typeof getDefaultWitnessCallOrder>;
 const mockSetDefaultWitnessCallOrder = setDefaultWitnessCallOrder as jest.MockedFunction<typeof setDefaultWitnessCallOrder>;
+const mockSetDefaultTeamConfiguration = setDefaultTeamConfiguration as jest.MockedFunction<typeof setDefaultTeamConfiguration>;
 const mockGetDefaultStudentAssignments = getDefaultStudentAssignments as jest.MockedFunction<typeof getDefaultStudentAssignments>;
 const mockUpsertDefaultStudentAssignment = upsertDefaultStudentAssignment as jest.MockedFunction<typeof upsertDefaultStudentAssignment>;
 const mockDeleteDefaultStudentAssignment = deleteDefaultStudentAssignment as jest.MockedFunction<typeof deleteDefaultStudentAssignment>;
@@ -89,6 +92,7 @@ beforeEach(() => {
     mockSharesIndividualRankings.mockReset();
     mockGetDefaultWitnessCallOrder.mockReset();
     mockSetDefaultWitnessCallOrder.mockReset();
+    mockSetDefaultTeamConfiguration.mockReset();
     mockGetDefaultStudentAssignments.mockReset();
     mockUpsertDefaultStudentAssignment.mockReset();
     mockDeleteDefaultStudentAssignment.mockReset();
@@ -247,7 +251,7 @@ describe('PUT /api/coach/teams/:teamId/default-witness-order', () => {
         mockTeamAccess();
         mockSetDefaultWitnessCallOrder.mockResolvedValueOnce(undefined as any);
         const res = await request(app).put(`/coach/teams/${TEAM}/default-witness-order`).set(auth())
-            .send({ witness_ids: [] });
+            .send({ side: 'P', witness_ids: [] });
         expect(res.status).toBe(200);
         expect(res.body.success).toBe(true);
     });
@@ -256,7 +260,7 @@ describe('PUT /api/coach/teams/:teamId/default-witness-order', () => {
         mockTeamAccess();
         mockSetDefaultWitnessCallOrder.mockResolvedValueOnce(undefined as any);
         const res = await request(app).put(`/coach/teams/${TEAM}/default-witness-order`).set(auth())
-            .send({ witness_ids: ['w1', 'w2'] });
+            .send({ side: 'P', witness_ids: ['w1', 'w2'] });
         expect(res.status).toBe(200);
     });
 });
@@ -303,7 +307,7 @@ describe('PUT /api/coach/teams/:teamId/default-assignments', () => {
         mockTeamAccess();
         mockUpsertDefaultStudentAssignment.mockResolvedValueOnce(undefined as any);
         const res = await request(app).put(`/coach/teams/${TEAM}/default-assignments`).set(auth())
-            .send({ field_id: FID, student_id: SID });
+            .send({ field_id: FID, student_id: SID, side: 'P' });
         expect(res.status).toBe(200);
         expect(res.body.success).toBe(true);
     });
@@ -312,7 +316,7 @@ describe('PUT /api/coach/teams/:teamId/default-assignments', () => {
         mockTeamAccess();
         mockUpsertDefaultStudentAssignment.mockResolvedValueOnce(undefined as any);
         const res = await request(app).put(`/coach/teams/${TEAM}/default-assignments`).set(auth())
-            .send({ field_id: FID, student_id: SID, witness_id: 'w1' });
+            .send({ field_id: FID, student_id: SID, side: 'P', witness_id: 'w1' });
         expect(res.status).toBe(200);
     });
 });
@@ -329,7 +333,7 @@ describe('DELETE /api/coach/teams/:teamId/default-assignments', () => {
         mockTeamAccess();
         mockDeleteDefaultStudentAssignment.mockResolvedValueOnce(undefined as any);
         const res = await request(app).delete(`/coach/teams/${TEAM}/default-assignments`).set(auth())
-            .send({ field_id: FID });
+            .send({ field_id: FID, side: 'P' });
         expect(res.status).toBe(200);
         expect(res.body.success).toBe(true);
     });
@@ -338,8 +342,27 @@ describe('DELETE /api/coach/teams/:teamId/default-assignments', () => {
         mockTeamAccess();
         mockDeleteDefaultStudentAssignment.mockResolvedValueOnce(undefined as any);
         const res = await request(app).delete(`/coach/teams/${TEAM}/default-assignments`).set(auth())
-            .send({ field_id: FID, witness_id: 'w1' });
+            .send({ field_id: FID, side: 'P', witness_id: 'w1' });
         expect(res.status).toBe(200);
+    });
+});
+
+describe('PUT /api/coach/teams/:teamId/default-configuration', () => {
+    it('saves a side configuration in one request', async () => {
+        mockTeamAccess();
+        mockSetDefaultTeamConfiguration.mockResolvedValueOnce(undefined as any);
+
+        const res = await request(app).put(`/coach/teams/${TEAM}/default-configuration`).set(auth())
+            .send({
+                side: 'D',
+                witness_ids: ['w1'],
+                assignments: [{ field_id: FID, student_id: SID, witness_id: null }],
+            });
+
+        expect(res.status).toBe(200);
+        expect(mockSetDefaultTeamConfiguration).toHaveBeenCalledWith(
+            TEAM, 'D', ['w1'], [{ field_id: FID, student_id: SID, witness_id: null }],
+        );
     });
 });
 
@@ -379,8 +402,8 @@ describe('POST /api/coach/teams/:teamId/pairings/:pairingId/assignments/bulk', (
         mockBulkUpsertStudentAssignments.mockResolvedValueOnce(undefined as any);
         const res = await request(app).post(url).set(auth())
             .send({ assignments: [
-                    { field_id: FID, student_id: SID },
-                    { field_id: 'f2', student_id: 's2', witness_id: 'w1' },
+                    { field_id: FID, student_id: SID, side: 'P' },
+                    { field_id: 'f2', student_id: 's2', side: 'D', witness_id: 'w1' },
                 ] });
         expect(res.status).toBe(200);
     });
@@ -389,7 +412,7 @@ describe('POST /api/coach/teams/:teamId/pairings/:pairingId/assignments/bulk', (
         mockTeamAccess();
         mockIsPairingRoundLocked.mockResolvedValueOnce(true);
         const res = await request(app).post(url).set(auth())
-            .send({ assignments: [{ field_id: FID, student_id: SID }] });
+            .send({ assignments: [{ field_id: FID, student_id: SID, side: 'P' }] });
         expect(res.status).toBe(409);
     });
 });

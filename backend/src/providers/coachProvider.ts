@@ -1,4 +1,4 @@
-import { dbQuery } from '../db';
+import { dbQuery, withTransaction } from '../db';
 import type {
     ICoachTournament, ICoachScheduleRound, ICoachResultRound,
     ICoach, IStudent, IWitnessCallOrder, IStudentAssignment, ICompetitionTeam, ITournament, ICustomRosterColumn
@@ -311,28 +311,28 @@ export async function setWitnessCallOrder(pairingId: string, teamId: string, wit
     }
 }
 
-export async function getStudentAssignments(pairingId: string, teamId: string): Promise<IStudentAssignment[]> {
+export async function getStudentAssignments(pairingId: string, teamId: string, side?: 'P' | 'D'): Promise<IStudentAssignment[]> {
     return (await dbQuery<IStudentAssignment>(
         `SELECT sa.id, sa.pairing_id, sa.team_id, sa.field_id, sf.label AS field_label,
-                sa.witness_id, sa.student_id, trs.student_name
+                sa.side, sa.witness_id, sa.student_id, trs.student_name
          FROM student_assignments sa
          JOIN scoring_fields sf ON sf.id = sa.field_id
          JOIN team_rostered_students trs ON trs.student_id = sa.student_id
-         WHERE sa.pairing_id=$1 AND sa.team_id=$2`,
-        [pairingId, teamId]
+         WHERE sa.pairing_id=$1 AND sa.team_id=$2 AND ($3::char IS NULL OR sa.side=$3)`,
+        [pairingId, teamId, side ?? null]
     ))?.rows ?? [];
 }
 
-export async function upsertStudentAssignment(pairingId: string, teamId: string, fieldId: string, studentId: string, witnessId?: string | null): Promise<IStudentAssignment> {
+export async function upsertStudentAssignment(pairingId: string, teamId: string, fieldId: string, studentId: string, side: 'P' | 'D', witnessId?: string | null): Promise<IStudentAssignment> {
     const row = (await dbQuery<IStudentAssignment>(
-        `INSERT INTO student_assignments (pairing_id, team_id, field_id, witness_id, student_id)
-         VALUES ($1,$2,$3,$4,$5)
-         ON CONFLICT (pairing_id, team_id, field_id, witness_id) DO UPDATE SET student_id=EXCLUDED.student_id
+        `INSERT INTO student_assignments (pairing_id, team_id, field_id, side, witness_id, student_id)
+         VALUES ($1,$2,$3,$4,$5,$6)
+         ON CONFLICT (pairing_id, team_id, field_id, witness_id, side) DO UPDATE SET student_id=EXCLUDED.student_id
          RETURNING id, pairing_id, team_id, field_id,
            (SELECT label FROM scoring_fields WHERE id=$3) AS field_label,
-           witness_id, student_id,
-           (SELECT student_name FROM team_rostered_students WHERE student_id=$5) AS student_name`,
-        [pairingId, teamId, fieldId, witnessId ?? null, studentId]
+           side, witness_id, student_id,
+           (SELECT student_name FROM team_rostered_students WHERE student_id=$6) AS student_name`,
+        [pairingId, teamId, fieldId, side, witnessId ?? null, studentId]
     ))?.rows[0];
     if (!row) throw new DbError('upsertStudentAssignment');
     return row;
@@ -341,39 +341,39 @@ export async function upsertStudentAssignment(pairingId: string, teamId: string,
 export async function bulkUpsertStudentAssignments(
     pairingId: string,
     teamId: string,
-    assignments: { field_id: string; student_id: string; witness_id?: string | null }[],
+    assignments: { field_id: string; student_id: string; side: 'P' | 'D'; witness_id?: string | null }[],
 ): Promise<void> {
     if (!assignments.length) return;
     await Promise.all(assignments.map(a =>
         dbQuery(
-            `INSERT INTO student_assignments (pairing_id, team_id, field_id, witness_id, student_id)
-             VALUES ($1,$2,$3,$4,$5)
-             ON CONFLICT (pairing_id, team_id, field_id, witness_id) DO UPDATE SET student_id=EXCLUDED.student_id`,
-            [pairingId, teamId, a.field_id, a.witness_id ?? null, a.student_id],
+            `INSERT INTO student_assignments (pairing_id, team_id, field_id, side, witness_id, student_id)
+             VALUES ($1,$2,$3,$4,$5,$6)
+             ON CONFLICT (pairing_id, team_id, field_id, witness_id, side) DO UPDATE SET student_id=EXCLUDED.student_id`,
+            [pairingId, teamId, a.field_id, a.side, a.witness_id ?? null, a.student_id],
         )
     ));
 }
 
 // ── Default call order ────────────────────────────────────────────────────────
 
-export async function getDefaultWitnessCallOrder(teamId: string): Promise<{ witness_id: string; witness_name: string; position: number }[]> {
+export async function getDefaultWitnessCallOrder(teamId: string, side?: 'P' | 'D'): Promise<{ witness_id: string; witness_name: string; position: number }[]> {
     return (await dbQuery<{ witness_id: string; witness_name: string; position: number }>(
         `SELECT d.witness_id, cw.name AS witness_name, d.position
          FROM default_witness_call_order d
          JOIN case_witnesses cw ON cw.id = d.witness_id
-         WHERE d.team_id = $1
+         WHERE d.team_id = $1 AND ($2::char IS NULL OR d.side = $2)
          ORDER BY d.position`,
-        [teamId],
+        [teamId, side ?? null],
     ))?.rows ?? [];
 }
 
-export async function setDefaultWitnessCallOrder(teamId: string, witnessIds: string[]): Promise<void> {
-    await dbQuery('DELETE FROM default_witness_call_order WHERE team_id = $1', [teamId]);
+export async function setDefaultWitnessCallOrder(teamId: string, side: 'P' | 'D', witnessIds: string[]): Promise<void> {
+    await dbQuery('DELETE FROM default_witness_call_order WHERE team_id = $1 AND side = $2', [teamId, side]);
     if (witnessIds.length) {
         await Promise.all(witnessIds.map((wid, i) =>
             dbQuery(
-                'INSERT INTO default_witness_call_order (team_id, witness_id, position) VALUES ($1,$2,$3)',
-                [teamId, wid, i + 1],
+                'INSERT INTO default_witness_call_order (team_id, side, witness_id, position) VALUES ($1,$2,$3,$4)',
+                [teamId, side, wid, i + 1],
             )
         ));
     }
@@ -381,34 +381,71 @@ export async function setDefaultWitnessCallOrder(teamId: string, witnessIds: str
 
 // ── Default student assignments ────────────────────────────────────────────────
 
-export async function getDefaultStudentAssignments(teamId: string): Promise<IStudentAssignment[]> {
+export async function getDefaultStudentAssignments(teamId: string, side?: 'P' | 'D'): Promise<IStudentAssignment[]> {
     return (await dbQuery<IStudentAssignment>(
         `SELECT d.id, null::uuid AS pairing_id, d.team_id, d.field_id,
-                sf.label AS field_label, d.witness_id, d.student_id, trs.student_name
+                sf.label AS field_label, d.side, d.witness_id, d.student_id, trs.student_name
          FROM default_student_assignments d
          JOIN scoring_fields sf ON sf.id = d.field_id
          JOIN team_rostered_students trs ON trs.student_id = d.student_id
-         WHERE d.team_id = $1`,
-        [teamId],
+         WHERE d.team_id = $1 AND ($2::char IS NULL OR d.side = $2)`,
+        [teamId, side ?? null],
     ))?.rows ?? [];
 }
 
 export async function upsertDefaultStudentAssignment(
-    teamId: string, fieldId: string, studentId: string, witnessId?: string | null,
+    teamId: string, fieldId: string, studentId: string, side: 'P' | 'D', witnessId?: string | null,
 ): Promise<void> {
     await dbQuery(
-        `INSERT INTO default_student_assignments (team_id, field_id, witness_id, student_id)
-         VALUES ($1,$2,$3,$4)
-         ON CONFLICT (team_id, field_id, witness_id) DO UPDATE SET student_id = EXCLUDED.student_id`,
-        [teamId, fieldId, witnessId ?? null, studentId],
+        `INSERT INTO default_student_assignments (team_id, field_id, side, witness_id, student_id)
+         VALUES ($1,$2,$3,$4,$5)
+         ON CONFLICT (team_id, field_id, witness_id, side) DO UPDATE SET student_id = EXCLUDED.student_id`,
+        [teamId, fieldId, side, witnessId ?? null, studentId],
     );
 }
 
-export async function deleteDefaultStudentAssignment(teamId: string, fieldId: string, witnessId?: string | null): Promise<void> {
+export async function deleteDefaultStudentAssignment(teamId: string, fieldId: string, side: 'P' | 'D', witnessId?: string | null): Promise<void> {
     await dbQuery(
-        'DELETE FROM default_student_assignments WHERE team_id=$1 AND field_id=$2 AND witness_id IS NOT DISTINCT FROM $3',
-        [teamId, fieldId, witnessId ?? null],
+        'DELETE FROM default_student_assignments WHERE team_id=$1 AND field_id=$2 AND side=$3 AND witness_id IS NOT DISTINCT FROM $4',
+        [teamId, fieldId, side, witnessId ?? null],
     );
+}
+
+/** Replaces one side's default call order and role assignments atomically. */
+export async function setDefaultTeamConfiguration(
+    teamId: string,
+    side: 'P' | 'D',
+    witnessIds: string[],
+    assignments: { field_id: string; student_id: string; witness_id?: string | null }[],
+): Promise<void> {
+    await withTransaction(async client => {
+        await client.query(
+            'DELETE FROM default_witness_call_order WHERE team_id = $1 AND side = $2',
+            [teamId, side],
+        );
+        if (witnessIds.length) {
+            await client.query(
+                `INSERT INTO default_witness_call_order (team_id, side, witness_id, position)
+                 SELECT $1, $2, witness_id, position
+                 FROM unnest($3::uuid[]) WITH ORDINALITY AS called(witness_id, position)`,
+                [teamId, side, witnessIds],
+            );
+        }
+
+        await client.query(
+            'DELETE FROM default_student_assignments WHERE team_id = $1 AND side = $2',
+            [teamId, side],
+        );
+        if (assignments.length) {
+            await client.query(
+                `INSERT INTO default_student_assignments (team_id, field_id, side, witness_id, student_id)
+                 SELECT $1, a.field_id, $2, a.witness_id, a.student_id
+                 FROM jsonb_to_recordset($3::jsonb)
+                      AS a(field_id uuid, student_id uuid, witness_id uuid)`,
+                [teamId, side, JSON.stringify(assignments)],
+            );
+        }
+    });
 }
 
 export async function getCompetitionField(tournamentId: string): Promise<ICompetitionTeam[]> {

@@ -26,6 +26,14 @@ export interface ITeam {
     /** Delivery status of the most recent invite email to this team's coach, if any. */
     email_status?: EmailStatus | null;
 }
+
+/** The readiness of one team's lineup for a specific pairing. */
+export interface IPairingRosterStatus {
+    pairing_id: string;
+    team_id: string;
+    roster_status: 'none' | 'default' | 'complete';
+    call_order_status: 'none' | 'default' | 'complete';
+}
 export interface ITournamentSummary {
     teams: {
         total: number;

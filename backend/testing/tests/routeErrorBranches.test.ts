@@ -647,6 +647,7 @@ describe('coachTeamRoutes - team access + uncovered paths', () => {
             .send({
                 field_id: SCORER_ID,
                 student_id: STUDENT_ID,
+                side: 'P',
             });
 
         expect(res.status).toBe(500);

@@ -413,7 +413,7 @@ describe('GET/PUT /teams/:teamId/pairings/:pairingId/assignments', () => {
         mockDbQuery.mockResolvedValueOnce({ rows: [{ field_id: SCORER, student_id: STUDENT_ID }], rowCount: 1 } as any);
         const res = await request(app)
             .put(`/organizer/tournament/${T}/teams/${TEAM_ID}/pairings/${PAIRING_ID}/assignments`)
-            .set(auth()).send({ field_id: SCORER, student_id: STUDENT_ID });
+            .set(auth()).send({ field_id: SCORER, student_id: STUDENT_ID, side: 'P' });
         expect(res.status).toBe(200);
     });
 
@@ -422,7 +422,7 @@ describe('GET/PUT /teams/:teamId/pairings/:pairingId/assignments', () => {
         mockDbQuery.mockResolvedValueOnce(null);
         const res = await request(app)
             .put(`/organizer/tournament/${T}/teams/${TEAM_ID}/pairings/${PAIRING_ID}/assignments`)
-            .set(auth()).send({ field_id: SCORER, student_id: STUDENT_ID });
+            .set(auth()).send({ field_id: SCORER, student_id: STUDENT_ID, side: 'P' });
         expect(res.status).toBe(500);
     });
 });
