@@ -48,8 +48,8 @@ export default function AssignRoles() {
                 apiFetch(`/coach/tournaments/${tid}/scoring-categories`).then(r => r.ok ? r.json() : []),
                 apiFetch(`/coach/tournaments/${tid}/witnesses`).then(r => r.ok ? r.json() : []),
                 apiFetch(`/coach/teams/${teamId}/students`).then(r => r.ok ? r.json() : []),
-                apiFetch(`/coach/teams/${teamId}/pairings/${pairingId}/assignments`).then(r => r.ok ? r.json() : []),
-                apiFetch(`/coach/teams/${teamId}/default-assignments`).then(r => r.ok ? r.json() : []),
+                apiFetch(`/coach/teams/${teamId}/pairings/${pairingId}/assignments?side=${side === 'p' ? 'P' : 'D'}`).then(r => r.ok ? r.json() : []),
+                apiFetch(`/coach/teams/${teamId}/default-assignments?side=${side === 'p' ? 'P' : 'D'}`).then(r => r.ok ? r.json() : []),
             ]).then(([cats, wits, studs, assigns, defaults]: [IScoringCategory[], Witness[], IStudent[], IStudentAssignment[], IStudentAssignment[]]) => {
                 if (!active) return
                 setCategories(cats)
@@ -135,7 +135,12 @@ export default function AssignRoles() {
         // Send all assigned rows in one request
         const assignments = rows
             .filter(r => activeAssignments?.get(r.key))
-            .map(r => ({ field_id: r.fieldId, student_id: activeAssignments!.get(r.key)!, witness_id: r.witnessId ?? null }))
+            .map(r => ({
+                field_id: r.fieldId,
+                student_id: activeAssignments!.get(r.key)!,
+                witness_id: r.witnessId ?? null,
+                side: isP ? 'P' as const : 'D' as const,
+            }))
         const res = await apiFetch(`/coach/teams/${teamId}/pairings/${pairingId}/assignments/bulk`, {
             method: 'POST',
             body: JSON.stringify({ assignments }),

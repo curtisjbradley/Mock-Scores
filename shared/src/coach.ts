@@ -86,6 +86,8 @@ export interface IStudentAssignment {
     team_id: string;
     field_id: string;
     field_label: string;
+    /** The side this student fills when their team is assigned to a pairing. */
+    side: 'P' | 'D';
     witness_id: string | null;
     student_id: string;
     student_name: string;

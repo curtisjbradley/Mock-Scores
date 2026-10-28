@@ -51,9 +51,9 @@ function SideSetupModal({
         Promise.all([
             apiFetch(`/coach/tournaments/${tournamentId}/witnesses`).then(r => r.ok ? r.json() : []),
             apiFetch(`/coach/tournaments/${tournamentId}/format`).then(r => r.ok ? r.json() : null),
-            apiFetch(`/coach/teams/${teamId}/default-witness-order`).then(r => r.ok ? r.json() : []),
+            apiFetch(`/coach/teams/${teamId}/default-witness-order?side=${ownSide}`).then(r => r.ok ? r.json() : []),
             apiFetch(`/coach/tournaments/${tournamentId}/scoring-categories`).then(r => r.ok ? r.json() : []),
-            apiFetch(`/coach/teams/${teamId}/default-assignments`).then(r => r.ok ? r.json() : []),
+            apiFetch(`/coach/teams/${teamId}/default-assignments?side=${ownSide}`).then(r => r.ok ? r.json() : []),
         ]).then(([wits, fmt, callOrder, cats, defaultAssigns]: [
             Witness[], Format | null, DefaultCallOrderRow[], IScoringCategory[], IStudentAssignment[]
         ]) => {
@@ -109,25 +109,22 @@ function SideSetupModal({
     // ── Save ──────────────────────────────────────────────────────────────────
     const handleSave = async () => {
         setSaving(true)
-        await Promise.all([
-            apiFetch(`/coach/teams/${teamId}/default-witness-order`, {
-                method: 'PUT',
-                body: JSON.stringify({ witness_ids: callOrderSlots.filter(Boolean) }),
+        const selectedAssignments = roleRows.flatMap(r => {
+            const studentId = assignments.get(r.key)
+            return studentId ? [{ field_id: r.fieldId, student_id: studentId, witness_id: r.witnessId }] : []
+        })
+        const response = await apiFetch(`/coach/teams/${teamId}/default-configuration`, {
+            method: 'PUT',
+            body: JSON.stringify({
+                side: ownSide,
+                witness_ids: callOrderSlots.filter(Boolean),
+                assignments: selectedAssignments,
             }),
-            ...roleRows.map(r => {
-                const studentId = assignments.get(r.key)
-                if (studentId) {
-                    return apiFetch(`/coach/teams/${teamId}/default-assignments`, {
-                        method: 'PUT',
-                        body: JSON.stringify({ field_id: r.fieldId, student_id: studentId, witness_id: r.witnessId }),
-                    })
-                }
-                return apiFetch(`/coach/teams/${teamId}/default-assignments`, {
-                    method: 'DELETE',
-                    body: JSON.stringify({ field_id: r.fieldId, witness_id: r.witnessId }),
-                })
-            }),
-        ])
+        })
+        if (!response.ok) {
+            setSaving(false)
+            return
+        }
         setSaving(false)
         setSaved(true)
         setTimeout(() => { setSaved(false); onClose() }, 800)

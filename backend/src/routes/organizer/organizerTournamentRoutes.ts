@@ -1651,10 +1651,10 @@ router.get('/teams/:teamId/pairings/:pairingId/assignments', async (req: Request
  *       500: { description: Unable to save assignment }
  */
 router.put('/teams/:teamId/pairings/:pairingId/assignments', async (req: Request, res: Response) => {
-    const { field_id, student_id } = req.body as { field_id?: string; student_id?: string };
-    if (!field_id || !student_id) return res.status(400).json({ message: 'Missing field_id or student_id' });
+    const { field_id, student_id, side } = req.body as { field_id?: string; student_id?: string; side?: 'P' | 'D' };
+    if (!field_id || !student_id || (side !== 'P' && side !== 'D')) return res.status(400).json({ message: 'field_id, student_id, and side (P or D) are required' });
     try {
-        return res.status(200).json(await coachProvider.upsertStudentAssignment(req.params.pairingId as string, req.params.teamId as string, field_id, student_id));
+        return res.status(200).json(await coachProvider.upsertStudentAssignment(req.params.pairingId as string, req.params.teamId as string, field_id, student_id, side));
     } catch (e) {
         if (e instanceof DbError) return res.status(500).json({ message: 'Unable to save assignment' });
         throw e;

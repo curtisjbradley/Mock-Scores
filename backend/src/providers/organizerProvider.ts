@@ -769,14 +769,14 @@ async function copyDefaultsForRound(client: PoolClient, roundID: string): Promis
     // Witness call order: copy per (pairing, team) where that team has no call order yet.
     await client.query(`INSERT INTO witness_call_order (pairing_id, team_id, witness_id, position)
                         SELECT pt.pairing_id, pt.team_id, d.witness_id, d.position
-                        FROM (SELECT pairing_id, p_team AS team_id
+                        FROM (SELECT pairing_id, p_team AS team_id, 'P'::char AS side
                               FROM pairings
                               WHERE round_id = $1
                               UNION ALL
-                              SELECT pairing_id, d_team AS team_id
+                              SELECT pairing_id, d_team AS team_id, 'D'::char AS side
                               FROM pairings
                               WHERE round_id = $1) pt
-                                 JOIN default_witness_call_order d ON d.team_id = pt.team_id
+                                 JOIN default_witness_call_order d ON d.team_id = pt.team_id AND d.side = pt.side
                         WHERE NOT EXISTS (SELECT 1
                                           FROM witness_call_order w
                                           WHERE w.pairing_id = pt.pairing_id
@@ -784,16 +784,16 @@ async function copyDefaultsForRound(client: PoolClient, roundID: string): Promis
                         ON CONFLICT (pairing_id, team_id, position) DO NOTHING`, [roundID],);
 
     // Role assignments: copy per (pairing, team) where that team has no assignments yet.
-    await client.query(`INSERT INTO student_assignments (pairing_id, team_id, field_id, witness_id, student_id)
-                        SELECT pt.pairing_id, pt.team_id, d.field_id, d.witness_id, d.student_id
-                        FROM (SELECT pairing_id, p_team AS team_id
+    await client.query(`INSERT INTO student_assignments (pairing_id, team_id, field_id, side, witness_id, student_id)
+                        SELECT pt.pairing_id, pt.team_id, d.field_id, d.side, d.witness_id, d.student_id
+                        FROM (SELECT pairing_id, p_team AS team_id, 'P'::char AS side
                               FROM pairings
                               WHERE round_id = $1
                               UNION ALL
-                              SELECT pairing_id, d_team AS team_id
+                              SELECT pairing_id, d_team AS team_id, 'D'::char AS side
                               FROM pairings
                               WHERE round_id = $1) pt
-                                 JOIN default_student_assignments d ON d.team_id = pt.team_id
+                                 JOIN default_student_assignments d ON d.team_id = pt.team_id AND d.side = pt.side
                         WHERE NOT EXISTS (SELECT 1
                                           FROM student_assignments s
                                           WHERE s.pairing_id = pt.pairing_id

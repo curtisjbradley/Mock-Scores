@@ -539,19 +539,21 @@ create table student_assignments
     pairing_id uuid     not null references pairings (pairing_id) on delete cascade,
     team_id    uuid     not null references teams (id) on delete cascade,
     field_id   uuid     not null references scoring_fields (id) on delete cascade,
+    side       char(1)  not null check (side in ('P', 'D')),
     witness_id uuid              references case_witnesses (id) on delete cascade,
     student_id uuid     not null,
     constraint student_assignments_pairing_team_field_witness_key
-        unique (pairing_id, team_id, field_id, witness_id)
+        unique (pairing_id, team_id, field_id, witness_id, side)
 );
 
 create table default_witness_call_order
 (
     id         uuid primary key default gen_random_uuid(),
     team_id    uuid     not null references teams (id) on delete cascade,
+    side       char(1)  not null check (side in ('P', 'D')),
     witness_id uuid     not null references case_witnesses (id) on delete cascade,
     position   smallint not null,
-    unique (team_id, position)
+    unique (team_id, side, position)
 );
 
 create table default_student_assignments
@@ -559,9 +561,10 @@ create table default_student_assignments
     id         uuid primary key default gen_random_uuid(),
     team_id    uuid not null references teams (id) on delete cascade,
     field_id   uuid not null references scoring_fields (id) on delete cascade,
+    side       char(1) not null check (side in ('P', 'D')),
     witness_id uuid          references case_witnesses (id) on delete cascade,
     student_id uuid not null references team_rostered_students (student_id) on delete cascade,
-    unique (team_id, field_id, witness_id)
+    unique (team_id, field_id, witness_id, side)
 );
 
 create table password_reset_tokens
