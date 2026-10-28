@@ -975,6 +975,56 @@ export async function getPairings(roundID: string): Promise<IPairingRow[]> {
     return result.rows;
 }
 
+/**
+ * Returns the lineup readiness for each side of every pairing in a round.
+ * Role assignments and witness call orders are reported independently, so an
+ * organizer can see exactly which part of a team's lineup remains unfinished.
+ */
+export async function getRoundPairingRosterStatuses(roundID: string): Promise<{
+    pairing_id: string;
+    team_id: string;
+    roster_status: 'none' | 'default' | 'complete';
+    call_order_status: 'none' | 'default' | 'complete';
+}[]> {
+    const result = await dbQuery<{
+        pairing_id: string;
+        team_id: string;
+        roster_status: 'none' | 'default' | 'complete';
+        call_order_status: 'none' | 'default' | 'complete';
+    }>(`
+        WITH pairing_teams AS (
+            SELECT pairing_id, p_team AS team_id FROM pairings WHERE round_id = $1
+            UNION ALL
+            SELECT pairing_id, d_team AS team_id FROM pairings WHERE round_id = $1
+        )
+        SELECT pt.pairing_id,
+               pt.team_id,
+               CASE
+                   WHEN EXISTS (SELECT 1 FROM student_assignments sa
+                                WHERE sa.pairing_id = pt.pairing_id AND sa.team_id = pt.team_id)
+                       THEN 'complete'
+                   WHEN NOT EXISTS (SELECT 1 FROM student_assignments sa
+                                    WHERE sa.pairing_id = pt.pairing_id AND sa.team_id = pt.team_id)
+                    AND EXISTS (SELECT 1 FROM default_student_assignments dsa WHERE dsa.team_id = pt.team_id)
+                       THEN 'default'
+                   ELSE 'none'
+               END AS roster_status,
+               CASE
+                   WHEN EXISTS (SELECT 1 FROM witness_call_order wco
+                                WHERE wco.pairing_id = pt.pairing_id AND wco.team_id = pt.team_id)
+                       THEN 'complete'
+                   WHEN NOT EXISTS (SELECT 1 FROM witness_call_order wco
+                                    WHERE wco.pairing_id = pt.pairing_id AND wco.team_id = pt.team_id)
+                    AND EXISTS (SELECT 1 FROM default_witness_call_order dwco WHERE dwco.team_id = pt.team_id)
+                       THEN 'default'
+                   ELSE 'none'
+               END AS call_order_status
+        FROM pairing_teams pt
+    `, [roundID]);
+    if (!result) throw new DbError('getRoundPairingRosterStatuses');
+    return result.rows;
+}
+
 export async function getPairing(pairingId: string): Promise<IPairingRow> {
     const result = await dbQuery<IPairingRow>('SELECT * FROM pairings WHERE pairing_id=$1', [pairingId]);
     if (!result) throw new DbError('getPairing');

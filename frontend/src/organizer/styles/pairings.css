@@ -6,6 +6,7 @@
 }
 
 .dash-pairing-card {
+    position: relative;
     padding: 1rem 1.25rem;
     border: 1px solid var(--border);
     border-radius: 1rem;
@@ -588,20 +589,9 @@
 }
 
 .pc-scorer-options {
-    position: absolute;
-    top: calc(100% + 2px);
-    left: 0;
-    right: 0;
-    z-index: 20;
     margin: 0;
-    padding: 0.2rem 0;
+    padding: 0;
     list-style: none;
-    max-height: 12rem;
-    overflow-y: auto;
-    background: var(--surface);
-    border: 1px solid var(--primary);
-    border-radius: var(--radius);
-    box-shadow: var(--shadow);
 }
 
 .pc-scorer-option {
@@ -628,18 +618,6 @@
     cursor: default;
     padding: 0.4rem 0.6rem;
     font-size: 0.85rem;
-}
-
-/* Inline variant used inside the Add Scorer modal, where an absolutely
-   positioned dropdown would be clipped by the modal's overflow. */
-.pc-scorer-options--inline {
-    position: static;
-    margin-top: 0;
-    border: 0;
-    box-shadow: none;
-    max-height: none;
-    overflow: visible;
-    padding: 0;
 }
 
 /* Fixed-height results region so the modal size stays constant as the
@@ -833,6 +811,132 @@
     gap: 0.4rem;
 }
 
+.pc-summary {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 1rem;
+    padding-right: 7.5rem;
+}
+
+.pc-summary-matchup {
+    display: grid;
+    grid-template-columns: minmax(11rem, 1fr) minmax(11rem, 1fr) minmax(8rem, 0.7fr);
+    gap: 0.9rem;
+    flex: 1;
+    min-width: 0;
+}
+
+.pc-summary-matchup > div {
+    display: flex;
+    flex-direction: column;
+    gap: 0.2rem;
+    min-width: 0;
+}
+
+.pc-pairing-label {
+    position: absolute;
+    top: 0.25rem;
+    left: 0.5rem;
+    z-index: 0;
+    pointer-events: none;
+    color: var(--text-muted);
+    font-size: 0.72rem;
+    font-weight: 700;
+    letter-spacing: 0.05em;
+}
+
+.pc-summary-team {
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    font-weight: 700;
+}
+
+.pc-summary-courtroom {
+    color: var(--text-muted);
+    font-size: 0.85rem;
+}
+
+.pc-roster-status {
+    align-self: flex-start;
+    padding: 0.12rem 0.45rem;
+    border-radius: 2rem;
+    font-size: 0.68rem;
+    font-weight: 700;
+    white-space: nowrap;
+}
+
+.pc-roster-status--complete { color: var(--success-fg); background: var(--success-subtle-bg); }
+.pc-roster-status--default { color: var(--primary-dark); background: var(--primary-subtle); }
+.pc-roster-status--none { color: var(--text-muted); background: var(--surface-muted); }
+
+.pc-call-order-status {
+    align-self: flex-start;
+    padding: 0.12rem 0.45rem;
+    border-radius: 2rem;
+    font-size: 0.68rem;
+    font-weight: 700;
+    white-space: nowrap;
+}
+
+.pc-call-order-status--complete { color: var(--success-fg); background: var(--success-subtle-bg); }
+.pc-call-order-status--default { color: var(--primary-dark); background: var(--primary-subtle); }
+.pc-call-order-status--none { color: var(--text-muted); background: var(--surface-muted); }
+
+.pc-expand-btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.4rem;
+    position: absolute;
+    top: 0.5rem;
+    right: 0.75rem;
+    z-index: 1;
+    padding: 0.42rem 0.65rem;
+    border: 1px solid var(--border-strong);
+    border-radius: var(--radius);
+    background: var(--surface);
+    color: var(--text);
+    font: inherit;
+    font-size: 0.82rem;
+    font-weight: 600;
+    cursor: pointer;
+}
+
+.pc-expand-btn:hover { background: var(--surface-muted); }
+
+.pc-details {
+    display: flex;
+    flex-direction: column;
+    gap: 0.75rem;
+    margin-top: 0.75rem;
+    animation: pc-details-expand 180ms ease-out;
+    transform-origin: top;
+}
+
+/* Native select menus in this short dialog must not be clipped by the shared
+   modal's scrolling boundary. */
+.pc-presider-modal {
+    overflow: visible;
+}
+
+@keyframes pc-details-expand {
+    from {
+        opacity: 0;
+        transform: translateY(-0.35rem) scaleY(0.97);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0) scaleY(1);
+    }
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .pc-details {
+        animation: none;
+    }
+}
+
 .pc-download-ballot-btn {
     background: none;
     border: 1px solid var(--border);
@@ -993,4 +1097,29 @@ button.pc-matchup-col:hover .pc-col-edit-hint {
 .pc-modal-remove-btn {
     background: var(--danger);
     color: var(--white);
+}
+
+/* The organizer sidebar reduces the card width well before a phone-sized
+   viewport, so switch to the stacked summary before its columns can collide. */
+@media (max-width: 56rem) {
+    .pc-summary {
+        align-items: flex-start;
+        flex-direction: column;
+        padding-right: 0;
+    }
+
+    .pc-summary-matchup {
+        grid-template-columns: 1fr 1fr;
+        width: 100%;
+    }
+
+    .pc-summary-courtroom {
+        grid-column: span 2;
+    }
+
+    .pc-expand-btn {
+        align-self: stretch;
+        justify-content: space-between;
+        position: static;
+    }
 }

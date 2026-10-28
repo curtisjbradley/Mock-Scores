@@ -46,7 +46,7 @@ function ManageConflictsModal({ scorer, tournamentId, onClose }: {
 
     return (
         <ModalBackdrop onClose={onClose}>
-            <div className="confirm-modal" role="dialog" aria-modal="true" aria-labelledby="conflicts-title">
+            <div className="confirm-modal sc-conflict-modal" role="dialog" aria-modal="true" aria-labelledby="conflicts-title">
                 <h2 id="conflicts-title">Conflicts — {scorer.name}</h2>
                 {conflicts.length > 0 && (
                     <ul className="sc-conflict-list">

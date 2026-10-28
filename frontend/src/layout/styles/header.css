@@ -1,6 +1,7 @@
 .site-header {
     display: flex;
     align-items: center;
+    gap: 0.75rem;
     padding: 0 2rem;
     height: 3.75rem;
     border-bottom: 1px solid var(--border);
@@ -17,6 +18,10 @@
     font-size: 1.25rem;
     color: var(--primary);
     letter-spacing: -0.03rem;
+    min-width: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
 }
 
 .account-button {
@@ -32,6 +37,8 @@
     font-weight: 500;
     line-height: 1;
     border: 1px solid var(--border);
+    min-width: 0;
+    max-width: 100%;
     transition: background 140ms ease, border-color 140ms ease, box-shadow 140ms ease;
 }
 
@@ -81,6 +88,7 @@
 }
 
 .account-name {
+    min-width: 0;
     max-width: 10rem;
     overflow: hidden;
     text-overflow: ellipsis;
@@ -95,4 +103,11 @@
 
 .account-button:hover .account-chevron {
     color: var(--primary);
+}
+
+@media (max-width: 480px) {
+    .site-header {
+        gap: 0.5rem;
+        padding-inline: 0.75rem;
+    }
 }

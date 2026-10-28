@@ -258,6 +258,15 @@ select.dash-edit-input:hover {
     list-style: none;
     padding: 0;
     margin: 0 0 0.75rem;
+    max-height: 15rem;
+    overflow-y: auto;
+}
+
+/* The native team picker needs to be able to extend beyond this dialog. The
+   conflict list above owns scrolling when the dialog has many entries. */
+.sc-conflict-modal,
+.crf-modal {
+    overflow: visible;
 }
 
 .sc-conflict-item {

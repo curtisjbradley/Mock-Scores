@@ -1,6 +1,6 @@
 import { useState } from 'react'
 import { Link } from 'react-router-dom'
-import type { IBallotStatus, ICourtroom, IPairing, IPairingScorer, IRound, IScorer, ITeam } from '@mock-scores/shared'
+import type { IBallotStatus, ICourtroom, IPairing, IPairingRosterStatus, IPairingScorer, IRound, IScorer, ITeam } from '@mock-scores/shared'
 import { apiFetch } from '../../auth/auth'
 import TeamSelectOptions from '../../shared/components/TeamSelectOptions'
 import DangerButton from '../../shared/components/DangerButton'
@@ -11,11 +11,13 @@ import { useAutoFocus } from '../../shared/hooks/useAutoFocus'
 
 interface Props {
     pairing: IPairing
+    pairingNumber: number
     teams: ITeam[]
     courtrooms: ICourtroom[]
     scorers: IScorer[]
     assignedScorers: IPairingScorer[]
     ballotStatus?: IBallotStatus
+    rosterStatuses: Record<string, IPairingRosterStatus>
     /** True once the round's one-time bulk scoring-link send has happened. Per-scorer
      *  resend buttons only appear afterwards. */
     linksSent: boolean
@@ -36,7 +38,8 @@ interface Props {
  * Supports inline editing of courtroom and team assignments, and manages
  * scorer assignment / presider selection.
  */
-export default function PairingCard({ pairing, teams, courtrooms, scorers, assignedScorers, ballotStatus, linksSent, tournamentId, roundId, round, conflictSet, courtroomInUse, onRemove, onUpdate, onScorerAssigned, onScorerRemoved, onPresiderChanged }: Props) {
+export default function PairingCard({ pairing, pairingNumber, teams, courtrooms, scorers, assignedScorers, ballotStatus, rosterStatuses, linksSent, tournamentId, roundId, round, conflictSet, courtroomInUse, onRemove, onUpdate, onScorerAssigned, onScorerRemoved, onPresiderChanged }: Props) {
+    const [expanded, setExpanded] = useState(false)
     const [editingCourtroom, setEditingCourtroom] = useState(false)
     const [courtroomDraft, setCourtroomDraft] = useState(pairing.courtroom ?? '')
 
@@ -69,6 +72,22 @@ export default function PairingCard({ pairing, teams, courtrooms, scorers, assig
         if (!id) return 'No courtroom'
         const c = courtrooms.find(c => c.id === id)
         return c ? c.name + (c.location ? ` (${c.location})` : '') : id
+    }
+
+    const rosterStatusLabel = (status: IPairingRosterStatus['roster_status'] | undefined) => {
+        switch (status) {
+            case 'complete': return 'Roster completed'
+            case 'default': return 'Using defaults'
+            default: return 'No roster'
+        }
+    }
+
+    const callOrderStatusLabel = (status: IPairingRosterStatus['call_order_status'] | undefined) => {
+        switch (status) {
+            case 'complete': return 'Call order assigned'
+            case 'default': return 'Using default order'
+            default: return 'No call order'
+        }
     }
 
     const openBallot = () => {
@@ -166,6 +185,47 @@ export default function PairingCard({ pairing, teams, courtrooms, scorers, assig
     return (
         <>
         <div className="dash-pairing-card">
+            <div className="pc-summary">
+                <div className="pc-summary-matchup">
+                    <span className="pc-pairing-label" aria-label={`Pairing ${pairingNumber}`}>{pairingNumber}</span>
+                    <div>
+                        <span className="dash-side-label">Prosecution</span>
+                        <span className="pc-summary-team">{teamName(pairing.p_team)}</span>
+                        <span className={`pc-roster-status pc-roster-status--${rosterStatuses[pairing.p_team]?.roster_status ?? 'none'}`}>
+                            {rosterStatusLabel(rosterStatuses[pairing.p_team]?.roster_status)}
+                        </span>
+                        <span className={`pc-call-order-status pc-call-order-status--${rosterStatuses[pairing.p_team]?.call_order_status ?? 'none'}`}>
+                            {callOrderStatusLabel(rosterStatuses[pairing.p_team]?.call_order_status)}
+                        </span>
+                    </div>
+                    <div>
+                        <span className="dash-side-label">Defense</span>
+                        <span className="pc-summary-team">{teamName(pairing.d_team)}</span>
+                        <span className={`pc-roster-status pc-roster-status--${rosterStatuses[pairing.d_team]?.roster_status ?? 'none'}`}>
+                            {rosterStatusLabel(rosterStatuses[pairing.d_team]?.roster_status)}
+                        </span>
+                        <span className={`pc-call-order-status pc-call-order-status--${rosterStatuses[pairing.d_team]?.call_order_status ?? 'none'}`}>
+                            {callOrderStatusLabel(rosterStatuses[pairing.d_team]?.call_order_status)}
+                        </span>
+                    </div>
+                    <div className="pc-summary-courtroom">
+                        <span className="dash-side-label">Courtroom</span>
+                        <span>{courtroomName(pairing.courtroom)}</span>
+                        {courtroomInUse && <span className="pc-courtroom-warning">Double-booked</span>}
+                    </div>
+                </div>
+                <button
+                    type="button"
+                    className="pc-expand-btn"
+                    aria-expanded={expanded}
+                    onClick={() => setExpanded(value => !value)}
+                >
+                    {expanded ? 'Hide details' : 'Show details'}
+                    <span aria-hidden="true">{expanded ? '▴' : '▾'}</span>
+                </button>
+            </div>
+
+            {expanded && <div className="pc-details">
             <div className="dash-pairing-topbar">
                 <div className="pc-topbar-actions">
                     <button className="pc-download-ballot-btn" onClick={openBallot}>
@@ -337,6 +397,7 @@ export default function PairingCard({ pairing, teams, courtrooms, scorers, assig
 
             </div>
             <button className="pc-save-btn" onClick={() => { setShowScorerAdd(true); setScorerDraft(''); setScorerQuery('') }}>+ Add Scorer</button>
+            </div>}
         </div>
 
         {showScorerAdd && (
@@ -365,7 +426,7 @@ export default function PairingCard({ pairing, teams, courtrooms, scorers, assig
                                         return <p className="pc-scorer-results-empty">No matching scorers</p>
                                     }
                                     return (
-                                        <ul className="pc-scorer-options pc-scorer-options--inline">
+                                        <ul className="pc-scorer-options">
                                             {matches.map(s => {
                                                 const selected = s.scorer_id === scorerDraft
                                                 return (
@@ -405,7 +466,7 @@ export default function PairingCard({ pairing, teams, courtrooms, scorers, assig
 
         {showPresiderModal && (
             <ModalBackdrop onClose={() => setShowPresiderModal(false)}>
-                <div className="confirm-modal" role="dialog" aria-modal="true" aria-labelledby="presider-title">
+                <div className="confirm-modal pc-presider-modal" role="dialog" aria-modal="true" aria-labelledby="presider-title">
                     <h2 id="presider-title" className="pc-modal-title">Change Presider</h2>
                     <label className="rv-field-label pc-modal-field">
                         Presider
