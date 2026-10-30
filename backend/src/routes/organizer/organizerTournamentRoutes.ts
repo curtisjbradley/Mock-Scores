@@ -2223,14 +2223,15 @@ router.get("/award-categories", tournamentHandler(async (req, res) => {
  *       500: { description: Database error }
  */
 router.post("/award-categories", tournamentHandler(async (req, res) => {
-    const { name, minNominees, maxNominees } = req.body as { name?: string; minNominees?: number; maxNominees?: number };
+    const { name, minNominees, maxNominees, openToAll = false } = req.body as { name?: string; minNominees?: number; maxNominees?: number; openToAll?: boolean };
     if (!name?.trim()) return res.status(400).json({ message: 'Name is required' });
     if (minNominees == null || maxNominees == null) return res.status(400).json({ message: 'minNominees and maxNominees are required' });
     if (minNominees < 0) return res.status(400).json({ message: 'minNominees must be >= 0' });
     if (maxNominees < 1) return res.status(400).json({ message: 'maxNominees must be >= 1' });
     if (minNominees > maxNominees) return res.status(400).json({ message: 'minNominees cannot exceed maxNominees' });
+    if (typeof openToAll !== 'boolean') return res.status(400).json({ message: 'openToAll must be a boolean' });
     try {
-        return res.status(201).json(await organizer.createAwardCategory(req.tournament, name.trim(), minNominees, maxNominees));
+        return res.status(201).json(await organizer.createAwardCategory(req.tournament, name.trim(), minNominees, maxNominees, openToAll));
     } catch (e) {
         if (e instanceof DbError) return res.status(500).json({ message: 'Unable to create award category' });
         throw e;
@@ -2272,14 +2273,15 @@ router.post("/award-categories", tournamentHandler(async (req, res) => {
 router.put("/award-categories/:categoryId", tournamentHandler(async (req, res) => {
     const categoryId = req.params.categoryId as string;
     if (!uuidRegex.test(categoryId)) return res.status(400).json({ message: 'Invalid category ID' });
-    const { name, minNominees, maxNominees } = req.body as { name?: string; minNominees?: number; maxNominees?: number };
+    const { name, minNominees, maxNominees, openToAll = false } = req.body as { name?: string; minNominees?: number; maxNominees?: number; openToAll?: boolean };
     if (!name?.trim()) return res.status(400).json({ message: 'Name is required' });
     if (minNominees == null || maxNominees == null) return res.status(400).json({ message: 'minNominees and maxNominees are required' });
     if (minNominees < 0) return res.status(400).json({ message: 'minNominees must be >= 0' });
     if (maxNominees < 1) return res.status(400).json({ message: 'maxNominees must be >= 1' });
     if (minNominees > maxNominees) return res.status(400).json({ message: 'minNominees cannot exceed maxNominees' });
+    if (typeof openToAll !== 'boolean') return res.status(400).json({ message: 'openToAll must be a boolean' });
     try {
-        return res.status(200).json(await organizer.updateAwardCategory(categoryId, name.trim(), minNominees, maxNominees));
+        return res.status(200).json(await organizer.updateAwardCategory(categoryId, name.trim(), minNominees, maxNominees, openToAll));
     } catch (e) {
         if (e instanceof NotFoundError) return res.status(404).json({ message: e.message });
         if (e instanceof DbError) return res.status(500).json({ message: 'Unable to update award category' });

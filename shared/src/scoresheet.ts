@@ -36,7 +36,7 @@ export interface IAwardCategoryInfo {
     name: string;
     minNominees: number;
     maxNominees: number;
-    /** Student IDs eligible for nomination in this category (scored on linked fields) */
+    /** Student IDs eligible for nomination in this category. */
     eligibleStudentIds: string[];
 }
 

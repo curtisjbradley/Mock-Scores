@@ -32,10 +32,10 @@ const ok = (rows: unknown[] = [], rowCount = rows.length) =>
 describe('organizerProvider.getAwardCategories', () => {
     it('returns mapped award categories', async () => {
         mockDbQuery.mockResolvedValueOnce(ok([
-            { id: CAT_ID, name: 'Best Attorney', min_nominees: 1, max_nominees: 3 },
+            { id: CAT_ID, name: 'Best Attorney', min_nominees: 1, max_nominees: 3, open_to_all: false },
         ]));
         const result = await organizerProvider.getAwardCategories(T);
-        expect(result).toEqual([{ id: CAT_ID, name: 'Best Attorney', minNominees: 1, maxNominees: 3 }]);
+        expect(result).toEqual([{ id: CAT_ID, name: 'Best Attorney', minNominees: 1, maxNominees: 3, openToAll: false }]);
     });
 
     it('returns empty array when no categories', async () => {
@@ -54,9 +54,9 @@ describe('organizerProvider.getAwardCategories', () => {
 // ═══════════════════════════════════════════════════════════════════════════════
 describe('organizerProvider.createAwardCategory', () => {
     it('returns created category', async () => {
-        mockDbQuery.mockResolvedValueOnce(ok([{ id: CAT_ID, name: 'Best Witness', min_nominees: 1, max_nominees: 2 }]));
-        const result = await organizerProvider.createAwardCategory(T, 'Best Witness', 1, 2);
-        expect(result).toEqual({ id: CAT_ID, name: 'Best Witness', minNominees: 1, maxNominees: 2 });
+        mockDbQuery.mockResolvedValueOnce(ok([{ id: CAT_ID, name: 'Best Witness', min_nominees: 1, max_nominees: 2, open_to_all: true }]));
+        const result = await organizerProvider.createAwardCategory(T, 'Best Witness', 1, 2, true);
+        expect(result).toEqual({ id: CAT_ID, name: 'Best Witness', minNominees: 1, maxNominees: 2, openToAll: true });
     });
 
     it('throws DbError when insert fails', async () => {
@@ -70,9 +70,9 @@ describe('organizerProvider.createAwardCategory', () => {
 // ═══════════════════════════════════════════════════════════════════════════════
 describe('organizerProvider.updateAwardCategory', () => {
     it('returns updated category', async () => {
-        mockDbQuery.mockResolvedValueOnce(ok([{ id: CAT_ID, name: 'Updated', min_nominees: 2, max_nominees: 5 }]));
-        const result = await organizerProvider.updateAwardCategory(CAT_ID, 'Updated', 2, 5);
-        expect(result).toEqual({ id: CAT_ID, name: 'Updated', minNominees: 2, maxNominees: 5 });
+        mockDbQuery.mockResolvedValueOnce(ok([{ id: CAT_ID, name: 'Updated', min_nominees: 2, max_nominees: 5, open_to_all: true }]));
+        const result = await organizerProvider.updateAwardCategory(CAT_ID, 'Updated', 2, 5, true);
+        expect(result).toEqual({ id: CAT_ID, name: 'Updated', minNominees: 2, maxNominees: 5, openToAll: true });
     });
 
     it('throws NotFoundError when category not found', async () => {

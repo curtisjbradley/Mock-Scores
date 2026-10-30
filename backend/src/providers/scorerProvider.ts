@@ -224,20 +224,19 @@ async function buildScoreSheetForPairing(ctx: PairingFormatContext): Promise<ISc
 
     // ── 9. Student info ───────────────────────────────────────────────────────
     const studentsRecord: IScoreSheetFormat['students'] = {};
-    const studentIds = new Set(studentAsgRows.map(sa => sa.student_id));
-    if (studentIds.size > 0) {
-        const studentRows = (await dbQuery<{
-            student_id: string;
-            student_name: string;
-            pronouns: string | null;
-            team_id: string;
-        }>(
-            'SELECT student_id, student_name, pronouns, team_id FROM team_rostered_students WHERE student_id = ANY($1)',
-            [[...studentIds]],
-        ))?.rows ?? [];
-        for (const s of studentRows) {
-            studentsRecord[s.student_id] = { name: s.student_name, pronouns: s.pronouns, schoolId: s.team_id };
-        }
+    // Award nominations can recognize any student participating in this trial,
+    // including rostered students whom the coach did not assign to a scorecard role.
+    const studentRows = (await dbQuery<{
+        student_id: string;
+        student_name: string;
+        pronouns: string | null;
+        team_id: string;
+    }>(
+        'SELECT student_id, student_name, pronouns, team_id FROM team_rostered_students WHERE team_id = ANY($1) ORDER BY team_id, student_name',
+        [[p_team, d_team]],
+    ))?.rows ?? [];
+    for (const s of studentRows) {
+        studentsRecord[s.student_id] = { name: s.student_name, pronouns: s.pronouns, schoolId: s.team_id };
     }
 
     // ── 10. Assemble categories ───────────────────────────────────────────────
@@ -306,9 +305,9 @@ async function buildScoreSheetForPairing(ctx: PairingFormatContext): Promise<ISc
 
     // ── 12. Award categories ──────────────────────────────────────────────────
     const awardCatRows = (await dbQuery<{
-        id: string; name: string; min_nominees: number; max_nominees: number;
+        id: string; name: string; min_nominees: number; max_nominees: number; open_to_all: boolean;
     }>(
-        'SELECT id, name, min_nominees, max_nominees FROM individual_award_categories WHERE tournament_id = $1 ORDER BY name',
+        'SELECT id, name, min_nominees, max_nominees, open_to_all FROM individual_award_categories WHERE tournament_id = $1 ORDER BY name',
         [tournament_id],
     ))?.rows ?? [];
 
@@ -317,24 +316,23 @@ async function buildScoreSheetForPairing(ctx: PairingFormatContext): Promise<ISc
         const fieldsByAwardCat = new Map<string, string[]>();
         for (const f of fieldRows) {
             if (f.award_category_id) {
-                if (!fieldsByAwardCat.has(f.award_category_id)) fieldsByAwardCat.set(f.award_category_id, []);
-                fieldsByAwardCat.get(f.award_category_id)!.push(f.id);
+                const fieldIds = fieldsByAwardCat.get(f.award_category_id) ?? [];
+                fieldIds.push(f.id);
+                fieldsByAwardCat.set(f.award_category_id, fieldIds);
             }
         }
 
         for (const ac of awardCatRows) {
-            const linkedFieldIds = fieldsByAwardCat.get(ac.id) ?? [];
-            const eligibleStudentIds = new Set<string>();
-            for (const sa of studentAsgRows) {
-                if (linkedFieldIds.includes(sa.field_id)) {
-                    eligibleStudentIds.add(sa.student_id);
-                }
-            }
+            const eligibleStudentIds = ac.open_to_all
+                ? Object.keys(studentsRecord)
+                : studentAsgRows
+                    .filter(assignment => (fieldsByAwardCat.get(ac.id) ?? []).includes(assignment.field_id))
+                    .map(assignment => assignment.student_id);
             awardCategories[ac.id] = {
                 name: ac.name,
                 minNominees: ac.min_nominees,
                 maxNominees: ac.max_nominees,
-                eligibleStudentIds: [...eligibleStudentIds],
+                eligibleStudentIds: [...new Set(eligibleStudentIds)],
             };
         }
     }

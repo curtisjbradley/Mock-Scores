@@ -76,6 +76,8 @@ export interface IIndividualAwardCategory {
     name: string
     minNominees: number
     maxNominees: number
+    /** When true, scorers may nominate any student on either trial roster. */
+    openToAll: boolean
 }
 
 /**

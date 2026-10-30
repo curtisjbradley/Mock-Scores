@@ -1338,12 +1338,13 @@ async function duplicateAwardCategories(sourceTournamentID: string, newTournamen
         id: string;
         name: string;
         min_nominees: number;
-        max_nominees: number
-    }>('SELECT id, name, min_nominees, max_nominees FROM individual_award_categories WHERE tournament_id=$1', [sourceTournamentID]))?.rows ?? [];
+        max_nominees: number;
+        open_to_all: boolean
+    }>('SELECT id, name, min_nominees, max_nominees, open_to_all FROM individual_award_categories WHERE tournament_id=$1', [sourceTournamentID]))?.rows ?? [];
     await Promise.all(cats.map(async c => {
         const newId = (await dbQuery<{
             id: string
-        }>('INSERT INTO individual_award_categories (tournament_id, name, min_nominees, max_nominees) VALUES ($1,$2,$3,$4) RETURNING id', [newTournamentID, c.name, c.min_nominees, c.max_nominees]))?.rows[0]?.id;
+        }>('INSERT INTO individual_award_categories (tournament_id, name, min_nominees, max_nominees, open_to_all) VALUES ($1,$2,$3,$4,$5) RETURNING id', [newTournamentID, c.name, c.min_nominees, c.max_nominees, c.open_to_all]))?.rows[0]?.id;
         if (newId) map.set(c.id, newId);
     }));
     return map;
@@ -1525,41 +1526,45 @@ export async function getAwardCategories(tournamentId: string): Promise<IIndivid
         id: string;
         name: string;
         min_nominees: number;
-        max_nominees: number
-    }>('SELECT id, name, min_nominees, max_nominees FROM individual_award_categories WHERE tournament_id = $1 ORDER BY name', [tournamentId]);
+        max_nominees: number;
+        open_to_all: boolean
+    }>('SELECT id, name, min_nominees, max_nominees, open_to_all FROM individual_award_categories WHERE tournament_id = $1 ORDER BY name', [tournamentId]);
     if (!result) throw new DbError('getAwardCategories');
     return result.rows.map(r => ({
-        id: r.id, name: r.name, minNominees: r.min_nominees, maxNominees: r.max_nominees,
+        id: r.id, name: r.name, minNominees: r.min_nominees, maxNominees: r.max_nominees, openToAll: r.open_to_all ?? false,
     }));
 }
 
-export async function createAwardCategory(tournamentId: string, name: string, minNominees: number, maxNominees: number,): Promise<IIndividualAwardCategory> {
+export async function createAwardCategory(tournamentId: string, name: string, minNominees: number, maxNominees: number, openToAll = false): Promise<IIndividualAwardCategory> {
     const row = (await dbQuery<{
         id: string;
         name: string;
         min_nominees: number;
-        max_nominees: number
-    }>(`INSERT INTO individual_award_categories (tournament_id, name, min_nominees, max_nominees)
-        VALUES ($1, $2, $3, $4)
-        RETURNING id, name, min_nominees, max_nominees`, [tournamentId, name, minNominees, maxNominees]))?.rows[0];
+        max_nominees: number;
+        open_to_all: boolean
+    }>(`INSERT INTO individual_award_categories (tournament_id, name, min_nominees, max_nominees, open_to_all)
+        VALUES ($1, $2, $3, $4, $5)
+        RETURNING id, name, min_nominees, max_nominees, open_to_all`, [tournamentId, name, minNominees, maxNominees, openToAll]))?.rows[0];
     if (!row) throw new DbError('createAwardCategory');
-    return {id: row.id, name: row.name, minNominees: row.min_nominees, maxNominees: row.max_nominees};
+    return {id: row.id, name: row.name, minNominees: row.min_nominees, maxNominees: row.max_nominees, openToAll: row.open_to_all ?? false};
 }
 
-export async function updateAwardCategory(categoryId: string, name: string, minNominees: number, maxNominees: number,): Promise<IIndividualAwardCategory> {
+export async function updateAwardCategory(categoryId: string, name: string, minNominees: number, maxNominees: number, openToAll = false): Promise<IIndividualAwardCategory> {
     const row = (await dbQuery<{
         id: string;
         name: string;
         min_nominees: number;
-        max_nominees: number
+        max_nominees: number;
+        open_to_all: boolean
     }>(`UPDATE individual_award_categories
         SET name         = $1,
             min_nominees = $2,
-            max_nominees = $3
-        WHERE id = $4
-        RETURNING id, name, min_nominees, max_nominees`, [name, minNominees, maxNominees, categoryId]))?.rows[0];
+            max_nominees = $3,
+            open_to_all = $4
+        WHERE id = $5
+        RETURNING id, name, min_nominees, max_nominees, open_to_all`, [name, minNominees, maxNominees, openToAll, categoryId]))?.rows[0];
     if (!row) throw new NotFoundError('award category');
-    return {id: row.id, name: row.name, minNominees: row.min_nominees, maxNominees: row.max_nominees};
+    return {id: row.id, name: row.name, minNominees: row.min_nominees, maxNominees: row.max_nominees, openToAll: row.open_to_all ?? false};
 }
 
 export async function deleteAwardCategory(categoryId: string): Promise<void> {

@@ -22,6 +22,7 @@ export default function AwardCategoriesTab({ tournamentId }: Props) {
     const [name, setName] = useState('')
     const [minNominees, setMinNominees] = useState(1)
     const [maxNominees, setMaxNominees] = useState(3)
+    const [openToAll, setOpenToAll] = useState(false)
     const [formError, setFormError] = useState<string | null>(null)
     const confirmRemove = useConfirmRemove<IIndividualAwardCategory>()
 
@@ -38,6 +39,7 @@ export default function AwardCategoriesTab({ tournamentId }: Props) {
         setName('')
         setMinNominees(1)
         setMaxNominees(3)
+        setOpenToAll(false)
         setFormError(null)
         setShowModal(true)
     }
@@ -47,6 +49,7 @@ export default function AwardCategoriesTab({ tournamentId }: Props) {
         setName(cat.name)
         setMinNominees(cat.minNominees)
         setMaxNominees(cat.maxNominees)
+        setOpenToAll(cat.openToAll)
         setFormError(null)
         setShowModal(true)
     }
@@ -61,7 +64,7 @@ export default function AwardCategoriesTab({ tournamentId }: Props) {
             if (editingId) {
                 const r = await apiFetch(`/organizer/tournament/${tournamentId}/award-categories/${editingId}`, {
                     method: 'PUT',
-                    body: JSON.stringify({ name: name.trim(), minNominees, maxNominees }),
+                    body: JSON.stringify({ name: name.trim(), minNominees, maxNominees, openToAll }),
                 })
                 if (!r.ok) throw new Error()
                 const updated: IIndividualAwardCategory = await r.json()
@@ -69,7 +72,7 @@ export default function AwardCategoriesTab({ tournamentId }: Props) {
             } else {
                 const r = await apiFetch(`/organizer/tournament/${tournamentId}/award-categories`, {
                     method: 'POST',
-                    body: JSON.stringify({ name: name.trim(), minNominees, maxNominees }),
+                    body: JSON.stringify({ name: name.trim(), minNominees, maxNominees, openToAll }),
                 })
                 if (!r.ok) throw new Error()
                 const created: IIndividualAwardCategory = await r.json()
@@ -110,18 +113,20 @@ export default function AwardCategoriesTab({ tournamentId }: Props) {
                             <th>Name</th>
                             <th>Min Nominees</th>
                             <th>Max Nominees</th>
+                            <th>Eligible students</th>
                             <th></th>
                         </tr>
                     </thead>
                     <tbody>
                         {categories.length === 0 && (
-                            <tr><td colSpan={4} className="dash-empty-cell">No award categories yet.</td></tr>
+                            <tr><td colSpan={5} className="dash-empty-cell">No award categories yet.</td></tr>
                         )}
                         {categories.map(cat => (
                             <tr key={cat.id}>
                                 <td className="dash-team-code">{cat.name}</td>
                                 <td>{cat.minNominees}</td>
                                 <td>{cat.maxNominees}</td>
+                                <td>{cat.openToAll ? 'All trial students' : 'Assigned roles only'}</td>
                                 <td>
                                     <div className="dash-actions-cell">
                                         <button className="dash-remove-btn" onClick={() => openEditModal(cat)}>Edit</button>
@@ -144,6 +149,13 @@ export default function AwardCategoriesTab({ tournamentId }: Props) {
                                 <label className="tc-label" htmlFor="ac-name">Category Name</label>
                                 <input id="ac-name" type="text" className="tc-input" required
                                     value={name} onChange={e => setName(e.target.value)} placeholder="e.g. Best Attorney" />
+                            </div>
+                            <div className="tc-field">
+                                <label className="tc-checkbox-label" htmlFor="ac-open-to-all">
+                                    <input id="ac-open-to-all" type="checkbox" checked={openToAll} onChange={e => setOpenToAll(e.target.checked)} />
+                                    Open this award to all students in the trial
+                                </label>
+                                <small className="tc-field-hint">When unchecked, scorers can nominate only students assigned to the award’s linked scoring fields.</small>
                             </div>
                             <div className="tc-field tc-field--row">
                                 <div className="tc-field-col">
