@@ -51,7 +51,7 @@ const RoundView = () => {
         error, notFound,
         saveName, addMatchup, updatePairing, removePairing, setRoundLocked,
         setPairingsPublished, setResultsPublished,
-        onScorerAssigned, onScorerRemoved, onPresiderChanged, reloadPairingScorers,
+        onScorerAssigned, onScorerCreated, onScorerRemoved, onPresiderChanged, reloadPairingScorers,
     } = useRoundView(id, roundId)
 
     const confirmRemove = useConfirmRemove<IPairing>()
@@ -238,6 +238,7 @@ const RoundView = () => {
                             onRemove={() => confirmRemove.open(pairing)}
                             onUpdate={updatePairing}
                             onScorerAssigned={s => onScorerAssigned(pairing.pairing_id, s)}
+                            onScorerCreated={onScorerCreated}
                             onScorerRemoved={assignmentId => onScorerRemoved(pairing.pairing_id, assignmentId)}
                             onPresiderChanged={(assignmentId, onlyTiebreaker) => onPresiderChanged(pairing.pairing_id, assignmentId, onlyTiebreaker)}
                         />

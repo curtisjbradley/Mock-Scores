@@ -64,8 +64,7 @@ function computeFromBallots(
         {
             p: string
             d: string
-            pPts: number
-            dPts: number
+            ballots: { pointsFor: number; pointsAgainst: number }[]
             tiebreakerWinner: string | null
             scorers: number
         }
@@ -75,8 +74,7 @@ function computeFromBallots(
         const existing = pairingMap.get(b.pairing_id)
 
         if (existing) {
-            existing.pPts += b.p_points
-            existing.dPts += b.d_points
+            existing.ballots.push({ pointsFor: b.p_points, pointsAgainst: b.d_points })
             existing.scorers += 1
 
             // The presider ballot carries the pairing's tiebreaker (winning team id).
@@ -87,29 +85,28 @@ function computeFromBallots(
             pairingMap.set(b.pairing_id, {
                 p: b.p_team_id,
                 d: b.d_team_id,
-                pPts: b.p_points,
-                dPts: b.d_points,
+                ballots: [{ pointsFor: b.p_points, pointsAgainst: b.d_points }],
                 tiebreakerWinner: b.presider_ballot ? b.tiebreaker : null,
                 scorers: 1,
             })
         }
     }
 
-    for (const [, { p, d, pPts, dPts, tiebreakerWinner, scorers }] of pairingMap) {
+    for (const [, { p, d, ballots, tiebreakerWinner, scorers }] of pairingMap) {
         const pTeam = teamMap.get(p)
         const dTeam = teamMap.get(d)
 
         if (pTeam && dTeam) {
             pTeam.pairings.push({
                 opponent: dTeam.code,
-                ballots: [{ pointsFor: pPts, pointsAgainst: dPts }],
+                ballots,
                 won_presider_tiebreaker: tiebreakerWinner === p,
                 num_scorers: scorers,
             })
 
             dTeam.pairings.push({
                 opponent: pTeam.code,
-                ballots: [{ pointsFor: dPts, pointsAgainst: pPts }],
+                ballots: ballots.map(({ pointsFor, pointsAgainst }) => ({ pointsFor: pointsAgainst, pointsAgainst: pointsFor })),
                 won_presider_tiebreaker: tiebreakerWinner === d,
                 num_scorers: scorers,
             })

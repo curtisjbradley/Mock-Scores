@@ -163,6 +163,9 @@ export function useRoundView(id: string | undefined, roundId: string | undefined
     const onScorerAssigned = (pairingId: string, scorer: IPairingScorer) =>
         setPairingScorers(prev => ({ ...prev, [pairingId]: [...(prev[pairingId] ?? []), scorer] }))
 
+    const onScorerCreated = (scorer: IScorer) =>
+        setScorers(prev => [...prev, scorer])
+
     /** Re-fetches every pairing's scorers + ballot status. Used after a bulk operation (auto-assign). */
     const reloadPairingScorers = () => {
         if (!id || !roundId) return
@@ -199,6 +202,6 @@ export function useRoundView(id: string | undefined, roundId: string | undefined
         error, notFound,
         saveName, addMatchup, updatePairing, removePairing, setPairings,
         setRoundLocked, setPairingsPublished, setResultsPublished,
-        onScorerAssigned, onScorerRemoved, onPresiderChanged, reloadPairingScorers,
+        onScorerAssigned, onScorerCreated, onScorerRemoved, onPresiderChanged, reloadPairingScorers,
     }
 }

@@ -2,12 +2,14 @@ import { useState } from 'react'
 import { Link } from 'react-router-dom'
 import type { IBallotStatus, ICourtroom, IPairing, IPairingRosterStatus, IPairingScorer, IRound, IScorer, ITeam } from '@mock-scores/shared'
 import { apiFetch } from '../../auth/auth'
+import { isValidEmail } from '../../utils/validation'
 import TeamSelectOptions from '../../shared/components/TeamSelectOptions'
 import DangerButton from '../../shared/components/DangerButton'
 import Icon from '../../shared/components/Icon'
 import EmailStatusBadge from '../../shared/components/EmailStatusBadge'
 import ModalBackdrop from '../../shared/components/ModalBackdrop'
 import { useAutoFocus } from '../../shared/hooks/useAutoFocus'
+import { v4 as randomUUID } from 'uuid'
 
 interface Props {
     pairing: IPairing
@@ -29,6 +31,7 @@ interface Props {
     onRemove: () => void
     onUpdate: (updated: IPairing) => void
     onScorerAssigned: (scorer: IPairingScorer) => void
+    onScorerCreated: (scorer: IScorer) => void
     onScorerRemoved: (assignmentId: string) => void
     onPresiderChanged: (assignmentId: string | null, onlyTiebreaker?: boolean) => void
 }
@@ -38,7 +41,7 @@ interface Props {
  * Supports inline editing of courtroom and team assignments, and manages
  * scorer assignment / presider selection.
  */
-export default function PairingCard({ pairing, pairingNumber, teams, courtrooms, scorers, assignedScorers, ballotStatus, rosterStatuses, linksSent, tournamentId, roundId, round, conflictSet, courtroomInUse, onRemove, onUpdate, onScorerAssigned, onScorerRemoved, onPresiderChanged }: Props) {
+export default function PairingCard({ pairing, pairingNumber, teams, courtrooms, scorers, assignedScorers, ballotStatus, rosterStatuses, linksSent, tournamentId, roundId, round, conflictSet, courtroomInUse, onRemove, onUpdate, onScorerAssigned, onScorerCreated, onScorerRemoved, onPresiderChanged }: Props) {
     const [expanded, setExpanded] = useState(false)
     const [editingCourtroom, setEditingCourtroom] = useState(false)
     const [courtroomDraft, setCourtroomDraft] = useState(pairing.courtroom ?? '')
@@ -50,6 +53,10 @@ export default function PairingCard({ pairing, pairingNumber, teams, courtrooms,
     const [showScorerAdd, setShowScorerAdd] = useState(false)
     const [scorerDraft, setScorerDraft] = useState('')
     const [scorerQuery, setScorerQuery] = useState('')
+    const [newScorerIsPaper, setNewScorerIsPaper] = useState(false)
+    const [newScorerEmail, setNewScorerEmail] = useState('')
+    const [newScorerWillingToPreside, setNewScorerWillingToPreside] = useState(true)
+    const [newScorerPreferences, setNewScorerPreferences] = useState<string[]>([])
     const [manualEntryScorer, setManualEntryScorer] = useState<{ name: string; assignmentId: string } | null>(null)
     const [removeScorerTarget, setRemoveScorerTarget] = useState<{ name: string; assignmentId: string } | null>(null)
 
@@ -115,12 +122,11 @@ export default function PairingCard({ pairing, pairingNumber, teams, courtrooms,
     const assignedIds = new Set(assignedScorers.filter(s => s.type === 'registered').map(s => s.scorer_id))
     const availableScorers = scorers.filter(s => !assignedIds.has(s.scorer_id))
 
-    const addRegisteredScorer = () => {
-        if (!scorerDraft) return
+    const addRegisteredScorer = (scorerId = scorerDraft, scorerToAssign = scorers.find(s => s.scorer_id === scorerId)) => {
+        if (!scorerId || !scorerToAssign) return
         apiFetch(`/organizer/tournament/${tournamentId}/pairings/${pairing.pairing_id}/scorers`, {
-            method: 'POST', body: JSON.stringify({ scorer_id: scorerDraft }),
+            method: 'POST', body: JSON.stringify({ scorer_id: scorerId }),
         }).then(r => r.json()).then((data: { assignment_id: string }) => {
-            const scorer = scorers.find(s => s.scorer_id === scorerDraft)!
             const isFirst = assignedScorers.length === 0
             if (isFirst) {
                 apiFetch(`/organizer/tournament/${tournamentId}/pairings/${pairing.pairing_id}/presider`, {
@@ -128,30 +134,40 @@ export default function PairingCard({ pairing, pairingNumber, teams, courtrooms,
                 })
                 onPresiderChanged(data.assignment_id)
             }
-            onScorerAssigned({ assignment_id: data.assignment_id, type: 'registered', scorer_id: scorerDraft, name: scorer.name, is_presider: isFirst, presider_only_tiebreaker: false, conflict_reported: false, p_points: null, d_points: null, ballot_id: null})
+            onScorerAssigned({ assignment_id: data.assignment_id, type: scorerToAssign.is_paper ? 'paper' : 'registered', scorer_id: scorerId, name: scorerToAssign.name, is_presider: isFirst, presider_only_tiebreaker: false, conflict_reported: false, p_points: null, d_points: null, ballot_id: null})
             setScorerDraft('')
             setScorerQuery('')
             setShowScorerAdd(false)
         })
     }
 
-    const addPaperScorer = () => {
+    const createScorer = () => {
         const name = scorerQuery.trim()
-        if (!name) return
-        apiFetch(`/organizer/tournament/${tournamentId}/pairings/${pairing.pairing_id}/scorers`, {
-            method: 'POST', body: JSON.stringify({ paper_name: name }),
-        }).then(r => r.json()).then((data: { assignment_id: string; scorer_id: string }) => {
-            const isFirst = assignedScorers.length === 0
-            if (isFirst) {
-                apiFetch(`/organizer/tournament/${tournamentId}/pairings/${pairing.pairing_id}/presider`, {
-                    method: 'PUT', body: JSON.stringify({ assignment_id: data.assignment_id }),
-                })
-                onPresiderChanged(data.assignment_id)
-            }
-            onScorerAssigned({ assignment_id: data.assignment_id, type: 'paper', scorer_id: data.scorer_id, name, is_presider: isFirst, presider_only_tiebreaker: false, conflict_reported: false, p_points: null, d_points: null, ballot_id: null })
-            setScorerQuery('')
-            setShowScorerAdd(false)
+        if (!name || (!newScorerIsPaper && !isValidEmail(newScorerEmail))) return
+        const scorer: IScorer = {
+            scorer_id: randomUUID(),
+            name,
+            email: newScorerIsPaper ? null : newScorerEmail.trim(),
+            is_paper: newScorerIsPaper,
+            willing_to_preside: newScorerWillingToPreside,
+            prefers_to_score_with: newScorerPreferences,
+        }
+        apiFetch(`/organizer/tournament/${tournamentId}/scorers`, {
+            method: 'POST', body: JSON.stringify(scorer),
+        }).then(r => {
+            if (!r.ok) throw new Error('Unable to create scorer.')
+            onScorerCreated(scorer)
+            addRegisteredScorer(scorer.scorer_id, scorer)
         })
+    }
+
+    const resetScorerAdd = () => {
+        setScorerDraft('')
+        setScorerQuery('')
+        setNewScorerIsPaper(false)
+        setNewScorerEmail('')
+        setNewScorerWillingToPreside(true)
+        setNewScorerPreferences([])
     }
 
     const removeScorer = (assignmentId: string) => {
@@ -396,7 +412,7 @@ export default function PairingCard({ pairing, pairingNumber, teams, courtrooms,
                 })}
 
             </div>
-            <button className="pc-save-btn" onClick={() => { setShowScorerAdd(true); setScorerDraft(''); setScorerQuery('') }}>+ Add Scorer</button>
+            <button className="pc-save-btn" onClick={() => { setShowScorerAdd(true); resetScorerAdd() }}>+ Add Scorer</button>
             </div>}
         </div>
 
@@ -448,17 +464,58 @@ export default function PairingCard({ pairing, pairingNumber, teams, courtrooms,
                         </div>
                     </label>
 
-                    <button
-                        className="pc-create-offline-btn"
-                        disabled={!scorerQuery.trim() || !!scorerDraft}
-                        onClick={addPaperScorer}
-                    >
-                        + Create offline scorer{scorerQuery.trim() ? ` "${scorerQuery.trim()}"` : ''}
-                    </button>
+                    {!scorerDraft && (
+                        <>
+                            <label className="sc-checkbox-label">
+                                <input type="checkbox" checked={newScorerIsPaper}
+                                    onChange={e => setNewScorerIsPaper(e.target.checked)} />
+                                Paper (offline) scorer — no email, scores on paper
+                            </label>
+                            {!newScorerIsPaper && (
+                                <label className="rv-field-label pc-modal-field" htmlFor="new-scorer-email">
+                                    Email
+                                    <input id="new-scorer-email" type="email" className="rv-select"
+                                        value={newScorerEmail} onChange={e => setNewScorerEmail(e.target.value)}
+                                        placeholder="scorer@example.com" />
+                                    {newScorerEmail && !isValidEmail(newScorerEmail) && <span className="tc-field-error">Invalid email address</span>}
+                                </label>
+                            )}
+                            <label className="sc-checkbox-label">
+                                <input type="checkbox" checked={newScorerWillingToPreside}
+                                    onChange={e => setNewScorerWillingToPreside(e.target.checked)} />
+                                Willing to preside
+                            </label>
+                            {scorers.length > 0 && (
+                                <div className="pc-modal-field">
+                                    <span className="rv-field-label">Prefers to score with</span>
+                                    <ul className="sc-pref-list">
+                                        {scorers.map(s => (
+                                            <li key={s.scorer_id}>
+                                                <label className="sc-checkbox-label">
+                                                    <input type="checkbox" checked={newScorerPreferences.includes(s.scorer_id)}
+                                                        onChange={() => setNewScorerPreferences(current => current.includes(s.scorer_id)
+                                                            ? current.filter(id => id !== s.scorer_id)
+                                                            : [...current, s.scorer_id])} />
+                                                    {s.name}{s.is_paper ? ' (paper)' : ''}
+                                                </label>
+                                            </li>
+                                        ))}
+                                    </ul>
+                                </div>
+                            )}
+                            <button
+                                className="pc-create-offline-btn"
+                                disabled={!scorerQuery.trim() || (!newScorerIsPaper && !isValidEmail(newScorerEmail))}
+                                onClick={createScorer}
+                            >
+                                + Create scorer{scorerQuery.trim() ? ` "${scorerQuery.trim()}"` : ''}
+                            </button>
+                        </>
+                    )}
 
                     <div className="confirm-actions">
                         <button onClick={() => setShowScorerAdd(false)}>Cancel</button>
-                        <button disabled={!scorerDraft} onClick={addRegisteredScorer}>Add</button>
+                        <button disabled={!scorerDraft} onClick={() => addRegisteredScorer()}>Add</button>
                     </div>
                 </div>
             </ModalBackdrop>
