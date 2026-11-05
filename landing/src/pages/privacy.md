@@ -82,7 +82,7 @@ We use personal information to:
 
 - Improve the Service's reliability and functionality;
 
-- Enforce our Terms and Conditions; and
+- Enforce our Terms of Service; and
 
 - Comply with legal obligations and protect legal rights.
 
