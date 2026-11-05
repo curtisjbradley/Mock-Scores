@@ -11,7 +11,7 @@
     border: 1px solid var(--border);
     border-radius: 1rem;
     background: var(--surface);
-    box-shadow: var(--shadow);
+    box-shadow: none;
     display: flex;
     flex-direction: column;
     gap: 0.75rem;
@@ -161,7 +161,7 @@
 .ss-chip--submitted { background: var(--success-subtle-bg); color: var(--success-fg); }
 .ss-chip--pending   { background: var(--surface-muted); color: var(--text-muted); }
 .ss-chip--missing   { background: var(--danger-bg); color: var(--danger); border: 1px solid var(--danger); }
-.ss-chip--danger    { background: var(--danger-bg); color: var(--danger); border: 1px solid var(--danger); }
+.ss-chip--danger    { background: var(--surface-muted); color: var(--danger); border: 1px solid var(--danger); }
 
 .dash-school-link {
     background: none;
@@ -821,17 +821,73 @@
 
 .pc-summary-matchup {
     display: grid;
-    grid-template-columns: minmax(11rem, 1fr) minmax(11rem, 1fr) minmax(8rem, 0.7fr);
+    grid-template-columns: minmax(11rem, 1fr) minmax(11rem, 1fr) minmax(8rem, 0.7fr) minmax(9rem, 0.8fr);
     gap: 0.9rem;
     flex: 1;
     min-width: 0;
 }
 
-.pc-summary-matchup > div {
+.pc-summary-matchup > div,
+.pc-summary-edit-target,
+.pc-summary-edit-field {
     display: flex;
     flex-direction: column;
     gap: 0.2rem;
     min-width: 0;
+}
+
+.pc-summary-edit-target {
+    position: relative;
+    padding: 0.2rem 0.3rem;
+    border: 0;
+    border-radius: 0.4rem;
+    background: none;
+    color: inherit;
+    font: inherit;
+    text-align: left;
+    cursor: pointer;
+}
+
+.pc-summary-edit-target:hover { background: var(--surface-muted); }
+.pc-summary-edit-target:focus-visible { outline: 0.1875rem solid var(--focus); outline-offset: 0.1rem; }
+.pc-summary-edit-hint { color: var(--text-muted); font-size: 0.68rem; font-weight: 700; opacity: 0; transition: opacity 120ms ease; }
+.pc-summary-edit-target:hover .pc-summary-edit-hint, .pc-summary-edit-target:focus-visible .pc-summary-edit-hint { opacity: 1; }
+.pc-summary-edit-target--unassigned {
+    background: var(--warning-bg);
+    box-shadow: inset 0 0 0 1px var(--warning-fg);
+}
+.pc-summary-edit-target--unassigned:hover { background: var(--warning-bg); filter: brightness(0.97); }
+.pc-summary-edit-target--unassigned .pc-summary-edit-hint { color: var(--warning-fg); opacity: 1; }
+.pc-summary-value--unassigned {
+    align-self: flex-start;
+    padding: 0.12rem 0.4rem;
+    border: 1px dashed var(--warning-fg);
+    border-radius: 0.25rem;
+    color: var(--warning-fg);
+    font-weight: 700;
+}
+.pc-summary-edit-actions { display: flex; align-items: flex-end; gap: 0.4rem; }
+.pc-summary-issues { display: flex; flex-wrap: wrap; gap: 0.25rem; }
+.pc-summary-courtroom--editing { gap: 0.4rem !important; }
+.pc-edit-matchup-modal { width: min(100%, 34rem); }
+.pc-edit-matchup-fields { display: grid; grid-template-columns: 1fr 1fr; gap: 0.75rem; margin: 1rem 0; }
+.pc-edit-courtroom-field { display: flex; flex-direction: column; gap: 0.35rem; margin: 1rem 0; }
+.pc-courtroom-help { margin: 0; color: var(--text-muted); font-size: 0.82rem; line-height: 1.4; }
+.pc-courtroom-typeahead { display: flex; flex-direction: column; gap: 0.5rem; }
+.pc-courtroom-results { display: flex; max-height: 12rem; flex-direction: column; overflow-y: auto; border: 1px solid var(--border); border-radius: var(--radius); background: var(--surface); }
+.pc-courtroom-results-label, .pc-courtroom-no-results { padding: 0.45rem 0.65rem; color: var(--text-muted); font-size: 0.75rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.04em; }
+.pc-courtroom-no-results { font-weight: 500; text-transform: none; letter-spacing: normal; }
+.pc-courtroom-option, .pc-create-courtroom-btn { padding: 0.55rem 0.65rem; border: 0; border-bottom: 1px solid var(--border); background: none; color: var(--text); font: inherit; font-size: 0.85rem; text-align: left; cursor: pointer; }
+.pc-courtroom-option:last-of-type { border-bottom: 0; }
+.pc-courtroom-option:hover, .pc-courtroom-option--selected { background: var(--primary-subtle); color: var(--primary-dark); }
+.pc-create-courtroom-btn { border-bottom: 0; color: var(--primary); font-weight: 700; }
+.pc-create-courtroom-btn:hover { background: var(--primary-subtle); }
+.pc-create-courtroom-btn:disabled { cursor: wait; opacity: 0.7; }
+.pc-clear-courtroom-btn { align-self: flex-start; padding: 0; border: 0; background: none; color: var(--text-muted); font: inherit; font-size: 0.82rem; text-decoration: underline; text-underline-offset: 0.15rem; cursor: pointer; }
+.pc-clear-courtroom-btn:hover, .pc-clear-courtroom-btn--selected { color: var(--danger); }
+
+@media (max-width: 40rem) {
+    .pc-edit-matchup-fields { grid-template-columns: 1fr; }
 }
 
 .pc-pairing-label {
@@ -857,6 +913,87 @@
     color: var(--text-muted);
     font-size: 0.85rem;
 }
+
+.pc-summary-progress { display: flex; flex-direction: column; gap: 0.3rem; min-width: 8rem; color: var(--text-muted); font-size: 0.82rem; }
+.pc-summary-progress progress { width: 100%; height: 0.35rem; accent-color: var(--primary); }
+
+.pc-ready-status {
+    color: var(--text);
+    font-weight: 600;
+}
+
+.pc-ready-status--ready { color: var(--success-fg); }
+
+.pc-next-step {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 0.75rem;
+    padding: 0.6rem 0.75rem;
+    border-radius: var(--radius);
+    background: var(--primary-subtle);
+    color: var(--text);
+    font-size: 0.84rem;
+}
+
+.pc-next-step-action,
+.pc-team-setup-link {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    border: 0;
+    border-radius: 0.35rem;
+    background: var(--primary);
+    color: var(--white);
+    padding: 0.35rem 0.55rem;
+    font: inherit;
+    font-size: 0.8rem;
+    font-weight: 700;
+    text-decoration: none;
+    white-space: nowrap;
+    cursor: pointer;
+}
+
+.pc-next-step-action:hover,
+.pc-team-setup-link:hover { background: var(--primary-dark); }
+
+.pc-setup-section {
+    padding: 0.75rem;
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    background: var(--surface-muted);
+}
+
+.pc-section-heading {
+    display: flex;
+    align-items: baseline;
+    justify-content: space-between;
+    gap: 0.5rem;
+    color: var(--text-muted);
+    font-size: 0.78rem;
+}
+
+.pc-section-heading h3 {
+    margin: 0;
+    color: var(--text);
+    font-size: 0.9rem;
+}
+
+.pc-setup-checklist {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 0.35rem 1rem;
+    margin: 0.6rem 0;
+    padding: 0;
+    list-style: none;
+    font-size: 0.82rem;
+}
+
+.pc-setup-checklist li { display: flex; align-items: flex-start; gap: 0.35rem; }
+.pc-setup-item--complete { color: var(--success-fg); }
+.pc-setup-item--incomplete { color: var(--text-muted); }
+.pc-team-preparation-status { margin: 0.6rem 0 0; color: var(--text-muted); font-size: 0.82rem; }
+.pc-empty-scorers { margin: 0; color: var(--text-muted); font-size: 0.85rem; }
 
 .pc-roster-status {
     align-self: flex-start;
@@ -1015,7 +1152,7 @@
     border: none;
     font-family: inherit;
     cursor: pointer;
-    padding: 0.2rem 0.3rem;
+    padding: 0.2rem 5.5rem 0.2rem 0.3rem;
     border-radius: 0.4rem;
     transition: background 120ms ease;
 }
@@ -1032,13 +1169,18 @@ button.pc-matchup-col:hover {
     position: absolute;
     top: 0.2rem;
     right: 0.3rem;
-    font-size: 0.7rem;
+    font-size: 0.68rem;
+    font-weight: 700;
     color: var(--text-muted);
-    opacity: 0;
+    opacity: 0.6;
     transition: opacity 120ms ease;
 }
 
 button.pc-matchup-col:hover .pc-col-edit-hint {
+    opacity: 1;
+}
+
+button.pc-matchup-col:focus-visible .pc-col-edit-hint {
     opacity: 1;
 }
 
@@ -1076,6 +1218,25 @@ button.pc-matchup-col:hover .pc-col-edit-hint {
 .pc-modal-field {
     display: block;
     margin-bottom: 0.75rem;
+}
+
+.pc-add-scorer-modal {
+    display: flex;
+    flex-direction: column;
+    gap: 0.9rem;
+}
+
+.pc-add-scorer-modal .pc-modal-title,
+.pc-add-scorer-modal .pc-modal-text--muted,
+.pc-add-scorer-modal .pc-modal-field,
+.pc-add-scorer-modal .pc-create-offline-btn { margin: 0; }
+
+.pc-add-scorer-modal .sc-checkbox-label { margin: 0; }
+
+.pc-add-scorer-modal .confirm-actions {
+    margin-top: 0.15rem;
+    padding-top: 0.9rem;
+    border-top: 1px solid var(--border);
 }
 
 .pc-modal-text {

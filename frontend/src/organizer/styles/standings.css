@@ -32,6 +32,28 @@
 .dash-diff--pos { color: var(--success-strong); font-weight: 600; }
 .dash-diff--neg { color: var(--danger); font-weight: 600; }
 
+.st-config-error {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 1rem;
+    padding: 0.9rem 1rem;
+    border: 1px solid var(--danger);
+    border-radius: var(--radius);
+    background: var(--danger-subtle-bg);
+    color: var(--danger);
+}
+
+.st-config-error > div { display: flex; flex-direction: column; gap: 0.25rem; min-width: 0; }
+.st-config-error strong { color: var(--danger); }
+.st-config-error span { color: var(--text); overflow-wrap: anywhere; }
+.st-config-error .btn-secondary { flex: 0 0 auto; background: var(--surface); white-space: nowrap; }
+
+@media (max-width: 40rem) {
+    .st-config-error { align-items: stretch; flex-direction: column; }
+    .st-config-error .btn-secondary { width: 100%; white-space: normal; }
+}
+
 /* ── StandingsBuilder ─────────────────────────────────────────────────────── */
 .sb-workspaces { display: flex; flex-direction: column; gap: 1rem; }
 

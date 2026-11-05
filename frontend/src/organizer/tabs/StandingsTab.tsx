@@ -1,11 +1,11 @@
 import { lazy, Suspense, useEffect, useMemo, useState } from 'react'
+import { useNavigate } from 'react-router-dom'
 import { apiFetch } from '../../auth/auth'
 import { computeStandings, parseDsl } from '@mock-scores/standings-dsl'
 import type { IAwardNomination, IStandingsTeam } from '@mock-scores/shared'
 import AddButton from '../../shared/components/AddButton'
 import { formatRank } from '../../shared/standings'
 import '../styles/standings.css'
-import {useNavigate} from "react-router-dom";
 
 const TiebreakerViewer = lazy(() => import('@mock-scores/standings-dsl/react').then(m => ({ default: m.TiebreakerViewer })))
 
@@ -245,6 +245,7 @@ function escapeCsvField(value: string): string {
 }
 
 export default function StandingsTab({ tournamentId }: { tournamentId: string }) {
+    const navigate = useNavigate()
     const [payload, setPayload] = useState<StandingsApiPayload | null>(null)
     const [selected, setSelected] = useState<Set<string>>(new Set())
     const [error, setError] = useState<string | null>(null)
@@ -295,8 +296,17 @@ export default function StandingsTab({ tournamentId }: { tournamentId: string })
     const result = useMemo(() => {
         if (!payload?.config || selected.size === 0) return null
 
-        const filtered = payload.ballots.filter(b => selected.has(b.round_id))
-        return computeFromBallots(filtered, payload.teams, payload.config)
+        try {
+            const filtered = payload.ballots.filter(b => selected.has(b.round_id))
+            return computeFromBallots(filtered, payload.teams, payload.config)
+        } catch {
+            return null
+        }
+    }, [payload, selected])
+
+    const configError = useMemo(() => {
+        if (!payload?.config || selected.size === 0) return null
+        try { parseDsl(payload.config.dsl); return null } catch (cause) { return cause instanceof Error ? cause.message : 'Invalid standings configuration.' }
     }, [payload, selected])
 
     if (error) {
@@ -362,6 +372,8 @@ export default function StandingsTab({ tournamentId }: { tournamentId: string })
                     No standings configuration set. Configure one in the Tiebreakers tab.
                 </p>
             )}
+
+            {configError && <div className="st-config-error" role="alert"><div><strong>Standings configuration needs attention.</strong><span>{configError}</span></div><button className="btn-secondary" onClick={() => navigate('?page=tiebreakers')}>Fix configuration</button></div>}
 
             {/* Export buttons */}
             {payload.ballots.length > 0 && (

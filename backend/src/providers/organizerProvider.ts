@@ -691,6 +691,34 @@ export async function getRounds(tournamentId: string): Promise<IRoundRow[]> {
     return result.rows;
 }
 
+/** One payload for the rounds list, including its operational-readiness summary. */
+export async function getRoundsReadiness(tournamentId: string) {
+    const rounds = await getRounds(tournamentId);
+    return Promise.all(rounds.map(async round => {
+        const [pairings, ballotStatuses, rosterStatuses] = await Promise.all([
+            getPairings(round.round_id), getBallotStatus(round.round_id), getRoundPairingRosterStatuses(round.round_id),
+        ]);
+        const scorers = await Promise.all(pairings.map(pairing => getPairingScorers(pairing.pairing_id)));
+        const warnings: { issue: string; label: string }[] = [];
+        const courtroomAssignments = new Map<string, number>();
+        for (const pairing of pairings) {
+            if (pairing.courtroom) courtroomAssignments.set(pairing.courtroom, (courtroomAssignments.get(pairing.courtroom) ?? 0) + 1);
+        }
+        if (!pairings.length) warnings.push({ issue: 'no-pairings', label: 'No matchups' });
+        if (pairings.some(pairing => !pairing.courtroom)) warnings.push({ issue: 'missing-courtroom', label: 'Missing courtroom' });
+        if ([...courtroomAssignments.values()].some(count => count > 1)) warnings.push({ issue: 'double-booked-courtroom', label: 'Double-booked courtroom' });
+        if (scorers.some(list => !list.length)) warnings.push({ issue: 'missing-scorers', label: 'Missing scorers' });
+        if (scorers.some(list => !list.some(scorer => scorer.is_presider))) warnings.push({ issue: 'missing-presider', label: 'Missing presider' });
+        if (rosterStatuses.some(status => status.roster_status === 'none')) warnings.push({ issue: 'missing-roster', label: 'Missing roster' });
+        if (rosterStatuses.some(status => status.call_order_status === 'none')) warnings.push({ issue: 'missing-call-order', label: 'Missing call order' });
+        return {
+            ...round,
+            ballot: { total: ballotStatuses.reduce((sum, status) => sum + status.total_scorers, 0), submitted: ballotStatuses.reduce((sum, status) => sum + status.submitted, 0) },
+            readiness: { pairings: pairings.length, warnings },
+        };
+    }));
+}
+
 export async function getRound(tournamentID: string, roundID: string): Promise<IRoundRow> {
     const row = (await dbQuery<IRoundRow>('SELECT * FROM rounds WHERE round_id=$1 AND tournament_id=$2', [roundID, tournamentID]))?.rows[0];
     if (!row) throw new NotFoundError('round');
@@ -801,7 +829,16 @@ async function copyDefaultsForRound(client: PoolClient, roundID: string): Promis
                         ON CONFLICT ON CONSTRAINT student_assignments_pairing_team_field_witness_key DO NOTHING`, [roundID],);
 }
 
-export async function getTeams(tournamentID: string): Promise<ITeam[]> {
+export type TeamIssueFilter = 'without-rosters' | 'without-default-assignments' | 'without-default-call-orders' | 'without-coaches';
+
+export async function getTeams(tournamentID: string, issue?: TeamIssueFilter): Promise<ITeam[]> {
+    const issueClauses: Record<TeamIssueFilter, string> = {
+        'without-rosters': 'AND NOT EXISTS (SELECT 1 FROM team_rostered_students trs WHERE trs.team_id = t.id)',
+        'without-default-assignments': 'AND NOT EXISTS (SELECT 1 FROM default_student_assignments dsa WHERE dsa.team_id = t.id)',
+        'without-default-call-orders': 'AND NOT EXISTS (SELECT 1 FROM default_witness_call_order dwco WHERE dwco.team_id = t.id)',
+        'without-coaches': 'AND NOT EXISTS (SELECT 1 FROM team_coaches tc WHERE tc.team_id = t.id)',
+    };
+    const filter = issue ? issueClauses[issue] : '';
     const joined = (await dbQuery<ITeam>(`SELECT t.id,
                                                  t.tournament_id,
                                                  t.name,
@@ -821,7 +858,7 @@ export async function getTeams(tournamentID: string): Promise<ITeam[]> {
                                               ORDER BY sent_at DESC
                                               LIMIT 1
                                               ) em ON true
-                                          WHERE t.tournament_id = $1`, [tournamentID]))?.rows ?? [];
+                                          WHERE t.tournament_id = $1 ${filter}`, [tournamentID]))?.rows ?? [];
     const invited = (await dbQuery<ITeam>(`SELECT t.id,
                                                   t.tournament_id,
                                                   t.name,
@@ -840,7 +877,7 @@ export async function getTeams(tournamentID: string): Promise<ITeam[]> {
                                                ORDER BY sent_at DESC
                                                LIMIT 1
                                                ) em ON true
-                                           WHERE t.tournament_id = $1
+                                           WHERE t.tournament_id = $1 ${filter}
                                              AND NOT EXISTS (SELECT 1
                                                              FROM team_coaches tc
                                                              WHERE tc.team_id = t.id

@@ -280,7 +280,7 @@ export default function ScorersTab({ tournamentId }: { tournamentId: string }) {
                 <button className="btn-primary tab-actions-import" onClick={() => setShowImport(true)}>Import CSV</button>
             </div>
 
-            <div className="dash-table-scroll">
+            <div className="dash-table-scroll scorers-table-wrap">
                 <table className="dash-standings-table">
                     <thead><tr><th>Name</th><th>Type</th><th>Email</th><th>Preside</th><th>Prefers</th><th></th></tr></thead>
                     <tbody>

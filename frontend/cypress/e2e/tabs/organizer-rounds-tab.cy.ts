@@ -77,13 +77,13 @@ describe('Rounds Tab', () => {
     cy.get('.dash-round-summary').eq(2).find('input.dash-round-name-input').should('have.value', 'Round 3')
   })
 
-  it('clicking Open → navigates to round view', () => {
+  it('clicking a round navigates to its round view', () => {
     cy.intercept('GET', '/organizer/tournament/tourney-1/rounds/r-1', { statusCode: 200, body: ROUNDS[0] }).as('getRound')
     cy.intercept('GET', '/organizer/tournament/tourney-1/rounds/r-1/pairings', { statusCode: 200, body: [] }).as('getPairings')
     cy.intercept('GET', '/organizer/tournament/tourney-1/scorers', { statusCode: 200, body: [] }).as('getScorers')
     cy.intercept('GET', '/organizer/tournament/tourney-1/courtrooms', { statusCode: 200, body: [] }).as('getCourtrooms')
     cy.intercept('GET', '/organizer/tournament/tourney-1/scorer-conflicts', { statusCode: 200, body: [] }).as('getConflicts')
-    cy.get('.dash-round-summary').first().contains('button', 'Open →').click()
+    cy.get('.dash-round-summary').first().click()
     cy.url().should('include', '/organizer/tourney-1/round/r-1')
   })
 

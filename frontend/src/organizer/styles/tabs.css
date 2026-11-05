@@ -157,6 +157,42 @@
     overflow-x: auto;
 }
 
+/* The team directory becomes a labeled card list on narrow screens. */
+@media (max-width: 40rem) {
+    .teams-table-wrap { overflow-x: visible; }
+    .teams-table-wrap .dash-standings-table,
+    .teams-table-wrap .dash-standings-table tbody,
+    .teams-table-wrap .dash-standings-table tr,
+    .teams-table-wrap .dash-standings-table td { display: block; width: 100%; }
+    .teams-table-wrap .dash-standings-table { border: 0; background: transparent; }
+    .teams-table-wrap .dash-standings-table thead { display: none; }
+    .teams-table-wrap .dash-standings-table tr {
+        margin-bottom: 0.75rem; border: 1px solid var(--border); border-radius: var(--radius);
+        background: var(--surface); overflow: hidden;
+    }
+    .teams-table-wrap .dash-standings-table td {
+        display: flex; align-items: center; justify-content: space-between; gap: 1rem;
+        padding: 0.65rem 0.8rem; text-align: right;
+    }
+    .teams-table-wrap .dash-standings-table td::before {
+        content: attr(data-label); flex: 0 0 5.5rem; color: var(--text-muted);
+        font-size: 0.75rem; font-weight: 700; text-align: left; text-transform: uppercase;
+    }
+    .teams-table-wrap .dash-actions-cell { justify-content: flex-end; }
+
+    .scorers-table-wrap { overflow-x: visible; }
+    .scorers-table-wrap .dash-standings-table,
+    .scorers-table-wrap .dash-standings-table tbody,
+    .scorers-table-wrap .dash-standings-table tr,
+    .scorers-table-wrap .dash-standings-table td { display: block; width: 100%; }
+    .scorers-table-wrap .dash-standings-table { border: 0; background: transparent; }
+    .scorers-table-wrap .dash-standings-table thead { display: none; }
+    .scorers-table-wrap .dash-standings-table tr { margin-bottom: 0.75rem; border: 1px solid var(--border); border-radius: var(--radius); background: var(--surface); overflow: hidden; }
+    .scorers-table-wrap .dash-standings-table td { padding: 0.6rem 0.8rem; }
+    .scorers-table-wrap .dash-standings-table td:first-child { font-size: 1rem; font-weight: 700; }
+    .scorers-table-wrap .dash-actions-cell { justify-content: flex-start; flex-wrap: wrap; }
+}
+
 .dash-edit-form {
     display: flex;
     gap: 0.4rem;
@@ -246,6 +282,30 @@ select.dash-edit-input:hover {
 
 .tab-actions-import {
     margin-left: 0.5rem;
+}
+
+@media (max-width: 40rem) {
+    .teams-tab-actions {
+        display: grid;
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+        gap: 0.5rem;
+        justify-content: stretch;
+        width: 100%;
+    }
+
+    .teams-tab-actions .btn-primary,
+    .teams-tab-actions .btn-secondary {
+        width: 100%;
+        min-width: 0;
+        height: auto;
+        min-height: 2.5rem;
+        padding: 0.5rem 0.65rem;
+        margin: 0;
+        line-height: 1.2;
+        white-space: normal;
+    }
+
+    .teams-tab-actions__full { grid-column: 1 / -1; }
 }
 
 .dash-empty-cell {

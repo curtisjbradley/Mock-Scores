@@ -89,20 +89,21 @@ export function EditTeamModal({ team, existingNames, onClose, onSave }: {
     team: ITeam
     existingNames: string[]
     onClose: () => void
-    onSave: (name: string, code: string) => void
+    onSave: (name: string, code: string, email: string) => void
 }) {
     const [name, setName] = useState(team.name)
     const [code, setCode] = useState(team.code)
+    const [email, setEmail] = useState(team.coach_email)
 
     const isDuplicate = name.trim().toLowerCase() !== team.name.toLowerCase() &&
         existingNames.some(n => n.toLowerCase() === name.trim().toLowerCase())
-    const valid = name.trim() && !isDuplicate
+    const valid = name.trim() && !isDuplicate && isValidEmail(email)
     const nameRef = useAutoFocus<HTMLInputElement>()
 
     const handleSubmit = (e: React.FormEvent) => {
         e.preventDefault()
         if (!valid) return
-        onSave(name.trim(), code.trim() || name.trim())
+        onSave(name.trim(), code.trim() || name.trim(), email.trim())
         onClose()
     }
 
@@ -120,6 +121,9 @@ export function EditTeamModal({ team, existingNames, onClose, onSave }: {
                         className="modal-input"
                         value={code} onChange={e => setCode(e.target.value)}
                         placeholder={name.trim() || team.name} />
+                    <label htmlFor="edit-team-email" className="modal-label">Coach email</label>
+                    <input id="edit-team-email" type="email" required className={`modal-input${email && !isValidEmail(email) ? ' modal-input--invalid' : ''}`}
+                        value={email} onChange={e => setEmail(e.target.value)} />
                     <div className="confirm-actions">
                         <button type="button" className="btn-cancel" onClick={onClose}>Cancel</button>
                         <button type="submit" className="btn-confirm" disabled={!valid}>Save</button>

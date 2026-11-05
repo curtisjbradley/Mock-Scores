@@ -49,6 +49,8 @@ export interface AwardCategory {
     name: string
     minNominees: number
     maxNominees: number
+    /** New awards are role-based unless configured otherwise after creation. */
+    openToAll: boolean
 }
 
 export const emptyInfo: TournamentInfo = {
@@ -82,7 +84,7 @@ let _acSeq = 0
 const acUid = () => `ac${_acSeq++}`
 
 export function makeAwardCategory(name = '', minNominees = 1, maxNominees = 3): AwardCategory {
-    return { id: acUid(), name, minNominees, maxNominees }
+    return { id: acUid(), name, minNominees, maxNominees, openToAll: false }
 }
 
 export const defaultWitnessCategory = (): ScoringCategory => ({

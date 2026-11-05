@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react'
-import { Link } from 'react-router-dom'
+import { Link, useNavigate, useSearchParams } from 'react-router-dom'
 import type { ITeam } from '@mock-scores/shared'
 import { ChangeTeamOwnerModal, ConfirmRemoveModal, EditTeamModal } from '../components/modals'
 import Section from './Section'
@@ -7,7 +7,6 @@ import AddTeamModal from '../components/AddTeamModal'
 import CsvImportModal from '../../shared/components/CsvImportModal'
 import { apiFetch } from '../../auth/auth'
 import { useConfirmRemove } from '../../shared/hooks/useConfirmRemove'
-import InlineEmailEdit from '../../shared/components/InlineEmailEdit'
 import DangerButton from '../../shared/components/DangerButton'
 import AddButton from '../../shared/components/AddButton'
 import StatusChip from '../../shared/components/StatusChip'
@@ -15,22 +14,31 @@ import EmailStatusBadge from '../../shared/components/EmailStatusBadge'
 
 
 export default function TeamsTab({ tournamentId }: { tournamentId: string }) {
+    const [searchParams] = useSearchParams()
+    const navigate = useNavigate()
+    const requestedIssue = searchParams.get('issue')
+    const teamIssues = new Set(['without-rosters', 'without-default-assignments', 'without-default-call-orders', 'without-coaches'])
+    const issue = requestedIssue && teamIssues.has(requestedIssue) ? requestedIssue : null
+    const issueLabels: Record<string, string> = {
+        'without-rosters': 'Teams Without Rosters',
+        'without-default-assignments': 'Teams Without Default Assignments',
+        'without-default-call-orders': 'Teams Without Call Orders',
+        'without-coaches': 'Teams Without Coaches',
+    }
     const [teams, setTeams] = useState<ITeam[]>([])
     const [showModal, setShowModal] = useState(false)
     const confirmRemove = useConfirmRemove<ITeam>()
     const [editingTeam, setEditingTeam] = useState<ITeam | null>(null)
-    const [editingEmailId, setEditingEmailId] = useState<string | null>(null)
-    const [editEmail, setEditEmail] = useState('')
     const [showImport, setShowImport] = useState(false)
     const [error, setError] = useState<string | null>(null)
     const [ownerChange, setOwnerChange] = useState<{ team: ITeam; email: string } | null>(null)
 
     useEffect(() => {
-        apiFetch(`/organizer/tournament/${tournamentId}/teams`)
+        apiFetch(`/organizer/tournament/${tournamentId}/teams${issue ? `?issue=${issue}` : ''}`)
             .then(r => r.json())
             .then(setTeams)
             .catch(console.error)
-    }, [tournamentId])
+    }, [tournamentId, issue])
 
     const putTeam = async (team: ITeam, patch: Partial<ITeam>): Promise<boolean> => {
         const res = await apiFetch(`/organizer/tournament/${tournamentId}/teams`, {
@@ -93,7 +101,6 @@ export default function TeamsTab({ tournamentId }: { tournamentId: string }) {
         }
         const refreshed = await apiFetch(`/organizer/tournament/${tournamentId}/teams`)
         if (refreshed.ok) setTeams(await refreshed.json() as ITeam[])
-        setEditingEmailId(null)
         setOwnerChange(null)
     }
 
@@ -110,50 +117,28 @@ export default function TeamsTab({ tournamentId }: { tournamentId: string }) {
     }
 
     return (
-        <Section title="Teams" description="Manage invited teams">
+        <Section title={issue ? issueLabels[issue] : 'Teams'} description={issue ? 'Only teams requiring attention are shown.' : 'Manage invited teams'}>
             {error && <p className="coach-save-error" role="alert">{error}</p>}
-            <div className="tab-actions">
-                <AddButton onClick={() => setShowModal(true)}>+ Add team</AddButton>
+            <div className="tab-actions teams-tab-actions">
+                {issue && <button className="btn-secondary teams-tab-actions__full" onClick={() => navigate('?page=teams')}>Show all teams</button>}
+                <AddButton className="teams-tab-actions__full" onClick={() => setShowModal(true)}>+ Add team</AddButton>
                 <button className="btn-primary tab-actions-import" onClick={() => setShowImport(true)}>Import CSV</button>
                 <button className="btn-secondary tab-actions-import" onClick={() => { void exportRosters() }}>Export All Rosters</button>
             </div>
 
-            <div className="dash-table-scroll">
+            <div className="dash-table-scroll teams-table-wrap">
                 <table className="dash-standings-table">
                     <thead><tr><th>Team</th><th>Code</th><th>Contact</th><th>Status</th><th></th></tr></thead>
                     <tbody>
                         {teams.map(team => (
                             <tr key={team.id}>
-                                <td><Link className="dash-table-link" to={`/organizer/${tournamentId}/school/${team.id}`}>{team.name}</Link></td>
-                                <td>{team.code}</td>
-                                <td>
-                                    {editingEmailId === team.id
-                                        ? <InlineEmailEdit
-                                            value={editEmail}
-                                            onChange={setEditEmail}
-                                            onSave={async () => {
-                                                if (team.has_joined && editEmail.trim().toLowerCase() !== team.coach_email.toLowerCase()) {
-                                                    setOwnerChange({ team, email: editEmail.trim() })
-                                                    return
-                                                }
-                                                const ok = await putTeam(team, { coach_email: editEmail })
-                                                if (ok) setEditingEmailId(null)
-                                            }}
-                                            onCancel={() => setEditingEmailId(null)}
-                                          />
-                                        : <span className="dash-judge-name">
-                                            {team.coach_email}
-                                            <EmailStatusBadge status={team.email_status} />
-                                          </span>
-                                    }
-                                </td>
-                                <td><StatusChip label={team.has_joined ? 'accepted' : 'pending'} variant={team.has_joined ? 'submitted' : 'pending'} /></td>
-                                <td>
+                                <td data-label="Team"><Link className="dash-table-link" to={`/organizer/${tournamentId}/school/${team.id}`}>{team.name}</Link></td>
+                                <td data-label="Code">{team.code}</td>
+                                <td data-label="Contact"><span className="dash-judge-name">{team.coach_email}<EmailStatusBadge status={team.email_status} /></span></td>
+                                <td data-label="Status"><StatusChip label={team.has_joined ? 'accepted' : 'pending'} variant={team.has_joined ? 'submitted' : 'pending'} /></td>
+                                <td data-label="Actions">
                                     <div className="dash-actions-cell">
                                         <button className="dash-remove-btn" onClick={() => setEditingTeam(team)}>Edit</button>
-                                        {editingEmailId !== team.id && (
-                                            <button className="dash-remove-btn" onClick={() => { setEditingEmailId(team.id); setEditEmail(team.coach_email) }}>Edit email</button>
-                                        )}
                                         <DangerButton onClick={() => confirmRemove.open(team)}>Remove</DangerButton>
                                     </div>
                                 </td>
@@ -176,7 +161,14 @@ export default function TeamsTab({ tournamentId }: { tournamentId: string }) {
                     team={editingTeam}
                     existingNames={teams.filter(t => t.id !== editingTeam.id).map(t => t.name)}
                     onClose={() => setEditingTeam(null)}
-                    onSave={(name, code) => { void putTeam(editingTeam, { name, code }) }}
+                    onSave={(name, code, email) => {
+                        if (editingTeam.has_joined && email.toLowerCase() !== editingTeam.coach_email.toLowerCase()) {
+                            void putTeam(editingTeam, { name, code })
+                            setOwnerChange({ team: editingTeam, email })
+                        } else {
+                            void putTeam(editingTeam, { name, code, coach_email: email })
+                        }
+                    }}
                 />
             )}
 

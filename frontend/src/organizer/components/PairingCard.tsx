@@ -7,6 +7,7 @@ import TeamSelectOptions from '../../shared/components/TeamSelectOptions'
 import DangerButton from '../../shared/components/DangerButton'
 import Icon from '../../shared/components/Icon'
 import EmailStatusBadge from '../../shared/components/EmailStatusBadge'
+import StatusChip from '../../shared/components/StatusChip'
 import ModalBackdrop from '../../shared/components/ModalBackdrop'
 import { useAutoFocus } from '../../shared/hooks/useAutoFocus'
 import { v4 as randomUUID } from 'uuid'
@@ -32,6 +33,7 @@ interface Props {
     onUpdate: (updated: IPairing) => void
     onScorerAssigned: (scorer: IPairingScorer) => void
     onScorerCreated: (scorer: IScorer) => void
+    onCourtroomCreated: (courtroom: ICourtroom) => void
     onScorerRemoved: (assignmentId: string) => void
     onPresiderChanged: (assignmentId: string | null, onlyTiebreaker?: boolean) => void
 }
@@ -41,22 +43,23 @@ interface Props {
  * Supports inline editing of courtroom and team assignments, and manages
  * scorer assignment / presider selection.
  */
-export default function PairingCard({ pairing, pairingNumber, teams, courtrooms, scorers, assignedScorers, ballotStatus, rosterStatuses, linksSent, tournamentId, roundId, round, conflictSet, courtroomInUse, onRemove, onUpdate, onScorerAssigned, onScorerCreated, onScorerRemoved, onPresiderChanged }: Props) {
+export default function PairingCard({ pairing, pairingNumber, teams, courtrooms, scorers, assignedScorers, ballotStatus, rosterStatuses, linksSent, tournamentId, roundId, round, conflictSet, courtroomInUse, onRemove, onUpdate, onScorerAssigned, onScorerCreated, onCourtroomCreated, onScorerRemoved, onPresiderChanged }: Props) {
     const [expanded, setExpanded] = useState(false)
     const [editingCourtroom, setEditingCourtroom] = useState(false)
     const [courtroomDraft, setCourtroomDraft] = useState(pairing.courtroom ?? '')
+    const [courtroomQuery, setCourtroomQuery] = useState('')
+    const [creatingCourtroom, setCreatingCourtroom] = useState(false)
 
     const [editingTeams, setEditingTeams] = useState(false)
     const [prosDraft, setProsDraft] = useState(pairing.p_team)
     const [defDraft, setDefDraft] = useState(pairing.d_team)
 
     const [showScorerAdd, setShowScorerAdd] = useState(false)
+    const [scorerAddMode, setScorerAddMode] = useState<'existing' | 'create'>('existing')
     const [scorerDraft, setScorerDraft] = useState('')
     const [scorerQuery, setScorerQuery] = useState('')
     const [newScorerIsPaper, setNewScorerIsPaper] = useState(false)
     const [newScorerEmail, setNewScorerEmail] = useState('')
-    const [newScorerWillingToPreside, setNewScorerWillingToPreside] = useState(true)
-    const [newScorerPreferences, setNewScorerPreferences] = useState<string[]>([])
     const [manualEntryScorer, setManualEntryScorer] = useState<{ name: string; assignmentId: string } | null>(null)
     const [removeScorerTarget, setRemoveScorerTarget] = useState<{ name: string; assignmentId: string } | null>(null)
 
@@ -67,35 +70,25 @@ export default function PairingCard({ pairing, pairingNumber, teams, courtrooms,
     const [onlyTiebreakerDraft, setOnlyTiebreakerDraft] = useState(false)
 
     // Programmatic focus (accessible replacement for the autoFocus attribute).
-    const courtroomSelectRef = useAutoFocus<HTMLSelectElement>(editingCourtroom)
+    const courtroomSelectRef = useAutoFocus<HTMLInputElement>(editingCourtroom)
     const scorerSearchRef = useAutoFocus<HTMLInputElement>(showScorerAdd)
 
     const teamName = (tid: string) => {
         const t = teams.find(t => t.id === tid)
-        return t ? `${t.code} - ${t.name}` : '-'
+        return t ? `${t.code} - ${t.name}` : 'Unassigned'
     }
 
+    const isTeamUnassigned = (tid: string) => !teams.some(t => t.id === tid)
+
     const courtroomName = (id: string | null) => {
-        if (!id) return 'No courtroom'
+        if (!id) return 'Unassigned'
         const c = courtrooms.find(c => c.id === id)
         return c ? c.name + (c.location ? ` (${c.location})` : '') : id
     }
 
-    const rosterStatusLabel = (status: IPairingRosterStatus['roster_status'] | undefined) => {
-        switch (status) {
-            case 'complete': return 'Roster completed'
-            case 'default': return 'Using defaults'
-            default: return 'No roster'
-        }
-    }
-
-    const callOrderStatusLabel = (status: IPairingRosterStatus['call_order_status'] | undefined) => {
-        switch (status) {
-            case 'complete': return 'Call order assigned'
-            case 'default': return 'Using default order'
-            default: return 'No call order'
-        }
-    }
+    const prosecutionUnassigned = isTeamUnassigned(pairing.p_team)
+    const defenseUnassigned = isTeamUnassigned(pairing.d_team)
+    const courtroomUnassigned = !pairing.courtroom
 
     const openBallot = () => {
         const qs = new URLSearchParams()
@@ -121,7 +114,21 @@ export default function PairingCard({ pairing, pairingNumber, teams, courtrooms,
 
     const assignedIds = new Set(assignedScorers.filter(s => s.type === 'registered').map(s => s.scorer_id))
     const availableScorers = scorers.filter(s => !assignedIds.has(s.scorer_id))
-
+    const hasPresider = assignedScorers.some(scorer => scorer.is_presider)
+    const teamReadinessChips = (teamId: string) => {
+        const status = rosterStatuses[teamId]
+        return (
+            <span className="pc-summary-issues">
+                {status?.roster_status === 'none' && <StatusChip label="No roster" variant="danger" />}
+                {status?.call_order_status === 'none' && <StatusChip label="No call order" variant="danger" />}
+            </span>
+        )
+    }
+    const hasScorerConflict = assignedScorers.some(scorer => scorer.type === 'registered' && (
+        conflictSet.has(`${scorer.scorer_id}:${pairing.p_team}`) ||
+        conflictSet.has(`${scorer.scorer_id}:${pairing.d_team}`) ||
+        scorer.conflict_reported
+    ))
     const addRegisteredScorer = (scorerId = scorerDraft, scorerToAssign = scorers.find(s => s.scorer_id === scorerId)) => {
         if (!scorerId || !scorerToAssign) return
         apiFetch(`/organizer/tournament/${tournamentId}/pairings/${pairing.pairing_id}/scorers`, {
@@ -149,8 +156,8 @@ export default function PairingCard({ pairing, pairingNumber, teams, courtrooms,
             name,
             email: newScorerIsPaper ? null : newScorerEmail.trim(),
             is_paper: newScorerIsPaper,
-            willing_to_preside: newScorerWillingToPreside,
-            prefers_to_score_with: newScorerPreferences,
+            willing_to_preside: true,
+            prefers_to_score_with: [],
         }
         apiFetch(`/organizer/tournament/${tournamentId}/scorers`, {
             method: 'POST', body: JSON.stringify(scorer),
@@ -166,8 +173,47 @@ export default function PairingCard({ pairing, pairingNumber, teams, courtrooms,
         setScorerQuery('')
         setNewScorerIsPaper(false)
         setNewScorerEmail('')
-        setNewScorerWillingToPreside(true)
-        setNewScorerPreferences([])
+        setScorerAddMode('existing')
+    }
+
+    const openScorerAdd = () => {
+        resetScorerAdd()
+        setShowScorerAdd(true)
+    }
+
+    const beginCourtroomEdit = () => {
+        setCourtroomDraft(pairing.courtroom ?? '')
+        setCourtroomQuery(pairing.courtroom ? courtroomName(pairing.courtroom) : '')
+        setEditingCourtroom(true)
+    }
+
+    const matchingCourtrooms = courtrooms.filter(c => {
+        const label = `${c.name}${c.location ? ` (${c.location})` : ''}`.toLowerCase()
+        return label.includes(courtroomQuery.trim().toLowerCase())
+    })
+    const hasExactCourtroomName = courtrooms.some(c => c.name.toLowerCase() === courtroomQuery.trim().toLowerCase())
+
+    const createCourtroom = async () => {
+        const name = courtroomQuery.trim()
+        if (!name || creatingCourtroom) return
+        setCreatingCourtroom(true)
+        const courtroom: ICourtroom = { id: randomUUID(), name, location: '' }
+        try {
+            const response = await apiFetch(`/organizer/tournament/${tournamentId}/courtrooms`, {
+                method: 'POST', body: JSON.stringify(courtroom),
+            })
+            if (!response.ok) throw new Error()
+            onCourtroomCreated(courtroom)
+            setCourtroomDraft(courtroom.id)
+        } finally {
+            setCreatingCourtroom(false)
+        }
+    }
+
+    const beginTeamsEdit = () => {
+        setProsDraft(pairing.p_team)
+        setDefDraft(pairing.d_team)
+        setEditingTeams(true)
     }
 
     const removeScorer = (assignmentId: string) => {
@@ -204,31 +250,24 @@ export default function PairingCard({ pairing, pairingNumber, teams, courtrooms,
             <div className="pc-summary">
                 <div className="pc-summary-matchup">
                     <span className="pc-pairing-label" aria-label={`Pairing ${pairingNumber}`}>{pairingNumber}</span>
-                    <div>
+                    <button type="button" className={`pc-summary-edit-target${prosecutionUnassigned ? ' pc-summary-edit-target--unassigned' : ''}`} aria-label="Edit matchup teams" onClick={beginTeamsEdit}>
                         <span className="dash-side-label">Prosecution</span>
-                        <span className="pc-summary-team">{teamName(pairing.p_team)}</span>
-                        <span className={`pc-roster-status pc-roster-status--${rosterStatuses[pairing.p_team]?.roster_status ?? 'none'}`}>
-                            {rosterStatusLabel(rosterStatuses[pairing.p_team]?.roster_status)}
-                        </span>
-                        <span className={`pc-call-order-status pc-call-order-status--${rosterStatuses[pairing.p_team]?.call_order_status ?? 'none'}`}>
-                            {callOrderStatusLabel(rosterStatuses[pairing.p_team]?.call_order_status)}
-                        </span>
-                    </div>
-                    <div>
+                        <span className={`pc-summary-team${prosecutionUnassigned ? ' pc-summary-value--unassigned' : ''}`}>{teamName(pairing.p_team)}</span>
+                        {teamReadinessChips(pairing.p_team)}
+                        <span className="pc-summary-edit-hint">{prosecutionUnassigned ? 'Assign team' : 'Edit teams'}</span>
+                    </button>
+                    <button type="button" className={`pc-summary-edit-target${defenseUnassigned ? ' pc-summary-edit-target--unassigned' : ''}`} aria-label="Edit matchup teams" onClick={beginTeamsEdit}>
                         <span className="dash-side-label">Defense</span>
-                        <span className="pc-summary-team">{teamName(pairing.d_team)}</span>
-                        <span className={`pc-roster-status pc-roster-status--${rosterStatuses[pairing.d_team]?.roster_status ?? 'none'}`}>
-                            {rosterStatusLabel(rosterStatuses[pairing.d_team]?.roster_status)}
-                        </span>
-                        <span className={`pc-call-order-status pc-call-order-status--${rosterStatuses[pairing.d_team]?.call_order_status ?? 'none'}`}>
-                            {callOrderStatusLabel(rosterStatuses[pairing.d_team]?.call_order_status)}
-                        </span>
-                    </div>
-                    <div className="pc-summary-courtroom">
+                        <span className={`pc-summary-team${defenseUnassigned ? ' pc-summary-value--unassigned' : ''}`}>{teamName(pairing.d_team)}</span>
+                        {teamReadinessChips(pairing.d_team)}
+                        <span className="pc-summary-edit-hint">{defenseUnassigned ? 'Assign team' : 'Edit teams'}</span>
+                    </button>
+                    <button type="button" className={`pc-summary-edit-target pc-summary-courtroom${courtroomUnassigned ? ' pc-summary-edit-target--unassigned' : ''}`} aria-label="Edit courtroom" onClick={beginCourtroomEdit}>
                         <span className="dash-side-label">Courtroom</span>
-                        <span>{courtroomName(pairing.courtroom)}</span>
+                        <span className={courtroomUnassigned ? 'pc-summary-value--unassigned' : undefined}>{courtroomName(pairing.courtroom)}</span>
                         {courtroomInUse && <span className="pc-courtroom-warning">Double-booked</span>}
-                    </div>
+                        <span className="pc-summary-edit-hint">{courtroomUnassigned ? 'Assign courtroom' : 'Edit courtroom'}</span>
+                    </button>
                 </div>
                 <button
                     type="button"
@@ -236,10 +275,32 @@ export default function PairingCard({ pairing, pairingNumber, teams, courtrooms,
                     aria-expanded={expanded}
                     onClick={() => setExpanded(value => !value)}
                 >
-                    {expanded ? 'Hide details' : 'Show details'}
+                    {expanded ? 'Hide details' : 'Manage pairing'}
                     <span aria-hidden="true">{expanded ? '▴' : '▾'}</span>
                 </button>
             </div>
+
+            {!expanded && (
+                <div className="pc-next-step">
+                    <span><strong>Next step:</strong>{' '}
+                        {!pairing.courtroom ? 'assign a courtroom' :
+                            assignedScorers.length === 0 ? 'assign scorers' :
+                                !hasPresider ? 'choose a presider' :
+                                    courtroomInUse ? 'resolve the double-booked courtroom' :
+                                        hasScorerConflict ? 'review scorer conflicts' :
+                                            ballotStatus && ballotStatus.submitted < ballotStatus.total_scorers ? 'wait for submitted ballots' : 'this pairing is ready'}
+                    </span>
+                    {!pairing.courtroom ? (
+                        <button type="button" className="pc-next-step-action" onClick={beginCourtroomEdit}>Assign courtroom</button>
+                    ) : assignedScorers.length === 0 ? (
+                        <button type="button" className="pc-next-step-action" onClick={openScorerAdd}>Assign scorers</button>
+                    ) : !hasPresider ? (
+                        <button type="button" className="pc-next-step-action" onClick={openPresiderModal}>Choose presider</button>
+                    ) : (courtroomInUse || hasScorerConflict) ? (
+                        <button type="button" className="pc-next-step-action" onClick={() => setExpanded(true)}>Review issue</button>
+                    ) : null}
+                </div>
+            )}
 
             {expanded && <div className="pc-details">
             <div className="dash-pairing-topbar">
@@ -254,71 +315,10 @@ export default function PairingCard({ pairing, pairingNumber, teams, courtrooms,
                 </div>
             </div>
 
-            {editingTeams ? (
-                <div className="pc-edit-teams">
-                    <label className="rv-field-label">
-                        Prosecution
-                        <select className="rv-select" value={prosDraft} onChange={e => setProsDraft(e.target.value)}>
-                            <TeamSelectOptions teams={teams} />
-                        </select>
-                    </label>
-                    <label className="rv-field-label">
-                        Defense
-                        <select className="rv-select" value={defDraft} onChange={e => setDefDraft(e.target.value)}>
-                            <TeamSelectOptions teams={teams} />
-                        </select>
-                    </label>
-                    <div className="pc-edit-actions">
-                        <button className="pc-save-btn" onClick={saveTeamsEdit}>Save</button>
-                        <button className="pc-cancel-btn" onClick={() => setEditingTeams(false)}>Cancel</button>
-                    </div>
-                </div>
-            ) : (
-                <div className="pc-matchup-grid">
-                    <button className="pc-matchup-col" onClick={() => { setProsDraft(pairing.p_team); setDefDraft(pairing.d_team); setEditingTeams(true) }}>
-                        <span className="dash-side-label">Prosecution</span>
-                        <span className="dash-team-name">{teamName(pairing.p_team)}</span>
-                        <span className="pc-col-edit-hint">✎</span>
-                    </button>
-                    <button className="pc-matchup-col" onClick={() => { setProsDraft(pairing.p_team); setDefDraft(pairing.d_team); setEditingTeams(true) }}>
-                        <span className="dash-side-label">Defense</span>
-                        <span className="dash-team-name">{teamName(pairing.d_team)}</span>
-                        <span className="pc-col-edit-hint">✎</span>
-                    </button>
-                    {editingCourtroom ? (
-                        <div className="pc-matchup-col pc-inline-edit">
-                            <span className="dash-side-label">Courtroom</span>
-                            <select className="rv-select" ref={courtroomSelectRef}
-                                value={courtroomDraft}
-                                onChange={e => setCourtroomDraft(e.target.value)}>
-                                <option value="" >No courtroom</option>
-                                {courtrooms.map(c => (
-                                    <option key={c.id} value={c.id}>{c.name}{c.location ? ` (${c.location})` : ''}</option>
-                                ))}
-                            </select>
-                            <div className="pc-edit-actions">
-                                <button className="pc-save-btn" onClick={saveCourtroomEdit}>Save</button>
-                                <button className="pc-cancel-btn" onClick={() => setEditingCourtroom(false)}>Cancel</button>
-                            </div>
-                        </div>
-                    ) : (
-                        <button className="pc-matchup-col" onClick={() => { setCourtroomDraft(pairing.courtroom ?? ''); setEditingCourtroom(true) }}>
-                            <span className="dash-side-label">Courtroom</span>
-                            {pairing.courtroom ?  <span className="dash-team-name">{courtroomName(pairing.courtroom)}</span> : <span className={"pc-no-courtroom"}> No Courtroom</span> }
-                            {courtroomInUse && (
-                                <span className="pc-courtroom-warning" title="This courtroom is assigned to another trial in the same round.">
-                                    ⚠ Double-booked
-                                </span>
-                            )}
-                            <span className="pc-col-edit-hint">✎</span>
-                        </button>
-                    )}
-                </div>
-            )}
-
             <div className="pc-scorers-section">
                 <div className="pc-scorers-header">
                     <span className="pc-scorers-label">Scorers</span>
+                    <button className="pc-save-btn" onClick={openScorerAdd}>Add scorer</button>
                     {assignedScorers.length > 0 && (
                         <button className="pc-cancel-btn" onClick={openPresiderModal}>Change presider</button>
                     )}
@@ -345,6 +345,8 @@ export default function PairingCard({ pairing, pairingNumber, teams, courtrooms,
                     )}
 
                 </div>
+
+                {assignedScorers.length === 0 && <p className="pc-empty-scorers">Assign scorers to collect ballots. The first scorer added becomes the presider.</p>}
 
                 {assignedScorers.map(s => {
                     const hasConflict = s.type === 'registered' && (
@@ -412,14 +414,83 @@ export default function PairingCard({ pairing, pairingNumber, teams, courtrooms,
                 })}
 
             </div>
-            <button className="pc-save-btn" onClick={() => { setShowScorerAdd(true); resetScorerAdd() }}>+ Add Scorer</button>
             </div>}
         </div>
 
+        {editingTeams && (
+            <ModalBackdrop onClose={() => setEditingTeams(false)}>
+                <div className="confirm-modal pc-edit-matchup-modal" role="dialog" aria-modal="true" aria-labelledby="edit-matchup-title">
+                    <h2 id="edit-matchup-title">Edit matchup teams</h2>
+                    <div className="pc-edit-matchup-fields">
+                        <label className="rv-field-label">
+                            Prosecution
+                            <select className="rv-select" value={prosDraft} onChange={e => setProsDraft(e.target.value)}>
+                                <TeamSelectOptions teams={teams} />
+                            </select>
+                        </label>
+                        <label className="rv-field-label">
+                            Defense
+                            <select className="rv-select" value={defDraft} onChange={e => setDefDraft(e.target.value)}>
+                                <TeamSelectOptions teams={teams} />
+                            </select>
+                        </label>
+                    </div>
+                    <div className="confirm-actions">
+                        <button type="button" className="btn-cancel" onClick={() => setEditingTeams(false)}>Cancel</button>
+                        <button type="button" className="btn-confirm" onClick={saveTeamsEdit}>Save changes</button>
+                    </div>
+                </div>
+            </ModalBackdrop>
+        )}
+
+        {editingCourtroom && (
+            <ModalBackdrop onClose={() => setEditingCourtroom(false)}>
+                <div className="confirm-modal pc-edit-matchup-modal" role="dialog" aria-modal="true" aria-labelledby="edit-courtroom-title">
+                    <h2 id="edit-courtroom-title">Edit courtroom</h2>
+                    <div className="pc-edit-courtroom-field">
+                        <label className="rv-field-label" htmlFor={`courtroom-search-${pairing.pairing_id}`}>Search or create a courtroom</label>
+                        <p className="pc-courtroom-help">Start typing to filter existing courtrooms. If it is not listed, create it from the name you enter.</p>
+                        <div className="pc-courtroom-typeahead">
+                            <input
+                                id={`courtroom-search-${pairing.pairing_id}`}
+                                className="rv-select"
+                                ref={courtroomSelectRef}
+                                value={courtroomQuery}
+                                placeholder="Start typing a courtroom name"
+                                onChange={event => { setCourtroomQuery(event.target.value); setCourtroomDraft('') }}
+                            />
+                            <div className="pc-courtroom-results">
+                                <span className="pc-courtroom-results-label">Existing courtrooms</span>
+                                {matchingCourtrooms.map(courtroom => {
+                                    const label = `${courtroom.name}${courtroom.location ? ` (${courtroom.location})` : ''}`
+                                    return <button key={courtroom.id} type="button" className={`pc-courtroom-option${courtroomDraft === courtroom.id ? ' pc-courtroom-option--selected' : ''}`} onClick={() => { setCourtroomDraft(courtroom.id); setCourtroomQuery(label) }}>{label}</button>
+                                })}
+                                {matchingCourtrooms.length === 0 && <span className="pc-courtroom-no-results">No matching courtrooms.</span>}
+                                {courtroomQuery.trim() && !hasExactCourtroomName && (
+                                    <button type="button" className="pc-create-courtroom-btn" disabled={creatingCourtroom} onClick={() => { void createCourtroom() }}>
+                                        {creatingCourtroom ? 'Creating…' : `+ Create "${courtroomQuery.trim()}"`}
+                                    </button>
+                                )}
+                            </div>
+                        </div>
+                        <button type="button" className={`pc-clear-courtroom-btn${courtroomDraft === '' ? ' pc-clear-courtroom-btn--selected' : ''}`} onClick={() => { setCourtroomDraft(''); setCourtroomQuery('') }}>
+                            No courtroom assigned
+                        </button>
+                    </div>
+                    <div className="confirm-actions">
+                        <button type="button" className="btn-cancel" onClick={() => setEditingCourtroom(false)}>Cancel</button>
+                        <button type="button" className="btn-confirm" onClick={saveCourtroomEdit}>Save changes</button>
+                    </div>
+                </div>
+            </ModalBackdrop>
+        )}
+
         {showScorerAdd && (
             <ModalBackdrop onClose={() => setShowScorerAdd(false)}>
-                <div className="confirm-modal" role="dialog" aria-modal="true" aria-labelledby="add-scorer-title">
+                <div className="confirm-modal pc-add-scorer-modal" role="dialog" aria-modal="true" aria-labelledby="add-scorer-title">
                     <h2 id="add-scorer-title" className="pc-modal-title">Add Scorer</h2>
+                    {scorerAddMode === 'existing' && <>
+                    <p className="pc-modal-text--muted">Choose a scorer already in this tournament.</p>
                     <label className="rv-field-label pc-modal-field">
                         Scorer
                         <div className="pc-scorer-typeahead">
@@ -430,7 +501,7 @@ export default function PairingCard({ pairing, pairingNumber, teams, courtrooms,
                                 value={scorerQuery}
                                 onChange={e => { setScorerQuery(e.target.value); setScorerDraft('') }}
                             />
-                            <div className="pc-scorer-results">
+                            {scorerQuery.trim() && <div className="pc-scorer-results">
                                 {(() => {
                                     const q = scorerQuery.trim().toLowerCase()
                                     const matches = q === '' || scorerDraft
@@ -460,12 +531,20 @@ export default function PairingCard({ pairing, pairingNumber, teams, courtrooms,
                                         </ul>
                                     )
                                 })()}
-                            </div>
+                            </div>}
                         </div>
                     </label>
+                    <button type="button" className="pc-create-offline-btn" onClick={() => { setScorerDraft(''); setScorerAddMode('create') }}>Create a new scorer instead</button>
+                    </>}
 
-                    {!scorerDraft && (
+                    {scorerAddMode === 'create' && (
                         <>
+                            <p className="pc-modal-text--muted">Create the scorer, then assign them to this pairing.</p>
+                            <label className="rv-field-label pc-modal-field" htmlFor="new-scorer-name">
+                                Scorer name
+                                <input id="new-scorer-name" className="rv-select" ref={scorerSearchRef}
+                                    value={scorerQuery} onChange={e => setScorerQuery(e.target.value)} placeholder="Full name" />
+                            </label>
                             <label className="sc-checkbox-label">
                                 <input type="checkbox" checked={newScorerIsPaper}
                                     onChange={e => setNewScorerIsPaper(e.target.checked)} />
@@ -480,29 +559,6 @@ export default function PairingCard({ pairing, pairingNumber, teams, courtrooms,
                                     {newScorerEmail && !isValidEmail(newScorerEmail) && <span className="tc-field-error">Invalid email address</span>}
                                 </label>
                             )}
-                            <label className="sc-checkbox-label">
-                                <input type="checkbox" checked={newScorerWillingToPreside}
-                                    onChange={e => setNewScorerWillingToPreside(e.target.checked)} />
-                                Willing to preside
-                            </label>
-                            {scorers.length > 0 && (
-                                <div className="pc-modal-field">
-                                    <span className="rv-field-label">Prefers to score with</span>
-                                    <ul className="sc-pref-list">
-                                        {scorers.map(s => (
-                                            <li key={s.scorer_id}>
-                                                <label className="sc-checkbox-label">
-                                                    <input type="checkbox" checked={newScorerPreferences.includes(s.scorer_id)}
-                                                        onChange={() => setNewScorerPreferences(current => current.includes(s.scorer_id)
-                                                            ? current.filter(id => id !== s.scorer_id)
-                                                            : [...current, s.scorer_id])} />
-                                                    {s.name}{s.is_paper ? ' (paper)' : ''}
-                                                </label>
-                                            </li>
-                                        ))}
-                                    </ul>
-                                </div>
-                            )}
                             <button
                                 className="pc-create-offline-btn"
                                 disabled={!scorerQuery.trim() || (!newScorerIsPaper && !isValidEmail(newScorerEmail))}
@@ -514,8 +570,10 @@ export default function PairingCard({ pairing, pairingNumber, teams, courtrooms,
                     )}
 
                     <div className="confirm-actions">
-                        <button onClick={() => setShowScorerAdd(false)}>Cancel</button>
-                        <button disabled={!scorerDraft} onClick={() => addRegisteredScorer()}>Add</button>
+                        <button type="button" onClick={() => setShowScorerAdd(false)}>Cancel</button>
+                        {scorerAddMode === 'existing'
+                            ? <button disabled={!scorerDraft} onClick={() => addRegisteredScorer()}>Add scorer</button>
+                            : <button type="button" onClick={() => setScorerAddMode('existing')}>Back to search</button>}
                     </div>
                 </div>
             </ModalBackdrop>

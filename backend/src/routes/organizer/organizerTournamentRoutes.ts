@@ -1082,7 +1082,12 @@ router.delete('/courtrooms', async (req: Request, res: Response) => {
  *       200: { description: Array of teams }
  */
 router.get('/teams', tournamentHandler(async (req, res) => {
-    return res.status(200).json(await organizer.getTeams(req.tournament));
+    const issue = req.query.issue
+    const validIssues = new Set(['without-rosters', 'without-default-assignments', 'without-default-call-orders', 'without-coaches'])
+    if (issue !== undefined && (typeof issue !== 'string' || !validIssues.has(issue))) {
+        return res.status(400).json({ message: 'Invalid team issue filter' })
+    }
+    return res.status(200).json(await organizer.getTeams(req.tournament, issue as organizer.TeamIssueFilter | undefined));
 }));
 
 function verifyTeamPayload(req: Request, res: Response, next: NextFunction) {
@@ -1680,12 +1685,13 @@ router.put('/teams/:teamId/pairings/:pairingId/assignments', async (req: Request
  */
 router.get("/rounds", tournamentHandler(async (req, res) => {
     try {
-        return res.status(200).json(await organizer.getRounds(req.tournament));
+        return res.status(200).json(await organizer.getRoundsReadiness(req.tournament));
     } catch (e) {
         if (e instanceof DbError) return res.status(500).json({ message: 'Database error' });
         throw e;
     }
 }));
+
 
 /** Replace a joined team's owner by email, optionally retaining the former owner as a coach. */
 router.put('/teams/:teamId/owner-email', async (req: Request, res: Response) => {

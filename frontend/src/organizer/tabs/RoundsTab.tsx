@@ -1,87 +1,95 @@
 import { useState, useEffect } from 'react'
-import { useNavigate } from 'react-router-dom'
-import type { IBallotStatus, IRound } from '@mock-scores/shared'
+import { useNavigate, useSearchParams } from 'react-router-dom'
+import type { IRound } from '@mock-scores/shared'
 import Section from './Section'
-import { ConfirmRemoveModal } from '../components/modals'
-import { useConfirmRemove } from '../../shared/hooks/useConfirmRemove'
-import DangerButton from '../../shared/components/DangerButton'
 import AddButton from '../../shared/components/AddButton'
 import { apiFetch } from '../../auth/auth'
 import '../styles/rounds.css'
 
-function RoundRow({ round, tournamentId, ballotSummary, onRemove, onSave }: {
+interface RoundReadiness { pairings: number; warnings: { issue: string; label: string }[] }
+interface RoundListEntry extends IRound { ballot: { total: number; submitted: number }; readiness: RoundReadiness }
+
+function RoundRow({ round, tournamentId, ballotSummary, readiness }: {
     round: IRound
     tournamentId: string
     ballotSummary: { total: number; submitted: number } | null
-    onRemove: (id: string) => void
-    onSave: (updated: IRound) => void
+    readiness: RoundReadiness | null
 }) {
     const navigate = useNavigate()
-    // Convert a UTC ISO string to the "YYYY-MM-DDTHH:MM" local time string datetime-local expects
-    const toLocalInput = (iso: string | null) => {
-        if (!iso) return ''
-        const d = new Date(iso)
-        const pad = (n: number) => String(n).padStart(2, '0')
-        return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}T${pad(d.getHours())}:${pad(d.getMinutes())}`
-    }
-    const [draftName, setDraftName] = useState(round.name)
-    const [draftTime, setDraftTime] = useState(() => toLocalInput(round.round_time))
-    const [tbd, setTbd] = useState(!round.round_time)
-    const dirty = draftName !== round.name || tbd !== !round.round_time ||
-        (!tbd && draftTime !== toLocalInput(round.round_time))
+    const [issuesExpanded, setIssuesExpanded] = useState(false)
+    const openRound = () => navigate(`/organizer/${tournamentId}/round/${round.round_id}`)
 
     return (
-        <div className="dash-round-summary">
-            <input
-                className="dash-round-name-input"
-                value={draftName}
-                onChange={e => setDraftName(e.target.value)}
-                placeholder="Round name"
-            />
-            <input
-                type="datetime-local"
-                className="dash-round-time-input"
-                value={tbd ? '' : draftTime}
-                disabled={tbd}
-                onChange={e => setDraftTime(e.target.value)}
-            />
-            <label className="dash-publish-checkbox">
-                <input type="checkbox" checked={tbd} onChange={e => setTbd(e.target.checked)} />
-                <span className="dash-publish-label">TBD</span>
-            </label>
-            <div className="dash-round-checks">
-                {dirty && (
-                    <button className="dash-round-save-btn" onClick={() => onSave({ ...round, name: draftName, round_time: tbd ? null : (draftTime ? new Date(draftTime).toISOString() : null), teams_public: round.teams_public, results_public: round.results_public })}>
-                        Save
-                    </button>
-                )}
-            </div>
-            <button className="dash-open-round-btn" onClick={() => navigate(`/organizer/${tournamentId}/round/${round.round_id}`)}>
-                Open →
-            </button>
-            {ballotSummary && ballotSummary.total > 0 && (
-                <span className={`pc-ballot-status ${
-                    ballotSummary.submitted === ballotSummary.total
-                        ? 'pc-ballot-status--complete'
-                        : ballotSummary.submitted > 0
-                            ? 'pc-ballot-status--partial'
-                            : 'pc-ballot-status--none'
-                }`}>
+        <div
+            className="dash-round-summary"
+            role="button"
+            tabIndex={0}
+            aria-label={`Open ${round.name}`}
+            onClick={openRound}
+            onKeyDown={event => {
+                if (event.target !== event.currentTarget) return
+                if (event.key === 'Enter' || event.key === ' ') {
+                    event.preventDefault()
+                    openRound()
+                }
+            }}
+        >
+            <div className="dash-round-summary-head">
+                <div>
+                    <h3>{round.name}</h3>
+                    <p>{round.round_time ? new Date(round.round_time).toLocaleString() : 'Not Scheduled'}</p>
+                </div>
+                {ballotSummary && ballotSummary.total > 0 && (
+                    <span className={`pc-ballot-status ${
+                        ballotSummary.submitted === ballotSummary.total
+                            ? 'pc-ballot-status--complete'
+                            : ballotSummary.submitted > 0
+                                ? 'pc-ballot-status--partial'
+                                : 'pc-ballot-status--none'
+                    }`}>
                     {ballotSummary.submitted}/{ballotSummary.total} ballots
                 </span>
-            )}
-            <DangerButton onClick={() => onRemove(round.round_id)}>
-                Remove
-            </DangerButton>
+                )}
+            </div>
+            <div className="dash-round-readiness">
+                <div className="dash-round-status-row">
+                    <span className="dash-round-pairings">{readiness?.pairings ?? 0} matchup{readiness?.pairings === 1 ? '' : 's'}</span>
+                    {round.locked && <span className="dash-round-chip dash-round-chip--locked">Locked</span>}
+                    {round.teams_public && <span className="dash-round-chip">Teams published</span>}
+                    {round.results_public && <span className="dash-round-chip">Results published</span>}
+                </div>
+                {readiness?.warnings.length ? (
+                    <div className="dash-round-issues">
+                        <button
+                            className="dash-round-issue-count"
+                            aria-expanded={issuesExpanded}
+                            onClick={event => {
+                                event.stopPropagation()
+                                setIssuesExpanded(expanded => !expanded)
+                            }}
+                        >
+                            {readiness.warnings.length} Issue{readiness.warnings.length === 1 ? '' : 's'}
+                        </button>
+                        {issuesExpanded && <div>{readiness.warnings.map(warning => <button key={warning.issue} className="dash-round-issue" onClick={event => {
+                            event.stopPropagation()
+                            navigate(`/organizer/${tournamentId}/round/${round.round_id}${warning.issue === 'no-pairings' ? '' : `?issue=${warning.issue}`}`)
+                        }}>{warning.label}</button>)}</div>}
+                    </div>
+                ) : readiness && <span className="dash-round-ready">Ready to run</span>}
+            </div>
+
         </div>
     )
 }
 
 export default function RoundsTab({ tournamentId }: { tournamentId: string }) {
+    const [searchParams] = useSearchParams()
+    const navigate = useNavigate()
+    const withoutPairings = searchParams.get('issue') === 'without-pairings'
     const [rounds, setRounds] = useState<IRound[]>([])
     const [error, setError] = useState<string | null>(null)
     const [ballotStatusByRound, setBallotStatusByRound] = useState<Record<string, { total: number; submitted: number }>>({})
-    const confirmRemove = useConfirmRemove<string>()
+    const [readinessByRound, setReadinessByRound] = useState<Record<string, RoundReadiness>>({})
 
     useEffect(() => {
         apiFetch(`/organizer/tournament/${tournamentId}/rounds`)
@@ -89,25 +97,14 @@ export default function RoundsTab({ tournamentId }: { tournamentId: string }) {
                 if (!res.ok) throw new Error()
                 return res.json()
             })
-            .then((data: IRound[]) => {
-                setRounds(data)
-                // Fetch ballot status for each round
-                Promise.all(data.map(r =>
-                    apiFetch(`/organizer/tournament/${tournamentId}/rounds/${r.round_id}/ballot-status`)
-                        .then(res => res.ok ? res.json() : [])
-                        .then((statuses: IBallotStatus[]) => ({
-                            roundId: r.round_id,
-                            total: statuses.reduce((sum, s) => sum + s.total_scorers, 0),
-                            submitted: statuses.reduce((sum, s) => sum + s.submitted, 0),
-                        }))
-                )).then(results => {
-                    const map: Record<string, { total: number; submitted: number }> = {}
-                    for (const r of results) map[r.roundId] = { total: r.total, submitted: r.submitted }
-                    setBallotStatusByRound(map)
-                })
+            .then((data: RoundListEntry[]) => {
+                const visible = withoutPairings ? data.filter(entry => entry.readiness.pairings === 0) : data
+                setRounds(visible)
+                setBallotStatusByRound(Object.fromEntries(visible.map(entry => [entry.round_id, entry.ballot])))
+                setReadinessByRound(Object.fromEntries(visible.map(entry => [entry.round_id, entry.readiness])))
             })
             .catch(() => setError('Failed to load rounds.'))
-    }, [tournamentId])
+    }, [tournamentId, withoutPairings])
 
     const handleAdd = () => {
 
@@ -121,50 +118,20 @@ export default function RoundsTab({ tournamentId }: { tournamentId: string }) {
         }).catch(() => setError('Failed to add round.'))
     }
 
-    const handleSave = async (updated: IRound) => {
-        setError(null)
-        try {
-        const res = await apiFetch(`/organizer/tournament/${tournamentId}/rounds/${updated.round_id}`, {
-            method: 'PATCH',
-            body: JSON.stringify(updated),
-        })
-        if (!res.ok) throw new Error()
-        setRounds(prev => prev.map(r => r.round_id === updated.round_id ? updated : r))
-        } catch { setError('Failed to save round.') }
-    }
-
-    const handleRemove = async (id: string) => {
-        setError(null)
-        try {
-            const res = await apiFetch(`/organizer/tournament/${tournamentId}/rounds/${id}`, { method: 'DELETE' })
-            if (!res.ok) throw new Error()
-            setRounds(prev => prev.filter(r => r.round_id !== id))
-            confirmRemove.clear()
-        } catch { setError('Failed to remove round.') }
-    }
-
-    const confirmRound = rounds.find(r => r.round_id === confirmRemove.pending)
     const sorted = [...rounds].sort((a, b) => a.position - b.position)
 
     return (
         <>
-            <Section title="Rounds">
+            <Section title={withoutPairings ? 'Rounds Without Pairings' : 'Rounds'} description={withoutPairings ? 'Only rounds requiring pairings are shown.' : undefined}>
                 {error && <p className="org-error">{error}</p>}
+                {withoutPairings && <button className="btn-secondary" onClick={() => navigate(`?page=rounds`)}>Show all rounds</button>}
                 <AddButton onClick={handleAdd}>+ Add round</AddButton>
                 {sorted.map(round => (
                     <RoundRow key={round.round_id} round={round} tournamentId={tournamentId}
                         ballotSummary={ballotStatusByRound[round.round_id] ?? null}
-                        onRemove={id => confirmRemove.open(id)}
-                        onSave={updated => { void handleSave(updated) }} />
+                        readiness={readinessByRound[round.round_id] ?? null} />
                 ))}
             </Section>
-            {confirmRemove.pending !== null && (
-                <ConfirmRemoveModal
-                    message={`Remove ${confirmRound?.name ?? 'this round'} and all its matchups?`}
-                    onCancel={confirmRemove.clear}
-                    onConfirm={() => { void handleRemove(confirmRemove.pending!) }}
-                />
-            )}
         </>
     )
 }

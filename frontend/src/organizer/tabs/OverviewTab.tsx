@@ -59,6 +59,7 @@ export default function OverviewTab({ tournamentId, onNavigate }: Props) {
 
     const nextRound = findNextRound(rounds)
     const navigate=  useNavigate()
+    const openIssue = (page: 'teams' | 'rounds', issue: string) => navigate(`/organizer/${tournamentId}?page=${page}&issue=${issue}`)
 
     if (loading && rounds.length == 0) {
         return (<LoadingPage loadingText={"Getting tournament information..."}/>)
@@ -89,30 +90,30 @@ export default function OverviewTab({ tournamentId, onNavigate }: Props) {
                 {overview &&
                     <>
                 {(overview.rounds.withoutPairings > 0) &&
-                <DashboardStatusCard title={"Rounds Without Pairings"} button = {<AddButton onClick={() => onNavigate('rounds')}>Manage Rounds</AddButton>}>
+                <DashboardStatusCard title={"Rounds Without Pairings"} button = {<AddButton onClick={() => openIssue('rounds', 'without-pairings')}>View Rounds</AddButton>}>
                     <span className={"dash-stat-alert-value"}>{overview.rounds.withoutPairings}</span>
                     <span className={"dash-stat-alert-sub"}>Rounds</span>
                 </DashboardStatusCard>}
                         {(overview.teams.withoutRosters > 0) &&
-                            <DashboardStatusCard title={"Teams Without Rosters"} button = {<AddButton onClick={() => onNavigate('teams')}>Manage Teams</AddButton>}>
+                            <DashboardStatusCard title={"Teams Without Rosters"} button = {<AddButton onClick={() => openIssue('teams', 'without-rosters')}>View Teams</AddButton>}>
                                 <span className={"dash-stat-alert-value"}>{overview.teams.withoutRosters}</span>
                                 {/*TODO: Add a page listing all these teams */}
                                 <span className={"dash-stat-alert-sub"}>Teams</span>
                             </DashboardStatusCard>}
                         {(overview.teams.withoutDefaultAssignments > 0) &&
-                            <DashboardStatusCard title={"Teams Without Default Assignments"} button = {<AddButton onClick={() => onNavigate('teams')}>Manage Teams</AddButton>}>
+                            <DashboardStatusCard title={"Teams Without Default Assignments"} button = {<AddButton onClick={() => openIssue('teams', 'without-default-assignments')}>View Teams</AddButton>}>
                                 <span className={"dash-stat-alert-value"}>{overview.teams.withoutDefaultAssignments}</span>
                                 {/*TODO: Add a page listing all these teams */}
                                 <span className={"dash-stat-alert-sub"}>Teams</span>
                             </DashboardStatusCard>}
                         {(overview.teams.withoutCoaches > 0) &&
-                            <DashboardStatusCard title={"Unregistered Coaches"} button = {<AddButton onClick={() => onNavigate('teams')}>Manage Coaches</AddButton>}>
+                            <DashboardStatusCard title={"Unregistered Coaches"} button = {<AddButton onClick={() => openIssue('teams', 'without-coaches')}>View Teams</AddButton>}>
                                 <span className={"dash-stat-alert-value"}>{overview.teams.withoutCoaches}</span>
                                 {/*TODO: Add a page listing all these teams */}
                                 <span className={"dash-stat-alert-sub"}>Coaches</span>
                             </DashboardStatusCard>}
                         {(overview.teams.withoutDefaultCallOrders > 0) &&
-                            <DashboardStatusCard title={"Teams without call orders"} button = {<AddButton onClick={() => onNavigate('teams')}>Manage Teams</AddButton>}>
+                            <DashboardStatusCard title={"Teams without call orders"} button = {<AddButton onClick={() => openIssue('teams', 'without-default-call-orders')}>View Teams</AddButton>}>
                                 <span className={"dash-stat-alert-value"}>{overview.teams.withoutDefaultCallOrders}</span>
                                 {/*TODO: Add a page listing all these teams */}
                                 <span className={"dash-stat-alert-sub"}>Teams</span>
