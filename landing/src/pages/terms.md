@@ -1,10 +1,10 @@
 ---
-title: "Terms and Conditions"
-description: "MockScores terms and conditions are kept simple. Data should be kept only for the purpose of providing a good tournament. The organizer accepts liability for the configuration and results of MockScores."
+title: "Terms of Service"
+description: "MockScores terms of Service are kept simple. Data should be kept only for the purpose of providing a good tournament. The organizer accepts liability for the configuration and results of MockScores."
 layout: ../layouts/PolicyLayout.astro
 ---
 
-These Terms and Conditions (the "Terms") are a legally binding agreement between you and the **San Luis Obispo County Mock Trial Committee** (the "Committee," "we," "us," or "our"). The Committee operates the official MockScores-hosted service. MockScores is the name of the software and service; it is not identified in these Terms as a separate legal entity. These Terms govern your access to and use of the official MockScores websites, applications, and related services operated under the Committee's direction that link to these Terms, including the service available at `mockscores.org` (collectively, the "Service").
+These Terms of Service (the "Terms") are a legally binding agreement between you and the **San Luis Obispo County Mock Trial Committee** (the "Committee," "we," "us," or "our"). The Committee operates the official MockScores-hosted service. MockScores is the name of the software and service; it is not identified in these Terms as a separate legal entity. These Terms govern your access to and use of the official MockScores websites, applications, and related services operated under the Committee's direction that link to these Terms, including the service available at `mockscores.org` (collectively, the "Service").
 
 By creating an account, accessing, or using the Service, you agree to these Terms. If you use the Service for a school, tournament, team, employer, or other organization, you represent that you have authority to accept these Terms on that organization's behalf. If you do not agree, do not use the Service.
 
