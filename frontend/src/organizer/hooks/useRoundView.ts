@@ -204,7 +204,7 @@ export function useRoundView(id: string | undefined, roundId: string | undefined
         round, teams, courtrooms, pairings, scorers, pairingScorers, ballotStatus, rosterStatus, conflictSet,
         error, notFound,
         saveName, addMatchup, updatePairing, removePairing, setPairings,
-        setRoundLocked, setPairingsPublished, setResultsPublished,
+        patchRound, setRoundLocked, setPairingsPublished, setResultsPublished,
         onScorerAssigned, onScorerCreated, onCourtroomCreated, onScorerRemoved, onPresiderChanged, reloadPairingScorers,
     }
 }

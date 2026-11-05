@@ -60,7 +60,7 @@ const RoundView = () => {
     const {
         round, teams, courtrooms, pairings, scorers, pairingScorers, ballotStatus, rosterStatus, conflictSet,
         error, notFound,
-        addMatchup, updatePairing, removePairing, setRoundLocked,
+        addMatchup, updatePairing, removePairing, patchRound, setRoundLocked,
         setPairingsPublished, setResultsPublished,
         onScorerAssigned, onScorerCreated, onCourtroomCreated, onScorerRemoved, onPresiderChanged, reloadPairingScorers,
     } = useRoundView(id, roundId)
@@ -198,10 +198,11 @@ const RoundView = () => {
 
     const saveRoundDetails = async () => {
         if (!round || !roundNameDraft.trim()) return
-        const updated = { ...round, name: roundNameDraft.trim(), round_time: !startTimeTbd && roundTimeDraft ? new Date(roundTimeDraft).toISOString() : null }
-        await apiFetch(`/organizer/tournament/${id}/rounds/${roundId}`, { method: 'PATCH', body: JSON.stringify(updated) })
+        patchRound({
+            name: roundNameDraft.trim(),
+            round_time: !startTimeTbd && roundTimeDraft ? new Date(roundTimeDraft).toISOString() : null,
+        }, 'Failed to save round details.')
         setShowEditRound(false)
-        window.location.reload()
     }
 
     return (

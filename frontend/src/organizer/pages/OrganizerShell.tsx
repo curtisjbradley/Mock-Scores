@@ -27,10 +27,16 @@ export default function OrganizerShell() {
     useEffect(() => {
         if (!id) return
         apiFetch(`/organizer/tournament/${id}`)
-            .then(response => response.ok ? response.json() : null)
+            .then(response => {
+                if (response.status === 403) {
+                    navigate('/403')
+                    return null
+                }
+                return response.ok ? response.json() : null
+            })
             .then((data: ITournament | null) => setTournament(data))
             .catch(console.error)
-    }, [id])
+    }, [id, navigate])
 
     const active = useMemo<OrganizerScreen>(() => {
         if (location.pathname.includes('/round/')) return 'rounds'
