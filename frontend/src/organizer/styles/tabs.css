@@ -189,6 +189,7 @@
     .scorers-table-wrap .dash-standings-table thead { display: none; }
     .scorers-table-wrap .dash-standings-table tr { margin-bottom: 0.75rem; border: 1px solid var(--border); border-radius: var(--radius); background: var(--surface); overflow: hidden; }
     .scorers-table-wrap .dash-standings-table td { padding: 0.6rem 0.8rem; }
+    .scorers-table-wrap .dash-standings-table td::before { content: attr(data-label); display: inline-block; width: 8rem; color: var(--text-muted); font-size: 0.8125rem; font-weight: 500; }
     .scorers-table-wrap .dash-standings-table td:first-child { font-size: 1rem; font-weight: 700; }
     .scorers-table-wrap .dash-actions-cell { justify-content: flex-start; flex-wrap: wrap; }
 }

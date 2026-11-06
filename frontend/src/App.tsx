@@ -14,6 +14,7 @@ const OrganizerShell = lazy(() => import('./organizer/pages/OrganizerShell.tsx')
 const TournamentNew = lazy(() => import('./organizer/pages/TournamentNew.tsx'));
 const ScorecardViewer = lazy(() => import('./organizer/pages/ScorecardViewer.tsx'));
 const RoundView = lazy(() => import('./organizer/pages/RoundView.tsx'));
+const ScorerView = lazy(() => import('./organizer/pages/ScorerView.tsx'));
 const BallotPage = lazy(() => import('./organizer/pages/BallotPage.tsx'));
 const CombinedScoresheetPage = lazy(() => import('./shared/components/CombinedScoresheetPage.tsx'));
 const CoachHome = lazy(() => import('./coach/CoachHome.tsx'));
@@ -60,8 +61,9 @@ function App() {
                   <Route path=":id" element={<OrganizerShell />}>
                       <Route index element={<TournamentDashboard />} />
                       <Route path="round/:round" element={<RoundView />} />
+                      <Route path="scorers/:scorerId" element={<ScorerView />} />
                   </Route>
-                  <Route path=":id/school/:schoolId" element={<CoachLayout isOrganizerView />}>
+                  <Route path=":id/team/:teamId" element={<CoachLayout isOrganizerView />}>
                       <Route index element={<Navigate to="overview" replace />} />
                       <Route path="overview" element={<OverviewPage />} />
                       <Route path="schedule" element={<SchedulePage />} />
@@ -71,8 +73,8 @@ function App() {
                       <Route path="field" element={<FieldPage />} />
                       <Route path="standings" element={<StandingsPage />} />
                   </Route>
-                  <Route path=":id/school/:teamId/assign-roles/:pairingId/:side" element={<AssignRoles />} />
-                  <Route path=":id/school/:teamId/witness-order/:pairingId" element={<WitnessCallOrder />} />
+                  <Route path=":id/team/:teamId/assign-roles/:pairingId/:side" element={<AssignRoles />} />
+                  <Route path=":id/team/:teamId/witness-order/:pairingId" element={<WitnessCallOrder />} />
                   <Route path=":id/pairing/:pairingId/scoresheet/:ballotId" element={<ScorecardViewer />} />
                   <Route path=":id/pairing/:pairingId/scoresheet" element={<CombinedScoresheetPage />} />
                   <Route path=":id/*" element={<NotFound />} />

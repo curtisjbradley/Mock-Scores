@@ -191,7 +191,7 @@ export default function TeamsTab({ tournamentId }: { tournamentId: string }) {
                         {teams.length === 0 && <tr><td colSpan={5} className="dash-empty-cell">No teams match the selected issues.</td></tr>}
                         {teams.map(team => (
                             <tr key={team.id}>
-                                <td data-label="Team"><Link className="dash-table-link" to={`/organizer/${tournamentId}/school/${team.id}`}>{team.name}</Link></td>
+                                <td data-label="Team"><Link className="dash-table-link" to={`/organizer/${tournamentId}/team/${team.id}`}>{team.name}</Link></td>
                                 <td data-label="Code">{team.code}</td>
                                 <td data-label="Contact"><span className="dash-judge-name">{team.coach_email}<EmailStatusBadge status={team.email_status} /></span></td>
                                 <td data-label="Status"><StatusChip label={team.has_joined ? 'accepted' : 'pending'} variant={team.has_joined ? 'submitted' : 'pending'} /></td>

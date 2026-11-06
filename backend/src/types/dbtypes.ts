@@ -118,6 +118,7 @@ export interface IScorerRow {
     email: string | null;
     is_paper: boolean;
     willing_to_preside: boolean;
+    notes: string;
 }
 
 export interface ICourtroomRow {

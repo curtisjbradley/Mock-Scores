@@ -157,6 +157,7 @@ export default function PairingCard({ pairing, pairingNumber, teams, courtrooms,
             email: newScorerIsPaper ? null : newScorerEmail.trim(),
             is_paper: newScorerIsPaper,
             willing_to_preside: true,
+            notes: '',
             prefers_to_score_with: [],
         }
         apiFetch(`/organizer/tournament/${tournamentId}/scorers`, {
@@ -370,7 +371,7 @@ export default function PairingCard({ pairing, pairingNumber, teams, courtrooms,
                             </span>
                         )}
                         <span className="pc-scorer-name">
-                            {s.name}
+                            <Link to={`/organizer/${tournamentId}/scorers/${s.scorer_id}`}>{s.name}</Link>
                             {s.type === 'paper'
                                 ? <span className="pc-scorer-type pc-scorer-type--paper">Paper</span>
                                 : <span className="pc-scorer-type pc-scorer-type--online">Online</span>

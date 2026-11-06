@@ -11,8 +11,9 @@ import { useConfirmRemove } from '../../shared/hooks/useConfirmRemove'
 import { useAutoFocus } from '../../shared/hooks/useAutoFocus'
 import Section from './Section'
 import { v4 as randomUUID } from 'uuid'
+import { Link } from 'react-router-dom'
 
-function ManageConflictsModal({ scorer, tournamentId, onClose }: {
+export function ManageConflictsModal({ scorer, tournamentId, onClose }: {
     scorer: IScorer
     tournamentId: string
     onClose: () => void
@@ -29,6 +30,7 @@ function ManageConflictsModal({ scorer, tournamentId, onClose }: {
 
     const conflictTeamIds = new Set(conflicts.map(c => c.team_id))
     const available = teams.filter(t => !conflictTeamIds.has(t.id))
+    const teamCode = (teamId: string) => teams.find(team => team.id === teamId)?.code
 
     const addConflict = (team: ITeam) => {
         apiFetch(`/organizer/tournament/${tournamentId}/scorers/${scorer.scorer_id}/conflicts`, {
@@ -50,12 +52,13 @@ function ManageConflictsModal({ scorer, tournamentId, onClose }: {
                 <h2 id="conflicts-title">Conflicts — {scorer.name}</h2>
                 {conflicts.length > 0 && (
                     <ul className="sc-conflict-list">
-                        {conflicts.map(c => (
-                            <li key={c.team_id} className="sc-conflict-item">
-                                <span>{c.team_name}</span>
+                        {conflicts.map(c => {
+                            const code = teamCode(c.team_id)
+                            return <li key={c.team_id} className="sc-conflict-item">
+                                <span>{c.team_name}{code ? ` (${code})` : ''}</span>
                                 <DangerButton onClick={() => removeConflict(c)}>Remove</DangerButton>
                             </li>
-                        ))}
+                        })}
                     </ul>
                 )}
                 {available.length > 0 ? (
@@ -82,22 +85,23 @@ function ManageConflictsModal({ scorer, tournamentId, onClose }: {
     )
 }
 
-interface ScorerDraft {
+export interface ScorerDraft {
     name: string
     email: string
     isPaper: boolean
     willingToPreside: boolean
     prefersToScoreWith: string[]
+    notes: string
 }
 
-const EMPTY_DRAFT: ScorerDraft = { name: '', email: '', isPaper: false, willingToPreside: true, prefersToScoreWith: [] }
+const EMPTY_DRAFT: ScorerDraft = { name: '', email: '', isPaper: false, willingToPreside: true, prefersToScoreWith: [], notes: '' }
 
 /**
  * Add/Edit form for a scorer. Handles both online (email required) and paper
  * (offline, no email) judges, plus the judge profile: willingness to preside and
  * a "prefers to score with" multi-select over the other scorers in the tournament.
  */
-function ScorerFormModal({ editingScorer, allScorers, onClose, onSave, saving }: {
+export function ScorerFormModal({ editingScorer, allScorers, onClose, onSave, saving }: {
     editingScorer: IScorer | null
     allScorers: IScorer[]
     onClose: () => void
@@ -111,6 +115,7 @@ function ScorerFormModal({ editingScorer, allScorers, onClose, onSave, saving }:
             isPaper: editingScorer.is_paper,
             willingToPreside: editingScorer.willing_to_preside,
             prefersToScoreWith: editingScorer.prefers_to_score_with ?? [],
+            notes: editingScorer.notes ?? '',
         }
         : EMPTY_DRAFT)
     const nameRef = useAutoFocus<HTMLInputElement>(true)
@@ -184,6 +189,13 @@ function ScorerFormModal({ editingScorer, allScorers, onClose, onSave, saving }:
                         )}
                     </div>
 
+                    <div className="tc-field">
+                        <label className="tc-label" htmlFor="scorer-notes">Notes</label>
+                        <textarea id="scorer-notes" className="tc-input" value={draft.notes}
+                            onChange={e => setDraft(d => ({ ...d, notes: e.target.value }))}
+                            placeholder="Organizer notes" />
+                    </div>
+
                     <div className="confirm-actions">
                         <button type="button" onClick={onClose} disabled={saving}>Cancel</button>
                         <button type="submit" disabled={!canSave || saving}>
@@ -220,10 +232,7 @@ export default function ScorersTab({ tournamentId }: { tournamentId: string }) {
             .catch(() => {})
     }, [tournamentId, loadScorers])
 
-    const scorerName = (id: string) => scorers.find(s => s.scorer_id === id)?.name ?? '—'
-
     const openAddModal = () => { setEditingScorer(null); setShowForm(true) }
-    const openEditModal = (scorer: IScorer) => { setEditingScorer(scorer); setShowForm(true) }
 
     const handleSave = async (draft: ScorerDraft) => {
         const base = {
@@ -232,6 +241,7 @@ export default function ScorersTab({ tournamentId }: { tournamentId: string }) {
             is_paper: draft.isPaper,
             willing_to_preside: draft.willingToPreside,
             prefers_to_score_with: draft.prefersToScoreWith,
+            notes: draft.notes.trim(),
         }
         setSaving(true)
         setError(null)
@@ -273,7 +283,7 @@ export default function ScorersTab({ tournamentId }: { tournamentId: string }) {
     }
 
     return (
-        <Section title="Scorers" description="Manage available scorers, including paper (offline) judges, their conflicts, and preferences">
+        <Section title="Scorers" description="Manage available scorers">
             {error && <p className="org-error" role="alert">{error}</p>}
             <div className="tab-actions">
                 <AddButton onClick={openAddModal}>+ Add scorer</AddButton>
@@ -282,34 +292,24 @@ export default function ScorersTab({ tournamentId }: { tournamentId: string }) {
 
             <div className="dash-table-scroll scorers-table-wrap">
                 <table className="dash-standings-table">
-                    <thead><tr><th>Name</th><th>Type</th><th>Email</th><th>Preside</th><th>Prefers</th><th></th></tr></thead>
+                    <thead><tr><th>Name</th><th>Email</th><th>Type</th><th>Manage Scorer</th></tr></thead>
                     <tbody>
                         {scorers.map(scorer => (
                             <tr key={scorer.scorer_id}>
-                                <td>{scorer.name}</td>
-                                <td>
-                                    <span className={`sc-type-badge ${scorer.is_paper ? 'sc-type-badge--paper' : 'sc-type-badge--online'}`}>
-                                        {scorer.is_paper ? 'Paper' : 'Online'}
-                                    </span>
-                                </td>
-                                <td className="dash-judge-name">
+                                <td data-label="Name">{scorer.name}</td>
+                                <td data-label="Email" className="dash-judge-name">
                                     {scorer.email ?? '—'}
                                     {scorer.email && bouncedEmails.has(scorer.email.toLowerCase()) && (
                                         <span title="Email delivery failed" className="dash-bounced-badge">⚠ BOUNCED</span>
                                     )}
                                 </td>
-                                <td>{scorer.willing_to_preside ? '✓' : '—'}</td>
-                                <td>
-                                    {scorer.prefers_to_score_with && scorer.prefers_to_score_with.length > 0
-                                        ? scorer.prefers_to_score_with.map(scorerName).join(', ')
-                                        : '—'}
+                                <td data-label="Type">
+                                    <span className={`sc-type-badge ${scorer.is_paper ? 'sc-type-badge--paper' : 'sc-type-badge--online'}`}>
+                                        {scorer.is_paper ? 'Paper' : 'Online'}
+                                    </span>
                                 </td>
-                                <td>
-                                    <div className="dash-actions-cell">
-                                        <button className="dash-remove-btn" onClick={() => openEditModal(scorer)}>Edit</button>
-                                        <button className="dash-remove-btn" onClick={() => setConflictsScorer(scorer)}>Manage Conflicts</button>
-                                        <DangerButton onClick={() => confirmRemove.open(scorer)}>Remove</DangerButton>
-                                    </div>
+                                <td data-label="Manage Scorer">
+                                    <Link className="dash-remove-btn" to={`/organizer/${tournamentId}/scorers/${scorer.scorer_id}`}>Manage Scorer</Link>
                                 </td>
                             </tr>
                         ))}

@@ -17,7 +17,7 @@ export default function SchedulePage() {
 
     const onAssignRoles = (pairingId: string, side: 'p' | 'd') => navigate(
         isOrganizerView
-            ? `/organizer/${tournamentId}/school/${teamId}/assign-roles/${pairingId}/${side}`
+            ? `/organizer/${tournamentId}/team/${teamId}/assign-roles/${pairingId}/${side}`
             : `/coach/${teamId}/assign-roles/${pairingId}/${side}`
     )
 
@@ -25,7 +25,7 @@ export default function SchedulePage() {
         const pairing = schedule.flatMap(r => r.pairings).find(p => p.pairing_id === pairingId)
         const side = pairing?.d_team_code === tournament.team_code ? 'd' : 'p'
         navigate(isOrganizerView
-            ? `/organizer/${tournamentId}/school/${teamId}/witness-order/${pairingId}?side=${side}`
+            ? `/organizer/${tournamentId}/team/${teamId}/witness-order/${pairingId}?side=${side}`
             : `/coach/${teamId}/witness-order/${pairingId}?side=${side}`)
     }
 

@@ -1,7 +1,10 @@
 import { useEffect, useMemo, useState } from 'react'
 import { Outlet, useLocation, useNavigate, useParams, useSearchParams } from 'react-router-dom'
+import '../../shared/styles/dashboard.css'
 import type { ITournament } from '@mock-scores/shared'
 import { apiFetch } from '../../auth/auth'
+import '../../shared/styles/dashboard.css'
+
 import DashboardSidebar, { type DashboardNavItem } from '../../shared/components/DashboardSidebar'
 import { type OrganizerScreen, VALID_SCREENS } from '../constants'
 
@@ -40,6 +43,7 @@ export default function OrganizerShell() {
 
     const active = useMemo<OrganizerScreen>(() => {
         if (location.pathname.includes('/round/')) return 'rounds'
+        if (location.pathname.includes('/scorers/')) return 'scorers'
         const requested = searchParams.get('page')
         return requested && VALID_SCREENS.has(requested) ? requested as OrganizerScreen : 'overview'
     }, [location.pathname, searchParams])

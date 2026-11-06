@@ -443,6 +443,18 @@ router.get("/scorers", tournamentHandler(async (req, res) => {
     }
 }));
 
+router.get('/scorers/:scorerId', tournamentHandler(async (req, res) => {
+    const scorerId = req.params.scorerId as string;
+    if (!uuidRegex.test(scorerId)) return res.status(400).json({ message: 'Invalid scorer ID' });
+    try {
+        return res.status(200).json(await organizer.getScorerDetail(req.tournament, scorerId));
+    } catch (e) {
+        if (e instanceof NotFoundError) return res.status(404).json({ message: e.message });
+        if (e instanceof DbError) return res.status(500).json({ message: 'Unable to load scorer assignments' });
+        throw e;
+    }
+}));
+
 function verifyScorer(req: Request, res: Response, next: NextFunction) {
     const scorer: IScorer = req.body;
     if (!scorer?.name?.trim() || !scorer?.scorer_id)
@@ -462,6 +474,7 @@ function verifyScorer(req: Request, res: Response, next: NextFunction) {
         email: isPaper ? (scorer.email?.trim() || null) : scorer.email,
         is_paper: isPaper,
         willing_to_preside: scorer.willing_to_preside ?? true,
+        notes: scorer.notes?.trim() ?? '',
     };
     next();
 }
@@ -1082,12 +1095,18 @@ router.delete('/courtrooms', async (req: Request, res: Response) => {
  *       200: { description: Array of teams }
  */
 router.get('/teams', tournamentHandler(async (req, res) => {
-    const issue = req.query.issue
-    const validIssues = new Set(['without-rosters', 'without-default-assignments', 'without-default-call-orders', 'without-coaches'])
-    if (issue !== undefined && (typeof issue !== 'string' || !validIssues.has(issue))) {
+    const rawIssues = req.query.issue === undefined
+        ? []
+        : Array.isArray(req.query.issue) ? req.query.issue : [req.query.issue]
+    if (!rawIssues.every((issue): issue is string => typeof issue === 'string')) {
         return res.status(400).json({ message: 'Invalid team issue filter' })
     }
-    return res.status(200).json(await organizer.getTeams(req.tournament, issue as organizer.TeamIssueFilter | undefined));
+    const issues = rawIssues.flatMap(issue => issue.split(','))
+    const validIssues = new Set(['without-rosters', 'without-default-assignments', 'without-default-call-orders', 'without-coaches'])
+    if (!issues.every(issue => validIssues.has(issue))) {
+        return res.status(400).json({ message: 'Invalid team issue filter' })
+    }
+    return res.status(200).json(await organizer.getTeams(req.tournament, issues as organizer.TeamIssueFilter[]));
 }));
 
 function verifyTeamPayload(req: Request, res: Response, next: NextFunction) {
@@ -1913,6 +1932,7 @@ router.post('/import/scorers', tournamentHandler(async (req, res) => {
                 email: email ? email : null,
                 is_paper: isPaper,
                 willing_to_preside: willingToPreside,
+                notes: '',
             };
             await organizer.addScorer(scorer, req.tournament);
             results.created++;

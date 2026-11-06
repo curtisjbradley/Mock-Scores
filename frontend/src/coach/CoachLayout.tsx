@@ -50,13 +50,13 @@ interface Format { criminal_case?: boolean }
  */
 export default function CoachLayout({ isOrganizerView = false }: Props) {
     // Coach view is scoped by team: `/coach/:teamId`. Organizer preview keeps
-    // the tournament id in `:id` and the previewed team in `:schoolId`.
-    const { teamId: teamIdParam, id, schoolId } = useParams<{ teamId: string; id: string; schoolId: string }>()
+    // the tournament id in `:id` and the previewed team in `:teamId`.
+    const { teamId: teamIdParam, id } = useParams<{ teamId: string; id: string }>()
     const navigate = useNavigate()
     const location = useLocation()
 
     // The team id that drives resolution and URLs.
-    const urlTeamId = isOrganizerView ? (schoolId ?? '') : (teamIdParam ?? '')
+    const urlTeamId = teamIdParam ?? ''
     // Tournament id from the route in organizer view (derived from the team otherwise).
     const organizerTournamentId = isOrganizerView ? id : undefined
 
@@ -194,7 +194,7 @@ export default function CoachLayout({ isOrganizerView = false }: Props) {
 
     // Base path for this dashboard's pages.
     const base = isOrganizerView
-        ? `/organizer/${organizerTournamentId}/school/${urlTeamId}`
+        ? `/organizer/${organizerTournamentId}/team/${urlTeamId}`
         : `/coach/${teamId}`
 
     // Derive the active tab from the last path segment.

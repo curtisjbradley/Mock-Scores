@@ -12,6 +12,9 @@ import type {
     IOrganizer,
     IRound,
     IScorer,
+    IScorerAssignablePairing,
+    IScorerAssignmentSummary,
+    IScorerDetail,
     IScoringCategory,
     IScoringTemplate,
     ITeam,
@@ -446,7 +449,8 @@ export async function getScorers(tournamentID: string): Promise<IScorer[]> {
         email: string | null;
         is_paper: boolean;
         willing_to_preside: boolean;
-    }>('SELECT scorer_id, name, email, is_paper, willing_to_preside FROM scorers WHERE tournament_id = $1', [tournamentID]);
+        notes: string;
+    }>('SELECT scorer_id, name, email, is_paper, willing_to_preside, notes FROM scorers WHERE tournament_id = $1 order by name, email', [tournamentID]);
     if (!result) throw new DbError('getScorers');
 
     // Attach each scorer's co-scoring preferences (preferred_scorer_id list).
@@ -470,22 +474,23 @@ export async function getScorers(tournamentID: string): Promise<IScorer[]> {
         email: r.email,
         is_paper: r.is_paper,
         willing_to_preside: r.willing_to_preside,
+        notes: r.notes,
         prefers_to_score_with: prefsByScorer.get(r.scorer_id) ?? [],
     }));
 }
 
 export async function addScorer(scorer: IScorer, tournamentId: string): Promise<void> {
     const result = await dbQuery(
-        'INSERT INTO scorers (scorer_id, tournament_id, name, email, is_paper, willing_to_preside) VALUES ($1,$2,$3,$4,$5,$6)',
-        [scorer.scorer_id, tournamentId, scorer.name, scorer.email, scorer.is_paper, scorer.willing_to_preside],
+        'INSERT INTO scorers (scorer_id, tournament_id, name, email, is_paper, willing_to_preside, notes) VALUES ($1,$2,$3,$4,$5,$6,$7)',
+        [scorer.scorer_id, tournamentId, scorer.name, scorer.email, scorer.is_paper, scorer.willing_to_preside, scorer.notes],
     );
     if (!result) throw new DbError('addScorer');
 }
 
 export async function updateScorer(scorer: IScorer, tournamentId: string): Promise<void> {
     const result = await dbQuery(
-        'UPDATE scorers SET tournament_id=$1, name=$2, email=$3, is_paper=$4, willing_to_preside=$5 WHERE scorer_id=$6',
-        [tournamentId, scorer.name, scorer.email, scorer.is_paper, scorer.willing_to_preside, scorer.scorer_id],
+        'UPDATE scorers SET tournament_id=$1, name=$2, email=$3, is_paper=$4, willing_to_preside=$5, notes=$6 WHERE scorer_id=$7',
+        [tournamentId, scorer.name, scorer.email, scorer.is_paper, scorer.willing_to_preside, scorer.notes, scorer.scorer_id],
     );
     if (!result) throw new DbError('updateScorer');
     if ((result.rowCount ?? 0) === 0) throw new NotFoundError('scorer');
@@ -495,6 +500,66 @@ export async function deleteScorer(scorerId: string): Promise<void> {
     const result = await dbQuery('DELETE FROM scorers WHERE scorer_id=$1 RETURNING scorer_id', [scorerId]);
     if (!result) throw new DbError('deleteScorer');
     if (!result.rows[0]) throw new NotFoundError('scorer');
+}
+
+export async function getScorerAssignmentSummaries(tournamentId: string, scorerId: string): Promise<IScorerAssignmentSummary[]> {
+    const result = await dbQuery<IScorerAssignmentSummary>(`SELECT spa.assignment_id, p.pairing_id, r.round_id, r.name AS round_name,
+                 p.p_team AS prosecution_id, p.d_team AS defense_id,
+                 prosecution.name AS prosecution, defense.name AS defense, c.name AS courtroom,
+                 COALESCE(other_scorers.scorers, '[]'::jsonb) AS other_scorers, b.ballot_id,
+                 EXISTS (SELECT 1 FROM scorer_presider_assignment presider
+                         WHERE presider.pairing_id = p.pairing_id
+                           AND presider.scorer_assignment_id = spa.assignment_id) AS is_presider
+          FROM scorer_pairing_assignments spa
+          JOIN scorers s ON s.scorer_id = spa.scorer_id
+          JOIN pairings p ON p.pairing_id = spa.pairing_id
+          JOIN rounds r ON r.round_id = p.round_id
+          JOIN teams prosecution ON prosecution.id = p.p_team
+          JOIN teams defense ON defense.id = p.d_team
+          LEFT JOIN courtrooms c ON c.id = p.courtroom
+          LEFT JOIN ballots b ON b.scorer_assignment_id = spa.assignment_id
+          LEFT JOIN LATERAL (
+              SELECT jsonb_agg(jsonb_build_object('scorer_id', other_scorer.scorer_id, 'name', other_scorer.name)
+                               ORDER BY other_scorer.name) AS scorers
+              FROM scorer_pairing_assignments other_assignment
+              JOIN scorers other_scorer ON other_scorer.scorer_id = other_assignment.scorer_id
+              WHERE other_assignment.pairing_id = p.pairing_id
+                AND other_assignment.assignment_id <> spa.assignment_id
+          ) other_scorers ON true
+          WHERE s.tournament_id = $1 AND spa.scorer_id = $2
+          ORDER BY r.name, p.pairing_id`, [tournamentId, scorerId]);
+    if (!result) throw new DbError('getScorerAssignmentSummaries');
+    return result.rows;
+}
+
+export async function getScorerAssignablePairings(tournamentId: string, scorerId: string): Promise<IScorerAssignablePairing[]> {
+    const result = await dbQuery<IScorerAssignablePairing>(`SELECT p.pairing_id, r.round_id, r.name AS round_name,
+                 prosecution.name AS prosecution, defense.name AS defense, courtroom.name AS courtroom,
+                 (SELECT COUNT(*)::int FROM scorer_pairing_assignments assignment WHERE assignment.pairing_id = p.pairing_id) AS scorer_count
+          FROM pairings p
+          JOIN rounds r ON r.round_id = p.round_id
+          JOIN teams prosecution ON prosecution.id = p.p_team
+          JOIN teams defense ON defense.id = p.d_team
+          LEFT JOIN courtrooms courtroom ON courtroom.id = p.courtroom
+          WHERE r.tournament_id = $1
+            AND NOT EXISTS (SELECT 1 FROM scorer_pairing_assignments existing
+                            WHERE existing.pairing_id = p.pairing_id AND existing.scorer_id = $2)
+          ORDER BY r.name, p.pairing_id`, [tournamentId, scorerId]);
+    if (!result) throw new DbError('getScorerAssignablePairings');
+    return result.rows;
+}
+
+export async function getScorerDetail(tournamentId: string, scorerId: string): Promise<IScorerDetail> {
+    const [scorers, assignments, conflicts, teams, availablePairings] = await Promise.all([
+        getScorers(tournamentId),
+        getScorerAssignmentSummaries(tournamentId, scorerId),
+        getConflicts(scorerId),
+        getTeams(tournamentId),
+        getScorerAssignablePairings(tournamentId, scorerId),
+    ]);
+    const scorer = scorers.find(candidate => candidate.scorer_id === scorerId);
+    if (!scorer) throw new NotFoundError('scorer');
+    return { scorer, scorers, assignments, conflicts, teams, available_pairings: availablePairings };
 }
 
 export async function getAllConflicts(tournamentId: string): Promise<{ scorer_id: string; team_id: string }[]> {
@@ -831,14 +896,16 @@ async function copyDefaultsForRound(client: PoolClient, roundID: string): Promis
 
 export type TeamIssueFilter = 'without-rosters' | 'without-default-assignments' | 'without-default-call-orders' | 'without-coaches';
 
-export async function getTeams(tournamentID: string, issue?: TeamIssueFilter): Promise<ITeam[]> {
+export async function getTeams(tournamentID: string, issues: TeamIssueFilter[] = []): Promise<ITeam[]> {
     const issueClauses: Record<TeamIssueFilter, string> = {
         'without-rosters': 'AND NOT EXISTS (SELECT 1 FROM team_rostered_students trs WHERE trs.team_id = t.id)',
         'without-default-assignments': 'AND NOT EXISTS (SELECT 1 FROM default_student_assignments dsa WHERE dsa.team_id = t.id)',
         'without-default-call-orders': 'AND NOT EXISTS (SELECT 1 FROM default_witness_call_order dwco WHERE dwco.team_id = t.id)',
         'without-coaches': 'AND NOT EXISTS (SELECT 1 FROM team_coaches tc WHERE tc.team_id = t.id)',
     };
-    const filter = issue ? issueClauses[issue] : '';
+    const filter = issues.length > 0
+        ? `AND (${issues.map(issue => issueClauses[issue].replace('AND ', '')).join(' OR ')})`
+        : '';
     const joined = (await dbQuery<ITeam>(`SELECT t.id,
                                                  t.tournament_id,
                                                  t.name,
@@ -1417,9 +1484,9 @@ async function duplicateScoringCategories(sourceTournamentID: string, newTournam
 }
 
 async function duplicateScorers(sourceTournamentID: string, newTournamentID: string): Promise<void> {
-    const scorers = await dbQuery<IScorer>('SELECT scorer_id, name, email, is_paper, willing_to_preside FROM scorers WHERE tournament_id=$1', [sourceTournamentID]);
+    const scorers = await dbQuery<IScorer>('SELECT scorer_id, name, email, is_paper, willing_to_preside, notes FROM scorers WHERE tournament_id=$1', [sourceTournamentID]);
     if (scorers?.rows.length) {
-        await Promise.all(scorers.rows.map(s => dbQuery('INSERT INTO scorers (scorer_id, tournament_id, name, email, is_paper, willing_to_preside) VALUES ($1,$2,$3,$4,$5,$6)', [randomUUID(), newTournamentID, s.name, s.email, s.is_paper, s.willing_to_preside])));
+        await Promise.all(scorers.rows.map(s => dbQuery('INSERT INTO scorers (scorer_id, tournament_id, name, email, is_paper, willing_to_preside, notes) VALUES ($1,$2,$3,$4,$5,$6,$7)', [randomUUID(), newTournamentID, s.name, s.email, s.is_paper, s.willing_to_preside, s.notes])));
     }
 }
 

@@ -1,0 +1,136 @@
+.scorer-view { gap: 1.5rem; }
+
+.scorer-view__header {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: 1rem;
+    padding: 1.25rem;
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    background: var(--surface);
+    box-shadow: var(--shadow-sm);
+}
+
+.scorer-view__title { min-width: 0; }
+.scorer-view__title h1 { margin: 0.4rem 0 0; font-size: 1.6rem; color: var(--text); }
+.scorer-view__title p { margin: 0.3rem 0 0; color: var(--text-muted); overflow-wrap: anywhere; }
+.scorer-view__actions { display: flex; flex-wrap: wrap; justify-content: flex-end; gap: 0.5rem; }
+
+.scorer-view__editor { display: grid; gap: 0.75rem; }
+
+.scorer-view__editor-section {
+    padding: 1.25rem;
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    background: var(--surface);
+}
+
+.scorer-view__editor-section h2 { margin: 0 0 0.9rem; font-size: 1.1rem; }
+.scorer-view__editor-heading { display: flex; align-items: center; justify-content: space-between; gap: 1rem; margin-bottom: 0.9rem; }
+.scorer-view__editor-heading h2 { margin: 0; }
+.scorer-view__editor-heading .btn-secondary { padding: 0.35rem 0.7rem; font-size: 0.82rem; }
+.scorer-view__editor-actions { display: flex; gap: 0.4rem; }
+.scorer-view__editor-actions .btn-primary,
+.scorer-view__editor-actions .btn-secondary { padding: 0.35rem 0.7rem; font-size: 0.82rem; }
+.scorer-view__editor-section > p { margin: -0.45rem 0 0.9rem; color: var(--text-muted); font-size: 0.875rem; }
+.scorer-view__field-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 0.75rem; }
+.scorer-view__options { display: flex; flex-wrap: wrap; gap: 0.75rem 1.25rem; margin-top: 0.9rem; }
+.scorer-view__options .sc-checkbox-label { margin: 0; }
+.scorer-view__summary { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 0.8rem 1.25rem; margin: 0; }
+.scorer-view__summary dt { color: var(--text-muted); font-size: 0.75rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.03em; }
+.scorer-view__summary dd { margin: 0.25rem 0 0; overflow-wrap: anywhere; }
+.scorer-view__notes { margin: 0; color: var(--text); overflow-wrap: anywhere; white-space: pre-wrap; }
+
+.scorer-view__assignments {
+    padding: 1.25rem;
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    background: var(--surface);
+}
+
+.scorer-view__section-heading { display: flex; align-items: flex-start; justify-content: space-between; gap: 1rem; margin-bottom: 1rem; }
+.scorer-view__section-heading h2 { margin: 0; font-size: 1.1rem; }
+.scorer-view__section-heading p { margin: 0.25rem 0 0; color: var(--text-muted); font-size: 0.875rem; }
+.scorer-view__section-heading > span { padding: 0.2rem 0.55rem; border-radius: 1rem; background: var(--surface-muted); color: var(--text-muted); font-size: 0.78rem; font-weight: 700; white-space: nowrap; }
+.scorer-view__table a { color: var(--primary); font-weight: 600; text-decoration: none; }
+.scorer-view__table a:hover { text-decoration: underline; }
+.scorer-view__add-assignment { margin-top: 1rem; }
+.scorer-view__assignment-modal { width: min(100%, 34rem); }
+.scorer-view__assignment-modal .tc-field { margin-top: 1rem; }
+.scorer-view__pairing-preview { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 0.75rem; margin: 1rem 0 0; padding: 0.85rem; border-radius: var(--radius); background: var(--surface-muted); }
+.scorer-view__pairing-preview dt { color: var(--text-muted); font-size: 0.72rem; font-weight: 700; text-transform: uppercase; }
+.scorer-view__pairing-preview dd { margin: 0.2rem 0 0; overflow-wrap: anywhere; }
+.scorer-view__assignment-actions {
+    display: grid;
+    min-width: 10rem;
+    gap: 0.4rem;
+}
+
+.scorer-view__assignment-actions .btn-secondary,
+.scorer-view__assignment-actions .ds-danger-btn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    min-height: 2rem;
+    padding: 0.35rem 0.6rem;
+    border-radius: 0.45rem;
+    font-size: 0.78rem;
+    line-height: 1.15;
+    text-align: center;
+    text-decoration: none;
+}
+
+.scorer-view__assignment-actions .ds-danger-btn--subtle {
+    border: 1px solid var(--danger);
+    background: transparent;
+}
+
+.scorer-view__assignment-actions .ds-danger-btn--subtle:hover:not(:disabled) {
+    background: var(--danger-bg);
+}
+
+.scorer-view__presider-status {
+    display: inline-flex;
+    align-items: center;
+    min-height: 2rem;
+    padding: 0.35rem 0.6rem;
+    border-radius: 0.45rem;
+    font-size: 0.78rem;
+    font-weight: 700;
+    text-align: center;
+}
+
+.scorer-view__presider-status { background: var(--success-subtle-bg); color: var(--success-fg); }
+.scorer-view__make-presider { padding: 0.35rem 0.6rem; font-size: 0.78rem; white-space: nowrap; }
+
+.scorer-view-pairing-pref {
+    color: var(--primary);
+    font-weight: bold;
+    text-decoration: none;
+    margin: 0.5rem;
+}
+
+@media (max-width: 40rem) {
+    .scorer-view__header { flex-direction: column; }
+    .scorer-view__actions { width: 100%; justify-content: stretch; }
+    .scorer-view__actions > * { flex: 1 1 100%; }
+    .scorer-view__field-grid { grid-template-columns: 1fr; }
+    .scorer-view__summary { grid-template-columns: 1fr; }
+    .scorer-view__editor-section { padding: 1rem; }
+    .scorer-view__save-row .btn-primary { width: 100%; }
+    .scorer-view__assignments { padding: 1rem; }
+    .scorer-view__pairing-preview { grid-template-columns: 1fr; }
+    .scorer-view__table { overflow-x: visible; }
+    .scorer-view__table .dash-standings-table,
+    .scorer-view__table .dash-standings-table tbody,
+    .scorer-view__table .dash-standings-table tr,
+    .scorer-view__table .dash-standings-table td { display: block; width: 100%; }
+    .scorer-view__table .dash-standings-table { border: 0; background: transparent; }
+    .scorer-view__table .dash-standings-table thead { display: none; }
+    .scorer-view__table .dash-standings-table tr { margin-bottom: 0.75rem; border: 1px solid var(--border); border-radius: var(--radius); overflow: hidden; }
+    .scorer-view__table .dash-standings-table tr:last-child { margin-bottom: 0; }
+    .scorer-view__table .dash-standings-table td { display: flex; justify-content: space-between; gap: 1rem; padding: 0.65rem 0.75rem; text-align: right; }
+    .scorer-view__table .dash-standings-table td::before { content: attr(data-label); flex: 0 0 6.5rem; color: var(--text-muted); font-size: 0.75rem; font-weight: 700; text-align: left; text-transform: uppercase; }
+    .scorer-view__assignment-actions { min-width: 0; width: 100%; }
+}
