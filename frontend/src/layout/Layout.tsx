@@ -9,11 +9,13 @@ import ErrorBoundary from "./ErrorBoundary.tsx";
 const Layout = () => (
     <>
         <Header />
-        <ErrorBoundary>
-            <Suspense fallback={<LoadingPage loadingText={'Loading Page...'} />}>
-                <Outlet />
-            </Suspense>
-        </ErrorBoundary>
+        <div className="layout-page">
+            <ErrorBoundary>
+                <Suspense fallback={<LoadingPage loadingText={'Loading Page...'} />}>
+                    <Outlet />
+                </Suspense>
+            </ErrorBoundary>
+        </div>
         <Footer />
     </>
 )

@@ -1,5 +1,5 @@
-import { useState, useEffect } from 'react'
-import { Link, useNavigate, useSearchParams } from 'react-router-dom'
+import { useState, useEffect, useRef } from 'react'
+import { Link, useSearchParams } from 'react-router-dom'
 import type { ITeam } from '@mock-scores/shared'
 import { ChangeTeamOwnerModal, ConfirmRemoveModal, EditTeamModal } from '../components/modals'
 import Section from './Section'
@@ -12,19 +12,23 @@ import AddButton from '../../shared/components/AddButton'
 import StatusChip from '../../shared/components/StatusChip'
 import EmailStatusBadge from '../../shared/components/EmailStatusBadge'
 
+const TEAM_ISSUE_FILTERS = [
+    { id: 'without-rosters', label: 'No roster' },
+    { id: 'without-default-assignments', label: 'No default assignments' },
+    { id: 'without-default-call-orders', label: 'No call orders' },
+    { id: 'without-coaches', label: 'No coaches' },
+] as const
+
+type TeamIssueFilter = typeof TEAM_ISSUE_FILTERS[number]['id']
 
 export default function TeamsTab({ tournamentId }: { tournamentId: string }) {
-    const [searchParams] = useSearchParams()
-    const navigate = useNavigate()
-    const requestedIssue = searchParams.get('issue')
-    const teamIssues = new Set(['without-rosters', 'without-default-assignments', 'without-default-call-orders', 'without-coaches'])
-    const issue = requestedIssue && teamIssues.has(requestedIssue) ? requestedIssue : null
-    const issueLabels: Record<string, string> = {
-        'without-rosters': 'Teams Without Rosters',
-        'without-default-assignments': 'Teams Without Default Assignments',
-        'without-default-call-orders': 'Teams Without Call Orders',
-        'without-coaches': 'Teams Without Coaches',
-    }
+    const [searchParams, setSearchParams] = useSearchParams()
+    const issueDropdownRef = useRef<HTMLDetailsElement>(null)
+    const activeIssues = new Set<TeamIssueFilter>(
+        searchParams.getAll('issue')
+            .flatMap(value => value.split(','))
+            .filter((value): value is TeamIssueFilter => TEAM_ISSUE_FILTERS.some(filter => filter.id === value)),
+    )
     const [teams, setTeams] = useState<ITeam[]>([])
     const [showModal, setShowModal] = useState(false)
     const confirmRemove = useConfirmRemove<ITeam>()
@@ -34,11 +38,39 @@ export default function TeamsTab({ tournamentId }: { tournamentId: string }) {
     const [ownerChange, setOwnerChange] = useState<{ team: ITeam; email: string } | null>(null)
 
     useEffect(() => {
-        apiFetch(`/organizer/tournament/${tournamentId}/teams${issue ? `?issue=${issue}` : ''}`)
+        const params = new URLSearchParams()
+        for (const issue of activeIssues) params.append('issue', issue)
+        const query = params.toString()
+        apiFetch(`/organizer/tournament/${tournamentId}/teams${query ? `?${query}` : ''}`)
             .then(r => r.json())
             .then(setTeams)
             .catch(console.error)
-    }, [tournamentId, issue])
+    }, [tournamentId, searchParams])
+
+    useEffect(() => {
+        const closeIssueDropdown = (event: PointerEvent) => {
+            const dropdown = issueDropdownRef.current
+            if (dropdown?.open && event.target instanceof Node && !dropdown.contains(event.target)) {
+                dropdown.open = false
+            }
+        }
+        document.addEventListener('pointerdown', closeIssueDropdown)
+        return () => document.removeEventListener('pointerdown', closeIssueDropdown)
+    }, [])
+
+    const setActiveIssues = (issues: Set<TeamIssueFilter>) => {
+        const next = new URLSearchParams(searchParams)
+        next.delete('issue')
+        for (const issue of issues) next.append('issue', issue)
+        setSearchParams(next)
+    }
+
+    const toggleIssue = (issue: TeamIssueFilter) => {
+        const next = new Set(activeIssues)
+        if (next.has(issue)) next.delete(issue)
+        else next.add(issue)
+        setActiveIssues(next)
+    }
 
     const putTeam = async (team: ITeam, patch: Partial<ITeam>): Promise<boolean> => {
         const res = await apiFetch(`/organizer/tournament/${tournamentId}/teams`, {
@@ -117,19 +149,46 @@ export default function TeamsTab({ tournamentId }: { tournamentId: string }) {
     }
 
     return (
-        <Section title={issue ? issueLabels[issue] : 'Teams'} description={issue ? 'Only teams requiring attention are shown.' : 'Manage invited teams'}>
+        <Section title="Teams" description={activeIssues.size > 0 ? 'Only teams requiring attention are shown.' : 'Manage invited teams'}>
             {error && <p className="coach-save-error" role="alert">{error}</p>}
             <div className="tab-actions teams-tab-actions">
-                {issue && <button className="btn-secondary teams-tab-actions__full" onClick={() => navigate('?page=teams')}>Show all teams</button>}
                 <AddButton className="teams-tab-actions__full" onClick={() => setShowModal(true)}>+ Add team</AddButton>
                 <button className="btn-primary tab-actions-import" onClick={() => setShowImport(true)}>Import CSV</button>
                 <button className="btn-secondary tab-actions-import" onClick={() => { void exportRosters() }}>Export All Rosters</button>
+            </div>
+
+            <div className="teams-issue-filters">
+                <div className="teams-active-issues" aria-label="Active filters">
+                    {TEAM_ISSUE_FILTERS.filter(issue => activeIssues.has(issue.id)).map(issue => (
+                        <button key={issue.id} type="button" className="teams-active-issue" onClick={() => toggleIssue(issue.id)} aria-label={`Remove ${issue.label} filter`}>
+                            <StatusChip label={`${issue.label} x`} variant="danger" />
+                        </button>
+                    ))}
+                </div>
+                <details ref={issueDropdownRef} className="teams-issue-dropdown">
+                    <summary aria-label="Filter teams" title="Filter teams">
+                        <svg aria-hidden="true" viewBox="0 0 24 24" focusable="false"><path d="M4 6h16M7 12h10M10 18h4" /></svg>
+                        <span>Filter</span>
+                    </summary>
+                    <div className="teams-issue-panel">
+                        <fieldset>
+                            <legend>Show teams with any of these issues</legend>
+                            {TEAM_ISSUE_FILTERS.map(issue => (
+                                <label key={issue.id} className="teams-issue-option">
+                                    <input type="checkbox" checked={activeIssues.has(issue.id)} onChange={() => toggleIssue(issue.id)} />
+                                    <span>{issue.label}</span>
+                                </label>
+                            ))}
+                        </fieldset>
+                    </div>
+                </details>
             </div>
 
             <div className="dash-table-scroll teams-table-wrap">
                 <table className="dash-standings-table">
                     <thead><tr><th>Team</th><th>Code</th><th>Contact</th><th>Status</th><th></th></tr></thead>
                     <tbody>
+                        {teams.length === 0 && <tr><td colSpan={5} className="dash-empty-cell">No teams match the selected issues.</td></tr>}
                         {teams.map(team => (
                             <tr key={team.id}>
                                 <td data-label="Team"><Link className="dash-table-link" to={`/organizer/${tournamentId}/school/${team.id}`}>{team.name}</Link></td>
