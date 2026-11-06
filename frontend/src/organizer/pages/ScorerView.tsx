@@ -347,7 +347,9 @@ export default function ScorerView() {
                                         <td data-label="Round"><Link to={`/organizer/${tournamentId}/round/${assignment.round_id}`}>{assignment.round_name}</Link></td>
                                         <td data-label="P"><Link to={`/organizer/${tournamentId}/team/${assignment.prosecution_id}`}>{assignment.prosecution}</Link></td>
                                         <td data-label="D"><Link to={`/organizer/${tournamentId}/team/${assignment.defense_id}`}>{assignment.defense}</Link></td>
-                                        <td data-label="Courtroom">{assignment.courtroom ?? '—'}</td>
+                                        <td data-label="Courtroom">{assignment.courtroom_id && assignment.courtroom
+                                            ? <Link to={`/organizer/${tournamentId}/courtrooms/${assignment.courtroom_id}`}>{assignment.courtroom}</Link>
+                                            : '—'}</td>
                                         <td data-label="Other scorers">{assignment.other_scorers.length > 0
                                             ? assignment.other_scorers.map((otherScorer, index) => <span key={otherScorer.scorer_id}>{index > 0 && ', '}<Link to={`/organizer/${tournamentId}/scorers/${otherScorer.scorer_id}`}>{otherScorer.name}</Link></span>)
                                             : '—'}</td>

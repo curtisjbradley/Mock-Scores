@@ -246,11 +246,17 @@ export default function CoachLayout({ isOrganizerView = false }: Props) {
                 />
 
                 <main className="dash-content">
+                    {isOrganizerView && (
+                        <div className="coach-view-banner" role="status">
+                            <strong>Organizer preview</strong>
+                            <span>You are viewing {title}&rsquo;s coach dashboard.</span>
+                        </div>
+                    )}
                     <button
                         className="org-back-btn"
                         onClick={() => navigate(isOrganizerView ? `/organizer/${tournamentId}?page=teams` : '/coach')}
                     >
-                        {isOrganizerView ? 'Back to tournament' : 'All tournaments'}
+                        {isOrganizerView ? 'Back to Organizer View' : 'All tournaments'}
                     </button>
 
                     <Outlet context={contextValue} />

@@ -505,7 +505,8 @@ export async function deleteScorer(scorerId: string): Promise<void> {
 export async function getScorerAssignmentSummaries(tournamentId: string, scorerId: string): Promise<IScorerAssignmentSummary[]> {
     const result = await dbQuery<IScorerAssignmentSummary>(`SELECT spa.assignment_id, p.pairing_id, r.round_id, r.name AS round_name,
                  p.p_team AS prosecution_id, p.d_team AS defense_id,
-                 prosecution.name AS prosecution, defense.name AS defense, c.name AS courtroom,
+                 prosecution.name AS prosecution, defense.name AS defense,
+                 p.courtroom AS courtroom_id, c.name AS courtroom,
                  COALESCE(other_scorers.scorers, '[]'::jsonb) AS other_scorers, b.ballot_id,
                  EXISTS (SELECT 1 FROM scorer_presider_assignment presider
                          WHERE presider.pairing_id = p.pairing_id

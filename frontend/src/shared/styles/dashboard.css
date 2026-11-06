@@ -223,6 +223,11 @@
 .dash-stat-card--feature .dash-stat-value {
     color: var(--primary);
 }
+.dash-courtroom-name>a {
+    color: var(--primary);
+    text-decoration: none;
+    font-weight: bold;
+}
 
 
 /* ── Responsive: stack the sidebar on top as a horizontal rail on mobile ──── */

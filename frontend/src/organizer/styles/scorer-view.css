@@ -111,7 +111,7 @@
     margin: 0.5rem;
 }
 
-@media (max-width: 40rem) {
+@media (max-width: 80rem) {
     .scorer-view__header { flex-direction: column; }
     .scorer-view__actions { width: 100%; justify-content: stretch; }
     .scorer-view__actions > * { flex: 1 1 100%; }

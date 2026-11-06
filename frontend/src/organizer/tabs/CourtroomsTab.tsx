@@ -83,7 +83,7 @@ export default function CourtroomsTab({ tournamentId }: { tournamentId: string }
                     <tbody>
                         {courtrooms.map(c => (
                             <tr key={c.id}>
-                                <td className="dash-team-code"><Link to={`/organizer/${tournamentId}/courtrooms/${c.id}`}>{c.name}</Link></td>
+                                <td className="dash-courtroom-name"><Link to={`/organizer/${tournamentId}/courtrooms/${c.id}`}>{c.name}</Link></td>
                                 <td className="dash-judge-name">{c.location ?? '—'}</td>
                                 <td>
                                     <div className="dash-actions-cell">

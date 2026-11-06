@@ -47,9 +47,9 @@
   table-layout: auto;
   border-collapse: separate;
   border-spacing: 0;
-  border: 1px solid var(--sbp-border, #d0d7de);
+  border: 1px solid var(--border, var(--sbp-border, #d0d7de));
   border-radius: 1rem;
-  background: var(--sbp-surface, #fff);
+  background: var(--surface, var(--sbp-surface, #fff));
   font-size: 0.9rem;
   overflow: visible;
 }
@@ -62,7 +62,7 @@
 .dash-standings-table td {
   display: table-cell;
   padding: 0.65rem 0.9rem;
-  border-bottom: 1px solid var(--sbp-border, #d0d7de);
+  border-bottom: 1px solid var(--border, var(--sbp-border, #d0d7de));
   text-align: left;
   white-space: nowrap;
 }
@@ -72,14 +72,14 @@
   font-weight: 700;
   text-transform: uppercase;
   letter-spacing: 0.05em;
-  color: var(--sbp-text-muted, #656d76);
-  background: var(--sbp-surface-muted, #f6f8fa);
+  color: var(--text-muted, var(--sbp-text-muted, #656d76));
+  background: var(--surface-muted, var(--sbp-surface-muted, #f6f8fa));
 }
 .dash-standings-table thead th:first-child { border-top-left-radius: 1rem; }
 .dash-standings-table thead th:last-child { border-top-right-radius: 1rem; }
 
 .dash-standings-table tbody tr:last-child td { border-bottom: none; }
-.dash-standings-table tbody tr:hover td { background: var(--sbp-surface-muted, #f6f8fa); }
+.dash-standings-table tbody tr:hover td { background: var(--surface-muted, var(--sbp-surface-muted, #f6f8fa)); }
 .dash-team-code { font-weight: 700; }
 
 /* ── StandingsBuilder ─────────────────────────────────────────────────────── */

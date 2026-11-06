@@ -25,6 +25,7 @@ export interface IScorerAssignmentSummary {
     defense_id: string;
     prosecution: string;
     defense: string;
+    courtroom_id: string | null;
     courtroom: string | null;
     other_scorers: IScorerAssignmentOtherScorer[];
     is_presider: boolean;
