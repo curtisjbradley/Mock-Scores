@@ -44,6 +44,7 @@ export default function OrganizerShell() {
     const active = useMemo<OrganizerScreen>(() => {
         if (location.pathname.includes('/round/')) return 'rounds'
         if (location.pathname.includes('/scorers/')) return 'scorers'
+        if (location.pathname.includes('/courtrooms/')) return 'courtrooms'
         const requested = searchParams.get('page')
         return requested && VALID_SCREENS.has(requested) ? requested as OrganizerScreen : 'overview'
     }, [location.pathname, searchParams])

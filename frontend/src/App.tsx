@@ -15,6 +15,7 @@ const TournamentNew = lazy(() => import('./organizer/pages/TournamentNew.tsx'));
 const ScorecardViewer = lazy(() => import('./organizer/pages/ScorecardViewer.tsx'));
 const RoundView = lazy(() => import('./organizer/pages/RoundView.tsx'));
 const ScorerView = lazy(() => import('./organizer/pages/ScorerView.tsx'));
+const CourtroomView = lazy(() => import('./organizer/pages/CourtroomView.tsx'));
 const BallotPage = lazy(() => import('./organizer/pages/BallotPage.tsx'));
 const CombinedScoresheetPage = lazy(() => import('./shared/components/CombinedScoresheetPage.tsx'));
 const CoachHome = lazy(() => import('./coach/CoachHome.tsx'));
@@ -62,6 +63,7 @@ function App() {
                       <Route index element={<TournamentDashboard />} />
                       <Route path="round/:round" element={<RoundView />} />
                       <Route path="scorers/:scorerId" element={<ScorerView />} />
+                      <Route path="courtrooms/:courtroomId" element={<CourtroomView />} />
                   </Route>
                   <Route path=":id/team/:teamId" element={<CoachLayout isOrganizerView />}>
                       <Route index element={<Navigate to="overview" replace />} />

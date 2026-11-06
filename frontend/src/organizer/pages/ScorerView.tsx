@@ -35,6 +35,7 @@ export default function ScorerView() {
     const [saving, setSaving] = useState(false)
     const [error, setError] = useState<string | null>(null)
     const [editingSections, setEditingSections] = useState<Set<EditorSection>>(new Set())
+    const [managingConflicts, setManagingConflicts] = useState(false)
     const confirmRemove = useConfirmRemove<IScorer>()
     const scorer = scorers.find(candidate => candidate.scorer_id === scorerId)
     const { register, handleSubmit, reset, resetField, setValue, watch, formState: { errors } } = useForm<ScorerDraft>({
@@ -278,14 +279,14 @@ export default function ScorerView() {
                     </section>
 
                     <section className="scorer-view__editor-section">
-                        <div className="scorer-view__editor-heading"><h2>Conflicts</h2></div>
+                        <div className="scorer-view__editor-heading"><h2>Conflicts</h2><button type="button" className="btn-secondary" onClick={() => setManagingConflicts(previous => !previous)}>{managingConflicts ? 'Done managing conflicts' : 'Manage conflicts'}</button></div>
                         {conflicts.length > 0 ? <ul className="sc-conflict-list">
                             {conflicts.map(conflict => <li key={conflict.team_id} className="sc-conflict-item">
                                 <span><Link to={`/organizer/${tournamentId}/team/${conflict.team_id}`}> {conflictTeamLabel(conflict)}</Link></span>
-                                <DangerButton onClick={() => { void removeConflict(conflict) }}>Remove</DangerButton>
+                                {managingConflicts && <DangerButton onClick={() => { void removeConflict(conflict) }}>Remove</DangerButton>}
                             </li>)}
                         </ul> : <p className="scorer-view__notes">No team conflicts.</p>}
-                        {teams.filter(team => !conflicts.some(conflict => conflict.team_id === team.id)).length > 0 && <div className="tc-field scorer-view__add-conflict">
+                        {managingConflicts && teams.filter(team => !conflicts.some(conflict => conflict.team_id === team.id)).length > 0 && <div className="tc-field scorer-view__add-conflict">
                             <label className="tc-label" htmlFor="scorer-view-add-conflict">Add conflicting team</label>
                             <select id="scorer-view-add-conflict" className="tc-input" defaultValue="" onChange={event => {
                                 const team = teams.find(candidate => candidate.id === event.target.value)

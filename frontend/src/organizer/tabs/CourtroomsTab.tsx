@@ -9,6 +9,7 @@ import { useAutoFocus } from '../../shared/hooks/useAutoFocus'
 import Section from './Section'
 import { apiFetch } from '../../auth/auth'
 import { v4 as randomUUID } from 'uuid'
+import { Link } from 'react-router-dom'
 
 export default function CourtroomsTab({ tournamentId }: { tournamentId: string }) {
     const [courtrooms, setCourtrooms] = useState<ICourtroom[]>([])
@@ -28,7 +29,7 @@ export default function CourtroomsTab({ tournamentId }: { tournamentId: string }
     }, [tournamentId])
 
     const openAddModal = () => { setEditingId(null); setName(''); setLocation(''); setShowModal(true) }
-    const openEditModal = (c: ICourtroom) => { setEditingId(c.id); setName(c.name); setLocation(c.location ?? ''); setShowModal(true) }
+    const openEditModal = (courtroom: ICourtroom) => { setEditingId(courtroom.id); setName(courtroom.name); setLocation(courtroom.location ?? ''); setShowModal(true) }
 
     const handleSave = async () => {
         if (!name.trim()) return
@@ -39,7 +40,7 @@ export default function CourtroomsTab({ tournamentId }: { tournamentId: string }
             const modified: ICourtroom = { id: editingId, name: name.trim(), location: location.trim() }
             const res = await apiFetch(`/organizer/tournament/${tournamentId}/courtrooms`, { method: 'PUT', body: JSON.stringify(modified) })
             if (!res.ok) throw new Error('Unable to save courtroom.')
-            setCourtrooms(prev => prev.map(c => c.id === editingId ? modified : c))
+            setCourtrooms(prev => prev.map(courtroom => courtroom.id === editingId ? modified : courtroom))
         } else {
             const created: ICourtroom = { id: randomUUID(), name: name.trim(), location: location.trim() }
             const res = await apiFetch(`/organizer/tournament/${tournamentId}/courtrooms`, { method: 'POST', body: JSON.stringify(created) })
@@ -58,12 +59,12 @@ export default function CourtroomsTab({ tournamentId }: { tournamentId: string }
         setSaving(true)
         setError(null)
         try {
-            const res = await apiFetch(`/organizer/tournament/${tournamentId}/courtrooms`, { method: 'DELETE', body: JSON.stringify(courtroom) })
-            if (!res.ok) throw new Error('Unable to remove courtroom.')
-            setCourtrooms(prev => prev.filter(c => c.id !== courtroom.id))
+            const response = await apiFetch(`/organizer/tournament/${tournamentId}/courtrooms`, { method: 'DELETE', body: JSON.stringify(courtroom) })
+            if (!response.ok) throw new Error('Unable to remove courtroom.')
+            setCourtrooms(previous => previous.filter(candidate => candidate.id !== courtroom.id))
             confirmRemove.clear()
-        } catch (e) {
-            setError(e instanceof Error ? e.message : 'Unable to remove courtroom.')
+        } catch (reason: unknown) {
+            setError(reason instanceof Error ? reason.message : 'Unable to remove courtroom.')
         } finally {
             setSaving(false)
         }
@@ -82,11 +83,12 @@ export default function CourtroomsTab({ tournamentId }: { tournamentId: string }
                     <tbody>
                         {courtrooms.map(c => (
                             <tr key={c.id}>
-                                <td className="dash-team-code">{c.name}</td>
+                                <td className="dash-team-code"><Link to={`/organizer/${tournamentId}/courtrooms/${c.id}`}>{c.name}</Link></td>
                                 <td className="dash-judge-name">{c.location ?? '—'}</td>
                                 <td>
                                     <div className="dash-actions-cell">
-                                        <button className="dash-remove-btn" onClick={() => openEditModal(c)}>Edit</button>
+                                        <button type="button" className="dash-remove-btn" onClick={() => openEditModal(c)}>Edit</button>
+                                        <Link className="dash-remove-btn" to={`/organizer/${tournamentId}/courtrooms/${c.id}`}>Manage courtroom</Link>
                                         <DangerButton onClick={() => confirmRemove.open(c)}>Remove</DangerButton>
                                     </div>
                                 </td>
@@ -120,13 +122,12 @@ export default function CourtroomsTab({ tournamentId }: { tournamentId: string }
                 </ModalBackdrop>
             )}
 
-            {confirmRemove.pending && (
-                <ConfirmRemoveModal
-                    message={`Remove ${confirmRemove.pending.name} from the courtroom list?`}
-                    onCancel={confirmRemove.clear}
-                    onConfirm={() => { void handleRemove(confirmRemove.pending!) }}
-                />
-            )}
+            {confirmRemove.pending && <ConfirmRemoveModal
+                message={`Remove ${confirmRemove.pending.name} from the courtroom list?`}
+                onCancel={confirmRemove.clear}
+                onConfirm={() => { void handleRemove(confirmRemove.pending!) }}
+            />}
+
         </Section>
     )
 }
