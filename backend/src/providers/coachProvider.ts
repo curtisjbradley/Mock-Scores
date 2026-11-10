@@ -66,8 +66,8 @@ export async function getTeamIdForCoach(tournamentId: string, userId: string): P
 }
 
 export async function getSchedule(tournamentId: string, teamId: string): Promise<ICoachScheduleRound[]> {
-    const rounds = (await dbQuery<{ round_id: string; name: string; round_time: Date | null; locked: boolean }>(
-        `SELECT round_id, name, round_time, locked FROM rounds WHERE tournament_id=$1 AND teams_public=true ORDER BY round_time desc`,
+    const rounds = (await dbQuery<{ round_id: string; name: string; round_time: Date | null; locked: boolean; results_public: boolean }>(
+        `SELECT round_id, name, round_time, locked, results_public FROM rounds WHERE tournament_id=$1 AND teams_public=true ORDER BY round_time desc`,
         [tournamentId]
     ))?.rows ?? [];
     return Promise.all(rounds.map(async r => ({
@@ -75,6 +75,7 @@ export async function getSchedule(tournamentId: string, teamId: string): Promise
         name: r.name,
         round_time: r.round_time?.toISOString() ?? null,
         locked: r.locked,
+        results_public: r.results_public,
         pairings: (await dbQuery<{ pairing_id: string; p_team_id: string; p_team_name: string; p_team_code: string; d_team_id: string; d_team_name: string; d_team_code: string; courtroom_name: string | null; has_assignments: boolean; has_call_order: boolean }>(
             `SELECT p.pairing_id,
                     pt.id AS p_team_id, pt.name AS p_team_name, pt.code AS p_team_code,

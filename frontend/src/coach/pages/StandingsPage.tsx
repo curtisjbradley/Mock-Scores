@@ -88,7 +88,8 @@ export default function StandingsPage() {
 
     return (
         <>
-            <table className="dash-standings-table">
+            <div className="coach-standings-table-scroll">
+                <table className="dash-standings-table">
                 <thead><tr>
                     <th>#</th><th>Code</th><th>Team</th>
                     {cols.map(c => <th key={c.stat}>{c.label}</th>)}
@@ -105,7 +106,8 @@ export default function StandingsPage() {
                         })}
                     </tr>
                 ))}</tbody>
-            </table>
+                </table>
+            </div>
             {dsl && (
                 <div className="coach-tiebreaker-viewer">
                     <TiebreakerViewer dsl={dsl} />

@@ -114,7 +114,7 @@
 
 .conflict-btn-report {
     color: var(--danger);
-    background: var(--danger-bg);
+    background: var(--surface-muted);
     border: 1px solid var(--danger) !important;
 }
 

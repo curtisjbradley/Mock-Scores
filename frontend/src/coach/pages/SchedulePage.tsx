@@ -12,7 +12,7 @@ import Tooltip from "../../shared/components/Tooltip.tsx"
  * witness-call-order flows.
  */
 export default function SchedulePage() {
-    const { tournamentId, teamId, tournament, schedule, isOrganizerView } = useCoachContext()
+    const { tournamentId, teamId, tournament, schedule, isOrganizerView, base } = useCoachContext()
     const navigate = useNavigate()
 
     const onAssignRoles = (pairingId: string, side: 'p' | 'd') => navigate(
@@ -43,58 +43,71 @@ export default function SchedulePage() {
                         </>
                     }
                 >
-                    <table className="dash-standings-table">
-                        <thead>
-                            <tr>
-                                <th>Prosecution</th>
-                                <th>Defense</th>
-                                <th>Courtroom</th>
-                                <th></th>
-                            </tr>
-                        </thead>
-                        <tbody>
-                            {round.pairings.map(p => {
-                                const side: 'p' | 'd' = teamId && p.d_team_id === teamId ? 'd' : 'p'
-                                return (
-                                    <tr key={p.pairing_id}>
-                                        <td>{p.p_team_code} - {p.p_team_name}</td>
-                                        <td>{p.d_team_code} - {p.d_team_name}</td>
-                                        <td>{p.courtroom_name ?? 'TBD'}</td>
-                                        <td className="coach-schedule-actions">
-                                            {round.locked ? (
-                                                <>
-                                                    <button className="btn-primary coach-btn-submitted" disabled>
-                                                        {p.has_assignments ? 'Roles Assigned' : 'Copied Default Roles'}
-                                                    </button>
-                                                    <button className="btn-primary coach-btn-submitted" disabled>
-                                                        {p.has_call_order ? 'Call Order Set' : 'Copied Default Call Order'}
-                                                    </button>
-                                                </>
-                                            ) : (
-                                                // Until the round is locked, coaches can freely (re-)edit both
-                                                // their role assignments and witness call order, so these stay
-                                                // clickable even after an initial entry has been saved.
-                                                <>
+                    {round.pairings.length === 0 ? (
+                        <p className="coach-schedule-no-pairing" role="status">
+                            Your team is not competing in this round.
+                        </p>
+                    ) : (
+                        <table className="dash-standings-table coach-schedule-table">
+                            <thead>
+                                <tr>
+                                    <th>Prosecution</th>
+                                    <th>Defense</th>
+                                    <th>Courtroom</th>
+                                    <th>Actions</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {round.pairings.map(p => {
+                                    const side: 'p' | 'd' = teamId && p.d_team_id === teamId ? 'd' : 'p'
+                                    return (
+                                        <tr key={p.pairing_id}>
+                                            <td data-label="Prosecution">{p.p_team_code} - {p.p_team_name}</td>
+                                            <td data-label="Defense">{p.d_team_code} - {p.d_team_name}</td>
+                                            <td data-label="Courtroom">{p.courtroom_name ?? 'TBD'}</td>
+                                            <td className="coach-schedule-actions" data-label="Actions">
+                                                {round.results_public ? (
                                                     <button
-                                                        className={`btn-primary${p.has_assignments ? ' coach-btn-set' : ''}`}
-                                                        onClick={() => onAssignRoles(p.pairing_id, side)}
+                                                        className="btn-primary coach-schedule-results-btn"
+                                                        onClick={() => navigate(`${base}/results`)}
                                                     >
-                                                        {p.has_assignments ? 'Edit roles' : 'Assign Roles'}
+                                                        See Results
                                                     </button>
-                                                    <button
-                                                        className={`btn-primary${p.has_call_order ? ' coach-btn-set' : ''}`}
-                                                        onClick={() => onWitnessOrder(p.pairing_id)}
-                                                    >
-                                                        {p.has_call_order ? 'Edit call order' : 'Assign Call Order'}
-                                                    </button>
-                                                </>
-                                            )}
-                                        </td>
-                                    </tr>
-                                )
-                            })}
-                        </tbody>
-                    </table>
+                                                ) : round.locked ? (
+                                                    <>
+                                                        <button className="btn-primary coach-btn-submitted" disabled>
+                                                            {p.has_assignments ? 'Roles Assigned' : 'Copied Default Roles'}
+                                                        </button>
+                                                        <button className="btn-primary coach-btn-submitted" disabled>
+                                                            {p.has_call_order ? 'Call Order Set' : 'Copied Default Call Order'}
+                                                        </button>
+                                                    </>
+                                                ) : (
+                                                    // Until the round is locked, coaches can freely (re-)edit both
+                                                    // their role assignments and witness call order, so these stay
+                                                    // clickable even after an initial entry has been saved.
+                                                    <>
+                                                        <button
+                                                            className={`btn-primary${p.has_assignments ? ' coach-btn-set' : ''}`}
+                                                            onClick={() => onAssignRoles(p.pairing_id, side)}
+                                                        >
+                                                            {p.has_assignments ? 'Edit roles' : 'Assign Roles'}
+                                                        </button>
+                                                        <button
+                                                            className={`btn-primary${p.has_call_order ? ' coach-btn-set' : ''}`}
+                                                            onClick={() => onWitnessOrder(p.pairing_id)}
+                                                        >
+                                                            {p.has_call_order ? 'Edit call order' : 'Assign Call Order'}
+                                                        </button>
+                                                    </>
+                                                )}
+                                            </td>
+                                        </tr>
+                                    )
+                                })}
+                            </tbody>
+                        </table>
+                    )}
                 </RoundGroup>
             ))}
         </>

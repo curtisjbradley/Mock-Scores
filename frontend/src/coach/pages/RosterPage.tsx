@@ -143,8 +143,8 @@ function SideSetupModal({
                             <tbody>
                                 {callOrderSlots.map((val, i) => (
                                     <tr key={i}>
-                                        <td>{i + 1}</td>
-                                        <td>
+                                        <td data-label="Call number">{i + 1}</td>
+                                        <td data-label="Witness">
                                             <select className="rv-select" value={val}
                                                 onChange={e => setSlot(i, e.target.value)}>
                                                 <option value="">- select -</option>
@@ -171,8 +171,8 @@ function SideSetupModal({
                             <tbody>
                                 {roleRows.map(r => (
                                     <tr key={r.key}>
-                                        <td>{r.label}</td>
-                                        <td>
+                                        <td data-label="Role">{r.label}</td>
+                                        <td data-label="Student">
                                             <select className="rv-select"
                                                 value={assignments.get(r.key) ?? ''}
                                                 onChange={e => setAssignments(prev => {
@@ -304,7 +304,7 @@ export default function RosterPage() {
                             </li>
                         ))}
                     </ul>
-                    : <div className="dash-table-scroll">
+                    : <div className="dash-table-scroll roster-table-wrap">
                         <table className="dash-standings-table roster-table">
                             <thead>
                                 <tr>
@@ -317,10 +317,10 @@ export default function RosterPage() {
                             <tbody>
                                 {students.map(s => (
                                     <tr key={s.student_id}>
-                                        <td className="dash-team-code">{s.student_name}</td>
-                                        <td>{s.pronouns ?? '-'}</td>
+                                        <td className="dash-team-code" data-label="Name">{s.student_name}</td>
+                                        <td data-label="Pronouns">{s.pronouns ?? '-'}</td>
                                         {rosterColumns.map(col => (
-                                            <td key={col.field}>
+                                            <td key={col.field} data-label={col.field}>
                                                 <input
                                                     className="rv-select roster-custom-input"
                                                     type={col.type === 'int' ? 'number' : 'text'}
@@ -331,7 +331,7 @@ export default function RosterPage() {
                                                 />
                                             </td>
                                         ))}
-                                        <td>
+                                        <td data-label="Actions">
                                             <DangerButton onClick={() => confirmRemove.open(s)}>Remove</DangerButton>
                                         </td>
                                     </tr>
@@ -343,10 +343,10 @@ export default function RosterPage() {
             {students.length > 0 && <p className="org-header-sub">{students.length} student{students.length !== 1 ? 's' : ''}</p>}
 
             <div className="coach-roster-actions">
-                <button className="btn-primary" onClick={() => setOpenSide('p')}>
+                <button type="button" className="btn-primary" onClick={() => setOpenSide('p')}>
                     Set {prosecutionLabel} Call Order &amp; Assignments
                 </button>
-                <button className="btn-primary" onClick={() => setOpenSide('d')}>
+                <button type="button" className="btn-primary" onClick={() => setOpenSide('d')}>
                     Set Defense Call Order &amp; Assignments
                 </button>
             </div>

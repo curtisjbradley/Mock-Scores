@@ -6,6 +6,7 @@ import { parseDsl, type StandingsConfig } from '@mock-scores/standings-dsl'
 import { computePairingStats, formatStatValue, type PairingBallot } from '../pairingStats'
 import RoundGroup from '../components/RoundGroup'
 import '../styles/results.css'
+import Icon from "../../shared/components/Icon.tsx";
 
 /** Maps a point differential to the win/loss/tie diff-cell modifier class. */
 function diffClass(diff: number): string {
@@ -137,7 +138,9 @@ export default function ResultsPage() {
         <>
             {results.map(round => (
                 <RoundGroup key={round.round_id} heading={round.name}>
-                    {statCols ? (
+                    {round.pairings.length == 0 ? <div className={'coach-results-no-pairings'}>
+                        This round contains no pairings.
+                    </div> : statCols ? (
                         // ── Stat-driven layout: two rows per pairing (P then D), each
                         //    showing the tournament's configured standings columns. ──
                         <table className="dash-standings-table coach-results-table">
@@ -163,7 +166,7 @@ export default function ResultsPage() {
                                                 const cell = stats?.prosecution.cells.find(x => x.stat === c.stat)
                                                 return <td key={c.stat} className="coach-stat-col"><strong>{cell ? formatStatValue(cell.value) : '—'}</strong></td>
                                             })}
-                                            <td rowSpan={2} className="coach-expand-cell">{isExpanded ? '▲' : '▼'}</td> {/*TODO: Add custom icons*/}
+                                            <td rowSpan={2} className="coach-expand-cell">{isExpanded ? <Icon name={'Up-Arrow'}/> : <Icon name={'Down-Arrow'}/> }</td>
                                         </tr>
                                         <tr onClick={() => togglePairing(p.pairing_id)} className="coach-pairing-row coach-pairing-row--bottom">
                                             <td className="coach-side-cell">D{stats?.defense.wonTiebreaker && <span className="coach-tb-badge" title="Won presider tiebreaker">TB</span>}</td>

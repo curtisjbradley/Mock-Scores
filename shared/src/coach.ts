@@ -30,6 +30,8 @@ export interface ICoachScheduleRound {
     round_time: string | null;
     /** When true, the round is locked: coaches can view but not edit call order / roles. */
     locked: boolean;
+    /** When true, this round's results are available on the Results tab. */
+    results_public: boolean;
     pairings: ICoachSchedulePairing[];
 }
 

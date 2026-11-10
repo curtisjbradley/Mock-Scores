@@ -26,16 +26,16 @@ export default function CoachesPage() {
             <div className="tab-actions">
                 <AddButton onClick={() => setShowAdd(true)}>+ Add coach</AddButton>
             </div>
-            <div className="dash-table-scroll">
-                <table className="dash-standings-table">
+            <div className="dash-table-scroll coaches-table-wrap">
+                <table className="dash-standings-table coaches-table">
                     <thead><tr><th>Name</th><th>Email</th><th>Role</th><th>Status</th><th>Notifications</th><th></th></tr></thead>
                     <tbody>{coaches.map(c => (
                         <tr key={c.coach_id}>
-                            <td>{c.name}</td>
-                            <td><span className="dash-judge-name">{c.email}</span></td>
-                            <td><StatusChip label={c.is_owner ? 'Owner' : 'Coach'} variant={c.is_owner ? 'submitted' : 'pending'} /></td>
-                            <td><StatusChip label={c.has_joined ? 'Joined' : 'Invited'} variant={c.has_joined ? 'submitted' : 'pending'} /></td>
-                            <td className={"notif-cell"}>
+                            <td data-label="Name">{c.name}</td>
+                            <td data-label="Email"><span className="dash-judge-name">{c.email}</span></td>
+                            <td data-label="Role"><StatusChip label={c.is_owner ? 'Owner' : 'Coach'} variant={c.is_owner ? 'submitted' : 'pending'} /></td>
+                            <td data-label="Status"><StatusChip label={c.has_joined ? 'Joined' : 'Invited'} variant={c.has_joined ? 'submitted' : 'pending'} /></td>
+                            <td className={"notif-cell"} data-label="Notifications">
                                 {c.has_joined ? (
                                     <button
                                         type="button"
@@ -54,7 +54,7 @@ export default function CoachesPage() {
                                     <span className="dash-judge-name">—</span>
                                 )}
                             </td>
-                            <td>{!c.is_owner && (
+                            <td data-label="Actions">{!c.is_owner && (
                                 <div className="dash-actions-cell">
                                     {isOrganizerView && c.has_joined && (
                                         <button className="dash-remove-btn" onClick={() => confirmOwner.open(c)}>Make Owner</button>

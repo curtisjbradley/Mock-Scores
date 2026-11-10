@@ -17,4 +17,5 @@
     -webkit-mask-position: center;
     mask-size: contain;
     -webkit-mask-size: contain;
+    margin: 0.5rem;
 }

@@ -5,6 +5,7 @@
 
 .coach-round-group {
     margin-bottom: 16px;
+    overflow-x: auto;
 }
 
 .coach-round-heading {

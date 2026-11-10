@@ -69,6 +69,9 @@
     text-align: center;
     font-weight: 700;
 }
+.coach-results-no-pairings {
+    color: var(--text-muted);
+}
 
 /* ── Stat-driven results layout (two rows per pairing) ──────────────────── */
 

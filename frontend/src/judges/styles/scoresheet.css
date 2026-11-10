@@ -29,6 +29,13 @@ html {
     box-shadow: var(--shadow);
 }
 
+/* Awards are always part of the desktop scoresheet; mobile presents them as
+   its final, separately navigated page. */
+.award-nominations--active,
+.award-nominations--inactive {
+    display: block;
+}
+
 .award-nominations > h2 { margin: 0; font-size: 1.15rem; }
 .award-nominations > p { margin: 0.35rem 0 1rem; color: var(--text-muted); }
 .nomination-category { margin-bottom: 1rem; padding-bottom: 0.75rem; border-bottom: 1px solid var(--border); }
@@ -428,11 +435,23 @@ html {
     border: 0;
 }
 
+.nom-move-up,
+.nom-move-down {
+color: var(--text);
+}
+.nom-move-up:disabled,
+.nom-move-down:disabled {
+    color: var(--text-muted);
+}
+
 /* ── Mobile ─────────────────────────────────────────────────────────────── */
 
 @media screen and (max-width: 48rem) {
     #scores {
-        padding: 0.75rem 0.5rem calc(8rem + env(safe-area-inset-bottom));
+        /* Reserve space for the tallest fixed navigation state: previous/next,
+           category label, and the final-page submit button. */
+        padding: 0.75rem 0.5rem calc(12rem + env(safe-area-inset-bottom));
+        scroll-padding-bottom: calc(12rem + env(safe-area-inset-bottom));
     }
 
     #score-table th,
@@ -456,7 +475,14 @@ html {
     }
 
     .category-inactive,
-    .submit-inactive {
+    .submit-inactive,
+    .award-nominations--inactive {
+        display: none;
+    }
+
+    /* The awards page has no score rows, so omit the otherwise empty table
+       (and its scoring/side labels) on mobile. */
+    .score-container--awards {
         display: none;
     }
 

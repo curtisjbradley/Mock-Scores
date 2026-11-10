@@ -267,7 +267,7 @@ function NominationCategory({categoryId, category, students, studentRoles, selec
             {selected.map((studentId, index) => {
                 const info = students[studentId];
                 if (!info) return null;
-                return <div key={studentId} className="nomination-rank-item"><span className="nomination-rank-number">{index + 1}</span><span className="nomination-rank-name">{info.name}</span><div className="nomination-rank-arrows"><button type="button" disabled={index === 0} onClick={() => onReorder(index, index - 1)} aria-label={`Move ${info.name} up`}><Icon name={'Up-Arrow'}/></button><button type="button" disabled={index === selected.length - 1} onClick={() => onReorder(index, index + 1)} aria-label={`Move ${info.name} down`}><Icon name={'Down-Arrow'}/></button></div></div>;
+                return <div key={studentId} className="nomination-rank-item"><span className="nomination-rank-number">{index + 1}</span><span className="nomination-rank-name">{info.name}</span><div className="nomination-rank-arrows"><button type="button" className={'nom-move-up'} disabled={index === 0} onClick={() => onReorder(index, index - 1)} aria-label={`Move ${info.name} up`}><Icon name={'Up-Arrow'}/></button><button type="button" className={'nom-move-up'} disabled={index === selected.length - 1} onClick={() => onReorder(index, index + 1)} aria-label={`Move ${info.name} down`}><Icon name={'Down-Arrow'}/></button></div></div>;
             })}
         </div>}
     </section>;
@@ -710,7 +710,13 @@ function ScoreSheet(
                 </div>
 
 
-                <div className="score-container">
+                <div
+                    className={
+                        categoryIndex === awardCategoryIndex
+                            ? "score-container score-container--awards"
+                            : "score-container"
+                    }
+                >
                     <table id="score-table">
                         <thead>
                         <tr className="scoresheet-header">
@@ -857,7 +863,15 @@ function ScoreSheet(
                     </table>
                 </div>
 
-                {hasAwards && categoryIndex === awardCategoryIndex && <section id="award-nominations" className="award-nominations" aria-labelledby="award-nominations-title">
+                {hasAwards && <section
+                    id="award-nominations"
+                    className={`award-nominations ${
+                        categoryIndex === awardCategoryIndex
+                            ? "award-nominations--active"
+                            : "award-nominations--inactive"
+                    }`}
+                    aria-labelledby="award-nominations-title"
+                >
                     <h2 id="award-nominations-title">Individual Award Nominations</h2>
                     <p>Select and rank students for each award category.</p>
                     {Object.entries(awardCategories).map(([categoryId, category]) => <NominationCategory key={categoryId} categoryId={categoryId} category={category} students={details.students} studentRoles={studentRoles} selected={nominations[categoryId] ?? []} onToggle={(studentId) => toggleNominee(categoryId, studentId, category.maxNominees)} onReorder={(fromIndex, toIndex) => reorderNominee(categoryId, fromIndex, toIndex)} prosecutionId={details.prosecutionId} defenseId={details.defenseId} />)}
