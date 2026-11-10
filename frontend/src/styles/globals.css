@@ -17,10 +17,7 @@
 
   /* Danger — errors, destructive actions, negative values */
   --danger: #e61c1c; /* primary danger (text, borders, solid fills) */
-  --danger-bg: rgb(
-    159 19 19 / 0.27
-  ); /* translucent danger wash (hover, "missing") */
-  --danger-subtle-bg: #fee2e2; /* opaque soft danger fill (badges) */
+  --danger-bg: var(--surface-muted) --danger-subtle-bg: #fee2e2; /* opaque soft danger fill (badges) */
   --danger-strong: #991b1b; /* high-contrast danger text on light fills */
 
   /* Success — confirmations, published/active state, positive values */
@@ -82,7 +79,7 @@
     --primary-subtle: #1e2d5a;
 
     --danger: #ff8080;
-    --danger-bg: #4a2020;
+    --danger-bg: var(--surface-muted);
     --danger-subtle-bg: #450a0a;
     --danger-strong: #fca5a5;
 
