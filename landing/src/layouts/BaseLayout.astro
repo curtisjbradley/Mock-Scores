@@ -31,7 +31,9 @@ import Footer from '../components/Footer.astro';
 
 const siteUrl = Astro.site ?? new URL('https://mockscores.org/');
 
-const canonicalURL = new URL(Astro.url.pathname, siteUrl);
+const canonicalPathname =
+  Astro.url.pathname === '/terms/' ? '/terms' : Astro.url.pathname;
+const canonicalURL = new URL(canonicalPathname, siteUrl);
 const imageURL = new URL(image, siteUrl);
 ---
 

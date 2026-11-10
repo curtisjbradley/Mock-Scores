@@ -11,10 +11,12 @@ Ballot management happens inside an open round. Prepare all assignments before l
 
 On each pairing card, select **Add Scorer**.
 
-- Search for and select a scorer from the tournament scorer pool to create an **Online** assignment.
-- Type a name and select **Create offline scorer** to create a **Paper** assignment.
+- Search for and select a scorer from the tournament scorer pool.
+- To add someone new, select **Create a new scorer instead**. Enter their name, then choose whether they will score online or on paper. Online scorers need an email address; paper scorers do not.
 
 The first scorer added becomes the presider automatically. Use **Change presider** to select another assigned scorer.
+
+For a fuller view of a judge's assignments, conflicts, notes, and preferences, select **Manage Scorer** from the tournament's **Scorers** page. That page also lets you make the scorer a presider for one of their assigned trials.
 
 ### Presider options
 
@@ -110,4 +112,3 @@ At least one expected ballot is still missing, or the round has no scored assign
 ### A scorer's link says it is no longer valid
 
 A ballot has already been submitted with that assignment link, or an organizer submitted it manually. Review the scorer row and scoresheet rather than requesting another submission on the same assignment.
-

@@ -7,31 +7,36 @@ sidebar:
 
 Scorers and courtrooms are tournament-level resources. Add them before building pairings so they are available from each round.
 
-## Add an online scorer
+## Add and manage scorers
 
 1. Open the tournament and select **Scorers**.
 2. Select **Add scorer**.
-3. Enter the scorer's first name, last name, and valid email address.
+3. Enter the scorer's name and, for an online scorer, a valid email address.
 4. Select **Add scorer**.
 
-Online scorers do not need MockScores accounts. Their email address is used to deliver the unique link for each assigned ballot.
+Online scorers do not need MockScores accounts. Their email address is used only to deliver the unique link for each assigned ballot. For a judge who will score on paper, select **Paper (offline) scorer** instead. Paper scorers do not need an email address.
 
-Use **Edit** to correct a scorer's name or email. A **BOUNCED** badge means an email delivery attempt failed; correct the address before sending or resending a scoring link.
+You can also record whether someone is willing to preside, the scorers they prefer to work with, and private organizer notes. These details are particularly useful when you use automatic assignments, but the organizer still chooses the presider for every trial.
+
+Select **Manage Scorer** to open a scorer's full record. From there, you can update their details, manage conflicts, review every trial they are assigned to, change their presiding assignment, or open an unsubmitted online scorecard for troubleshooting. Select a courtroom name from the **Courtrooms** list to see and manage every trial assigned there.
+
+A **BOUNCED** badge means a scoring-link email could not be delivered. Correct the address before sending or resending a link.
 
 ## Import scorers from CSV
 
-Select **Import CSV** to upload a file or paste text with these columns:
+Select **Import CSV** to upload a file or paste text. The required column is `name`. `email` is required for online scorers. The other columns are optional:
 
 ```csv
-first_name,last_name,email
-Jane,Smith,jane.smith@example.com
+name,email,is_paper,willing_to_preside
+Jane Smith,jane.smith@example.com,false,true
+Pat Lee,,true,false
 ```
 
-Review the preview, select **Import**, and correct any row-level errors shown in the result.
+Use `true` for a paper scorer and omit their email. Review the preview, select **Import**, and correct any row-level errors shown in the result.
 
 ## Record scorer conflicts
 
-1. Find the scorer and select **Manage Conflicts**.
+1. Select **Manage Scorer** for the scorer, then **Manage conflicts**.
 2. Choose each team the scorer must not evaluate.
 3. Remove a listed conflict only when it no longer applies.
 4. Select **Done**.
@@ -46,7 +51,7 @@ Scorers can also report an unexpected conflict when they open an online ballot. 
 
 ## Remove a scorer
 
-Select **Remove** from the **Scorers** page to remove a person from the tournament's scorer pool. If the scorer is already assigned to a pairing, review that round and replace the assignment as needed.
+Select **Remove** from the scorer's record to remove a person from the tournament's scorer pool. If the scorer is already assigned to a pairing, review that round and replace the assignment as needed.
 
 ## Add a courtroom
 
@@ -63,4 +68,3 @@ Courtroom details appear alongside the room name when organizers assign pairings
 When the same courtroom is assigned to more than one pairing in a round, each affected pairing displays **Double-booked**. Change one of the courtroom assignments before the round begins.
 
 Courtrooms can initially be left as **TBD**, but the organizer **Overview** counts pairings without a courtroom so they can be resolved before the round.
-
