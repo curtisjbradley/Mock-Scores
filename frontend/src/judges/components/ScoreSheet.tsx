@@ -1,5 +1,5 @@
 import "../styles/scoresheet.css";
-import {useEffect, useState} from "react";
+import {useEffect, useMemo, useState} from "react";
 import {
     type Control,
     type FieldErrors,
@@ -10,14 +10,18 @@ import {
     useFormState,
 } from "react-hook-form";
 
-import type {IScoreSheetFormat, IStudentInfo,} from "@mock-scores/shared";
+import type {IAwardCategoryInfo, IScoreSheetFormat, IStudentInfo,} from "@mock-scores/shared";
 
 import ConfirmSubmitModal from "./ConfirmSubmitModal.tsx";
+import Icon from "../../shared/components/Icon.tsx";
 
 /**
  * Flat map of score field IDs to numeric values.
  */
 export type ScoreResults = Record<string, number>;
+
+/** Per-category award selections, ordered from highest to lowest nomination. */
+export type NominationSelections = Record<string, string[]>;
 
 
 /**
@@ -51,7 +55,8 @@ function sanitizeScores(value: unknown): ScoreResults {
     for (const [key, score] of Object.entries(value)) {
         if (
             typeof score === "number" &&
-            Number.isFinite(score)
+            Number.isFinite(score) &&
+            Number.isInteger(score)
         ) {
             scores[key] = score;
         }
@@ -136,6 +141,9 @@ function ScoreBox({
             ) {
                 return `Must be ${minScore}–${maxScore}.`;
             }
+            if (!Number.isInteger(value)) {
+                return "Must be a whole number."
+            }
 
             return true;
         },
@@ -158,6 +166,7 @@ function ScoreBox({
                 inputMode="numeric"
                 min={minScore}
                 max={maxScore}
+                step={1}
                 aria-invalid={hasError}
                 aria-describedby={
                     hasError
@@ -219,6 +228,51 @@ function ScoreError({
     );
 }
 
+interface NominationCategoryProps {
+    categoryId: string;
+    category: IAwardCategoryInfo;
+    students: Record<string, IStudentInfo>;
+    studentRoles: Record<string, string[]>;
+    selected: string[];
+    onToggle: (studentId: string) => void;
+    onReorder: (fromIndex: number, toIndex: number) => void;
+    prosecutionId: string;
+    defenseId: string;
+}
+
+/** A single award category's nominees and their ranking. */
+function NominationCategory({categoryId, category, students, studentRoles, selected, onToggle, onReorder, prosecutionId, defenseId}: NominationCategoryProps) {
+    const atMax = selected.length >= category.maxNominees;
+    const required = Math.min(category.minNominees, category.eligibleStudentIds.length);
+
+    return <section className="nomination-category" aria-labelledby={`award-${categoryId}`}>
+        <h3 id={`award-${categoryId}`} className="nomination-category-name">{category.name}<span className="nomination-category-count"> {' '}({selected.length}/{category.maxNominees}{required > 0 ? `, min ${required}` : ''})</span></h3>
+        <div className="nomination-students">
+            {category.eligibleStudentIds.map((studentId) => {
+                const info = students[studentId];
+                if (!info) return null;
+                const isSelected = selected.includes(studentId);
+                const disabled = !isSelected && atMax;
+                const roles = studentRoles[studentId] ?? [];
+                const side = info.schoolId === prosecutionId ? 'P' : info.schoolId === defenseId ? 'D' : '';
+                return <label key={studentId} className={`nomination-student${isSelected ? ' nomination-student--selected' : ''}${disabled ? ' nomination-student--disabled' : ''}`}>
+                    <input type="checkbox" checked={isSelected} disabled={disabled} onChange={() => onToggle(studentId)} />
+                    <span className="nomination-student-info"><span>{info.name}{side ? ` - ${side}` : ''}</span>{roles.length > 0 && <span className="nomination-student-roles">{roles.join(', ')}</span>}</span>
+                </label>;
+            })}
+            {category.eligibleStudentIds.length === 0 && <p className="nomination-empty">No eligible students for this category.</p>}
+        </div>
+        {selected.length > 1 && <div className="nomination-ranking-list">
+            <p className="nomination-ranking-hint">Use the arrows to rank nominees. #1 = best.</p>
+            {selected.map((studentId, index) => {
+                const info = students[studentId];
+                if (!info) return null;
+                return <div key={studentId} className="nomination-rank-item"><span className="nomination-rank-number">{index + 1}</span><span className="nomination-rank-name">{info.name}</span><div className="nomination-rank-arrows"><button type="button" disabled={index === 0} onClick={() => onReorder(index, index - 1)} aria-label={`Move ${info.name} up`}><Icon name={'Up-Arrow'}/></button><button type="button" disabled={index === selected.length - 1} onClick={() => onReorder(index, index + 1)} aria-label={`Move ${info.name} down`}><Icon name={'Down-Arrow'}/></button></div></div>;
+            })}
+        </div>}
+    </section>;
+}
+
 
 /**
  * Main scoresheet.
@@ -240,7 +294,11 @@ function ScoreSheet(
         witnesses,
     } = details;
 
-    const lastIndex = categoryOrder.length - 1;
+    const hasAwards = Object.keys(details.awardCategories ?? {}).length > 0;
+    const awardCategoryIndex = categoryOrder.length;
+    const lastIndex = hasAwards
+        ? awardCategoryIndex
+        : categoryOrder.length - 1;
 
     const prosecutionLabel =
         details.isCriminal
@@ -265,7 +323,7 @@ function ScoreSheet(
         if (
             !Number.isInteger(parsed) ||
             parsed < 0 ||
-            parsed >= categoryOrder.length
+            parsed > lastIndex
         ) {
             return 0;
         }
@@ -302,6 +360,38 @@ function ScoreSheet(
         pendingScores,
         setPendingScores,
     ] = useState<ScoreResults | null>(null);
+
+    const [nominations, setNominations] = useState<NominationSelections>({});
+    const [showAwardValidation, setShowAwardValidation] = useState(false);
+    const awardCategories = useMemo(
+        () => details.awardCategories ?? {},
+        [details.awardCategories],
+    );
+
+    const studentRoles = useMemo(() => {
+        const roles: Record<string, string[]> = {};
+        const addRole = (studentId: string | null, label: string) => {
+            if (!studentId) return;
+            const studentRolesForId = roles[studentId] ?? (roles[studentId] = []);
+            if (!studentRolesForId.includes(label)) studentRolesForId.push(label);
+        };
+        for (const catId of details.categoryOrder) {
+            const category = details.scoringCategories[catId];
+            if (!category) continue;
+            const witnessName = category.witnessId ? details.witnesses[category.witnessId]?.characterName ?? null : null;
+            for (const assignment of category.categoryAssignments) {
+                const label = witnessName ? `${assignment.assignmentName} - ${witnessName}` : assignment.assignmentName;
+                addRole(assignment.pStudentId, label);
+                addRole(assignment.dStudentId, label);
+            }
+        }
+        return roles;
+    }, [details.categoryOrder, details.scoringCategories, details.witnesses]);
+
+    const isNominationsValid = useMemo(() => Object.entries(awardCategories).every(([categoryId, category]) => {
+        const required = Math.min(category.minNominees, category.eligibleStudentIds.length);
+        return (nominations[categoryId] ?? []).length >= required;
+    }), [awardCategories, nominations]);
 
 
     const {
@@ -441,8 +531,31 @@ function ScoreSheet(
     const onSubmit: SubmitHandler<ScoreResults> = (
         scores,
     ) => {
+        if (!isNominationsValid) {
+            setShowAwardValidation(true);
+            setCategoryIndex(awardCategoryIndex);
+            return;
+        }
         setPendingScores(scores);
         setShowConfirm(true);
+    };
+
+    const toggleNominee = (categoryId: string, studentId: string, maxNominees: number) => {
+        setNominations((current) => {
+            const selected = current[categoryId] ?? [];
+            if (selected.includes(studentId)) return {...current, [categoryId]: selected.filter((id) => id !== studentId)};
+            if (selected.length >= maxNominees) return current;
+            return {...current, [categoryId]: [...selected, studentId]};
+        });
+    };
+
+    const reorderNominee = (categoryId: string, fromIndex: number, toIndex: number) => {
+        setNominations((current) => {
+            const selected = [...(current[categoryId] ?? [])];
+            const [moved] = selected.splice(fromIndex, 1);
+            selected.splice(toIndex, 0, moved);
+            return {...current, [categoryId]: selected};
+        });
     };
 
 
@@ -744,6 +857,13 @@ function ScoreSheet(
                     </table>
                 </div>
 
+                {hasAwards && categoryIndex === awardCategoryIndex && <section id="award-nominations" className="award-nominations" aria-labelledby="award-nominations-title">
+                    <h2 id="award-nominations-title">Individual Award Nominations</h2>
+                    <p>Select and rank students for each award category.</p>
+                    {Object.entries(awardCategories).map(([categoryId, category]) => <NominationCategory key={categoryId} categoryId={categoryId} category={category} students={details.students} studentRoles={studentRoles} selected={nominations[categoryId] ?? []} onToggle={(studentId) => toggleNominee(categoryId, studentId, category.maxNominees)} onReorder={(fromIndex, toIndex) => reorderNominee(categoryId, fromIndex, toIndex)} prosecutionId={details.prosecutionId} defenseId={details.defenseId} />)}
+                    {showAwardValidation && !isNominationsValid && <p className="ranking-error" role="alert">Please select the minimum number of nominees for each category.</p>}
+                </section>}
+
 
                 <div className="scoresheet-footer">
                     <button
@@ -768,7 +888,7 @@ function ScoreSheet(
                         disabled={categoryIndex <= 0}
                         onClick={handlePrev}
                     >
-                        ← Previous
+                        <Icon name={'Left-Arrow'} /> Previous
                     </button>
 
 
@@ -779,7 +899,7 @@ function ScoreSheet(
                     >
                         {categoryIndex + 1}
                         {" / "}
-                        {categoryOrder.length}
+                        {lastIndex + 1}
                     </span>
 
 
@@ -791,7 +911,7 @@ function ScoreSheet(
                         disabled={isLastCategory}
                         onClick={handleNext}
                     >
-                        Next →
+                        Next <Icon name={'Right-Arrow'} />
                     </button>
 
 
@@ -799,7 +919,9 @@ function ScoreSheet(
                         className="nav-category-label"
                         aria-hidden="true"
                     >
-                        {(() => {
+                        {categoryIndex === awardCategoryIndex
+                            ? 'Individual Award Nominations'
+                            : (() => {
                             const category =
                                 scoringCategories[
                                     categoryOrder[
@@ -847,6 +969,7 @@ function ScoreSheet(
                     pendingScores={
                         pendingScores
                     }
+                    nominations={nominations}
                     prosecution={
                         details.prosecutionCode
                     }

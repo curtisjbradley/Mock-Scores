@@ -319,7 +319,7 @@ export default function PairingCard({ pairing, pairingNumber, teams, courtrooms,
             <div className="pc-scorers-section">
                 <div className="pc-scorers-header">
                     <span className="pc-scorers-label">Scorers</span>
-                    <button className="pc-save-btn" onClick={openScorerAdd}>Add scorer</button>
+
                     {assignedScorers.length > 0 && (
                         <button className="pc-cancel-btn" onClick={openPresiderModal}>Change presider</button>
                     )}
@@ -334,6 +334,7 @@ export default function PairingCard({ pairing, pairingNumber, teams, courtrooms,
                             {ballotStatus.submitted}/{ballotStatus.total_scorers} ballots
                         </span>
                     )}
+
                     {assignedScorers.some(s => s.p_points != null || s.d_points != null) && (
                         <Link
                             to={`/organizer/${tournamentId}/pairing/${pairing.pairing_id}/scoresheet${
@@ -344,7 +345,6 @@ export default function PairingCard({ pairing, pairingNumber, teams, courtrooms,
                             Combined scoresheet
                         </Link>
                     )}
-
                 </div>
 
                 {assignedScorers.length === 0 && <p className="pc-empty-scorers">Assign scorers to collect ballots. The first scorer added becomes the presider.</p>}
@@ -413,6 +413,7 @@ export default function PairingCard({ pairing, pairingNumber, teams, courtrooms,
                     </div>
                     )
                 })}
+                <button className="pc-save-btn" onClick={openScorerAdd}>Add scorer</button>
 
             </div>
             </div>}

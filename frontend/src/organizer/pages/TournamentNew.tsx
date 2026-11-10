@@ -16,6 +16,7 @@ import TournamentScoringFields from '../steps/TournamentScoringFields'
 import TournamentStandings from '../steps/TournamentStandings'
 import { apiFetch } from '../../auth/auth'
 import LoadingPage from '../../layout/LoadingPage.tsx'
+import Icon from "../../shared/components/Icon.tsx";
 
 type StepKey = 'details' | 'witnesses' | 'template' | 'awards' | 'scoring' | 'tiebreakers'
 
@@ -186,7 +187,7 @@ export default function TournamentNew() {
         <main className="org-main">
             <div className="org-container">
                 <button className="org-back-btn" onClick={() => stepIndex > 0 ? back() : navigate('/organizer')}>
-                    ← {stepIndex > 0 ? 'Back' : 'All tournaments'}
+                    <Icon name={'Left-Arrow'}/> {stepIndex > 0 ? 'Back' : 'All tournaments'}
                 </button>
                 <TournamentStepper steps={stepperSteps} currentIndex={stepIndex} onGoTo={setStepIndex} />
                 <div className="tc-card">
@@ -214,7 +215,7 @@ export default function TournamentNew() {
                                 awardCategories={awardCategories}
                                 onSubmit={() => goToKey('tiebreakers')}
                                 onBack={back}
-                                submitLabel="Next →"
+                                submitLabel="Next"
                             />
                         )}
                         {current === 'tiebreakers' && (

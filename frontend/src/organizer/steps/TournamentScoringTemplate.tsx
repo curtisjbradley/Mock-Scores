@@ -1,5 +1,6 @@
 import { useState } from 'react'
 import type { IScoringTemplate } from '@mock-scores/shared'
+import Icon from "../../shared/components/Icon.tsx";
 
 interface Props {
     /** Templates fetched from the API. */
@@ -62,8 +63,8 @@ export default function TournamentScoringTemplate({ templates, loading, selected
                 </div>
             )}
             <div className="tc-actions">
-                <button type="button" className="btn-cancel" onClick={onBack}>← Back</button>
-                <button type="submit" className="btn-confirm" disabled={loading}>Next →</button>
+                <button type="button" className="btn-cancel" onClick={onBack}><Icon name={'Left-Arrow'}/> Back</button>
+                <button type="submit" className="btn-confirm" disabled={loading}>Next <Icon name={'Right-Arrow'}/></button>
             </div>
         </form>
     )

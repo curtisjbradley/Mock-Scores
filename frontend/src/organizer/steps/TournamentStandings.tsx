@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react'
 import { fetchStandingsTemplates } from '../hooks/useTournamentData'
 import type { IStandingsTemplate } from '@mock-scores/shared'
+import Icon from "../../shared/components/Icon.tsx";
 
 interface Props {
     onSubmit: (standingsConfigId: string | null) => void
@@ -53,8 +54,8 @@ export default function TournamentStandings({ onSubmit, onBack }: Props) {
                 Standings configuration can be fully customized from the tournament dashboard after creation.
             </p>
             <div className="tc-actions">
-                <button type="button" className="btn-cancel" onClick={onBack}>← Back</button>
-                <button type="submit" className="btn-confirm" disabled={loading}>Create tournament →</button>
+                <button type="button" className="btn-cancel" onClick={onBack}><Icon name={'Left-Arrow'}/>Back</button>
+                <button type="submit" className="btn-confirm" disabled={loading}>Create tournament <Icon name={'Right-Arrow'}/></button>
             </div>
         </form>
     )

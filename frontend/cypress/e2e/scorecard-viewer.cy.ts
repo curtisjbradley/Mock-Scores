@@ -767,7 +767,7 @@ describe('Scorecard Viewer', () => {
     cy.window().then((win) => {
       cy.stub(win.history, 'go').as('historyGo')
     })
-    cy.contains('button', '← Back to tournament').click()
+    cy.contains('button', 'Back to tournament').click()
     cy.get('@historyGo').should('have.been.calledWith', -1)
   })
 

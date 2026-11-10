@@ -8,6 +8,7 @@ import { resolveCoachTournament } from '../../coach/coachApi'
 import { parseDsl, type StandingsConfig } from '@mock-scores/standings-dsl'
 import { computePairingStats, type PairingBallot } from '../../coach/pairingStats'
 import './combined-scoresheet.css'
+import Icon from "./Icon.tsx";
 
 type StoredBallotRecord = {
     scorer_assignment_id: string
@@ -440,7 +441,7 @@ export default function CombinedScoresheetPage() {
     if (loading) {
         return (
             <main className="cs-page">
-                <button className="cs-back-btn" onClick={() => navigate(-1)}>← Back</button>
+                <button className="cs-back-btn" onClick={() => navigate(-1)}><Icon name={'Left-Arrow'}/> Back</button>
                 <p className="cs-message">Loading combined scoresheet…</p>
             </main>
         )
@@ -449,7 +450,7 @@ export default function CombinedScoresheetPage() {
     if (error || !data) {
         return (
             <main className="cs-page">
-                <button className="cs-back-btn" onClick={() => navigate(-1)}>← Back</button>
+                <button className="cs-back-btn" onClick={() => navigate(-1)}><Icon name={'Left-Arrow'}/> Back</button>
                 <p className="cs-message">{error ?? 'Scoresheet not found.'}</p>
             </main>
         )
@@ -458,7 +459,7 @@ export default function CombinedScoresheetPage() {
     return (
         <main className="cs-page">
             <div className="cs-toolbar">
-                <button className="cs-back-btn" onClick={() => navigate(-1)}>← Back</button>
+                <button className="cs-back-btn" onClick={() => navigate(-1)}><Icon name={'Left-Arrow'}/> Back</button>
                 <button
                     className="cs-print-btn"
                     onClick={() => void downloadCombinedXlsx(

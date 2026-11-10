@@ -25,7 +25,7 @@ describe('New Tournament wizard', () => {
     cy.get('#location').type('City Hall')
     // Check both TBD checkboxes so dates are not required
     cy.get('input[type="checkbox"]').each($cb => cy.wrap($cb).check({ force: true }))
-    cy.contains('button', 'Next →').click()
+    cy.contains('button', 'Next').click()
     cy.contains('h1', 'Case format').should('be.visible')
   })
 
@@ -33,9 +33,9 @@ describe('New Tournament wizard', () => {
     cy.get('#name').type('Test Tournament')
     cy.get('#location').type('City Hall')
     cy.get('input[type="checkbox"]').each($cb => cy.wrap($cb).check({ force: true }))
-    cy.contains('button', 'Next →').click()
+    cy.contains('button', 'Next').click()
     cy.contains('h1', 'Case format').should('be.visible')
-    cy.contains('button', /← back/i).click()
+    cy.contains('button', 'back').click()
     cy.contains('h1', 'New tournament').should('be.visible')
   })
 

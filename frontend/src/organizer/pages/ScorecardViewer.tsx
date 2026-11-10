@@ -10,6 +10,7 @@ import '../../judges/styles/scoresheet.css'
 import '../../judges/styles/modal.css'
 import AddButton from "../../shared/components/AddButton.tsx";
 import DangerButton from "../../shared/components/DangerButton.tsx";
+import Icon from "../../shared/components/Icon.tsx";
 
 type EditLogEntry = {
     editor_email: string
@@ -457,7 +458,7 @@ const ScorecardViewer = () => {
         return (
             <main className="org-main">
                 <div className="org-container">
-                    <button className="org-back-btn" onClick={() => navigate(-1)}>← Back</button>
+                    <button className="org-back-btn" onClick={() => navigate(-1)}><Icon name={'Left-Arrow'}/> Back</button>
                     <p className="coach-empty">{error ?? 'Scoresheet not found.'}</p>
                 </div>
             </main>
@@ -502,7 +503,7 @@ const ScorecardViewer = () => {
         <>
             <main className="org-main">
                 <div className="org-container">
-                    <button className="org-back-btn" onClick={() => navigate(-1)}>← Back to tournament</button>
+                    <button className="org-back-btn" onClick={() => navigate(-1)}><Icon name={'Left-Arrow'} /> Back to tournament</button>
 
                     <div className="coach-section">
                         <div className="sv-header">
@@ -571,7 +572,7 @@ const ScorecardViewer = () => {
                                                     <span className="sv-editlog-time">{new Date(entry.edited_at).toLocaleString()}</span>
                                                 </div>
                                                 <div className="sv-editlog-diff">
-                                                    P: {entry.p_points_before} → {entry.p_points_after} | D: {entry.d_points_before} → {entry.d_points_after}
+                                                    P: {entry.p_points_before} <Icon name={'Right-Arrow'}/> {entry.p_points_after} | D: {entry.d_points_before} <Icon name={'Right-Arrow'}/> {entry.d_points_after}
                                                 </div>
                                                 <div className="sv-editlog-reason">{entry.reason}</div>
                                             </div>

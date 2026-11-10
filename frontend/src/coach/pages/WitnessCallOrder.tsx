@@ -8,6 +8,7 @@ import '../../organizer/styles/organizer.css'
 import '../../organizer/styles/tabs.css'
 import '../../organizer/styles/round-view.css'
 import '../../organizer/styles/standings.css'
+import Icon from "../../shared/components/Icon.tsx";
 
 interface Witness { id: string; name: string; side: string }
 
@@ -79,7 +80,7 @@ export default function WitnessCallOrder() {
     return (
         <main className="org-main">
             <div className="org-container">
-                <button className="org-back-btn" onClick={() => navigate(-1)}>← Back to schedule</button>
+                <button className="org-back-btn" onClick={() => navigate(-1)}><Icon name={'Left-Arrow'}/> Back to schedule</button>
                 <h1>Witness Call Order</h1>
                 {witnesses.length === 0
                     ? <p className="coach-empty">No witnesses configured for this tournament.</p>

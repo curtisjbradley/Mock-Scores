@@ -3,6 +3,7 @@ import type { TournamentInfo } from '../types/tournament'
 import FormField from '../../shared/components/FormField'
 import DateRangePicker from '../../shared/components/DateRangePicker'
 import Tooltip from "../../shared/components/Tooltip.tsx";
+import Icon from "../../shared/components/Icon.tsx";
 
 interface Props {
     info: TournamentInfo
@@ -87,8 +88,8 @@ export default function TournamentDetails({ info, onChange, onNext, onBack }: Pr
 
 
             <div className="tc-actions">
-                <button type="button" className="btn-cancel" onClick={onBack}>← Back</button>
-                <button type="submit" className="btn-confirm">Next →</button>
+                <button type="button" className="btn-cancel" onClick={onBack}><Icon name={'Left-Arrow'}/> Back</button>
+                <button type="submit" className="btn-confirm">Next <Icon name={'Right-Arrow'}/></button>
             </div>
         </form>
     )

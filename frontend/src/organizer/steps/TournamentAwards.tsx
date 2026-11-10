@@ -5,6 +5,7 @@ import DangerButton from '../../shared/components/DangerButton'
 import AddButton from '../../shared/components/AddButton'
 import '../styles/organizer.css'
 import '../styles/tournament-create.css'
+import Icon from "../../shared/components/Icon.tsx";
 
 interface Props {
     awardCategories: AwardCategory[]
@@ -100,8 +101,8 @@ export default function TournamentAwards({ awardCategories, onChange, onNext, on
             {submitted && hasErrors && <div className="tc-error-banner">Fix the highlighted award categories before continuing.</div>}
 
             <div className="tc-actions">
-                <button type="button" className="btn-cancel" onClick={onBack}>← Back</button>
-                <button type="submit" className="btn-confirm">Next →</button>
+                <button type="button" className="btn-cancel" onClick={onBack}><Icon name={'Left-Arrow'}/> Back</button>
+                <button type="submit" className="btn-confirm">Next <Icon name={'Right-Arrow'}/></button>
             </div>
         </form>
     )
