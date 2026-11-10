@@ -1,567 +1,764 @@
 body {
-    min-height: 100dvh;
-    overflow-x: clip;
+  min-height: 100dvh;
+  overflow-x: clip;
 }
 
 html {
-    touch-action: pan-x pan-y;
+  touch-action: pan-x pan-y;
 }
 
 /* ── Layout ─────────────────────────────────────────────────────────────── */
 
 #scores {
-    max-width: 72rem;
-    width: 100%;
-    margin: 0 auto;
-    padding: 1.5rem 1rem 2rem;
+  max-width: 72rem;
+  width: 100%;
+  margin: 0 auto;
+  padding: 1.5rem 1rem 2rem;
 }
 
 .score-container {
-    width: 100%;
+  width: 100%;
+}
+
+.award-nominations {
+  margin-top: 1.5rem;
+  padding: 1.25rem;
+  border: 1px solid var(--border);
+  border-radius: 1.25rem;
+  background: var(--surface);
+  box-shadow: var(--shadow);
+}
+
+/* Awards are always part of the desktop scoresheet; mobile presents them as
+   its final, separately navigated page. */
+.award-nominations--active,
+.award-nominations--inactive {
+  display: block;
+}
+
+.award-nominations > h2 {
+  margin: 0;
+  font-size: 1.15rem;
+}
+.award-nominations > p {
+  margin: 0.35rem 0 1rem;
+  color: var(--text-muted);
+}
+.nomination-category {
+  margin-bottom: 1rem;
+  padding-bottom: 0.75rem;
+  border-bottom: 1px solid var(--border);
+}
+.nomination-category:last-child {
+  margin-bottom: 0;
+  border-bottom: 0;
+}
+.nomination-category-name {
+  margin: 0 0 0.5rem;
+  font-size: 0.95rem;
+  font-weight: 700;
+}
+.nomination-category-count {
+  color: var(--text-muted);
+  font-size: 0.8rem;
+  font-weight: 500;
+}
+.nomination-students {
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+}
+.nomination-student {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.4rem 0.6rem;
+  border-radius: var(--radius);
+  cursor: pointer;
+  font-size: 0.9rem;
+}
+.nomination-student:hover {
+  background: var(--surface-muted);
+}
+.nomination-student--selected {
+  background: var(--primary-subtle);
+  font-weight: 600;
+}
+.nomination-student--disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+.nomination-student input[type="checkbox"] {
+  width: 1rem;
+  height: 1rem;
+  accent-color: var(--primary);
+  cursor: inherit;
+}
+.nomination-student-info {
+  display: flex;
+  flex: 1;
+  justify-content: space-between;
+  gap: 0.5rem;
+}
+.nomination-student-roles {
+  color: var(--text-muted);
+  font-size: 0.8rem;
+  font-weight: 400;
+  text-align: right;
+}
+.nomination-empty {
+  margin: 0;
+  color: var(--text-muted);
+  font-size: 0.85rem;
+  font-style: italic;
+}
+.nomination-ranking-list {
+  margin-top: 0.75rem;
+  padding: 0.5rem;
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  background: var(--surface-muted);
+}
+.nomination-ranking-hint {
+  margin: 0 0 0.5rem;
+  color: var(--text-muted);
+  font-size: 0.8rem;
+  font-style: italic;
+}
+.nomination-rank-item {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  margin-bottom: 0.3rem;
+  padding: 0.4rem 0.5rem;
+  border-radius: var(--radius);
+  background: var(--surface);
+}
+.nomination-rank-item:last-child {
+  margin-bottom: 0;
+}
+.nomination-rank-number {
+  display: flex;
+  flex: 0 0 auto;
+  align-items: center;
+  justify-content: center;
+  width: 1.5rem;
+  height: 1.5rem;
+  border-radius: 50%;
+  color: var(--white);
+  background: var(--primary);
+  font-size: 0.75rem;
+  font-weight: 800;
+}
+.nomination-rank-name {
+  flex: 1;
+  font-size: 0.9rem;
+  font-weight: 600;
+}
+.nomination-rank-arrows {
+  display: flex;
+  gap: 0.2rem;
+}
+.nomination-rank-arrows button {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 1.75rem;
+  height: 1.75rem;
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  background: var(--surface);
+  cursor: pointer;
+}
+.nomination-rank-arrows button:hover:not(:disabled) {
+  background: var(--primary-subtle);
+}
+.nomination-rank-arrows button:disabled {
+  opacity: 0.3;
+  cursor: not-allowed;
 }
 
 /* ── Case / team header ─────────────────────────────────────────────────── */
 
 .trial-info-card {
-    margin-bottom: 1.25rem;
-    padding: 1rem 1.25rem;
-    border: 1px solid var(--border);
-    border-radius: 1rem;
-    background: var(--surface);
-    box-shadow: var(--shadow);
+  margin-bottom: 1.25rem;
+  padding: 1rem 1.25rem;
+  border: 1px solid var(--border);
+  border-radius: 1rem;
+  background: var(--surface);
+  box-shadow: var(--shadow);
 }
 
 .trial-info-meta {
-    display: flex;
-    align-items: center;
-    gap: 1rem;
-    margin-bottom: 0.5rem;
-    font-size: 0.85rem;
-    color: var(--text-muted);
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  margin-bottom: 0.5rem;
+  font-size: 0.85rem;
+  color: var(--text-muted);
 }
 
 .trial-info-courtroom {
-    font-weight: 600;
-    color: var(--primary-dark);
+  font-weight: 600;
+  color: var(--primary-dark);
 }
 
 .trial-info-presider {
-    font-style: italic;
+  font-style: italic;
 }
 
 .tournament-name {
-    margin: 0 0 0.2rem;
-    font-size: 1.35rem;
-    font-weight: 700;
-    color: var(--text);
+  margin: 0 0 0.2rem;
+  font-size: 1.35rem;
+  font-weight: 700;
+  color: var(--text);
 }
 
 .case-name {
-    margin: 0 0 0.75rem;
-    font-size: 1.05rem;
-    font-weight: 500;
-    font-style: italic;
-    color: var(--text-muted);
+  margin: 0 0 0.75rem;
+  font-size: 1.05rem;
+  font-weight: 500;
+  font-style: italic;
+  color: var(--text-muted);
 }
 
 .team-labels {
-    display: grid;
-    grid-template-columns: 1fr 1fr;
-    gap: 0.75rem;
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 0.75rem;
 }
 
 .team-label {
-    display: flex;
-    flex-direction: column;
-    gap: 0.15rem;
-    padding: 0.6rem 0.75rem;
-    border: 1px solid var(--border);
-    border-radius: 0.75rem;
-    background: var(--surface-muted);
+  display: flex;
+  flex-direction: column;
+  gap: 0.15rem;
+  padding: 0.6rem 0.75rem;
+  border: 1px solid var(--border);
+  border-radius: 0.75rem;
+  background: var(--surface-muted);
 }
 
 .team-code {
-    font-size: 1.4rem;
-    font-weight: 600;
-    color: var(--primary-dark);
-    line-height: 1;
+  font-size: 1.4rem;
+  font-weight: 600;
+  color: var(--primary-dark);
+  line-height: 1;
 }
 
 .team-code--defense {
-    color: var(--text);
+  color: var(--text);
 }
 
 .team-label-role {
-    font-size: 0.75rem;
-    font-weight: 500;
-    letter-spacing: 0.05em;
-    text-transform: uppercase;
-    color: var(--text-muted);
+  font-size: 0.75rem;
+  font-weight: 500;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+  color: var(--text-muted);
 }
 
 .team-label strong {
-    font-size: 0.9rem;
-    color: var(--text);
+  font-size: 0.9rem;
+  color: var(--text);
 }
 
 /* ── Table ──────────────────────────────────────────────────────────────── */
 
 #score-table {
-    width: 100%;
-    border: 1px solid var(--border);
-    border-collapse: separate;
-    border-spacing: 0;
-    border-radius: 1.25rem;
-    background: var(--surface);
-    box-shadow: var(--shadow);
+  width: 100%;
+  border: 1px solid var(--border);
+  border-collapse: separate;
+  border-spacing: 0;
+  border-radius: 1.25rem;
+  background: var(--surface);
+  box-shadow: var(--shadow);
 }
 
 #score-table th,
 #score-table td {
-    padding: 0.85rem 1rem;
-    border-bottom: 1px solid var(--border);
-    vertical-align: top;
+  padding: 0.85rem 1rem;
+  border-bottom: 1px solid var(--border);
+  vertical-align: top;
 }
 
 #score-table td:first-child {
-    vertical-align: middle;
+  vertical-align: middle;
 }
 
 #score-table td + td,
 #score-table th + th {
-    border-left: 1px solid var(--border);
+  border-left: 1px solid var(--border);
 }
 
 .scoresheet-header th {
-    position: sticky;
-    top: 0;
-    z-index: 20;
-    color: var(--text-muted);
-    background: var(--surface);
-    font-size: 1rem;
-    font-weight: 600;
-    letter-spacing: 0.06em;
-    text-transform: uppercase;
-    box-shadow: 0 1px 0 var(--border);
+  position: sticky;
+  top: 0;
+  z-index: 20;
+  color: var(--text-muted);
+  background: var(--surface);
+  font-size: 1rem;
+  font-weight: 600;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  box-shadow: 0 1px 0 var(--border);
 }
 
-.scoresheet-header th:first-child { border-top-left-radius: 1.25rem; }
-.scoresheet-header th:last-child  { border-top-right-radius: 1.25rem; }
+.scoresheet-header th:first-child {
+  border-top-left-radius: 1.25rem;
+}
+.scoresheet-header th:last-child {
+  border-top-right-radius: 1.25rem;
+}
 
 .category-name th {
-    position: sticky;
-    top: 2.7rem;
-    z-index: 10;
-    padding: 0.6rem 1rem;
-    color: var(--primary-dark);
-    background: var(--surface-muted);
-    font-size: 0.875rem;
-    font-weight: 700;
-    letter-spacing: 0.04em;
-    text-align: left;
-    text-transform: uppercase;
-    box-shadow: 0 1px 0 var(--border);
+  position: sticky;
+  top: 2.7rem;
+  z-index: 10;
+  padding: 0.6rem 1rem;
+  color: var(--primary-dark);
+  background: var(--surface-muted);
+  font-size: 0.875rem;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  text-align: left;
+  text-transform: uppercase;
+  box-shadow: 0 1px 0 var(--border);
 }
 
 /* Desktop: all categories visible */
 .category-active,
 .category-inactive {
-    display: table-row-group;
+  display: table-row-group;
 }
 
 .score-row:hover td {
-    background: var(--surface-muted);
+  background: var(--surface-muted);
 }
 
 /* ── Desktop submit ─────────────────────────────────────────────────────── */
 
 .scoresheet-footer {
-    display: flex;
-    justify-content: center;
-    margin-top: 1.5rem;
+  display: flex;
+  justify-content: center;
+  margin-top: 1.5rem;
 }
 
 .scoresheet-footer--tiebreaker {
-    flex-direction: column;
-    align-items: center;
-    gap: 1rem;
+  flex-direction: column;
+  align-items: center;
+  gap: 1rem;
 }
 
 #score-submit-desktop {
-    padding: 0.85rem 3rem;
-    min-height: 2.75rem;
-    border: 0;
-    border-radius: var(--radius);
-    color: var(--white);
-    background: var(--primary);
-    font-size: 1rem;
-    font-weight: 500;
-    cursor: pointer;
-    box-shadow: var(--shadow-primary-lg);
-    transition: background 140ms ease, transform 140ms ease, box-shadow 140ms ease;
+  padding: 0.85rem 3rem;
+  min-height: 2.75rem;
+  border: 0;
+  border-radius: var(--radius);
+  color: var(--white);
+  background: var(--primary);
+  font-size: 1rem;
+  font-weight: 500;
+  cursor: pointer;
+  box-shadow: var(--shadow-primary-lg);
+  transition:
+    background 140ms ease,
+    transform 140ms ease,
+    box-shadow 140ms ease;
 }
 
 #score-submit-desktop:hover {
-    background: var(--primary-dark);
-    transform: translateY(-1px);
-    box-shadow: 0 0.875rem 1.75rem rgba(31, 94, 255, 0.28);
+  background: var(--primary-dark);
+  transform: translateY(-1px);
+  box-shadow: 0 0.875rem 1.75rem rgba(31, 94, 255, 0.28);
 }
 
 #score-submit-desktop:focus-visible {
-    outline: none;
-    box-shadow: 0 0 0 0.25rem var(--focus);
+  outline: none;
+  box-shadow: 0 0 0 0.25rem var(--focus);
 }
 
 /* ── Score inputs ───────────────────────────────────────────────────────── */
 
 .score-box {
-    display: flex;
-    flex-direction: column;
-    gap: 0.3rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.3rem;
 }
 
 .score-input {
-    width: 100%;
-    min-height: 2.75rem;
-    padding: 0.45rem 0.5rem;
-    border: 1px solid var(--border-strong);
-    border-radius: var(--radius);
-    color: var(--text);
-    background: var(--surface);
-    font-size: 1rem;
-    font-weight: 400;
-    text-align: center;
-    appearance: textfield;
-    -moz-appearance: textfield;
-    transition: border-color 140ms ease, box-shadow 140ms ease;
+  width: 100%;
+  min-height: 2.75rem;
+  padding: 0.45rem 0.5rem;
+  border: 1px solid var(--border-strong);
+  border-radius: var(--radius);
+  color: var(--text);
+  background: var(--surface);
+  font-size: 1rem;
+  font-weight: 400;
+  text-align: center;
+  appearance: textfield;
+  -moz-appearance: textfield;
+  transition:
+    border-color 140ms ease,
+    box-shadow 140ms ease;
 }
 
 .score-input::-webkit-outer-spin-button,
 .score-input::-webkit-inner-spin-button {
-    margin: 0;
-    -webkit-appearance: none;
+  margin: 0;
+  -webkit-appearance: none;
 }
 
-.score-input:hover { border-color: var(--primary); }
-.score-input:focus { outline: none; }
+.score-input:hover {
+  border-color: var(--primary);
+}
+.score-input:focus {
+  outline: none;
+}
 
 .score-input:focus-visible {
-    border-color: var(--primary);
-    box-shadow: 0 0 0 0.25rem var(--focus);
+  border-color: var(--primary);
+  box-shadow: 0 0 0 0.25rem var(--focus);
 }
 
 .score-input[aria-invalid="true"] {
-    border-color: var(--danger);
-    border-width: 2px;
-    background: var(--danger-bg);
+  border-color: var(--danger);
+  border-width: 2px;
+  background: var(--danger-bg);
 }
 
 .score-range {
-    font-size: 0.75rem;
-    color: var(--text-muted);
-    text-align: center;
+  font-size: 0.75rem;
+  color: var(--text-muted);
+  text-align: center;
 }
 
 /* ── Student info ───────────────────────────────────────────────────────── */
 
 .student-name {
-    margin: 0;
-    color: var(--text);
-    font-size: 0.9rem;
-    line-height: 1.25;
+  margin: 0;
+  color: var(--text);
+  font-size: 0.9rem;
+  line-height: 1.25;
 }
 
 .student-pronouns {
-    font-size: 0.75rem;
-    font-weight: 400;
-    color: var(--text-muted);
+  font-size: 0.75rem;
+  font-weight: 400;
+  color: var(--text-muted);
 }
 
 .student-nom {
-    display: flex;
-    align-items: center;
-    gap: 0.5rem;
-    color: var(--text-muted);
-    font-size: 0.82rem;
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  color: var(--text-muted);
+  font-size: 0.82rem;
 }
 
 .student-nom input[type="checkbox"] {
-    width: 1.25rem;
-    height: 1.25rem;
-    cursor: pointer;
-    accent-color: var(--primary);
-    flex-shrink: 0;
+  width: 1.25rem;
+  height: 1.25rem;
+  cursor: pointer;
+  accent-color: var(--primary);
+  flex-shrink: 0;
 }
 
 /* ── Errors ─────────────────────────────────────────────────────────────── */
 
 .error {
-    display: block;
-    margin-top: 0.4rem;
-    padding: 0.35rem 0.5rem;
-    border: 1.5px solid var(--danger);
-    border-radius: 0.4rem;
-    background: var(--danger-bg);
-    color: var(--danger);
-    text-align: center;
-    font-size: 0.75rem;
-    font-weight: 600;
-    line-height: 1.3;
+  display: block;
+  margin-top: 0.4rem;
+  padding: 0.35rem 0.5rem;
+  border: 1.5px solid var(--danger);
+  border-radius: 0.4rem;
+  background: var(--surface-muted);
+  color: var(--danger);
+  text-align: center;
+  font-size: 0.75rem;
+  font-weight: 600;
+  line-height: 1.3;
 }
 
 /* ── Mobile nav ─────────────────────────────────────────────────────────── */
 
 .scoresheet-nav {
-    display: none;
+  display: none;
 }
 
 .nav-progress {
-    text-align: center;
-    font-size: 0.875rem;
-    font-weight: 400;
-    color: var(--text-muted);
+  text-align: center;
+  font-size: 0.875rem;
+  font-weight: 400;
+  color: var(--text-muted);
 }
 
 .nav-category-label {
-    grid-column: 1 / -1;
-    margin: 0;
-    text-align: center;
-    font-size: 1rem;
-    font-weight: 500;
-    color: var(--primary-dark);
+  grid-column: 1 / -1;
+  margin: 0;
+  text-align: center;
+  font-size: 1rem;
+  font-weight: 500;
+  color: var(--primary-dark);
 }
 
 .nav-button,
 #score-submit {
-    min-height: 2.75rem;
-    padding: 0.75rem 1rem;
-    border: 0;
-    border-radius: var(--radius);
-    font-size: 0.95rem;
-    font-weight: 500;
-    cursor: pointer;
-    transition: transform 140ms ease, opacity 140ms ease, background 140ms ease;
+  min-height: 2.75rem;
+  padding: 0.75rem 1rem;
+  border: 0;
+  border-radius: var(--radius);
+  font-size: 0.95rem;
+  font-weight: 500;
+  cursor: pointer;
+  transition:
+    transform 140ms ease,
+    opacity 140ms ease,
+    background 140ms ease;
 }
 
 .nav-button {
-    display: inline-flex;
-    align-items: center;
-    justify-content: center;
-    color: var(--nav-btn-text);
-    background: var(--nav-btn-bg);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--nav-btn-text);
+  background: var(--nav-btn-bg);
 }
 
 #score-submit {
-    color: var(--white);
-    background: var(--primary);
-    box-shadow: var(--shadow-primary-lg);
+  color: var(--white);
+  background: var(--primary);
+  box-shadow: var(--shadow-primary-lg);
 }
 
 .nav-button:hover:not(:disabled),
 #score-submit:hover:not(:disabled) {
-    transform: translateY(-1px);
+  transform: translateY(-1px);
 }
 
 #score-submit:hover:not(:disabled) {
-    background: var(--primary-dark);
+  background: var(--primary-dark);
 }
 
 .nav-button:focus-visible,
 #score-submit:focus-visible {
-    outline: none;
-    box-shadow: 0 0 0 0.25rem var(--focus);
+  outline: none;
+  box-shadow: 0 0 0 0.25rem var(--focus);
 }
 
 .nav-button:disabled,
 #score-submit:disabled {
-    cursor: not-allowed;
-    opacity: 0.4;
-    box-shadow: none;
+  cursor: not-allowed;
+  opacity: 0.4;
+  box-shadow: none;
 }
 
 /* ── Accessibility ──────────────────────────────────────────────────────── */
 
 .sr-only {
-    position: absolute;
-    width: 1px;
-    height: 1px;
-    padding: 0;
-    margin: -1px;
-    overflow: hidden;
-    clip: rect(0, 0, 0, 0);
-    white-space: nowrap;
-    border: 0;
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border: 0;
+}
+
+.nom-move-up,
+.nom-move-down {
+  color: var(--text);
+}
+.nom-move-up:disabled,
+.nom-move-down:disabled {
+  color: var(--text-muted);
 }
 
 /* ── Mobile ─────────────────────────────────────────────────────────────── */
 
 @media screen and (max-width: 48rem) {
-    #scores {
-        padding: 0.75rem 0.5rem calc(8rem + env(safe-area-inset-bottom));
-    }
+  #scores {
+    /* Reserve space for the tallest fixed navigation state: previous/next,
+           category label, and the final-page submit button. */
+    padding: 0.75rem 0.5rem calc(12rem + env(safe-area-inset-bottom));
+    scroll-padding-bottom: calc(12rem + env(safe-area-inset-bottom));
+  }
 
-    #score-table th,
-    #score-table td {
-        padding: 0.65rem 0.4rem;
-    }
+  #score-table th,
+  #score-table td {
+    padding: 0.65rem 0.4rem;
+  }
 
-    #score-table td:first-child {
-        font-size: 0.82rem;
-        word-break: break-word;
-        max-width: 6rem;
-    }
+  #score-table td:first-child {
+    font-size: 0.82rem;
+    word-break: break-word;
+    max-width: 6rem;
+  }
 
-    .scoresheet-header th {
-        font-size: 0.8rem;
-        letter-spacing: 0.03em;
-    }
+  .scoresheet-header th {
+    font-size: 0.8rem;
+    letter-spacing: 0.03em;
+  }
 
-    .case-name {
-        font-size: 1.1rem;
-    }
+  .case-name {
+    font-size: 1.1rem;
+  }
 
-    .category-inactive,
-    .submit-inactive {
-        display: none;
-    }
+  .category-inactive,
+  .submit-inactive,
+  .award-nominations--inactive {
+    display: none;
+  }
 
-    .trial-info-card {
-        display: none;
-    }
+  /* The awards page has no score rows, so omit the otherwise empty table
+       (and its scoring/side labels) on mobile. */
+  .score-container--awards {
+    display: none;
+  }
 
-    /* Category name header stays visible on mobile for context */
-    .category-name th {
-        position: sticky;
-        top: 2.4rem;
-        font-size: 0.8rem;
-        padding: 0.5rem 0.6rem;
-    }
-    #score-submit-desktop {
-        display: none;
-    }
-    .scoresheet-nav {
-        display: grid;
-        position: fixed;
-        left: 0.75rem;
-        right: 0.75rem;
-        bottom: calc(0.75rem + env(safe-area-inset-bottom));
-        grid-template-columns: 1fr auto 1fr;
-        grid-template-rows: auto auto;
-        width: auto;
-        margin: 0;
-        gap: 0.5rem;
-        padding: 0.9rem;
-        border: 1px solid var(--border);
-        border-radius: 1.25rem;
-        background: var(--nav-bg);
-        box-shadow: 0 -0.625rem 1.875rem rgba(23, 32, 51, 0.06);
-        backdrop-filter: blur(0.625rem);
-        z-index: 6;
-    }
+  .trial-info-card {
+    display: none;
+  }
 
-    .nav-button {
-        min-height: 3.5rem;
-        font-size: 1rem;
-        padding: 0.75rem 1.25rem;
-        /* Prevent double-tap zoom on buttons */
-        touch-action: manipulation;
-    }
+  /* Category name header stays visible on mobile for context */
+  .category-name th {
+    position: sticky;
+    top: 2.4rem;
+    font-size: 0.8rem;
+    padding: 0.5rem 0.6rem;
+  }
+  #score-submit-desktop {
+    display: none;
+  }
+  .scoresheet-nav {
+    display: grid;
+    position: fixed;
+    left: 0.75rem;
+    right: 0.75rem;
+    bottom: calc(0.75rem + env(safe-area-inset-bottom));
+    grid-template-columns: 1fr auto 1fr;
+    grid-template-rows: auto auto;
+    width: auto;
+    margin: 0;
+    gap: 0.5rem;
+    padding: 0.9rem;
+    border: 1px solid var(--border);
+    border-radius: 1.25rem;
+    background: var(--nav-bg);
+    box-shadow: 0 -0.625rem 1.875rem rgba(23, 32, 51, 0.06);
+    backdrop-filter: blur(0.625rem);
+    z-index: 6;
+  }
 
-    #score-submit.submit-active {
-        grid-column: 1 / -1;
-        min-height: 3.5rem;
-        font-size: 1.1rem;
-        touch-action: manipulation;
-    }
+  .nav-button {
+    min-height: 3.5rem;
+    font-size: 1rem;
+    padding: 0.75rem 1.25rem;
+    /* Prevent double-tap zoom on buttons */
+    touch-action: manipulation;
+  }
 
-    .score-input {
-        min-height: 3.25rem;
-        font-size: 1.2rem;
-        min-width: 0;
-        width: 100%;
-        /* Prevent zoom on focus in iOS (font-size >= 16px) */
-        touch-action: manipulation;
-    }
+  #score-submit.submit-active {
+    grid-column: 1 / -1;
+    min-height: 3.5rem;
+    font-size: 1.1rem;
+    touch-action: manipulation;
+  }
 
-    .student-name,
-    .student-nom {
-        font-size: 0.9rem;
-    }
+  .score-input {
+    min-height: 3.25rem;
+    font-size: 1.2rem;
+    min-width: 0;
+    width: 100%;
+    /* Prevent zoom on focus in iOS (font-size >= 16px) */
+    touch-action: manipulation;
+  }
 
-    .student-nom input[type="checkbox"] {
-        width: 1.5rem;
-        height: 1.5rem;
-    }
+  .student-name,
+  .student-nom {
+    font-size: 0.9rem;
+  }
 
-    .error {
-        width: 100%;
-    }
+  .student-nom input[type="checkbox"] {
+    width: 1.5rem;
+    height: 1.5rem;
+  }
 
-    .nav-button {
-        background: var(--nav-btn-bg);
-        color: var(--nav-btn-text);
-    }
+  .error {
+    width: 100%;
+  }
 
-    .score-row:hover td {
-        background: rgba(255, 255, 255, 0.04);
-    }
+  .nav-button {
+    background: var(--nav-btn-bg);
+    color: var(--nav-btn-text);
+  }
 
-    /* Table fills viewport width */
-    #score-table {
-        border-radius: 0.75rem;
-    }
+  .score-row:hover td {
+    background: rgba(255, 255, 255, 0.04);
+  }
 
-    .scoresheet-header th:first-child { border-top-left-radius: 0.75rem; }
-    .scoresheet-header th:last-child  { border-top-right-radius: 0.75rem; }
+  /* Table fills viewport width */
+  #score-table {
+    border-radius: 0.75rem;
+  }
+
+  .scoresheet-header th:first-child {
+    border-top-left-radius: 0.75rem;
+  }
+  .scoresheet-header th:last-child {
+    border-top-right-radius: 0.75rem;
+  }
 }
 
 /* Extra-small phones (< 375px) */
 @media screen and (max-width: 23.4375rem) {
-    #score-table th,
-    #score-table td {
-        padding: 0.5rem 0.25rem;
-    }
+  #score-table th,
+  #score-table td {
+    padding: 0.5rem 0.25rem;
+  }
 
-    #score-table td:first-child {
-        font-size: 0.75rem;
-        max-width: 4.5rem;
-    }
+  #score-table td:first-child {
+    font-size: 0.75rem;
+    max-width: 4.5rem;
+  }
 
-    .score-input {
-        min-height: 3rem;
-        font-size: 1.1rem;
-        padding: 0.35rem 0.25rem;
-    }
+  .score-input {
+    min-height: 3rem;
+    font-size: 1.1rem;
+    padding: 0.35rem 0.25rem;
+  }
 
-    .nav-button {
-        padding: 0.6rem 0.75rem;
-        font-size: 0.9rem;
-    }
+  .nav-button {
+    padding: 0.6rem 0.75rem;
+    font-size: 0.9rem;
+  }
 
-    .scoresheet-nav {
-        left: 0.4rem;
-        right: 0.4rem;
-        padding: 0.6rem;
-    }
+  .scoresheet-nav {
+    left: 0.4rem;
+    right: 0.4rem;
+    padding: 0.6rem;
+  }
 }
 
 /* ── High contrast ──────────────────────────────────────────────────────── */
 
 @media (forced-colors: active) {
-    #score-table,
-    #score-table th,
-    #score-table td,
-    .score-input,
-    .scoresheet-nav,
-    .error {
-        border-color: CanvasText;
-    }
+  #score-table,
+  #score-table th,
+  #score-table td,
+  .score-input,
+  .scoresheet-nav,
+  .error {
+    border-color: CanvasText;
+  }
 
-    .score-input:focus-visible,
-    .nav-button:focus-visible,
-    #score-submit:focus-visible,
-    #score-submit-desktop:focus-visible {
-        outline: 3px solid Highlight;
-        box-shadow: none;
-    }
+  .score-input:focus-visible,
+  .nav-button:focus-visible,
+  #score-submit:focus-visible,
+  #score-submit-desktop:focus-visible {
+    outline: 3px solid Highlight;
+    box-shadow: none;
+  }
 }

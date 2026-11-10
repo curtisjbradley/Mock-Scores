@@ -3,8 +3,12 @@
 // workspace to XML is the one step that genuinely needs the Blockly runtime;
 // everything else is handled by the (unit-tested) homomorphism.
 
-import * as Blockly from 'blockly';
-import { configToWorkspaceXml, workspaceXmlToConfig, type StandingsConfig } from '@mock-scores/standings-dsl';
+import * as Blockly from "blockly";
+import {
+  configToWorkspaceXml,
+  workspaceXmlToConfig,
+  type StandingsConfig,
+} from "@mock-scores/standings-dsl";
 
 /** Serialize a Blockly workspace to its XML string. */
 function workspaceToXml(ws: Blockly.Workspace): string {
@@ -26,6 +30,9 @@ export function extractStandingsConfig(
 }
 
 /** Produce `{ statsXml, standingsXml }` workspace XML for a StandingsConfig. */
-export function configToXml(config: StandingsConfig): { statsXml: string; standingsXml: string } {
+export function configToXml(config: StandingsConfig): {
+  statsXml: string;
+  standingsXml: string;
+} {
   return configToWorkspaceXml(config);
 }

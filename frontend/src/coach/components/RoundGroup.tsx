@@ -1,11 +1,11 @@
-import type { ReactNode } from 'react'
-import './styles/round-group.css'
+import type { ReactNode } from "react";
+import "./styles/round-group.css";
 
 interface RoundGroupProps {
-    /** Round heading — a plain string or richer node (e.g. name + time). */
-    heading: ReactNode
-    /** The round's content, typically a results/schedule table. */
-    children: ReactNode
+  /** Round heading — a plain string or richer node (e.g. name + time). */
+  heading: ReactNode;
+  /** The round's content, typically a results/schedule table. */
+  children: ReactNode;
 }
 
 /**
@@ -19,10 +19,10 @@ interface RoundGroupProps {
  * </RoundGroup>
  */
 export default function RoundGroup({ heading, children }: RoundGroupProps) {
-    return (
-        <div className="coach-round-group">
-            <h3 className="coach-round-heading">{heading}</h3>
-            {children}
-        </div>
-    )
+  return (
+    <div className="coach-round-group">
+      <h3 className="coach-round-heading">{heading}</h3>
+      {children}
+    </div>
+  );
 }

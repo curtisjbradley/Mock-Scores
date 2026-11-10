@@ -39,7 +39,7 @@ export type {
   MathFn,
   PairingField,
   TeamField,
-} from './types.js';
+} from "./types.js";
 
 export {
   // Builtin registries (authoritative valid-field lists)
@@ -53,16 +53,16 @@ export {
   COMPARE_OPS,
   LOGIC_OPS,
   MATH_FNS,
-} from './types.js';
+} from "./types.js";
 
-export { parseDsl, serializeConfig, serializeExpr } from './dsl.js';
+export { parseDsl, serializeConfig, serializeExpr } from "./dsl.js";
 
 export {
   configToWorkspaceXml,
   workspaceXmlToConfig,
   parseXml,
   type XmlNode,
-} from './blockly-xml.js';
+} from "./blockly-xml.js";
 
 export {
   DslError,
@@ -76,6 +76,6 @@ export {
   DslNumberError,
   DslInternalError,
   assertNever,
-} from './errors.js';
+} from "./errors.js";
 
-export { interp, computeStandings, type TeamStats } from './interp.js';
+export { interp, computeStandings, type TeamStats } from "./interp.js";

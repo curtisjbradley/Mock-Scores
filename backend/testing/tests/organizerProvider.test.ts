@@ -902,8 +902,11 @@ describe('editBallot', () => {
             .mockResolvedValueOnce({ rows: [], rowCount: 1 } as any)
             .mockResolvedValueOnce({ rows: [], rowCount: 1 } as any);
 
-        await provider.editBallot(AID, newPayload, 'editor@example.com', 'Correction');
+        await provider.editBallot(BID, newPayload, 'editor@example.com', 'Correction');
 
+        const lookupCall = mockDbQuery.mock.calls[0];
+        expect(lookupCall[0]).toMatch(/WHERE ballot_id=\$1/i);
+        expect(lookupCall[1]).toEqual([BID]);
         expect(mockGetFieldMultipliers).toHaveBeenCalledWith(TID);
         expect(mockComputeBallotTotals).toHaveBeenCalledWith(newPayload.scores, expect.any(Map));
 
@@ -951,7 +954,7 @@ describe('editBallot', () => {
             .mockResolvedValueOnce({ rows: [], rowCount: 1 } as any)
             .mockResolvedValueOnce({ rows: [], rowCount: 1 } as any);
 
-        await provider.editBallot(AID, newPayload, 'editor@example.com', 'Correction');
+        await provider.editBallot(BID, newPayload, 'editor@example.com', 'Correction');
 
         expect(JSON.parse((mockDbQuery.mock.calls[1][1] as unknown[])[0] as string)).toEqual({
             ...original,
@@ -961,12 +964,12 @@ describe('editBallot', () => {
 
     it('throws DbError when the initial query fails', async () => {
         mockDbQuery.mockResolvedValueOnce(null as any);
-        await expect(provider.editBallot(AID, newPayload, 'e@example.com', 'x')).rejects.toBeInstanceOf(DbError);
+        await expect(provider.editBallot(BID, newPayload, 'e@example.com', 'x')).rejects.toBeInstanceOf(DbError);
     });
 
     it('throws NotFoundError when the ballot does not exist', async () => {
         mockDbQuery.mockResolvedValueOnce({ rows: [], rowCount: 0 } as any);
-        await expect(provider.editBallot(AID, newPayload, 'e@example.com', 'x')).rejects.toBeInstanceOf(NotFoundError);
+        await expect(provider.editBallot(BID, newPayload, 'e@example.com', 'x')).rejects.toBeInstanceOf(NotFoundError);
     });
 
     it('throws DbError when updating the ballot fails', async () => {
@@ -983,7 +986,7 @@ describe('editBallot', () => {
             } as any)
             .mockResolvedValueOnce(null as any);
 
-        await expect(provider.editBallot(AID, newPayload, 'e@example.com', 'x')).rejects.toBeInstanceOf(DbError);
+        await expect(provider.editBallot(BID, newPayload, 'e@example.com', 'x')).rejects.toBeInstanceOf(DbError);
     });
 });
 

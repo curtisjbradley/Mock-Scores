@@ -1,57 +1,65 @@
-import type { IScoreSheetFormat } from '@mock-scores/shared'
+import type { IScoreSheetFormat } from "@mock-scores/shared";
 
 /**
  * Extra metadata rendered in the ballot header that isn't part of the
  * scoresheet format itself.
  */
 export interface BallotMeta {
-    /** Team code for the prosecution/plaintiff (overrides format if provided). */
-    prosecutionCode?: string
-    /** Team code for the defense (overrides format if provided). */
-    defenseCode?: string
-    /** Courtroom display name (overrides format's courtroomNumber if provided). */
-    courtroom?: string
-    /** Round name, e.g. "Round 1". */
-    roundName?: string
-    /** ISO date-time string for the round, rendered as a localized date + time. */
-    roundTime?: string | null
+  /** Team code for the prosecution/plaintiff (overrides format if provided). */
+  prosecutionCode?: string;
+  /** Team code for the defense (overrides format if provided). */
+  defenseCode?: string;
+  /** Courtroom display name (overrides format's courtroomNumber if provided). */
+  courtroom?: string;
+  /** Round name, e.g. "Round 1". */
+  roundName?: string;
+  /** ISO date-time string for the round, rendered as a localized date + time. */
+  roundTime?: string | null;
 }
 
 /** Escapes a string for safe interpolation into HTML text/attributes. */
 function esc(value: string | null | undefined): string {
-    return String(value ?? '')
-        .replace(/&/g, '&amp;')
-        .replace(/</g, '&lt;')
-        .replace(/>/g, '&gt;')
-        .replace(/"/g, '&quot;')
-        .replace(/'/g, '&#39;')
+  return String(value ?? "")
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/"/g, "&quot;")
+    .replace(/'/g, "&#39;");
 }
 
 /** A blank underscored line for handwritten entry, e.g. score or name blanks. */
 function blankBox(): string {
-    return '<span class="score-blank"></span>'
+  return '<span class="score-blank"></span>';
 }
 
 /** Builds a single scoring-category table section. */
-function renderCategory(fmt: IScoreSheetFormat, catId: string, prosLabel: string): string {
-    const cat = fmt.scoringCategories[catId]
-    if (!cat) return ''
-    const witness = cat.witnessId ? fmt.witnesses[cat.witnessId] : null
-    const heading = witness ? `${cat.categoryName} — ${witness.characterName}` : cat.categoryName
+function renderCategory(
+  fmt: IScoreSheetFormat,
+  catId: string,
+  prosLabel: string,
+): string {
+  const cat = fmt.scoringCategories[catId];
+  if (!cat) return "";
+  const witness = cat.witnessId ? fmt.witnesses[cat.witnessId] : null;
+  const heading = witness
+    ? `${cat.categoryName} — ${witness.characterName}`
+    : cat.categoryName;
 
-    const rows = cat.categoryAssignments.map((a) => {
-        const pStudent = a.pStudentId ? fmt.students[a.pStudentId]?.name : null
-        const dStudent = a.dStudentId ? fmt.students[a.dStudentId]?.name : null
-        const range = `${a.minScore}–${a.maxScore}`
-        return `
+  const rows = cat.categoryAssignments
+    .map((a) => {
+      const pStudent = a.pStudentId ? fmt.students[a.pStudentId]?.name : null;
+      const dStudent = a.dStudentId ? fmt.students[a.dStudentId]?.name : null;
+      const range = `${a.minScore}–${a.maxScore}`;
+      return `
             <tr>
                 <td class="assignment">${esc(a.assignmentName)} <span class="range">(${range})</span></td>
-                <td class="score-cell">${a.side !== 'D' ? blankBox() : ''}${pStudent ? `<span class="student">${esc(pStudent)}</span>` : ''}</td>
-                <td class="score-cell">${a.side !== 'P' ? blankBox() : ''}${dStudent ? `<span class="student">${esc(dStudent)}</span>` : ''}</td>
-            </tr>`
-    }).join('')
+                <td class="score-cell">${a.side !== "D" ? blankBox() : ""}${pStudent ? `<span class="student">${esc(pStudent)}</span>` : ""}</td>
+                <td class="score-cell">${a.side !== "P" ? blankBox() : ""}${dStudent ? `<span class="student">${esc(dStudent)}</span>` : ""}</td>
+            </tr>`;
+    })
+    .join("");
 
-    return `
+  return `
         <table class="cat-table">
             <thead>
                 <tr class="cat-heading"><th colspan="3">${esc(heading)}</th></tr>
@@ -62,40 +70,46 @@ function renderCategory(fmt: IScoreSheetFormat, catId: string, prosLabel: string
                 </tr>
             </thead>
             <tbody>${rows}</tbody>
-        </table>`
+        </table>`;
 }
 
 /** Builds the fill-in-the-blank award nominations section. */
 function renderAwards(fmt: IScoreSheetFormat): string {
-    const awards = Object.values(fmt.awardCategories)
-    if (awards.length === 0) return ''
+  const awards = Object.values(fmt.awardCategories);
+  if (awards.length === 0) return "";
 
-    const blocks = awards.map((ac) => {
-        const count = Math.max(1, ac.maxNominees || 1)
-        const lines = Array.from({ length: count }, () => '<span class="award-line"></span>').join('')
-        const hint = ac.minNominees === ac.maxNominees
-            ? `${ac.maxNominees}`
-            : `${ac.minNominees}–${ac.maxNominees}`
-        return `
+  const blocks = awards
+    .map((ac) => {
+      const count = Math.max(1, ac.maxNominees || 1);
+      const lines = Array.from(
+        { length: count },
+        () => '<span class="award-line"></span>',
+      ).join("");
+      const hint =
+        ac.minNominees === ac.maxNominees
+          ? `${ac.maxNominees}`
+          : `${ac.minNominees}–${ac.maxNominees}`;
+      return `
             <div class="award">
                 <span class="award-name">${esc(ac.name)} <span class="award-hint">(nominate ${hint})</span></span>
                 <span class="award-blanks">${lines}</span>
-            </div>`
-    }).join('')
+            </div>`;
+    })
+    .join("");
 
-    return `
+  return `
         <div class="awards">
             <div class="section-title">Award Nominations</div>
             ${blocks}
-        </div>`
+        </div>`;
 }
 
 /** Builds the presider tiebreaker selector section. */
 function renderTiebreaker(fmt: IScoreSheetFormat, meta: BallotMeta): string {
-    const prosLabel = fmt.isCriminal ? 'Prosecution' : 'Plaintiff'
-    const pCode = esc(meta.prosecutionCode ?? fmt.prosecutionCode)
-    const dCode = esc(meta.defenseCode ?? fmt.defenseCode)
-    return `
+  const prosLabel = fmt.isCriminal ? "Prosecution" : "Plaintiff";
+  const pCode = esc(meta.prosecutionCode ?? fmt.prosecutionCode);
+  const dCode = esc(meta.defenseCode ?? fmt.defenseCode);
+  return `
         <div class="tiebreaker">
             <div class="section-title">Presider Tiebreaker</div>
             <div class="tb-note">To be completed by the presiding judge in the event of a tie.</div>
@@ -103,18 +117,22 @@ function renderTiebreaker(fmt: IScoreSheetFormat, meta: BallotMeta): string {
                 <span class="tb-option"><span class="tb-box"></span> ${prosLabel} (${pCode})</span>
                 <span class="tb-option"><span class="tb-box"></span> Defense (${dCode})</span>
             </div>
-        </div>`
+        </div>`;
 }
 
 /** Formats the round date/time for the header, or empty string when unavailable. */
 function formatRoundTime(roundTime?: string | null): string {
-    if (!roundTime) return ''
-    const d = new Date(roundTime)
-    if (isNaN(d.getTime())) return ''
-    return d.toLocaleString(undefined, {
-        weekday: 'short', month: 'short', day: 'numeric', year: 'numeric',
-        hour: 'numeric', minute: '2-digit',
-    })
+  if (!roundTime) return "";
+  const d = new Date(roundTime);
+  if (isNaN(d.getTime())) return "";
+  return d.toLocaleString(undefined, {
+    weekday: "short",
+    month: "short",
+    day: "numeric",
+    year: "numeric",
+    hour: "numeric",
+    minute: "2-digit",
+  });
 }
 
 /**
@@ -205,44 +223,49 @@ export const BALLOT_STYLES = `
     .ballot .tb-box {
         display: inline-block; width: 1.3em; height: 1.3em;
         border: 1.5px solid #111; vertical-align: middle; margin-right: 0.47em;
-    }`
+    }`;
 
 /**
  * Builds the inner `.ballot` markup (header, categories, awards, tiebreaker,
  * signature) as an HTML string. Rendered by the ballot route via
  * `dangerouslySetInnerHTML` and paired with {@link BALLOT_STYLES}.
  */
-export function buildBallotInner(fmt: IScoreSheetFormat, meta: BallotMeta = {}): string {
-    const prosLabel = fmt.isCriminal ? 'Prosecution' : 'Plaintiff'
-    const pCode = esc(meta.prosecutionCode ?? fmt.prosecutionCode)
-    const dCode = esc(meta.defenseCode ?? fmt.defenseCode)
-    const courtroom = esc(meta.courtroom ?? fmt.courtroomNumber)
-    const roundName = esc(meta.roundName ?? '')
-    const roundTime = esc(formatRoundTime(meta.roundTime))
-    const caseName = esc(fmt.caseName)
-    const tournamentName = esc(fmt.tournamentName)
+export function buildBallotInner(
+  fmt: IScoreSheetFormat,
+  meta: BallotMeta = {},
+): string {
+  const prosLabel = fmt.isCriminal ? "Prosecution" : "Plaintiff";
+  const pCode = esc(meta.prosecutionCode ?? fmt.prosecutionCode);
+  const dCode = esc(meta.defenseCode ?? fmt.defenseCode);
+  const courtroom = esc(meta.courtroom ?? fmt.courtroomNumber);
+  const roundName = esc(meta.roundName ?? "");
+  const roundTime = esc(formatRoundTime(meta.roundTime));
+  const caseName = esc(fmt.caseName);
+  const tournamentName = esc(fmt.tournamentName);
 
-    const categories = fmt.categoryOrder.map((id) => renderCategory(fmt, id, prosLabel)).join('')
-    const awards = renderAwards(fmt)
-    const tiebreaker = renderTiebreaker(fmt, meta)
+  const categories = fmt.categoryOrder
+    .map((id) => renderCategory(fmt, id, prosLabel))
+    .join("");
+  const awards = renderAwards(fmt);
+  const tiebreaker = renderTiebreaker(fmt, meta);
 
-    return `
+  return `
     <div class="ballot">
         <div class="header">
             <div class="header-top">
                 <div>
                     <h1 class="tournament-name">${tournamentName}</h1>
-                    ${caseName ? `<div class="case-name">${caseName}</div>` : ''}
+                    ${caseName ? `<div class="case-name">${caseName}</div>` : ""}
                 </div>
                 <div class="header-meta">
-                    ${roundName ? `<div><strong>${roundName}</strong></div>` : ''}
-                    ${roundTime ? `<div>${roundTime}</div>` : ''}
-                    <div>Courtroom: ${courtroom || '________'}</div>
+                    ${roundName ? `<div><strong>${roundName}</strong></div>` : ""}
+                    ${roundTime ? `<div>${roundTime}</div>` : ""}
+                    <div>Courtroom: ${courtroom || "________"}</div>
                 </div>
             </div>
             <div class="teams">
-                <span class="team-line"><span class="team-role">${esc(prosLabel)}:</span> <span class="team-code">${pCode || '________'}</span></span>
-                <span class="team-line"><span class="team-role">Defense:</span> <span class="team-code">${dCode || '________'}</span></span>
+                <span class="team-line"><span class="team-role">${esc(prosLabel)}:</span> <span class="team-code">${pCode || "________"}</span></span>
+                <span class="team-line"><span class="team-role">Defense:</span> <span class="team-code">${dCode || "________"}</span></span>
             </div>
             <div class="scorer-line">
                 <span class="field"><span class="label">Scorer</span> <span class="value">&nbsp;</span></span>
@@ -259,26 +282,26 @@ export function buildBallotInner(fmt: IScoreSheetFormat, meta: BallotMeta = {}):
         <div class="signature-line">
             <span class="field"><span class="label">Scorer Signature</span> <span class="value">&nbsp;</span></span>
         </div>
-    </div>`
+    </div>`;
 }
 
 /** CSS pixels per inch (browser standard for layout units). */
-const PX_PER_IN = 96
+const PX_PER_IN = 96;
 
 /**
  * Usable printable area of a Letter portrait page after the 0.4in @page
  * margins on all sides: 8.5in × 11in minus 0.4in × 2.
  */
 const BALLOT_PAGE = {
-    /** Usable content width in CSS pixels (7.7in). */
-    width: (8.5 - 0.4 * 2) * PX_PER_IN,
-    /** Usable content height in CSS pixels (10.2in). */
-    height: (11 - 0.4 * 2) * PX_PER_IN,
-} as const
+  /** Usable content width in CSS pixels (7.7in). */
+  width: (8.5 - 0.4 * 2) * PX_PER_IN,
+  /** Usable content height in CSS pixels (10.2in). */
+  height: (11 - 0.4 * 2) * PX_PER_IN,
+} as const;
 
 /** Bounds for the auto-fit search, in CSS px for the ballot root font-size. */
-const MIN_BALLOT_FONT = 6
-const MAX_BALLOT_FONT = 48
+const MIN_BALLOT_FONT = 6;
+const MAX_BALLOT_FONT = 48;
 
 /**
  * Finds the largest ballot root font-size (the `--ballot-font` value, in px)
@@ -296,46 +319,46 @@ const MAX_BALLOT_FONT = 48
  * @returns The chosen font-size in px.
  */
 export function fitBallotFontSize(
-    innerHtml: string,
-    maxHeight: number = BALLOT_PAGE.height,
-    maxWidth: number = BALLOT_PAGE.width,
+  innerHtml: string,
+  maxHeight: number = BALLOT_PAGE.height,
+  maxWidth: number = BALLOT_PAGE.width,
 ): number {
-    // Probe container sized to the printable area, rendered off-screen.
-    const probe = document.createElement('div')
-    probe.setAttribute('aria-hidden', 'true')
-    probe.style.position = 'fixed'
-    probe.style.left = '-10000px'
-    probe.style.top = '0'
-    probe.style.width = `${maxWidth}px`
-    probe.style.visibility = 'hidden'
-    probe.style.pointerEvents = 'none'
-    probe.innerHTML = innerHtml
+  // Probe container sized to the printable area, rendered off-screen.
+  const probe = document.createElement("div");
+  probe.setAttribute("aria-hidden", "true");
+  probe.style.position = "fixed";
+  probe.style.left = "-10000px";
+  probe.style.top = "0";
+  probe.style.width = `${maxWidth}px`;
+  probe.style.visibility = "hidden";
+  probe.style.pointerEvents = "none";
+  probe.innerHTML = innerHtml;
 
-    const ballotEl = probe.firstElementChild as HTMLElement | null
-    document.body.appendChild(probe)
+  const ballotEl = probe.firstElementChild as HTMLElement | null;
+  document.body.appendChild(probe);
 
-    const fitsAt = (fontPx: number): boolean => {
-        if (!ballotEl) return true
-        ballotEl.style.setProperty('--ballot-font', `${fontPx}px`)
-        // Content fits if it does not exceed the usable page height. scrollHeight
-        // captures overflow beyond the probe's own box.
-        return ballotEl.scrollHeight <= maxHeight
+  const fitsAt = (fontPx: number): boolean => {
+    if (!ballotEl) return true;
+    ballotEl.style.setProperty("--ballot-font", `${fontPx}px`);
+    // Content fits if it does not exceed the usable page height. scrollHeight
+    // captures overflow beyond the probe's own box.
+    return ballotEl.scrollHeight <= maxHeight;
+  };
+
+  try {
+    // Binary search for the largest integer-ish font size that still fits.
+    let lo = MIN_BALLOT_FONT;
+    let hi = MAX_BALLOT_FONT;
+    // If even the minimum overflows, just use the minimum.
+    if (!fitsAt(lo)) return lo;
+    // 0.25px precision is well below a visible difference in print.
+    while (hi - lo > 0.25) {
+      const mid = (lo + hi) / 2;
+      if (fitsAt(mid)) lo = mid;
+      else hi = mid;
     }
-
-    try {
-        // Binary search for the largest integer-ish font size that still fits.
-        let lo = MIN_BALLOT_FONT
-        let hi = MAX_BALLOT_FONT
-        // If even the minimum overflows, just use the minimum.
-        if (!fitsAt(lo)) return lo
-        // 0.25px precision is well below a visible difference in print.
-        while (hi - lo > 0.25) {
-            const mid = (lo + hi) / 2
-            if (fitsAt(mid)) lo = mid
-            else hi = mid
-        }
-        return Math.floor(lo * 4) / 4 // round down to nearest 0.25px
-    } finally {
-        document.body.removeChild(probe)
-    }
+    return Math.floor(lo * 4) / 4; // round down to nearest 0.25px
+  } finally {
+    document.body.removeChild(probe);
+  }
 }

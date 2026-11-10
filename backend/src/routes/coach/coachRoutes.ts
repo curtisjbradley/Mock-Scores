@@ -1,7 +1,7 @@
 import { Router } from "express";
 import * as coach from "../../providers/coachProvider";
 import { getScoringCategories } from "../../providers/organizerProvider";
-import {getBallot, getSheetFromBallot} from "../../providers/scorerProvider";
+import { getBallot, getSheetFromBallot } from "../../providers/scorerProvider";
 import { uuidRegex } from "../../authUtils";
 import { authedHandler } from "../../types/handlers";
 import teamRoutes from "./coachTeamRoutes";
@@ -17,9 +17,14 @@ const router = Router();
  *     responses:
  *       200: { description: Array of tournaments }
  */
-router.get("/tournaments", authedHandler(async (req, res) => {
-    return res.status(200).json(await coach.getAllTournaments(req.session.userId));
-}));
+router.get(
+  "/tournaments",
+  authedHandler(async (req, res) => {
+    return res
+      .status(200)
+      .json(await coach.getAllTournaments(req.session.userId));
+  }),
+);
 
 /**
  * @swagger
@@ -36,19 +41,26 @@ router.get("/tournaments", authedHandler(async (req, res) => {
  *       200: { description: Schedule data }
  *       400: { description: Invalid team ID }
  */
-router.get("/tournaments/:teamId/schedule", authedHandler(async (req, res) => {
+router.get(
+  "/tournaments/:teamId/schedule",
+  authedHandler(async (req, res) => {
     const id = req.params.teamId as string;
-    if (!uuidRegex.test(id)) return res.status(400).json({ message: "Invalid team ID" });
+    if (!uuidRegex.test(id))
+      return res.status(400).json({ message: "Invalid team ID" });
 
     // Accept an explicit teamId query param (used by organizer preview view).
     // Fall back to deriving it from the session for regular coach access.
-    const queryTeamId = typeof req.query.teamId === 'string' ? req.query.teamId : null;
-    if (queryTeamId && !uuidRegex.test(queryTeamId)) return res.status(400).json({ message: "Invalid team ID" });
+    const queryTeamId =
+      typeof req.query.teamId === "string" ? req.query.teamId : null;
+    if (queryTeamId && !uuidRegex.test(queryTeamId))
+      return res.status(400).json({ message: "Invalid team ID" });
 
-    const teamId = queryTeamId ?? await coach.getTeamIdForCoach(id, req.session.userId);
+    const teamId =
+      queryTeamId ?? (await coach.getTeamIdForCoach(id, req.session.userId));
     if (!teamId) return res.status(200).json([]);
     return res.status(200).json(await coach.getSchedule(id, teamId));
-}));
+  }),
+);
 
 /**
  * @swagger
@@ -65,11 +77,15 @@ router.get("/tournaments/:teamId/schedule", authedHandler(async (req, res) => {
  *       200: { description: Results data }
  *       400: { description: Invalid team ID }
  */
-router.get("/tournaments/:teamId/results", authedHandler(async (req, res) => {
+router.get(
+  "/tournaments/:teamId/results",
+  authedHandler(async (req, res) => {
     const id = req.params.teamId as string;
-    if (!uuidRegex.test(id)) return res.status(400).json({ message: "Invalid team ID" });
+    if (!uuidRegex.test(id))
+      return res.status(400).json({ message: "Invalid team ID" });
     return res.status(200).json(await coach.getResults(id));
-}));
+  }),
+);
 
 /**
  * @swagger
@@ -86,11 +102,15 @@ router.get("/tournaments/:teamId/results", authedHandler(async (req, res) => {
  *       200: { description: Competition field }
  *       400: { description: Invalid team ID }
  */
-router.get("/tournaments/:teamId/field", authedHandler(async (req, res) => {
+router.get(
+  "/tournaments/:teamId/field",
+  authedHandler(async (req, res) => {
     const id = req.params.teamId as string;
-    if (!uuidRegex.test(id)) return res.status(400).json({ message: "Invalid team ID" });
+    if (!uuidRegex.test(id))
+      return res.status(400).json({ message: "Invalid team ID" });
     return res.status(200).json(await coach.getCompetitionField(id));
-}));
+  }),
+);
 
 /**
  * @swagger
@@ -107,11 +127,15 @@ router.get("/tournaments/:teamId/field", authedHandler(async (req, res) => {
  *       200: { description: Standings data }
  *       400: { description: Invalid team ID }
  */
-router.get("/tournaments/:tournamentId/standings", authedHandler(async (req, res) => {
+router.get(
+  "/tournaments/:tournamentId/standings",
+  authedHandler(async (req, res) => {
     const id = req.params.tournamentId as string;
-    if (!uuidRegex.test(id)) return res.status(400).json({ message: "Invalid team ID" });
+    if (!uuidRegex.test(id))
+      return res.status(400).json({ message: "Invalid team ID" });
     return res.status(200).json(await coach.getStandingsData(id));
-}));
+  }),
+);
 
 /**
  * @swagger
@@ -128,11 +152,15 @@ router.get("/tournaments/:tournamentId/standings", authedHandler(async (req, res
  *       200: { description: Scoring categories }
  *       400: { description: Invalid team ID }
  */
-router.get("/tournaments/:teamId/scoring-categories", authedHandler(async (req, res) => {
+router.get(
+  "/tournaments/:teamId/scoring-categories",
+  authedHandler(async (req, res) => {
     const id = req.params.teamId as string;
-    if (!uuidRegex.test(id)) return res.status(400).json({ message: "Invalid team ID" });
+    if (!uuidRegex.test(id))
+      return res.status(400).json({ message: "Invalid team ID" });
     return res.status(200).json(await getScoringCategories(id));
-}));
+  }),
+);
 
 /**
  * @swagger
@@ -149,11 +177,15 @@ router.get("/tournaments/:teamId/scoring-categories", authedHandler(async (req, 
  *       200: { description: Witnesses }
  *       400: { description: Invalid team ID }
  */
-router.get("/tournaments/:teamId/witnesses", authedHandler(async (req, res) => {
+router.get(
+  "/tournaments/:teamId/witnesses",
+  authedHandler(async (req, res) => {
     const id = req.params.teamId as string;
-    if (!uuidRegex.test(id)) return res.status(400).json({ message: "Invalid team ID" });
+    if (!uuidRegex.test(id))
+      return res.status(400).json({ message: "Invalid team ID" });
     return res.status(200).json(await coach.getWitnessesForTournament(id));
-}));
+  }),
+);
 
 /**
  * @swagger
@@ -170,11 +202,15 @@ router.get("/tournaments/:teamId/witnesses", authedHandler(async (req, res) => {
  *       200: { description: Case format }
  *       400: { description: Invalid team ID }
  */
-router.get("/tournaments/:teamId/format", authedHandler(async (req, res) => {
+router.get(
+  "/tournaments/:teamId/format",
+  authedHandler(async (req, res) => {
     const id = req.params.teamId as string;
-    if (!uuidRegex.test(id)) return res.status(400).json({ message: "Invalid team ID" });
+    if (!uuidRegex.test(id))
+      return res.status(400).json({ message: "Invalid team ID" });
     return res.status(200).json(await coach.getFormatForTournament(id));
-}));
+  }),
+);
 
 router.use("/teams/:teamId", teamRoutes);
 
@@ -198,17 +234,24 @@ router.use("/teams/:teamId", teamRoutes);
  *       400: { description: Invalid ID }
  *       403: { description: Results not published }
  */
-router.get("/tournaments/:teamId/pairings/:pairingId/ballots", authedHandler(async (req, res) => {
+router.get(
+  "/tournaments/:teamId/pairings/:pairingId/ballots",
+  authedHandler(async (req, res) => {
     const teamId = req.params.teamId as string;
     const pairingId = req.params.pairingId as string;
-    if (!uuidRegex.test(teamId)) return res.status(400).json({ message: "Invalid team ID" });
-    if (!uuidRegex.test(pairingId)) return res.status(400).json({ message: "Invalid pairing ID" });
+    if (!uuidRegex.test(teamId))
+      return res.status(400).json({ message: "Invalid team ID" });
+    if (!uuidRegex.test(pairingId))
+      return res.status(400).json({ message: "Invalid pairing ID" });
     // `:teamId` here is the tournament id; resolve the coach's actual competing
     // team so we only expose scoresheets for pairings their team was part of.
-    if (!await coach.canViewPairingResults(pairingId, teamId)) return res.status(404).json({ message: "Pairing not found" });
-    return res.status(200).json(await coach.getPairingBallots(teamId, pairingId));
-}));
-
+    if (!(await coach.canViewPairingResults(pairingId, teamId)))
+      return res.status(404).json({ message: "Pairing not found" });
+    return res
+      .status(200)
+      .json(await coach.getPairingBallots(teamId, pairingId));
+  }),
+);
 
 /**
  * @swagger
@@ -234,34 +277,43 @@ router.get("/tournaments/:teamId/pairings/:pairingId/ballots", authedHandler(asy
  *       400: { description: Invalid ID }
  *       404: { description: Ballot not found }
  */
-router.get("/tournaments/:teamId/pairings/:pairingId/ballots/:ballotId", authedHandler(async (req, res) => {
+router.get(
+  "/tournaments/:teamId/pairings/:pairingId/ballots/:ballotId",
+  authedHandler(async (req, res) => {
     const teamId = req.params.teamId as string;
     const pairingId = req.params.pairingId as string;
     const ballotId = req.params.ballotId as string;
-    if (!uuidRegex.test(teamId)) return res.status(400).json({ message: "Invalid team ID" });
-    if (!uuidRegex.test(pairingId)) return res.status(400).json({ message: "Invalid pairing ID" });
-    if (!uuidRegex.test(ballotId)) return res.status(400).json({ message: "Invalid ballot ID" });
+    if (!uuidRegex.test(teamId))
+      return res.status(400).json({ message: "Invalid team ID" });
+    if (!uuidRegex.test(pairingId))
+      return res.status(400).json({ message: "Invalid pairing ID" });
+    if (!uuidRegex.test(ballotId))
+      return res.status(400).json({ message: "Invalid ballot ID" });
 
-    if (!await coach.isBallotInPairingWithPublicResults(ballotId, teamId))
-        return res.status(404).json({ message: "Ballot not found" });
-    const sheet = await getSheetFromBallot(ballotId, { skipGuards: true }).catch(() => null);
+    if (!(await coach.isBallotInPairingWithPublicResults(ballotId, teamId)))
+      return res.status(404).json({ message: "Ballot not found" });
+    const sheet = await getSheetFromBallot(ballotId, {
+      skipGuards: true,
+    }).catch(() => null);
     const ballot = (await getBallot(ballotId))?.ballot_json ?? null;
 
-    if (!sheet && !ballot) return res.status(404).json({ message: "Ballot not found" });
+    if (!sheet && !ballot)
+      return res.status(404).json({ message: "Ballot not found" });
 
     // Redact scorer identity from the sheet
     if (sheet) {
-        sheet.scorer = { name: '', scorerID: '', isPaper: false };
-        sheet.presiderName = '';
+      sheet.scorer = { name: "", scorerID: "", isPaper: false };
+      sheet.presiderName = "";
     }
 
     // When the tournament does not share individual rankings, coaches must not
     // see award nominations on the ballot.
-    if (ballot && !await coach.sharesIndividualRankings(teamId)) {
-        ballot.nominations = []
+    if (ballot && !(await coach.sharesIndividualRankings(teamId))) {
+      ballot.nominations = [];
     }
 
     return res.status(200).json({ sheet, ballot });
-}));
+  }),
+);
 
 export default router;

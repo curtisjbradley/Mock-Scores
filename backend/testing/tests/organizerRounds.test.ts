@@ -287,10 +287,10 @@ describe('GET .../pairings/:pairingId/scoresheets/:ballotId', () => {
     });
 });
 
-describe('PUT .../pairings/:pairingId/scoresheets/:assignmentId', () => {
-    const SCORESHEET_URL = `${PAIRING_URL}/scoresheets/${ASSIGNMENT_ID}`;
+describe('PUT .../pairings/:pairingId/scoresheets/:ballotId', () => {
+    const SCORESHEET_URL = `${PAIRING_URL}/scoresheets/${BALLOT_ID}`;
 
-    it('returns 400 for invalid assignment ID', async () => {
+    it('returns 400 for invalid ballot ID', async () => {
         mockPairingAccess();
 
         const res = await request(app)
@@ -384,7 +384,7 @@ describe('PUT .../pairings/:pairingId/scoresheets/:assignmentId', () => {
         expect(res.status).toBe(200);
         expect(res.body.success).toBe(true);
         expect(editBallot).toHaveBeenCalledWith(
-            ASSIGNMENT_ID,
+            BALLOT_ID,
             { scores },
             expect.any(String),
             'Scorer reported error',

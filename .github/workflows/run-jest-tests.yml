@@ -2,7 +2,6 @@ name: Backend Testing
 
 on:
   push:
-    branches: [main, dev]
     paths:
       - "backend/**"
       - "shared/**"

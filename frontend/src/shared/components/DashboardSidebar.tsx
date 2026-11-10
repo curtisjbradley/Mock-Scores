@@ -1,27 +1,27 @@
-import {useState} from "react";
+import { useState } from "react";
 import Icon from "./Icon";
 
 export interface DashboardNavItem<T extends string> {
-    key: T
-    label: string
-    /**
-     * Icon name (without extension) of a designed SVG in `public/icons/`.
-     * Rendered via the shared `<Icon>` component (a `var(--text)` CSS mask).
-     */
-    icon: string
+  key: T;
+  label: string;
+  /**
+   * Icon name (without extension) of a designed SVG in `public/icons/`.
+   * Rendered via the shared `<Icon>` component (a `var(--text)` CSS mask).
+   */
+  icon: string;
 }
 
 interface Props<T extends string> {
-    items: DashboardNavItem<T>[]
-    active: T
-    onChange: (key: T) => void
-    /** Title shown at the top of the sidebar (e.g. team code or tournament name). */
-    title: string
-    subtitle?: string
-    /** Persisted independently for each dashboard type. */
-    storageKey: string
-    /** Accessible label for the nav landmark. */
-    ariaLabel?: string
+  items: DashboardNavItem<T>[];
+  active: T;
+  onChange: (key: T) => void;
+  /** Title shown at the top of the sidebar (e.g. team code or tournament name). */
+  title: string;
+  subtitle?: string;
+  /** Persisted independently for each dashboard type. */
+  storageKey: string;
+  /** Accessible label for the nav landmark. */
+  ariaLabel?: string;
 }
 
 /**
@@ -37,61 +37,77 @@ interface Props<T extends string> {
  */
 
 export default function DashboardSidebar<T extends string>({
-    items, active, onChange, title, subtitle,
-    ariaLabel = 'Dashboard sections', storageKey,
+  items,
+  active,
+  onChange,
+  title,
+  subtitle,
+  ariaLabel = "Dashboard sections",
+  storageKey,
 }: Props<T>) {
-
-    const [collapsed, setCollapsed] = useState<boolean>(() => {
-        try {
-            return localStorage.getItem(storageKey) === 'true'
-        } catch {
-            return false
-        }
-    })
-    const toggleCollapsed = () => {
-        setCollapsed(prev => {
-            const next = !prev
-            try { localStorage.setItem(storageKey, String(next)) } catch { /* ignore */ }
-            return next
-        })
+  const [collapsed, setCollapsed] = useState<boolean>(() => {
+    try {
+      return localStorage.getItem(storageKey) === "true";
+    } catch {
+      return false;
     }
+  });
+  const toggleCollapsed = () => {
+    setCollapsed((prev) => {
+      const next = !prev;
+      try {
+        localStorage.setItem(storageKey, String(next));
+      } catch {
+        /* ignore */
+      }
+      return next;
+    });
+  };
 
-    return (
-        <aside className={`dash-sidebar${collapsed ? ' dash-sidebar--collapsed' : ''}`}>
-            <div className="dash-sidebar-head">
-                {!collapsed && (
-                    <div className="dash-sidebar-titles">
-                        <span className="dash-sidebar-title">{title}</span>
-                        {subtitle && <span className="dash-sidebar-subtitle">{subtitle}</span>}
-                    </div>
-                )}
-                <button
-                    type="button"
-                    className="dash-sidebar-toggle"
-                    onClick={toggleCollapsed}
-                    aria-label={collapsed ? 'Expand navigation' : 'Collapse navigation'}
-                    aria-expanded={!collapsed}
-                    title={collapsed ? 'Expand navigation' : 'Collapse navigation'}
-                >
-                    <Icon name={collapsed ? 'Expand' : 'Shrink'} className="dash-sidebar-toggle-icon" size={1} />
-                </button>
-            </div>
+  return (
+    <aside
+      className={`dash-sidebar${collapsed ? " dash-sidebar--collapsed" : ""}`}
+    >
+      <div className="dash-sidebar-head">
+        {!collapsed && (
+          <div className="dash-sidebar-titles">
+            <span className="dash-sidebar-title">{title}</span>
+            {subtitle && (
+              <span className="dash-sidebar-subtitle">{subtitle}</span>
+            )}
+          </div>
+        )}
+        <button
+          type="button"
+          className="dash-sidebar-toggle"
+          onClick={toggleCollapsed}
+          aria-label={collapsed ? "Expand navigation" : "Collapse navigation"}
+          aria-expanded={!collapsed}
+          title={collapsed ? "Expand navigation" : "Collapse navigation"}
+        >
+          <Icon
+            name={collapsed ? "Expand" : "Shrink"}
+            className="dash-sidebar-toggle-icon"
+            size={1}
+          />
+        </button>
+      </div>
 
-            <nav className="dash-sidebar-nav" aria-label={ariaLabel}>
-                {items.map(item => (
-                    <button
-                        key={item.key}
-                        type="button"
-                        className={`dash-nav-item${active === item.key ? ' dash-nav-item--active' : ''}`}
-                        onClick={() => onChange(item.key)}
-                        aria-current={active === item.key ? 'page' : undefined}
-                        title={collapsed ? item.label : undefined}
-                    >
-                        <Icon name={item.icon} className="dash-nav-icon" />
-                        <span className="dash-nav-label handwritting">{item.label}</span>
-                    </button>
-                ))}
-            </nav>
-        </aside>
-    )
+      <nav className="dash-sidebar-nav" aria-label={ariaLabel}>
+        {items.map((item) => (
+          <button
+            key={item.key}
+            type="button"
+            className={`dash-nav-item${active === item.key ? " dash-nav-item--active" : ""}`}
+            onClick={() => onChange(item.key)}
+            aria-current={active === item.key ? "page" : undefined}
+            title={collapsed ? item.label : undefined}
+          >
+            <Icon name={item.icon} className="dash-nav-icon" />
+            <span className="dash-nav-label handwritting">{item.label}</span>
+          </button>
+        ))}
+      </nav>
+    </aside>
+  );
 }

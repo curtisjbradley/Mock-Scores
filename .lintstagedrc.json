@@ -1,4 +1,6 @@
 {
-  "frontend/**/*.{ts,tsx}": "eslint --fix --no-warn-ignored",
-  "backend/**/*.ts": "eslint --fix --no-warn-ignored"
+  "*.{js,jsx,ts,tsx}": ["prettier --write"],
+  "frontend/**/*.{js,jsx,ts,tsx}": ["eslint --fix"],
+  "backend/**/*.{js,jsx,ts,tsx}": ["eslint --fix"],
+  "*.{json,css,md}": ["prettier --write"]
 }

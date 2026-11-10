@@ -1,229 +1,229 @@
-
 // Row interfaces for all database tables
 
-import {ScorecardPayload} from "@mock-scores/shared";
+import { ScorecardPayload } from "@mock-scores/shared";
 
 export interface IAuthRow {
-    user_id: string;
-    password_hash: string;
-    email: string;
-    created_at: Date;
-    first_name: string;
-    last_name: string;
+  user_id: string;
+  password_hash: string;
+  email: string;
+  created_at: Date;
+  first_name: string;
+  last_name: string;
 }
 
 export interface ITournamentFormatRow {
-    format_id: string;
-    case_name: string;
-    criminal_case: boolean;
-    p_witnesses_called: number;
-    d_witnesses_called: number;
-    has_swing: boolean;
+  format_id: string;
+  case_name: string;
+  criminal_case: boolean;
+  p_witnesses_called: number;
+  d_witnesses_called: number;
+  has_swing: boolean;
 }
 
 export interface ITournamentRow {
-    id: string;
-    name: string;
-    location: string;
-    start_date: Date | null;
-    end_date: Date | null;
-    created_at: Date;
-    case_format_id: string;
-    num_rounds: number;
-    num_teams: number;
-    status: 'active' | 'completed' | 'archived';
-    share_individual_rankings: boolean;
+  id: string;
+  name: string;
+  location: string;
+  start_date: Date | null;
+  end_date: Date | null;
+  created_at: Date;
+  case_format_id: string;
+  num_rounds: number;
+  num_teams: number;
+  status: "active" | "completed" | "archived";
+  share_individual_rankings: boolean;
 }
 
 export interface ICaseWitnessRow {
-    id: string;
-    case_format: string;
-    side: 'P' | 'D' | 'S';
-    name: string;
+  id: string;
+  case_format: string;
+  side: "P" | "D" | "S";
+  name: string;
 }
 
 export interface IScoringCategoryRow {
-    id: string;
-    tournament_id: string;
-    name: string;
-    witness_category: boolean;
-    position: number;
+  id: string;
+  tournament_id: string;
+  name: string;
+  witness_category: boolean;
+  position: number;
 }
 
 export interface IScoringFieldRow {
-    id: string;
-    category_id: string;
-    label: string;
-    min_score: number;
-    max_score: number;
-    multiplier: number;
-    assignable: boolean;
-    visible_to_scorers: boolean;
-    prosecution: boolean;
-    defense: boolean;
-    calling: boolean;
-    crossing: boolean;
-    position: number;
-    award_category_id: string | null;
+  id: string;
+  category_id: string;
+  label: string;
+  min_score: number;
+  max_score: number;
+  multiplier: number;
+  assignable: boolean;
+  visible_to_scorers: boolean;
+  prosecution: boolean;
+  defense: boolean;
+  calling: boolean;
+  crossing: boolean;
+  position: number;
+  award_category_id: string | null;
 }
 
 export interface IBallotRow {
-    ballot_id: string;
-    scorer_assignment: string;
-    tournament_id: string;
-    pairing_id: string;
-    ballot_json: ScorecardPayload;
-    p_team_id: string;
-    d_team_id: string;
-    d_points: number;
-    p_points: number;
-    tiebreaker?: string;
-    presider_ballot: boolean;
-
+  ballot_id: string;
+  scorer_assignment: string;
+  tournament_id: string;
+  pairing_id: string;
+  ballot_json: ScorecardPayload;
+  p_team_id: string;
+  d_team_id: string;
+  d_points: number;
+  p_points: number;
+  tiebreaker?: string;
+  presider_ballot: boolean;
 }
 
 export interface IScoringTemplateFieldRow {
-    template_category_id: string;
-    label: string;
-    min_score: number;
-    max_score: number;
-    multiplier: number;
-    assignable: boolean;
-    visible_to_scorers: boolean;
-    prosecution: boolean;
-    defense: boolean;
-    calling: boolean;
-    crossing: boolean;
-    position: number;
-    award_category_id: string | null;
+  template_category_id: string;
+  label: string;
+  min_score: number;
+  max_score: number;
+  multiplier: number;
+  assignable: boolean;
+  visible_to_scorers: boolean;
+  prosecution: boolean;
+  defense: boolean;
+  calling: boolean;
+  crossing: boolean;
+  position: number;
+  award_category_id: string | null;
 }
 
-export interface ITournamentOwnerRow {    id : string,
-    tournament_id: string;
-    delegate_id: string;
-    role: 'owner' | 'delegate';
+export interface ITournamentOwnerRow {
+  id: string;
+  tournament_id: string;
+  delegate_id: string;
+  role: "owner" | "delegate";
 }
 
 export interface ITournamentDelegateInviteRow {
-    id: string;
-    tournament_id: string;
-    name: string;
-    email: string;
+  id: string;
+  tournament_id: string;
+  name: string;
+  email: string;
 }
 
 export interface IScorerRow {
-    scorer_id: string;
-    tournament_id: string;
-    name: string;
-    email: string | null;
-    is_paper: boolean;
-    willing_to_preside: boolean;
+  scorer_id: string;
+  tournament_id: string;
+  name: string;
+  email: string | null;
+  is_paper: boolean;
+  willing_to_preside: boolean;
+  notes: string;
 }
 
 export interface ICourtroomRow {
-    id: string;
-    tournament_id: string;
-    name: string;
-    location: string | null;
+  id: string;
+  tournament_id: string;
+  name: string;
+  location: string | null;
 }
 
 export interface ITeamRow {
-    id: string;
-    tournament_id: string;
-    name: string;
-    code: string;
+  id: string;
+  tournament_id: string;
+  name: string;
+  code: string;
 }
 
 export interface ITeamInviteRow {
-    id: string;
-    team_id: string;
-    invite_email: string;
-    name: string;
-    code: string;
+  id: string;
+  team_id: string;
+  invite_email: string;
+  name: string;
+  code: string;
 }
 
 export interface ITeamCoachRow {
-    coach_id: string;
-    team_id: string;
-    is_owner: boolean;
-    notifications: boolean;
+  coach_id: string;
+  team_id: string;
+  is_owner: boolean;
+  notifications: boolean;
 }
 
 export interface IRoundRow {
-    round_id: string;
-    tournament_id: string;
-    results_public: boolean;
-    teams_public: boolean;
-    locked: boolean;
-    position: number;
-    name: string;
-    round_time: Date | null;
+  round_id: string;
+  tournament_id: string;
+  results_public: boolean;
+  teams_public: boolean;
+  locked: boolean;
+  position: number;
+  name: string;
+  round_time: Date | null;
 }
 
 export interface IPairingRow {
-    pairing_id: string;
-    round_id: string;
-    p_team: string;
-    d_team: string;
-    courtroom: string | null;
+  pairing_id: string;
+  round_id: string;
+  p_team: string;
+  d_team: string;
+  courtroom: string | null;
 }
 
 export interface IScorerPairingAssignmentRow {
-    assignment_id: string;
-    scorer_id: string;
-    pairing_id: string;
-    conflict_reported: boolean;
+  assignment_id: string;
+  scorer_id: string;
+  pairing_id: string;
+  conflict_reported: boolean;
 }
 
 export interface IScorerPresiderAssignmentRow {
-    presider_assignment_id: string;
-    scorer_assignment_id: string;
-    pairing_id: string;
-    show_scores: boolean;
+  presider_assignment_id: string;
+  scorer_assignment_id: string;
+  pairing_id: string;
+  show_scores: boolean;
 }
 
 export interface ITeamRosteredStudentRow {
-    student_id: string;
-    team_id: string;
-    student_name: string;
+  student_id: string;
+  team_id: string;
+  student_name: string;
 }
 
 export interface ITournamentSummaryRow {
-    teams_total: number;
-    teams_with_rosters: number;
-    teams_without_rosters: number;
-    teams_with_default_assignments: number;
-    teams_without_default_assignments: number;
-    teams_with_default_call_orders: number;
-    teams_without_default_call_orders: number;
-    teams_with_coaches: number;
-    teams_without_coaches: number;
+  teams_total: number;
+  teams_with_rosters: number;
+  teams_without_rosters: number;
+  teams_with_default_assignments: number;
+  teams_without_default_assignments: number;
+  teams_with_default_call_orders: number;
+  teams_without_default_call_orders: number;
+  teams_with_coaches: number;
+  teams_without_coaches: number;
 
-    rounds_total: number;
-    rounds_with_pairings: number;
-    rounds_without_pairings: number;
+  rounds_total: number;
+  rounds_with_pairings: number;
+  rounds_without_pairings: number;
 
-    pairings_total: number;
-    pairings_with_scorers: number;
-    pairings_without_scorers: number;
-    pairings_with_presiders: number;
-    pairings_without_presiders: number;
-    pairings_with_courtrooms: number;
-    pairings_without_courtrooms: number;
+  pairings_total: number;
+  pairings_with_scorers: number;
+  pairings_without_scorers: number;
+  pairings_with_presiders: number;
+  pairings_without_presiders: number;
+  pairings_with_courtrooms: number;
+  pairings_without_courtrooms: number;
 
-    courtrooms_double_booked: number;
-    pairings_in_double_booked_courtrooms: number;
+  courtrooms_double_booked: number;
+  pairings_in_double_booked_courtrooms: number;
 
-    ballots_submitted: number;
-    paper_ballots_awaiting_input: number;
+  ballots_submitted: number;
+  paper_ballots_awaiting_input: number;
 
-    scorers_total: number;
-    scorers_with_conflicts: number;
+  scorers_total: number;
+  scorers_with_conflicts: number;
 }
 
 export interface ICustomRosterColumnRow {
-    tournament_id: string,
-    position: number,
-    type: 'string' | 'int',
-    column_name: string
+  tournament_id: string;
+  position: number;
+  type: "string" | "int";
+  column_name: string;
 }

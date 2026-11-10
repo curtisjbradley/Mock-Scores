@@ -1,621 +1,653 @@
 .org-main {
-    flex: 1;
-    display: flex;
-    justify-content: center;
-    padding: 2rem 1rem;
+  flex: 1;
+  display: flex;
+  justify-content: center;
+  padding: 2rem 1rem;
 }
 
 .org-container {
-    width: min(100%, 72rem);
-    display: flex;
-    flex-direction: column;
-    gap: 1.25rem;
+  width: min(100%, 72rem);
+  display: flex;
+  flex-direction: column;
+  gap: 1.25rem;
 }
 
 .org-header {
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    gap: 1rem;
-    flex-wrap: wrap;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  flex-wrap: wrap;
 }
 
 .org-header h1 {
-    font-size: 1.75rem;
+  font-size: 1.75rem;
 }
 
 .org-header-sub {
-    margin: 0;
-    font-size: 0.85rem;
-    color: var(--text-muted);
+  margin: 0;
+  font-size: 0.85rem;
+  color: var(--text-muted);
 }
 
 .org-back-btn {
-    align-self: flex-start;
-    background: var(--primary-subtle);
-    border: 1px solid var(--primary);
-    border-radius: var(--radius);
-    padding: 0.4rem 0.9rem;
-    color: var(--primary);
-    font-size: 0.9rem;
-    font-weight: 600;
-    font-family: inherit;
-    cursor: pointer;
-    transition: background 120ms ease;
+  align-self: flex-start;
+  background: var(--primary-subtle);
+  border: 1px solid var(--primary);
+  border-radius: var(--radius);
+  padding: 0.4rem 0.9rem;
+  color: var(--primary);
+  font-size: 0.9rem;
+  font-weight: 600;
+  font-family: inherit;
+  cursor: pointer;
+  transition: background 120ms ease;
 }
 
-.org-back-btn:hover { background: var(--primary); color: var(--white); }
+.org-back-btn:hover {
+  background: var(--primary);
+  color: var(--white);
+}
 
 .org-tournament-list {
-    display: flex;
-    flex-direction: column;
-    gap: 0.75rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
 }
 
 .org-tournament-card {
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    gap: 1rem;
-    padding: 1rem 1.25rem;
-    border: 1px solid var(--border);
-    border-radius: var(--radius);
-    background: var(--surface);
-    box-shadow: var(--shadow);
-    text-align: left;
-    font-family: inherit;
-    transition: border-color 140ms ease, box-shadow 140ms ease;
-    flex-wrap: wrap;
-    overflow: hidden;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  padding: 1rem 1.25rem;
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  background: var(--surface);
+  box-shadow: var(--shadow);
+  text-align: left;
+  font-family: inherit;
+  transition:
+    border-color 140ms ease,
+    box-shadow 140ms ease;
+  flex-wrap: wrap;
+  overflow: hidden;
 }
 
 .org-tournament-card:has(.org-tournament-info:hover) {
-    border-color: var(--primary);
-    box-shadow: 0 0 0 0.1875rem var(--focus);
+  border-color: var(--primary);
+  box-shadow: 0 0 0 0.1875rem var(--focus);
 }
 
 .org-tournament-info {
-    flex: 1;
-    display: flex;
-    flex-direction: column;
-    gap: 0.25rem;
-    cursor: pointer;
-    color: inherit;
-    text-decoration: none;
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+  cursor: pointer;
+  color: inherit;
+  text-decoration: none;
 }
 
 .org-duplicate-btn {
-    flex-shrink: 0;
-    padding: 0.35rem 0.85rem;
-    border: 1px solid var(--border-strong);
-    border-radius: var(--radius);
-    background: var(--surface);
-    color: var(--text-muted);
-    font-size: 0.82rem;
-    font-weight: 600;
-    font-family: inherit;
-    cursor: pointer;
-    transition: background 140ms ease, color 140ms ease;
+  flex-shrink: 0;
+  padding: 0.35rem 0.85rem;
+  border: 1px solid var(--border-strong);
+  border-radius: var(--radius);
+  background: var(--surface);
+  color: var(--text-muted);
+  font-size: 0.82rem;
+  font-weight: 600;
+  font-family: inherit;
+  cursor: pointer;
+  transition:
+    background 140ms ease,
+    color 140ms ease;
 }
 
 .org-duplicate-btn:hover {
-    background: var(--primary-subtle);
-    color: var(--primary);
-    border-color: var(--primary);
+  background: var(--primary-subtle);
+  color: var(--primary);
+  border-color: var(--primary);
 }
 
 .org-tournament-info {
-    display: flex;
-    flex-direction: column;
-    gap: 0.25rem;
-    min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+  min-width: 0;
 }
 
 .org-tournament-name {
-    font-size: 1rem;
-    font-weight: 600;
-    color: var(--text);
-    overflow: hidden;
-    text-overflow: ellipsis;
-    white-space: nowrap;
+  font-size: 1rem;
+  font-weight: 600;
+  color: var(--text);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 .org-tournament-meta {
-    font-size: 0.82rem;
-    color: var(--text-muted);
+  font-size: 0.82rem;
+  color: var(--text-muted);
 }
 
 .org-status {
-    flex-shrink: 0;
-    padding: 0.25rem 0.65rem;
-    border-radius: 2rem;
-    font-size: 0.78rem;
-    font-weight: 600;
-    text-transform: uppercase;
-    letter-spacing: 0.04em;
+  flex-shrink: 0;
+  padding: 0.25rem 0.65rem;
+  border-radius: 2rem;
+  font-size: 0.78rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
 }
 
-.org-status--upcoming  { background: var(--surface-muted); color: var(--text-muted); }
-.org-status--active    { background: var(--success-subtle-bg); color: var(--success-fg); }
-.org-status--completed { background: var(--primary-subtle); color: var(--primary-dark); }
+.org-status--upcoming {
+  background: var(--surface-muted);
+  color: var(--text-muted);
+}
+.org-status--active {
+  background: var(--success-subtle-bg);
+  color: var(--success-fg);
+}
+.org-status--completed {
+  background: var(--primary-subtle);
+  color: var(--primary-dark);
+}
 
 /* Status filter bar */
 .org-status-filter {
-    display: flex;
-    gap: 4px;
-    margin-bottom: 16px;
-    padding: 4px;
-    background: var(--surface-muted);
-    border-radius: 0.6rem;
-    width: fit-content;
+  display: flex;
+  gap: 4px;
+  margin-bottom: 16px;
+  padding: 4px;
+  background: var(--surface-muted);
+  border-radius: 0.6rem;
+  width: fit-content;
 }
 
 .org-status-filter-btn {
-    padding: 6px 14px;
-    border: none;
-    background: transparent;
-    border-radius: 0.5rem;
-    font-size: 0.85rem;
-    font-weight: 500;
-    color: var(--text-muted);
-    cursor: pointer;
-    transition: background 0.15s, color 0.15s;
+  padding: 6px 14px;
+  border: none;
+  background: transparent;
+  border-radius: 0.5rem;
+  font-size: 0.85rem;
+  font-weight: 500;
+  color: var(--text-muted);
+  cursor: pointer;
+  transition:
+    background 0.15s,
+    color 0.15s;
 }
 
 .org-status-filter-btn:hover {
-    background: var(--surface);
+  background: var(--surface);
 }
 
 .org-status-filter-btn--active {
-    background: var(--surface);
-    color: var(--text);
-    box-shadow: var(--shadow-sm);
+  background: var(--surface);
+  color: var(--text);
+  box-shadow: var(--shadow-sm);
 }
 
 .org-status-filter-count {
-    display: inline-block;
-    margin-left: 4px;
-    padding: 0 5px;
-    font-size: 0.75rem;
-    background: var(--surface-muted);
-    border-radius: 0.5rem;
-    min-width: 16px;
-    text-align: center;
+  display: inline-block;
+  margin-left: 4px;
+  padding: 0 5px;
+  font-size: 0.75rem;
+  background: var(--surface-muted);
+  border-radius: 0.5rem;
+  min-width: 16px;
+  text-align: center;
 }
 
 .org-status-filter-btn--active .org-status-filter-count {
-    background: var(--primary-subtle);
+  background: var(--primary-subtle);
 }
 
 /* Tournament card status badge */
 .org-tournament-status {
-    display: inline-block;
-    margin-left: 8px;
-    padding: 1px 6px;
-    font-size: 0.6rem;
-    font-weight: 700;
-    letter-spacing: 0.02em;
-    border-radius: 3px;
-    vertical-align: middle;
+  display: inline-block;
+  margin-left: 8px;
+  padding: 1px 6px;
+  font-size: 0.6rem;
+  font-weight: 700;
+  letter-spacing: 0.02em;
+  border-radius: 3px;
+  vertical-align: middle;
 }
 
 .org-tournament-status--completed {
-    background: var(--primary-subtle);
-    color: var(--primary-dark);
+  background: var(--primary-subtle);
+  color: var(--primary-dark);
 }
 
 .org-tournament-status--archived {
-    background: var(--surface-muted);
-    color: var(--text-muted);
+  background: var(--surface-muted);
+  color: var(--text-muted);
 }
 
 .org-tournament-card--archived {
-    opacity: 0.7;
+  opacity: 0.7;
 }
 
 .org-meta-row {
-    display: flex;
-    flex-wrap: wrap;
-    gap: 0.5rem 1.5rem;
-    font-size: 0.875rem;
-    color: var(--text-muted);
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem 1.5rem;
+  font-size: 0.875rem;
+  color: var(--text-muted);
 }
 
 .org-dashboard-grid {
-    display: grid;
-    grid-template-columns: repeat(auto-fill, minmax(10rem, 1fr));
-    gap: 0.75rem;
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(10rem, 1fr));
+  gap: 0.75rem;
 }
 
 .org-dashboard-card {
-    padding: 1.25rem;
-    border: 1px solid var(--border);
-    border-radius: var(--radius);
-    background: var(--surface);
-    box-shadow: var(--shadow);
+  padding: 1.25rem;
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  background: var(--surface);
+  box-shadow: var(--shadow);
 }
 
 .org-dashboard-card h2 {
-    font-size: 0.8rem;
-    font-weight: 600;
-    text-transform: uppercase;
-    letter-spacing: 0.05em;
-    color: var(--text-muted);
-    margin-bottom: 0.5rem;
+  font-size: 0.8rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: var(--text-muted);
+  margin-bottom: 0.5rem;
 }
 
 .org-dashboard-stat {
-    font-size: 2rem;
-    font-weight: 700;
-    color: var(--text);
-    line-height: 1;
+  font-size: 2rem;
+  font-weight: 700;
+  color: var(--text);
+  line-height: 1;
 }
 
 .org-dashboard-stat--alert {
-    color: var(--danger);
+  color: var(--danger);
 }
 
 /* Coach dashboard */
 .coach-section {
-    display: flex;
-    flex-direction: column;
-    gap: 0.5rem;
-    padding: 1.25rem;
-    border: 1px solid var(--border);
-    border-radius: var(--radius);
-    background: var(--surface);
-    box-shadow: var(--shadow);
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  padding: 1.25rem;
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  background: var(--surface);
+  box-shadow: var(--shadow);
 }
 
 .coach-section h2 {
-    font-size: 1rem;
-    font-weight: 700;
+  font-size: 1rem;
+  font-weight: 700;
 }
 
 .coach-empty {
-    color: var(--text-muted);
-    font-size: 0.9rem;
+  color: var(--text-muted);
+  font-size: 0.9rem;
 }
 
 .coach-empty-message {
-    margin: 0;
+  margin: 0;
 }
 
 .coach-empty-hint {
-    margin: 0.35rem 0 0;
-    font-size: 0.85rem;
-    opacity: 0.85;
+  margin: 0.35rem 0 0;
+  font-size: 0.85rem;
+  opacity: 0.85;
 }
 
 .coach-view-banner {
-    padding: 0.4rem 0.9rem;
-    border-radius: 0.5rem;
-    background: var(--primary-subtle);
-    color: var(--primary-dark);
-    font-size: 0.85rem;
-    font-weight: 600;
-    align-self: flex-start;
+  display: flex;
+  align-items: center;
+  gap: 0.65rem;
+  width: 100%;
+  padding: 0.7rem 0.9rem;
+  border: 1px solid var(--warning-fg);
+  border-radius: 0.5rem;
+  background: var(--warning-bg);
+  color: var(--warning-fg);
+  font-size: 0.85rem;
+}
+
+.coach-view-banner strong {
+  font-weight: 700;
+  white-space: nowrap;
+}
+
+@media (max-width: 30rem) {
+  .coach-view-banner {
+    align-items: flex-start;
+    flex-direction: column;
+    gap: 0.2rem;
+  }
 }
 
 .tab-actions {
-    display: flex;
-    justify-content: flex-end;
-    margin-bottom: 0.75rem;
+  display: flex;
+  justify-content: flex-end;
+  margin-bottom: 0.75rem;
 }
 
 .scorecard-note {
-    margin-top: 1rem;
-    font-style: italic;
+  margin-top: 1rem;
+  font-style: italic;
 }
 
 /* ── Scorecard viewer ───────────────────────────────────────────────────── */
 .sv-header {
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    flex-wrap: wrap;
-    gap: 0.5rem;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 0.5rem;
 }
 
 .sv-header h2 {
-    margin: 0;
+  margin: 0;
 }
 
 .sv-header-actions {
-    display: flex;
-    gap: 0.5rem;
+  display: flex;
+  gap: 0.5rem;
 }
 
 .sv-editlog-section {
-    margin-bottom: 1rem;
+  margin-bottom: 1rem;
 }
 
 .sv-editlog-toggle {
-    background: none;
-    border: none;
-    padding: 0;
-    cursor: pointer;
-    color: var(--primary);
-    font-size: 0.875rem;
-    font-weight: 600;
-    text-decoration: underline;
+  background: none;
+  border: none;
+  padding: 0;
+  cursor: pointer;
+  color: var(--primary);
+  font-size: 0.875rem;
+  font-weight: 600;
+  text-decoration: underline;
 }
 
 .sv-editlog-list {
-    margin-top: 0.75rem;
-    border: 1px solid var(--border);
-    border-radius: 0.75rem;
-    overflow: hidden;
+  margin-top: 0.75rem;
+  border: 1px solid var(--border);
+  border-radius: 0.75rem;
+  overflow: hidden;
 }
 
 .sv-editlog-entry {
-    padding: 0.75rem 1rem;
-    border-bottom: 1px solid var(--border);
-    font-size: 0.85rem;
+  padding: 0.75rem 1rem;
+  border-bottom: 1px solid var(--border);
+  font-size: 0.85rem;
 }
 
 .sv-editlog-entry:last-child {
-    border-bottom: none;
+  border-bottom: none;
 }
 
 .sv-editlog-entry-head {
-    display: flex;
-    justify-content: space-between;
-    margin-bottom: 0.25rem;
+  display: flex;
+  justify-content: space-between;
+  margin-bottom: 0.25rem;
 }
 
 .sv-editlog-time {
-    color: var(--text-muted);
-    font-size: 0.8rem;
+  color: var(--text-muted);
+  font-size: 0.8rem;
 }
 
 .sv-editlog-diff {
-    color: var(--text-muted);
-    margin-bottom: 0.25rem;
+  color: var(--text-muted);
+  margin-bottom: 0.25rem;
 }
 
 .sv-editlog-reason {
-    font-style: italic;
+  font-style: italic;
 }
 
 .sv-edit-actions {
-    display: flex;
-    gap: 0.5rem;
-    margin-bottom: 1rem;
-    flex-wrap: wrap;
+  display: flex;
+  gap: 0.5rem;
+  margin-bottom: 1rem;
+  flex-wrap: wrap;
 }
 
 .sv-delete-btn {
-    background: var(--danger);
-    color: var(--white);
-    border-color: var(--danger);
+  background: var(--danger);
+  color: var(--white);
+  border-color: var(--danger);
 }
 
 .sv-trial-info {
-    margin-bottom: 1rem;
+  margin-bottom: 1rem;
 }
 
 .sv-case-name {
-    margin: 0;
+  margin: 0;
 }
 
 .sv-empty-italic {
-    font-style: italic;
+  font-style: italic;
 }
 
 .sv-score-input-edit {
-    width: 4rem;
-    text-align: center;
-    font-weight: bold;
+  width: 4rem;
+  text-align: center;
+  font-weight: bold;
 }
 
 .sv-score-input-view {
-    display: inline-block;
-    min-width: 2.5rem;
-    text-align: center;
-    font-weight: bold;
+  display: inline-block;
+  min-width: 2.5rem;
+  text-align: center;
+  font-weight: bold;
 }
 
-
 .sv-section {
-    margin-top: 1.5rem;
+  margin-top: 1.5rem;
 }
 
 .sv-section--sm {
-    margin-top: 1rem;
+  margin-top: 1rem;
 }
 
 .sv-nominations-list {
-    padding-left: 1.25rem;
+  padding-left: 1.25rem;
 }
 
 .sv-nominations-grid {
-    display: grid;
-    grid-template-columns: repeat(auto-fill, minmax(15rem, 1fr));
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(15rem, 1fr));
 }
 
 .sv-nomination-side {
-    margin-left: 1rem;
-    color: var(--text-muted);
-    font-size: small;
+  margin-left: 1rem;
+  color: var(--text-muted);
+  font-size: small;
 }
 
 .sv-nomination-group {
-    margin-top: 0.75rem;
+  margin-top: 0.75rem;
 }
 
 .sv-nomination-award {
-    margin: 0 0 0.25rem;
-    font-size: 0.95rem;
-    font-weight: 600;
+  margin: 0 0 0.25rem;
+  font-size: 0.95rem;
+  font-weight: 600;
 }
 
 .sv-totals {
-    margin-top: 1rem;
-    display: flex;
-    gap: 2rem;
+  margin-top: 1rem;
+  display: flex;
+  gap: 2rem;
 }
 
 .sv-modal-title {
-    margin: 0 0 0.75rem;
+  margin: 0 0 0.75rem;
 }
 
 .sv-modal-title--danger {
-    margin: 0 0 0.75rem;
-    color: var(--danger);
+  margin: 0 0 0.75rem;
+  color: var(--danger);
 }
 
 .sv-modal-text {
-    margin: 0 0 0.5rem;
-    line-height: 1.6;
+  margin: 0 0 0.5rem;
+  line-height: 1.6;
 }
 
 .sv-modal-text--muted {
-    margin: 0 0 1rem;
-    font-size: 0.85rem;
-    color: var(--text-muted);
+  margin: 0 0 1rem;
+  font-size: 0.85rem;
+  color: var(--text-muted);
 }
 
 .sv-modal-text--intro {
-    margin: 0 0 1rem;
-    line-height: 1.6;
-    font-size: 0.9rem;
+  margin: 0 0 1rem;
+  line-height: 1.6;
+  font-size: 0.9rem;
 }
 
 .sv-modal-confirm-danger {
-    background: var(--danger);
+  background: var(--danger);
 }
 
 .sv-reason-label {
-    display: block;
-    margin-bottom: 0.4rem;
-    font-size: 0.85rem;
-    font-weight: 600;
+  display: block;
+  margin-bottom: 0.4rem;
+  font-size: 0.85rem;
+  font-weight: 600;
 }
 
 .sv-reason-textarea {
-    width: 100%;
-    min-height: 5rem;
-    resize: vertical;
-    padding: 0.5rem 0.75rem;
-    font-family: inherit;
-    font-size: 0.9rem;
+  width: 100%;
+  min-height: 5rem;
+  resize: vertical;
+  padding: 0.5rem 0.75rem;
+  font-family: inherit;
+  font-size: 0.9rem;
 }
 
 .sv-modal-actions-spaced {
-    margin-top: 1rem;
+  margin-top: 1rem;
 }
 
 .org-empty-state {
-    opacity: 0.6;
-    text-align: center;
-    padding: 24px 0;
+  opacity: 0.6;
+  text-align: center;
+  padding: 24px 0;
 }
 
 .rv-toolbar {
-    display: flex;
-    gap: 0.5rem;
-    align-items: center;
-    flex-wrap: wrap;
+  display: flex;
+  gap: 0.5rem;
+  align-items: center;
+  flex-wrap: wrap;
 }
 
 .rv-send-msg {
-    font-size: 0.82rem;
-    color: var(--text-muted);
+  font-size: 0.82rem;
+  color: var(--text-muted);
 }
 
 /* ── Roster tab ─────────────────────────────────────────────────────────────── */
 .roster-tab {
-    display: flex;
-    flex-direction: column;
-    gap: 1.25rem;
+  display: flex;
+  flex-direction: column;
+  gap: 1.25rem;
 }
 
 .roster-add-form {
-    display: flex;
-    gap: 0.5rem;
+  display: flex;
+  gap: 0.5rem;
 }
 
 .roster-add-form input {
-    flex: 1;
+  flex: 1;
 }
 
 .roster-add-form input,
 .roster-add-form .btn-primary {
-    height: 2.25rem;
-    border-radius: 0.6rem;
-    white-space: nowrap;
+  height: 2.25rem;
+  border-radius: 0.6rem;
+  white-space: nowrap;
 }
 
-
 .roster-list {
-    list-style: none;
-    margin: 0;
-    padding: 0;
-    display: flex;
-    flex-direction: column;
-    gap: 0.4rem;
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 0.4rem;
 }
 
 .roster-item {
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    padding: 0.6rem 0.9rem;
-    background: var(--surface);
-    border: 1px solid var(--border);
-    border-radius: 0.6rem;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0.6rem 0.9rem;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 0.6rem;
 }
 
 .roster-name {
-    font-size: 0.95rem;
-    font-weight: 500;
-    color: var(--text);
+  font-size: 0.95rem;
+  font-weight: 500;
+  color: var(--text);
 }
 
 .roster-pronouns {
-    margin-left: 0.4rem;
-    font-size: 0.82rem;
-    font-weight: 400;
-    color: var(--text-muted);
+  margin-left: 0.4rem;
+  font-size: 0.82rem;
+  font-weight: 400;
+  color: var(--text-muted);
 }
 
 .dash-remove-btn {
-    background: none;
-    border: none;
-    color: var(--danger);
-    font-size: 0.85rem;
-    font-weight: 600;
-    font-family: inherit;
-    cursor: pointer;
-    padding: 0.2rem 0.4rem;
-    border-radius: 0.4rem;
-    transition: background 120ms ease;
+  background: none;
+  border: none;
+  color: var(--danger);
+  font-size: 0.85rem;
+  font-weight: 600;
+  font-family: inherit;
+  cursor: pointer;
+  padding: 0.2rem 0.4rem;
+  border-radius: 0.4rem;
+  transition: background 120ms ease;
 }
-.dash-remove-btn:hover{
-    background: var(--surface-muted);
+.dash-remove-btn:hover {
+  background: var(--surface-muted);
 }
 
 /* ── Print ──────────────────────────────────────────────────────────────── */
 
 @media print {
-    .org-back-btn,
-    .pc-save-btn,
-    .pc-cancel-btn,
-    .pc-view-btn,
-    .dash-remove-btn,
-    .confirm-actions,
-    .account-danger-zone,
-    .scoresheet-nav {
-        display: none !important;
-    }
+  .org-back-btn,
+  .pc-save-btn,
+  .pc-cancel-btn,
+  .pc-view-btn,
+  .dash-remove-btn,
+  .confirm-actions,
+  .account-danger-zone,
+  .scoresheet-nav {
+    display: none !important;
+  }
 
-    .org-main {
-        padding: 0;
-    }
+  .org-main {
+    padding: 0;
+  }
 
-    .org-container {
-        max-width: 100%;
-        box-shadow: none;
-    }
+  .org-container {
+    max-width: 100%;
+    box-shadow: none;
+  }
 }

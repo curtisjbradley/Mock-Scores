@@ -1,47 +1,72 @@
-import {dbQuery, withTransaction} from '../db';
-import {computeBallotTotals, getFieldMultipliers} from './scorerProvider';
-import type {PoolClient} from 'pg';
+import { dbQuery, withTransaction } from "../db";
+import { computeBallotTotals, getFieldMultipliers } from "./scorerProvider";
+import type { PoolClient } from "pg";
 import type {
-    EmailStatus,
-    IAwardNomination,
-    IBallotStatus,
-    ICourtroom,
-    ICustomRosterColumn,
-    IDuplicateOptions,
-    IIndividualAwardCategory,
-    IOrganizer,
-    IRound,
-    IScorer,
-    IScoringCategory,
-    IScoringTemplate,
-    ITeam,
-    ITournament,
-    ITournamentSummary,
-    IWitnesses,
-    TournamentPayload
-} from '@mock-scores/shared';
+  EmailStatus,
+  IAwardNomination,
+  IBallotStatus,
+  ICourtroom,
+  ICustomRosterColumn,
+  IDuplicateOptions,
+  IIndividualAwardCategory,
+  IOrganizer,
+  IRound,
+  IScorer,
+  IScorerAssignablePairing,
+  IScorerAssignmentSummary,
+  IScorerDetail,
+  IScoringCategory,
+  IScoringTemplate,
+  ITeam,
+  ITournament,
+  ITournamentSummary,
+  IWitnesses,
+  TournamentPayload,
+} from "@mock-scores/shared";
 import type {
-    IAuthRow,
-    ICaseWitnessRow,
-    ICourtroomRow,
-    ICustomRosterColumnRow,
-    IPairingRow,
-    IRoundRow,
-    IScoringCategoryRow,
-    IScoringFieldRow,
-    IScoringTemplateFieldRow, ITeamInviteRow,
-    ITeamRow,
-    ITournamentDelegateInviteRow,
-    ITournamentFormatRow,
-    ITournamentOwnerRow,
-    ITournamentSummaryRow
-} from '../types/dbtypes';
-import {randomUUID} from 'node:crypto';
-import {AlreadyExistsError, DbError, NotFoundError, OrganizerAlreadyJoinedError} from '../errors';
+  IAuthRow,
+  ICaseWitnessRow,
+  ICourtroomRow,
+  ICustomRosterColumnRow,
+  IPairingRow,
+  IRoundRow,
+  IScoringCategoryRow,
+  IScoringFieldRow,
+  IScoringTemplateFieldRow,
+  ITeamInviteRow,
+  ITeamRow,
+  ITournamentDelegateInviteRow,
+  ITournamentFormatRow,
+  ITournamentOwnerRow,
+  ITournamentSummaryRow,
+} from "../types/dbtypes";
+import { randomUUID } from "node:crypto";
+import {
+  AlreadyExistsError,
+  DbError,
+  NotFoundError,
+  OrganizerAlreadyJoinedError,
+} from "../errors";
 
-async function insertWitnesses(formatID: string, cf: TournamentPayload['caseFormat']): Promise<void> {
-    const witnesses: [string, string][] = [...cf.pWitnessNames.map(n => ['P', n] as [string, string]), ...cf.dWitnessNames.map(n => ['D', n] as [string, string]), ...(cf.hasSwing ? cf.swingWitnessNames.map(n => ['S', n] as [string, string]) : []),];
-    await Promise.all(witnesses.map(([side, name]) => dbQuery('INSERT INTO case_witnesses (case_format, side, name) VALUES ($1,$2,$3)', [formatID, side, name])));
+async function insertWitnesses(
+  formatID: string,
+  cf: TournamentPayload["caseFormat"],
+): Promise<void> {
+  const witnesses: [string, string][] = [
+    ...cf.pWitnessNames.map((n) => ["P", n] as [string, string]),
+    ...cf.dWitnessNames.map((n) => ["D", n] as [string, string]),
+    ...(cf.hasSwing
+      ? cf.swingWitnessNames.map((n) => ["S", n] as [string, string])
+      : []),
+  ];
+  await Promise.all(
+    witnesses.map(([side, name]) =>
+      dbQuery(
+        "INSERT INTO case_witnesses (case_format, side, name) VALUES ($1,$2,$3)",
+        [formatID, side, name],
+      ),
+    ),
+  );
 }
 
 /**
@@ -49,75 +74,169 @@ async function insertWitnesses(formatID: string, cf: TournamentPayload['caseForm
  * each payload `tempId` to the generated database UUID. Scoring fields use this
  * map to resolve their `awardCategoryId` links.
  */
-async function insertAwardCategories(tournamentID: string, awardCategories: TournamentPayload['awardCategories'],): Promise<Map<string, string>> {
-    const tempIdToUuid = new Map<string, string>();
-    await Promise.all((awardCategories ?? []).map(async ac => {
-        const row = (await dbQuery<{
-            id: string
-        }>('INSERT INTO individual_award_categories (tournament_id, name, min_nominees, max_nominees) VALUES ($1,$2,$3,$4) RETURNING id', [tournamentID, ac.name, ac.minNominees, ac.maxNominees]))?.rows[0];
-        if (!row) throw new DbError('insertAwardCategories');
-        tempIdToUuid.set(ac.tempId, row.id);
-    }));
-    return tempIdToUuid;
+async function insertAwardCategories(
+  tournamentID: string,
+  awardCategories: TournamentPayload["awardCategories"],
+): Promise<Map<string, string>> {
+  const tempIdToUuid = new Map<string, string>();
+  await Promise.all(
+    (awardCategories ?? []).map(async (ac) => {
+      const row = (
+        await dbQuery<{
+          id: string;
+        }>(
+          "INSERT INTO individual_award_categories (tournament_id, name, min_nominees, max_nominees) VALUES ($1,$2,$3,$4) RETURNING id",
+          [tournamentID, ac.name, ac.minNominees, ac.maxNominees],
+        )
+      )?.rows[0];
+      if (!row) throw new DbError("insertAwardCategories");
+      tempIdToUuid.set(ac.tempId, row.id);
+    }),
+  );
+  return tempIdToUuid;
 }
 
-async function insertCategories(tournamentID: string, categories: TournamentPayload['scoringCategories'], awardTempIdToUuid: Map<string, string> = new Map(),): Promise<void> {
-    /** Resolves a field's awardCategoryId, mapping a creation tempId to its UUID. */
-    const resolveAwardId = (awardCategoryId: string | null): string | null => {
-        if (!awardCategoryId) return null;
-        return awardTempIdToUuid.get(awardCategoryId) ?? awardCategoryId;
-    };
-    await Promise.all((categories ?? []).map(async cat => {
-        const categoryID = randomUUID();
-        await dbQuery('INSERT INTO scoring_categories (id, tournament_id, name, witness_category, position) VALUES ($1,$2,$3,$4,$5)', [categoryID, tournamentID, cat.name, cat.witnessCategory, cat.position]);
-        await Promise.all(cat.fields.map(f => dbQuery('INSERT INTO scoring_fields (category_id, label, min_score, max_score, multiplier, assignable, visible_to_scorers, prosecution, defense, calling, crossing, position, award_category_id) VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13)', [categoryID, f.label, f.min, f.max, f.multiplier, f.assignable, f.visibleToScorers, f.prosecution, f.defense, f.calling, f.crossing, f.position, resolveAwardId(f.awardCategoryId)])));
-    }));
+async function insertCategories(
+  tournamentID: string,
+  categories: TournamentPayload["scoringCategories"],
+  awardTempIdToUuid: Map<string, string> = new Map(),
+): Promise<void> {
+  /** Resolves a field's awardCategoryId, mapping a creation tempId to its UUID. */
+  const resolveAwardId = (awardCategoryId: string | null): string | null => {
+    if (!awardCategoryId) return null;
+    return awardTempIdToUuid.get(awardCategoryId) ?? awardCategoryId;
+  };
+  await Promise.all(
+    (categories ?? []).map(async (cat) => {
+      const categoryID = randomUUID();
+      await dbQuery(
+        "INSERT INTO scoring_categories (id, tournament_id, name, witness_category, position) VALUES ($1,$2,$3,$4,$5)",
+        [categoryID, tournamentID, cat.name, cat.witnessCategory, cat.position],
+      );
+      await Promise.all(
+        cat.fields.map((f) =>
+          dbQuery(
+            "INSERT INTO scoring_fields (category_id, label, min_score, max_score, multiplier, assignable, visible_to_scorers, prosecution, defense, calling, crossing, position, award_category_id) VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13)",
+            [
+              categoryID,
+              f.label,
+              f.min,
+              f.max,
+              f.multiplier,
+              f.assignable,
+              f.visibleToScorers,
+              f.prosecution,
+              f.defense,
+              f.calling,
+              f.crossing,
+              f.position,
+              resolveAwardId(f.awardCategoryId),
+            ],
+          ),
+        ),
+      );
+    }),
+  );
 }
 
 async function getTournamentFormatId(tournamentID: string): Promise<string> {
-    const row = (await dbQuery<{
-        case_format_id: string
-    }>('SELECT case_format_id FROM tournaments WHERE id=$1', [tournamentID]))?.rows[0];
-    if (!row) throw new NotFoundError('tournament');
-    return row.case_format_id;
+  const row = (
+    await dbQuery<{
+      case_format_id: string;
+    }>("SELECT case_format_id FROM tournaments WHERE id=$1", [tournamentID])
+  )?.rows[0];
+  if (!row) throw new NotFoundError("tournament");
+  return row.case_format_id;
 }
 
-export async function getFormat(tournamentID: string): Promise<ITournamentFormatRow & { case_format_id: string }> {
-    const row = (await dbQuery<ITournamentFormatRow & { case_format_id: string }>(`SELECT tf.*, t.case_format_id
+export async function getFormat(
+  tournamentID: string,
+): Promise<ITournamentFormatRow & { case_format_id: string }> {
+  const row = (
+    await dbQuery<ITournamentFormatRow & { case_format_id: string }>(
+      `SELECT tf.*, t.case_format_id
                                                                                    FROM tournaments t
                                                                                             JOIN tournament_format tf ON tf.format_id = t.case_format_id
-                                                                                   WHERE t.id = $1`, [tournamentID]))?.rows[0];
-    if (!row) throw new NotFoundError('tournament format');
-    return row;
+                                                                                   WHERE t.id = $1`,
+      [tournamentID],
+    )
+  )?.rows[0];
+  if (!row) throw new NotFoundError("tournament format");
+  return row;
 }
 
-export async function updateFormat(tournamentID: string, format: TournamentPayload['caseFormat']): Promise<void> {
-    const formatID = await getTournamentFormatId(tournamentID);
-    const result = await dbQuery('UPDATE tournament_format SET case_name=$1, criminal_case=$2, p_witnesses_called=$3, d_witnesses_called=$4, has_swing=$5 WHERE format_id=$6', [format.caseName, format.criminalCase, format.pWitnessesCalled, format.dWitnessesCalled, format.hasSwing, formatID]);
-    if (!result) throw new DbError('updateFormat');
+export async function updateFormat(
+  tournamentID: string,
+  format: TournamentPayload["caseFormat"],
+): Promise<void> {
+  const formatID = await getTournamentFormatId(tournamentID);
+  const result = await dbQuery(
+    "UPDATE tournament_format SET case_name=$1, criminal_case=$2, p_witnesses_called=$3, d_witnesses_called=$4, has_swing=$5 WHERE format_id=$6",
+    [
+      format.caseName,
+      format.criminalCase,
+      format.pWitnessesCalled,
+      format.dWitnessesCalled,
+      format.hasSwing,
+      formatID,
+    ],
+  );
+  if (!result) throw new DbError("updateFormat");
 }
 
 export async function getWitnesses(tournamentID: string): Promise<IWitnesses> {
-    const formatID = await getTournamentFormatId(tournamentID);
-    const rows = (await dbQuery<ICaseWitnessRow>('SELECT side, name FROM case_witnesses WHERE case_format=$1', [formatID]))?.rows ?? [];
-    return {
-        pWitnessNames: rows.filter(w => w.side === 'P').map(w => w.name),
-        dWitnessNames: rows.filter(w => w.side === 'D').map(w => w.name),
-        swingWitnessNames: rows.filter(w => w.side === 'S').map(w => w.name),
-    };
+  const formatID = await getTournamentFormatId(tournamentID);
+  const rows =
+    (
+      await dbQuery<ICaseWitnessRow>(
+        "SELECT side, name FROM case_witnesses WHERE case_format=$1",
+        [formatID],
+      )
+    )?.rows ?? [];
+  return {
+    pWitnessNames: rows.filter((w) => w.side === "P").map((w) => w.name),
+    dWitnessNames: rows.filter((w) => w.side === "D").map((w) => w.name),
+    swingWitnessNames: rows.filter((w) => w.side === "S").map((w) => w.name),
+  };
 }
 
-export async function updateWitnesses(tournamentID: string, witnesses: IWitnesses): Promise<void> {
-    const formatID = await getTournamentFormatId(tournamentID);
-    await dbQuery('DELETE FROM case_witnesses WHERE case_format=$1', [formatID]);
-    const all: [string, string][] = [...witnesses.pWitnessNames.map(n => ['P', n] as [string, string]), ...witnesses.dWitnessNames.map(n => ['D', n] as [string, string]), ...witnesses.swingWitnessNames.map(n => ['S', n] as [string, string]),];
-    await Promise.all(all.map(([side, name]) => dbQuery('INSERT INTO case_witnesses (case_format, side, name) VALUES ($1,$2,$3)', [formatID, side, name])));
+export async function updateWitnesses(
+  tournamentID: string,
+  witnesses: IWitnesses,
+): Promise<void> {
+  const formatID = await getTournamentFormatId(tournamentID);
+  await dbQuery("DELETE FROM case_witnesses WHERE case_format=$1", [formatID]);
+  const all: [string, string][] = [
+    ...witnesses.pWitnessNames.map((n) => ["P", n] as [string, string]),
+    ...witnesses.dWitnessNames.map((n) => ["D", n] as [string, string]),
+    ...witnesses.swingWitnessNames.map((n) => ["S", n] as [string, string]),
+  ];
+  await Promise.all(
+    all.map(([side, name]) =>
+      dbQuery(
+        "INSERT INTO case_witnesses (case_format, side, name) VALUES ($1,$2,$3)",
+        [formatID, side, name],
+      ),
+    ),
+  );
 }
 
-export async function getScoringCategories(tournamentID: string): Promise<IScoringCategory[]> {
-    const cats = (await dbQuery<IScoringCategoryRow>('SELECT id, name, witness_category, position FROM scoring_categories WHERE tournament_id=$1 ORDER BY position', [tournamentID]))?.rows ?? [];
-    const catIds = cats.map(c => c.id);
-    const fields = catIds.length > 0 ? (await dbQuery<IScoringFieldRow>(`SELECT id,
+export async function getScoringCategories(
+  tournamentID: string,
+): Promise<IScoringCategory[]> {
+  const cats =
+    (
+      await dbQuery<IScoringCategoryRow>(
+        "SELECT id, name, witness_category, position FROM scoring_categories WHERE tournament_id=$1 ORDER BY position",
+        [tournamentID],
+      )
+    )?.rows ?? [];
+  const catIds = cats.map((c) => c.id);
+  const fields =
+    catIds.length > 0
+      ? ((
+          await dbQuery<IScoringFieldRow>(
+            `SELECT id,
                                                                                 category_id,
                                                                                 label,
                                                                                 min_score,
@@ -132,130 +251,207 @@ export async function getScoringCategories(tournamentID: string): Promise<IScori
                                                                                 position,
                                                                                 award_category_id
                                                                          FROM scoring_fields
-                                                                         WHERE category_id IN (${catIds.map((_, i) => `$${i + 1}`).join(',')})
-                                                                         ORDER BY position`, catIds))?.rows ?? [] : [];
-    return cats.map(c => ({
-        id: c.id,
-        name: c.name,
-        witnessCategory: c.witness_category,
-        position: c.position,
-        fields: fields.filter(f => f.category_id === c.id).map(f => ({
-            id: f.id,
-            label: f.label,
-            min: f.min_score,
-            max: f.max_score,
-            multiplier: Number(f.multiplier),
-            assignable: f.assignable,
-            visibleToScorers: f.visible_to_scorers,
-            prosecution: f.prosecution,
-            defense: f.defense,
-            calling: f.calling,
-            crossing: f.crossing,
-            awardCategoryId: f.award_category_id,
-        })),
-    }));
+                                                                         WHERE category_id IN (${catIds.map((_, i) => `$${i + 1}`).join(",")})
+                                                                         ORDER BY position`,
+            catIds,
+          )
+        )?.rows ?? [])
+      : [];
+  return cats.map((c) => ({
+    id: c.id,
+    name: c.name,
+    witnessCategory: c.witness_category,
+    position: c.position,
+    fields: fields
+      .filter((f) => f.category_id === c.id)
+      .map((f) => ({
+        id: f.id,
+        label: f.label,
+        min: f.min_score,
+        max: f.max_score,
+        multiplier: Number(f.multiplier),
+        assignable: f.assignable,
+        visibleToScorers: f.visible_to_scorers,
+        prosecution: f.prosecution,
+        defense: f.defense,
+        calling: f.calling,
+        crossing: f.crossing,
+        awardCategoryId: f.award_category_id,
+      })),
+  }));
 }
 
-export async function updateScoringCategories(tournamentID: string, categories: TournamentPayload['scoringCategories']): Promise<void> {
-    await dbQuery('DELETE FROM scoring_fields WHERE category_id IN (SELECT id FROM scoring_categories WHERE tournament_id=$1)', [tournamentID]);
-    await dbQuery('DELETE FROM scoring_categories WHERE tournament_id=$1', [tournamentID]);
-    await insertCategories(tournamentID, categories);
+export async function updateScoringCategories(
+  tournamentID: string,
+  categories: TournamentPayload["scoringCategories"],
+): Promise<void> {
+  await dbQuery(
+    "DELETE FROM scoring_fields WHERE category_id IN (SELECT id FROM scoring_categories WHERE tournament_id=$1)",
+    [tournamentID],
+  );
+  await dbQuery("DELETE FROM scoring_categories WHERE tournament_id=$1", [
+    tournamentID,
+  ]);
+  await insertCategories(tournamentID, categories);
 }
 
-export async function updateTournamentDetails(tournamentID: string, t: {
+export async function updateTournamentDetails(
+  tournamentID: string,
+  t: {
     name: string;
     location: string;
     startDate?: string | null;
     endDate?: string | null;
-    shareIndividualRankings?: boolean
-}): Promise<void> {
-    const result = await dbQuery('UPDATE tournaments SET name=$1, location=$2, start_date=$3, end_date=$4, share_individual_rankings=COALESCE($5, share_individual_rankings) WHERE id=$6', [t.name, t.location, t.startDate ?? null, t.endDate ?? null, t.shareIndividualRankings ?? null, tournamentID]);
-    if (!result) throw new DbError('updateTournamentDetails');
-    if (result.rowCount === 0) throw new NotFoundError('tournament');
+    shareIndividualRankings?: boolean;
+  },
+): Promise<void> {
+  const result = await dbQuery(
+    "UPDATE tournaments SET name=$1, location=$2, start_date=$3, end_date=$4, share_individual_rankings=COALESCE($5, share_individual_rankings) WHERE id=$6",
+    [
+      t.name,
+      t.location,
+      t.startDate ?? null,
+      t.endDate ?? null,
+      t.shareIndividualRankings ?? null,
+      tournamentID,
+    ],
+  );
+  if (!result) throw new DbError("updateTournamentDetails");
+  if (result.rowCount === 0) throw new NotFoundError("tournament");
 }
 
-export async function updateTournamentStatus(tournamentID: string, status: 'active' | 'completed' | 'archived'): Promise<void> {
-    const result = await dbQuery('UPDATE tournaments SET status=$1 WHERE id=$2', [status, tournamentID]);
-    if (!result) throw new DbError('updateTournamentStatus');
-    if (result.rowCount === 0) throw new NotFoundError('tournament');
+export async function updateTournamentStatus(
+  tournamentID: string,
+  status: "active" | "completed" | "archived",
+): Promise<void> {
+  const result = await dbQuery("UPDATE tournaments SET status=$1 WHERE id=$2", [
+    status,
+    tournamentID,
+  ]);
+  if (!result) throw new DbError("updateTournamentStatus");
+  if (result.rowCount === 0) throw new NotFoundError("tournament");
 }
 
-export async function getStandingsConfig(tournamentID: string): Promise<{ id: string; dsl: string } | null> {
-    const r = await dbQuery<{ id: string; standings_dsl: string }>(`SELECT sc.id, sc.standings_dsl
+export async function getStandingsConfig(
+  tournamentID: string,
+): Promise<{ id: string; dsl: string } | null> {
+  const r = await dbQuery<{ id: string; standings_dsl: string }>(
+    `SELECT sc.id, sc.standings_dsl
                                                                     FROM tournaments t
                                                                              JOIN standings_configs sc ON sc.id = t.standings_config_id
-                                                                    WHERE t.id = $1`, [tournamentID]);
-    if (r === null) throw new DbError('getStandingsConfig');
-    if (!r.rows[0]) return null;
-    const {id, standings_dsl} = r.rows[0];
-    return {id, dsl: standings_dsl};
+                                                                    WHERE t.id = $1`,
+    [tournamentID],
+  );
+  if (r === null) throw new DbError("getStandingsConfig");
+  if (!r.rows[0]) return null;
+  const { id, standings_dsl } = r.rows[0];
+  return { id, dsl: standings_dsl };
 }
 
-export async function upsertStandingsConfig(tournamentID: string, dsl: string): Promise<void> {
-    const existing = await dbQuery<{
-        standings_config_id: string | null
-    }>('SELECT standings_config_id FROM tournaments WHERE id=$1', [tournamentID]);
-    if (!existing) throw new DbError('upsertStandingsConfig');
-    const configId = existing.rows[0]?.standings_config_id;
-    if (configId) {
-        const isTemplate = !!(await dbQuery<{
-            id: string
-        }>('SELECT id FROM standings_templates WHERE config_id=$1 LIMIT 1', [configId]))?.rows[0];
-        if (isTemplate) {
-            const row = (await dbQuery<{
-                id: string
-            }>('INSERT INTO standings_configs (standings_dsl) VALUES ($1) RETURNING id', [dsl]))?.rows[0];
-            if (!row) throw new DbError('upsertStandingsConfig insert');
-            await dbQuery('UPDATE tournaments SET standings_config_id=$1 WHERE id=$2', [row.id, tournamentID]);
-        } else {
-            await dbQuery('UPDATE standings_configs SET standings_dsl=$1 WHERE id=$2', [dsl, configId]);
-        }
+export async function upsertStandingsConfig(
+  tournamentID: string,
+  dsl: string,
+): Promise<void> {
+  const existing = await dbQuery<{
+    standings_config_id: string | null;
+  }>("SELECT standings_config_id FROM tournaments WHERE id=$1", [tournamentID]);
+  if (!existing) throw new DbError("upsertStandingsConfig");
+  const configId = existing.rows[0]?.standings_config_id;
+  if (configId) {
+    const isTemplate = !!(
+      await dbQuery<{
+        id: string;
+      }>("SELECT id FROM standings_templates WHERE config_id=$1 LIMIT 1", [
+        configId,
+      ])
+    )?.rows[0];
+    if (isTemplate) {
+      const row = (
+        await dbQuery<{
+          id: string;
+        }>(
+          "INSERT INTO standings_configs (standings_dsl) VALUES ($1) RETURNING id",
+          [dsl],
+        )
+      )?.rows[0];
+      if (!row) throw new DbError("upsertStandingsConfig insert");
+      await dbQuery(
+        "UPDATE tournaments SET standings_config_id=$1 WHERE id=$2",
+        [row.id, tournamentID],
+      );
     } else {
-        const row = (await dbQuery<{
-            id: string
-        }>('INSERT INTO standings_configs (standings_dsl) VALUES ($1) RETURNING id', [dsl]))?.rows[0];
-        if (!row) throw new DbError('upsertStandingsConfig insert');
-        await dbQuery('UPDATE tournaments SET standings_config_id=$1 WHERE id=$2', [row.id, tournamentID]);
+      await dbQuery(
+        "UPDATE standings_configs SET standings_dsl=$1 WHERE id=$2",
+        [dsl, configId],
+      );
     }
+  } else {
+    const row = (
+      await dbQuery<{
+        id: string;
+      }>(
+        "INSERT INTO standings_configs (standings_dsl) VALUES ($1) RETURNING id",
+        [dsl],
+      )
+    )?.rows[0];
+    if (!row) throw new DbError("upsertStandingsConfig insert");
+    await dbQuery("UPDATE tournaments SET standings_config_id=$1 WHERE id=$2", [
+      row.id,
+      tournamentID,
+    ]);
+  }
 }
 
 export async function getOrganizerStandingsData(tournamentID: string): Promise<{
-    config: { dsl: string } | null;
-    teams: { id: string; name: string; code: string }[];
-    ballots: {
-        p_team_id: string;
-        d_team_id: string;
-        p_points: number;
-        d_points: number;
-        pairing_id: string;
-        round_id: string;
-        tiebreaker: string | null;
-        presider_ballot: boolean
-    }[];
-    rounds: { round_id: string; name: string }[];
+  config: { dsl: string } | null;
+  teams: { id: string; name: string; code: string }[];
+  ballots: {
+    p_team_id: string;
+    d_team_id: string;
+    p_points: number;
+    d_points: number;
+    pairing_id: string;
+    round_id: string;
+    tiebreaker: string | null;
+    presider_ballot: boolean;
+  }[];
+  rounds: { round_id: string; name: string }[];
 }> {
-    const [configRow, teamsRows, roundsRows, ballotsRows] = await Promise.all([dbQuery<{
-        standings_dsl: string
-    }>(`SELECT sc.standings_dsl
+  const [configRow, teamsRows, roundsRows, ballotsRows] = await Promise.all([
+    dbQuery<{
+      standings_dsl: string;
+    }>(
+      `SELECT sc.standings_dsl
         FROM tournaments t
                  JOIN standings_configs sc ON sc.id = t.standings_config_id
-        WHERE t.id = $1`, [tournamentID],), dbQuery<{
-        id: string;
-        name: string;
-        code: string
-    }>('SELECT id, name, code FROM teams WHERE tournament_id = $1', [tournamentID],), dbQuery<{
-        round_id: string;
-        name: string
-    }>('SELECT round_id, name FROM rounds WHERE tournament_id = $1 ORDER BY round_time  NULLS LAST', [tournamentID],), dbQuery<{
-        p_team_id: string;
-        d_team_id: string;
-        p_points: number;
-        d_points: number;
-        pairing_id: string;
-        round_id: string;
-        tiebreaker: string | null;
-        presider_ballot: boolean
-    }>(`SELECT b.p_team_id,
+        WHERE t.id = $1`,
+      [tournamentID],
+    ),
+    dbQuery<{
+      id: string;
+      name: string;
+      code: string;
+    }>("SELECT id, name, code FROM teams WHERE tournament_id = $1", [
+      tournamentID,
+    ]),
+    dbQuery<{
+      round_id: string;
+      name: string;
+    }>(
+      "SELECT round_id, name FROM rounds WHERE tournament_id = $1 ORDER BY round_time  NULLS LAST",
+      [tournamentID],
+    ),
+    dbQuery<{
+      p_team_id: string;
+      d_team_id: string;
+      p_points: number;
+      d_points: number;
+      pairing_id: string;
+      round_id: string;
+      tiebreaker: string | null;
+      presider_ballot: boolean;
+    }>(
+      `SELECT b.p_team_id,
                b.d_team_id,
                b.p_points,
                b.d_points,
@@ -265,33 +461,41 @@ export async function getOrganizerStandingsData(tournamentID: string): Promise<{
                b.presider_ballot
         FROM ballots b
                  JOIN pairings p ON p.pairing_id = b.pairing_id
-        WHERE b.tournament_id = $1`, [tournamentID],),]);
+        WHERE b.tournament_id = $1`,
+      [tournamentID],
+    ),
+  ]);
 
-    if (!configRow || !teamsRows || !roundsRows || !ballotsRows) throw new DbError('getOrganizerStandingsData');
+  if (!configRow || !teamsRows || !roundsRows || !ballotsRows)
+    throw new DbError("getOrganizerStandingsData");
 
-    const row = configRow.rows[0];
-    return {
-        config: row ? {dsl: row.standings_dsl} : null,
-        teams: teamsRows.rows,
-        ballots: ballotsRows.rows,
-        rounds: roundsRows.rows,
-    };
+  const row = configRow.rows[0];
+  return {
+    config: row ? { dsl: row.standings_dsl } : null,
+    teams: teamsRows.rows,
+    ballots: ballotsRows.rows,
+    rounds: roundsRows.rows,
+  };
 }
 
-export async function getStandingsTemplates(): Promise<{
+export async function getStandingsTemplates(): Promise<
+  {
     id: string;
     label: string;
     description: string;
-    config_id: string
-}[]> {
-    const result = await dbQuery<{
-        id: string;
-        label: string;
-        description: string;
-        config_id: string
-    }>('SELECT id, label, description, config_id FROM standings_templates ORDER BY label');
-    if (!result) throw new DbError('getStandingsTemplates');
-    return result.rows;
+    config_id: string;
+  }[]
+> {
+  const result = await dbQuery<{
+    id: string;
+    label: string;
+    description: string;
+    config_id: string;
+  }>(
+    "SELECT id, label, description, config_id FROM standings_templates ORDER BY label",
+  );
+  if (!result) throw new DbError("getStandingsTemplates");
+  return result.rows;
 }
 
 /**
@@ -301,9 +505,11 @@ export async function getStandingsTemplates(): Promise<{
  * chosen.
  */
 export async function getScoringTemplates(): Promise<IScoringTemplate[]> {
-    const result = await dbQuery<IScoringTemplate>('SELECT id, label, description FROM scoring_templates ORDER BY label');
-    if (!result) throw new DbError('getScoringTemplates');
-    return result.rows;
+  const result = await dbQuery<IScoringTemplate>(
+    "SELECT id, label, description FROM scoring_templates ORDER BY label",
+  );
+  if (!result) throw new DbError("getScoringTemplates");
+  return result.rows;
 }
 
 /**
@@ -313,38 +519,65 @@ export async function getScoringTemplates(): Promise<IScoringTemplate[]> {
  *
  * Throws NotFoundError if the template does not exist.
  */
-export async function copyScoringTemplateToTournament(templateID: string, tournamentID: string): Promise<void> {
-    const template = (await dbQuery<{
-        id: string
-    }>('SELECT id FROM scoring_templates WHERE id=$1', [templateID]))?.rows[0];
-    if (!template) throw new NotFoundError('scoring template');
+export async function copyScoringTemplateToTournament(
+  templateID: string,
+  tournamentID: string,
+): Promise<void> {
+  const template = (
+    await dbQuery<{
+      id: string;
+    }>("SELECT id FROM scoring_templates WHERE id=$1", [templateID])
+  )?.rows[0];
+  if (!template) throw new NotFoundError("scoring template");
 
-    // 1. Copy award categories, mapping each template award id → new tournament award id.
-    const templateAwards = (await dbQuery<{
+  // 1. Copy award categories, mapping each template award id → new tournament award id.
+  const templateAwards =
+    (
+      await dbQuery<{
         id: string;
         name: string;
         min_nominees: number;
-        max_nominees: number
-    }>('SELECT id, name, min_nominees, max_nominees FROM scoring_template_award_categories WHERE template_id=$1', [templateID]))?.rows ?? [];
-    const awardIdMap = new Map<string, string>();
-    await Promise.all(templateAwards.map(async a => {
-        const newId = (await dbQuery<{
-            id: string
-        }>('INSERT INTO individual_award_categories (tournament_id, name, min_nominees, max_nominees) VALUES ($1,$2,$3,$4) RETURNING id', [tournamentID, a.name, a.min_nominees, a.max_nominees]))?.rows[0]?.id;
-        if (newId) awardIdMap.set(a.id, newId);
-    }));
+        max_nominees: number;
+      }>(
+        "SELECT id, name, min_nominees, max_nominees FROM scoring_template_award_categories WHERE template_id=$1",
+        [templateID],
+      )
+    )?.rows ?? [];
+  const awardIdMap = new Map<string, string>();
+  await Promise.all(
+    templateAwards.map(async (a) => {
+      const newId = (
+        await dbQuery<{
+          id: string;
+        }>(
+          "INSERT INTO individual_award_categories (tournament_id, name, min_nominees, max_nominees) VALUES ($1,$2,$3,$4) RETURNING id",
+          [tournamentID, a.name, a.min_nominees, a.max_nominees],
+        )
+      )?.rows[0]?.id;
+      if (newId) awardIdMap.set(a.id, newId);
+    }),
+  );
 
-    // 2. Copy scoring categories + their fields, remapping field award links.
-    const templateCats = (await dbQuery<{
+  // 2. Copy scoring categories + their fields, remapping field award links.
+  const templateCats =
+    (
+      await dbQuery<{
         id: string;
         name: string;
         witness_category: boolean;
-        position: number
-    }>('SELECT id, name, witness_category, position FROM scoring_template_categories WHERE template_id=$1 ORDER BY position', [templateID]))?.rows ?? [];
-    if (!templateCats.length) return;
+        position: number;
+      }>(
+        "SELECT id, name, witness_category, position FROM scoring_template_categories WHERE template_id=$1 ORDER BY position",
+        [templateID],
+      )
+    )?.rows ?? [];
+  if (!templateCats.length) return;
 
-    const catIds = templateCats.map(c => c.id);
-    const templateFields = (await dbQuery<IScoringTemplateFieldRow>(`SELECT template_category_id,
+  const catIds = templateCats.map((c) => c.id);
+  const templateFields =
+    (
+      await dbQuery<IScoringTemplateFieldRow>(
+        `SELECT template_category_id,
                                                                             label,
                                                                             min_score,
                                                                             max_score,
@@ -358,23 +591,56 @@ export async function copyScoringTemplateToTournament(templateID: string, tourna
                                                                             position,
                                                                             award_category_id
                                                                      FROM scoring_template_fields
-                                                                     WHERE template_category_id IN (${catIds.map((_, i) => `$${i + 1}`).join(',')})
-                                                                     ORDER BY position`, catIds))?.rows ?? [];
+                                                                     WHERE template_category_id IN (${catIds.map((_, i) => `$${i + 1}`).join(",")})
+                                                                     ORDER BY position`,
+        catIds,
+      )
+    )?.rows ?? [];
 
-    await Promise.all(templateCats.map(async cat => {
-        const newCatID = randomUUID();
-        await dbQuery('INSERT INTO scoring_categories (id, tournament_id, name, witness_category, position) VALUES ($1,$2,$3,$4,$5)', [newCatID, tournamentID, cat.name, cat.witness_category, cat.position]);
-        await Promise.all(templateFields.filter(f => f.template_category_id === cat.id).map(f => dbQuery('INSERT INTO scoring_fields (category_id, label, min_score, max_score, multiplier, assignable, visible_to_scorers, prosecution, defense, calling, crossing, position, award_category_id) VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13)', [newCatID, f.label, f.min_score, f.max_score, Number(f.multiplier), f.assignable, f.visible_to_scorers, f.prosecution, f.defense, f.calling, f.crossing, f.position, f.award_category_id ? (awardIdMap.get(f.award_category_id) ?? null) : null])));
-    }));
+  await Promise.all(
+    templateCats.map(async (cat) => {
+      const newCatID = randomUUID();
+      await dbQuery(
+        "INSERT INTO scoring_categories (id, tournament_id, name, witness_category, position) VALUES ($1,$2,$3,$4,$5)",
+        [newCatID, tournamentID, cat.name, cat.witness_category, cat.position],
+      );
+      await Promise.all(
+        templateFields
+          .filter((f) => f.template_category_id === cat.id)
+          .map((f) =>
+            dbQuery(
+              "INSERT INTO scoring_fields (category_id, label, min_score, max_score, multiplier, assignable, visible_to_scorers, prosecution, defense, calling, crossing, position, award_category_id) VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13)",
+              [
+                newCatID,
+                f.label,
+                f.min_score,
+                f.max_score,
+                Number(f.multiplier),
+                f.assignable,
+                f.visible_to_scorers,
+                f.prosecution,
+                f.defense,
+                f.calling,
+                f.crossing,
+                f.position,
+                f.award_category_id
+                  ? (awardIdMap.get(f.award_category_id) ?? null)
+                  : null,
+              ],
+            ),
+          ),
+      );
+    }),
+  );
 }
 
 export async function deleteTournament(tournamentID: string): Promise<void> {
-    await withTransaction(async client => {
-        // These references intentionally preserve historical data under normal
-        // operation, so they are not all database cascades. A tournament
-        // deletion is the explicit destructive operation that removes them.
-        await client.query(
-            `DELETE FROM ballots
+  await withTransaction(async (client) => {
+    // These references intentionally preserve historical data under normal
+    // operation, so they are not all database cascades. A tournament
+    // deletion is the explicit destructive operation that removes them.
+    await client.query(
+      `DELETE FROM ballots
              WHERE tournament_id=$1
                 OR pairing_id IN (
                     SELECT p.pairing_id FROM pairings p
@@ -383,171 +649,375 @@ export async function deleteTournament(tournamentID: string): Promise<void> {
                 )
                 OR p_team_id IN (SELECT id FROM teams WHERE tournament_id=$1)
                 OR d_team_id IN (SELECT id FROM teams WHERE tournament_id=$1)`,
-            [tournamentID],
-        );
-        await client.query(
-            `DELETE FROM scorer_presider_assignment
+      [tournamentID],
+    );
+    await client.query(
+      `DELETE FROM scorer_presider_assignment
              WHERE pairing_id IN (
                  SELECT p.pairing_id FROM pairings p
                  JOIN rounds r ON r.round_id=p.round_id
                  WHERE r.tournament_id=$1
              )`,
-            [tournamentID],
-        );
-        await client.query('DELETE FROM custom_roster_column_definitions WHERE tournament_id=$1', [tournamentID]);
-        const row = (await client.query('DELETE FROM tournaments WHERE id=$1 RETURNING id', [tournamentID])).rows[0];
-        if (!row) throw new NotFoundError('tournament');
-    });
+      [tournamentID],
+    );
+    await client.query(
+      "DELETE FROM custom_roster_column_definitions WHERE tournament_id=$1",
+      [tournamentID],
+    );
+    const row = (
+      await client.query("DELETE FROM tournaments WHERE id=$1 RETURNING id", [
+        tournamentID,
+      ])
+    ).rows[0];
+    if (!row) throw new NotFoundError("tournament");
+  });
 }
 
 export async function getTournaments(userId: string): Promise<ITournament[]> {
-    const result = await dbQuery<ITournament>('SELECT * FROM tournaments WHERE id IN (SELECT tournament_id FROM tournament_owners WHERE delegate_id = $1)', [userId]);
-    if (!result) throw new DbError('getTournaments');
-    return result.rows;
+  const result = await dbQuery<ITournament>(
+    "SELECT * FROM tournaments WHERE id IN (SELECT tournament_id FROM tournament_owners WHERE delegate_id = $1)",
+    [userId],
+  );
+  if (!result) throw new DbError("getTournaments");
+  return result.rows;
 }
 
-export async function getTournament(tournamentID: string): Promise<ITournament> {
-    const row = (await dbQuery<ITournament>('SELECT * FROM tournaments WHERE id = $1', [tournamentID]))?.rows[0];
-    if (!row) throw new NotFoundError('tournament');
-    return row;
+export async function getTournament(
+  tournamentID: string,
+): Promise<ITournament> {
+  const row = (
+    await dbQuery<ITournament>("SELECT * FROM tournaments WHERE id = $1", [
+      tournamentID,
+    ])
+  )?.rows[0];
+  if (!row) throw new NotFoundError("tournament");
+  return row;
 }
 
-export async function createTournament(tournament: TournamentPayload): Promise<ITournament> {
-    const tournamentID = randomUUID();
-    const formatID = randomUUID();
-    const {tournament: t, caseFormat: cf} = tournament;
-    const formatInsert = await dbQuery('INSERT INTO tournament_format (format_id, case_name, criminal_case, p_witnesses_called, d_witnesses_called, has_swing) VALUES ($1,$2,$3,$4,$5,$6)', [formatID, cf.caseName, cf.criminalCase, cf.pWitnessesCalled, cf.dWitnessesCalled, cf.hasSwing]);
-    if (!formatInsert || formatInsert.rowCount !== 1) throw new DbError('createTournament format');
-    const insertion = await dbQuery('INSERT INTO tournaments (id, name, location, start_date, end_date, case_format_id, standings_config_id, share_individual_rankings) VALUES ($1,$2,$3,$4,$5,$6,$7,$8)', [tournamentID, t.name, t.location, t.startDate, t.endDate, formatID, tournament.standingsConfigId ?? null, t.shareIndividualRankings ?? true]);
-    if (!insertion || insertion.rowCount !== 1) throw new DbError('createTournament insert');
-    await insertWitnesses(formatID, cf);
-    if (tournament.scoringTemplateId) {
-        // Preset branch: copy the chosen template's categories/fields/awards server-side.
-        await copyScoringTemplateToTournament(tournament.scoringTemplateId, tournamentID);
-    } else {
-        // Manual branch: insert the award + scoring categories supplied in the payload.
-        const awardTempIdToUuid = await insertAwardCategories(tournamentID, tournament.awardCategories);
-        await insertCategories(tournamentID, tournament.scoringCategories, awardTempIdToUuid);
-    }
-    const row = (await dbQuery<ITournament>('SELECT * FROM tournaments WHERE id = $1', [tournamentID]))?.rows[0];
-    if (!row) throw new DbError('createTournament select');
-    return row;
+export async function createTournament(
+  tournament: TournamentPayload,
+): Promise<ITournament> {
+  const tournamentID = randomUUID();
+  const formatID = randomUUID();
+  const { tournament: t, caseFormat: cf } = tournament;
+  const formatInsert = await dbQuery(
+    "INSERT INTO tournament_format (format_id, case_name, criminal_case, p_witnesses_called, d_witnesses_called, has_swing) VALUES ($1,$2,$3,$4,$5,$6)",
+    [
+      formatID,
+      cf.caseName,
+      cf.criminalCase,
+      cf.pWitnessesCalled,
+      cf.dWitnessesCalled,
+      cf.hasSwing,
+    ],
+  );
+  if (!formatInsert || formatInsert.rowCount !== 1)
+    throw new DbError("createTournament format");
+  const insertion = await dbQuery(
+    "INSERT INTO tournaments (id, name, location, start_date, end_date, case_format_id, standings_config_id, share_individual_rankings) VALUES ($1,$2,$3,$4,$5,$6,$7,$8)",
+    [
+      tournamentID,
+      t.name,
+      t.location,
+      t.startDate,
+      t.endDate,
+      formatID,
+      tournament.standingsConfigId ?? null,
+      t.shareIndividualRankings ?? true,
+    ],
+  );
+  if (!insertion || insertion.rowCount !== 1)
+    throw new DbError("createTournament insert");
+  await insertWitnesses(formatID, cf);
+  if (tournament.scoringTemplateId) {
+    // Preset branch: copy the chosen template's categories/fields/awards server-side.
+    await copyScoringTemplateToTournament(
+      tournament.scoringTemplateId,
+      tournamentID,
+    );
+  } else {
+    // Manual branch: insert the award + scoring categories supplied in the payload.
+    const awardTempIdToUuid = await insertAwardCategories(
+      tournamentID,
+      tournament.awardCategories,
+    );
+    await insertCategories(
+      tournamentID,
+      tournament.scoringCategories,
+      awardTempIdToUuid,
+    );
+  }
+  const row = (
+    await dbQuery<ITournament>("SELECT * FROM tournaments WHERE id = $1", [
+      tournamentID,
+    ])
+  )?.rows[0];
+  if (!row) throw new DbError("createTournament select");
+  return row;
 }
 
-export async function addTournamentOrganizer(tournamentID: string, userId: string, role: 'owner' | 'delegate'): Promise<void> {
-    const result = await dbQuery('INSERT INTO tournament_owners (tournament_id, delegate_id, role) VALUES ($1,$2,$3)', [tournamentID, userId, role]);
-    if (!result) throw new DbError('addTournamentOrganizer');
+export async function addTournamentOrganizer(
+  tournamentID: string,
+  userId: string,
+  role: "owner" | "delegate",
+): Promise<void> {
+  const result = await dbQuery(
+    "INSERT INTO tournament_owners (tournament_id, delegate_id, role) VALUES ($1,$2,$3)",
+    [tournamentID, userId, role],
+  );
+  if (!result) throw new DbError("addTournamentOrganizer");
 }
 
 export async function getScorers(tournamentID: string): Promise<IScorer[]> {
-    const result = await dbQuery<{
-        scorer_id: string;
-        name: string;
-        email: string | null;
-        is_paper: boolean;
-        willing_to_preside: boolean;
-    }>('SELECT scorer_id, name, email, is_paper, willing_to_preside FROM scorers WHERE tournament_id = $1', [tournamentID]);
-    if (!result) throw new DbError('getScorers');
+  const result = await dbQuery<{
+    scorer_id: string;
+    name: string;
+    email: string | null;
+    is_paper: boolean;
+    willing_to_preside: boolean;
+    notes: string;
+  }>(
+    "SELECT scorer_id, name, email, is_paper, willing_to_preside, notes FROM scorers WHERE tournament_id = $1 order by name, email",
+    [tournamentID],
+  );
+  if (!result) throw new DbError("getScorers");
 
-    // Attach each scorer's co-scoring preferences (preferred_scorer_id list).
-    const prefs = (await dbQuery<{ scorer_id: string; preferred_scorer_id: string }>(
+  // Attach each scorer's co-scoring preferences (preferred_scorer_id list).
+  const prefs =
+    (
+      await dbQuery<{ scorer_id: string; preferred_scorer_id: string }>(
         `SELECT csp.scorer_id, csp.preferred_scorer_id
          FROM scorer_coscoring_preferences csp
                   JOIN scorers s ON s.scorer_id = csp.scorer_id
          WHERE s.tournament_id = $1`,
         [tournamentID],
-    ))?.rows ?? [];
-    const prefsByScorer = new Map<string, string[]>();
-    for (const p of prefs) {
-        const list = prefsByScorer.get(p.scorer_id) ?? [];
-        list.push(p.preferred_scorer_id);
-        prefsByScorer.set(p.scorer_id, list);
-    }
+      )
+    )?.rows ?? [];
+  const prefsByScorer = new Map<string, string[]>();
+  for (const p of prefs) {
+    const list = prefsByScorer.get(p.scorer_id) ?? [];
+    list.push(p.preferred_scorer_id);
+    prefsByScorer.set(p.scorer_id, list);
+  }
 
-    return result.rows.map(r => ({
-        scorer_id: r.scorer_id,
-        name: r.name,
-        email: r.email,
-        is_paper: r.is_paper,
-        willing_to_preside: r.willing_to_preside,
-        prefers_to_score_with: prefsByScorer.get(r.scorer_id) ?? [],
-    }));
+  return result.rows.map((r) => ({
+    scorer_id: r.scorer_id,
+    name: r.name,
+    email: r.email,
+    is_paper: r.is_paper,
+    willing_to_preside: r.willing_to_preside,
+    notes: r.notes,
+    prefers_to_score_with: prefsByScorer.get(r.scorer_id) ?? [],
+  }));
 }
 
-export async function addScorer(scorer: IScorer, tournamentId: string): Promise<void> {
-    const result = await dbQuery(
-        'INSERT INTO scorers (scorer_id, tournament_id, name, email, is_paper, willing_to_preside) VALUES ($1,$2,$3,$4,$5,$6)',
-        [scorer.scorer_id, tournamentId, scorer.name, scorer.email, scorer.is_paper, scorer.willing_to_preside],
-    );
-    if (!result) throw new DbError('addScorer');
+export async function addScorer(
+  scorer: IScorer,
+  tournamentId: string,
+): Promise<void> {
+  const result = await dbQuery(
+    "INSERT INTO scorers (scorer_id, tournament_id, name, email, is_paper, willing_to_preside, notes) VALUES ($1,$2,$3,$4,$5,$6,$7)",
+    [
+      scorer.scorer_id,
+      tournamentId,
+      scorer.name,
+      scorer.email,
+      scorer.is_paper,
+      scorer.willing_to_preside,
+      scorer.notes,
+    ],
+  );
+  if (!result) throw new DbError("addScorer");
 }
 
-export async function updateScorer(scorer: IScorer, tournamentId: string): Promise<void> {
-    const result = await dbQuery(
-        'UPDATE scorers SET tournament_id=$1, name=$2, email=$3, is_paper=$4, willing_to_preside=$5 WHERE scorer_id=$6',
-        [tournamentId, scorer.name, scorer.email, scorer.is_paper, scorer.willing_to_preside, scorer.scorer_id],
-    );
-    if (!result) throw new DbError('updateScorer');
-    if ((result.rowCount ?? 0) === 0) throw new NotFoundError('scorer');
+export async function updateScorer(
+  scorer: IScorer,
+  tournamentId: string,
+): Promise<void> {
+  const result = await dbQuery(
+    "UPDATE scorers SET tournament_id=$1, name=$2, email=$3, is_paper=$4, willing_to_preside=$5, notes=$6 WHERE scorer_id=$7",
+    [
+      tournamentId,
+      scorer.name,
+      scorer.email,
+      scorer.is_paper,
+      scorer.willing_to_preside,
+      scorer.notes,
+      scorer.scorer_id,
+    ],
+  );
+  if (!result) throw new DbError("updateScorer");
+  if ((result.rowCount ?? 0) === 0) throw new NotFoundError("scorer");
 }
 
 export async function deleteScorer(scorerId: string): Promise<void> {
-    const result = await dbQuery('DELETE FROM scorers WHERE scorer_id=$1 RETURNING scorer_id', [scorerId]);
-    if (!result) throw new DbError('deleteScorer');
-    if (!result.rows[0]) throw new NotFoundError('scorer');
+  const result = await dbQuery(
+    "DELETE FROM scorers WHERE scorer_id=$1 RETURNING scorer_id",
+    [scorerId],
+  );
+  if (!result) throw new DbError("deleteScorer");
+  if (!result.rows[0]) throw new NotFoundError("scorer");
 }
 
-export async function getAllConflicts(tournamentId: string): Promise<{ scorer_id: string; team_id: string }[]> {
-    const result = await dbQuery<{ scorer_id: string; team_id: string }>(`SELECT sc.scorer_id, sc.team_id
+export async function getScorerAssignmentSummaries(
+  tournamentId: string,
+  scorerId: string,
+): Promise<IScorerAssignmentSummary[]> {
+  const result = await dbQuery<IScorerAssignmentSummary>(
+    `SELECT spa.assignment_id, p.pairing_id, r.round_id, r.name AS round_name,
+                 p.p_team AS prosecution_id, p.d_team AS defense_id,
+                 prosecution.name AS prosecution, defense.name AS defense,
+                 p.courtroom AS courtroom_id, c.name AS courtroom,
+                 COALESCE(other_scorers.scorers, '[]'::jsonb) AS other_scorers, b.ballot_id,
+                 EXISTS (SELECT 1 FROM scorer_presider_assignment presider
+                         WHERE presider.pairing_id = p.pairing_id
+                           AND presider.scorer_assignment_id = spa.assignment_id) AS is_presider
+          FROM scorer_pairing_assignments spa
+          JOIN scorers s ON s.scorer_id = spa.scorer_id
+          JOIN pairings p ON p.pairing_id = spa.pairing_id
+          JOIN rounds r ON r.round_id = p.round_id
+          JOIN teams prosecution ON prosecution.id = p.p_team
+          JOIN teams defense ON defense.id = p.d_team
+          LEFT JOIN courtrooms c ON c.id = p.courtroom
+          LEFT JOIN ballots b ON b.scorer_assignment_id = spa.assignment_id
+          LEFT JOIN LATERAL (
+              SELECT jsonb_agg(jsonb_build_object('scorer_id', other_scorer.scorer_id, 'name', other_scorer.name)
+                               ORDER BY other_scorer.name) AS scorers
+              FROM scorer_pairing_assignments other_assignment
+              JOIN scorers other_scorer ON other_scorer.scorer_id = other_assignment.scorer_id
+              WHERE other_assignment.pairing_id = p.pairing_id
+                AND other_assignment.assignment_id <> spa.assignment_id
+          ) other_scorers ON true
+          WHERE s.tournament_id = $1 AND spa.scorer_id = $2
+          ORDER BY r.name, p.pairing_id`,
+    [tournamentId, scorerId],
+  );
+  if (!result) throw new DbError("getScorerAssignmentSummaries");
+  return result.rows;
+}
+
+export async function getScorerAssignablePairings(
+  tournamentId: string,
+  scorerId: string,
+): Promise<IScorerAssignablePairing[]> {
+  const result = await dbQuery<IScorerAssignablePairing>(
+    `SELECT p.pairing_id, r.round_id, r.name AS round_name,
+                 prosecution.name AS prosecution, defense.name AS defense, courtroom.name AS courtroom,
+                 (SELECT COUNT(*)::int FROM scorer_pairing_assignments assignment WHERE assignment.pairing_id = p.pairing_id) AS scorer_count
+          FROM pairings p
+          JOIN rounds r ON r.round_id = p.round_id
+          JOIN teams prosecution ON prosecution.id = p.p_team
+          JOIN teams defense ON defense.id = p.d_team
+          LEFT JOIN courtrooms courtroom ON courtroom.id = p.courtroom
+          WHERE r.tournament_id = $1
+            AND NOT EXISTS (SELECT 1 FROM scorer_pairing_assignments existing
+                            WHERE existing.pairing_id = p.pairing_id AND existing.scorer_id = $2)
+          ORDER BY r.name, p.pairing_id`,
+    [tournamentId, scorerId],
+  );
+  if (!result) throw new DbError("getScorerAssignablePairings");
+  return result.rows;
+}
+
+export async function getScorerDetail(
+  tournamentId: string,
+  scorerId: string,
+): Promise<IScorerDetail> {
+  const [scorers, assignments, conflicts, teams, availablePairings] =
+    await Promise.all([
+      getScorers(tournamentId),
+      getScorerAssignmentSummaries(tournamentId, scorerId),
+      getConflicts(scorerId),
+      getTeams(tournamentId),
+      getScorerAssignablePairings(tournamentId, scorerId),
+    ]);
+  const scorer = scorers.find((candidate) => candidate.scorer_id === scorerId);
+  if (!scorer) throw new NotFoundError("scorer");
+  return {
+    scorer,
+    scorers,
+    assignments,
+    conflicts,
+    teams,
+    available_pairings: availablePairings,
+  };
+}
+
+export async function getAllConflicts(
+  tournamentId: string,
+): Promise<{ scorer_id: string; team_id: string }[]> {
+  const result = await dbQuery<{ scorer_id: string; team_id: string }>(
+    `SELECT sc.scorer_id, sc.team_id
                                                                           FROM scorer_conflicts sc
                                                                                    JOIN scorers s ON s.scorer_id = sc.scorer_id
-                                                                          WHERE s.tournament_id = $1`, [tournamentId]);
-    if (!result) throw new DbError('getAllConflicts');
-    return result.rows;
+                                                                          WHERE s.tournament_id = $1`,
+    [tournamentId],
+  );
+  if (!result) throw new DbError("getAllConflicts");
+  return result.rows;
 }
 
-export async function getConflicts(scorerId: string): Promise<{
+export async function getConflicts(scorerId: string): Promise<
+  {
     id: string;
     scorer_id: string;
     team_id: string;
-    team_name: string
-}[]> {
-    const result = await dbQuery<{
-        id: string;
-        scorer_id: string;
-        team_id: string;
-        team_name: string
-    }>(`SELECT sc.id, sc.scorer_id, sc.team_id, t.name AS team_name
+    team_name: string;
+  }[]
+> {
+  const result = await dbQuery<{
+    id: string;
+    scorer_id: string;
+    team_id: string;
+    team_name: string;
+  }>(
+    `SELECT sc.id, sc.scorer_id, sc.team_id, t.name AS team_name
         FROM scorer_conflicts sc
                  JOIN teams t ON t.id = sc.team_id
-        WHERE sc.scorer_id = $1`, [scorerId]);
-    if (!result) throw new DbError('getConflicts');
-    return result.rows;
+        WHERE sc.scorer_id = $1`,
+    [scorerId],
+  );
+  if (!result) throw new DbError("getConflicts");
+  return result.rows;
 }
 
-export async function addConflict(scorerId: string, teamId: string): Promise<{
-    id: string;
-    scorer_id: string;
-    team_id: string;
-    team_name: string
+export async function addConflict(
+  scorerId: string,
+  teamId: string,
+): Promise<{
+  id: string;
+  scorer_id: string;
+  team_id: string;
+  team_name: string;
 }> {
-    const row = (await dbQuery<{
-        id: string;
-        scorer_id: string;
-        team_id: string;
-        team_name: string
-    }>(`INSERT INTO scorer_conflicts (scorer_id, team_id)
+  const row = (
+    await dbQuery<{
+      id: string;
+      scorer_id: string;
+      team_id: string;
+      team_name: string;
+    }>(
+      `INSERT INTO scorer_conflicts (scorer_id, team_id)
         VALUES ($1, $2)
         ON CONFLICT DO NOTHING
-        RETURNING id, scorer_id, team_id, (SELECT name FROM teams WHERE id = $2) AS team_name`, [scorerId, teamId]))?.rows[0];
-    if (!row) throw new AlreadyExistsError('scorer conflict');
-    return row;
+        RETURNING id, scorer_id, team_id, (SELECT name FROM teams WHERE id = $2) AS team_name`,
+      [scorerId, teamId],
+    )
+  )?.rows[0];
+  if (!row) throw new AlreadyExistsError("scorer conflict");
+  return row;
 }
 
-export async function removeConflict(scorerId: string, teamId: string): Promise<void> {
-    const result = await dbQuery('DELETE FROM scorer_conflicts WHERE scorer_id=$1 AND team_id=$2 RETURNING scorer_id', [scorerId, teamId]);
-    if (!result) throw new DbError('removeConflict');
-    if (!result.rows[0]) throw new NotFoundError('scorer conflict');
+export async function removeConflict(
+  scorerId: string,
+  teamId: string,
+): Promise<void> {
+  const result = await dbQuery(
+    "DELETE FROM scorer_conflicts WHERE scorer_id=$1 AND team_id=$2 RETURNING scorer_id",
+    [scorerId, teamId],
+  );
+  if (!result) throw new DbError("removeConflict");
+  if (!result.rows[0]) throw new NotFoundError("scorer conflict");
 }
 
 /**
@@ -555,15 +1025,26 @@ export async function removeConflict(scorerId: string, teamId: string): Promise<
  * are ignored (the DB check constraint also forbids them). Preference rows are
  * directional; the auto-assign algorithm treats them as a soft hint.
  */
-export async function setCoscoringPreferences(scorerId: string, preferredIds: string[]): Promise<void> {
-    const unique = [...new Set(preferredIds)].filter(id => id && id !== scorerId);
-    await dbQuery('DELETE FROM scorer_coscoring_preferences WHERE scorer_id=$1', [scorerId]);
-    if (unique.length === 0) return;
-    await Promise.all(unique.map(pid => dbQuery(
+export async function setCoscoringPreferences(
+  scorerId: string,
+  preferredIds: string[],
+): Promise<void> {
+  const unique = [...new Set(preferredIds)].filter(
+    (id) => id && id !== scorerId,
+  );
+  await dbQuery("DELETE FROM scorer_coscoring_preferences WHERE scorer_id=$1", [
+    scorerId,
+  ]);
+  if (unique.length === 0) return;
+  await Promise.all(
+    unique.map((pid) =>
+      dbQuery(
         `INSERT INTO scorer_coscoring_preferences (scorer_id, preferred_scorer_id)
          VALUES ($1, $2) ON CONFLICT DO NOTHING`,
         [scorerId, pid],
-    )));
+      ),
+    ),
+  );
 }
 
 /**
@@ -574,22 +1055,28 @@ export async function setCoscoringPreferences(scorerId: string, preferredIds: st
  *
  * Returned as flat (scorer_id, team_id) pairs.
  */
-export async function getScorerTeamHistory(tournamentId: string): Promise<{ scorer_id: string; team_id: string }[]> {
-    const result = await dbQuery<{ scorer_id: string; team_id: string }>(
-        `SELECT DISTINCT spa.scorer_id, team_id
+export async function getScorerTeamHistory(
+  tournamentId: string,
+): Promise<{ scorer_id: string; team_id: string }[]> {
+  const result = await dbQuery<{ scorer_id: string; team_id: string }>(
+    `SELECT DISTINCT spa.scorer_id, team_id
          FROM scorer_pairing_assignments spa
                   JOIN pairings p ON p.pairing_id = spa.pairing_id
                   JOIN rounds r ON r.round_id = p.round_id
                   CROSS JOIN LATERAL (VALUES (p.p_team), (p.d_team)) AS t(team_id)
          WHERE r.tournament_id = $1`,
-        [tournamentId],
-    );
-    if (!result) throw new DbError('getScorerTeamHistory');
-    return result.rows;
+    [tournamentId],
+  );
+  if (!result) throw new DbError("getScorerTeamHistory");
+  return result.rows;
 }
 
-export async function getOrganizers(tournamentID: string): Promise<IOrganizer[]> {
-    const [active, invited] = await Promise.all([dbQuery<IOrganizer>(`SELECT tournament_owners.delegate_id            AS id,
+export async function getOrganizers(
+  tournamentID: string,
+): Promise<IOrganizer[]> {
+  const [active, invited] = await Promise.all([
+    dbQuery<IOrganizer>(
+      `SELECT tournament_owners.delegate_id            AS id,
                                                                              auth.first_name || ' ' || auth.last_name AS name,
                                                                              auth.email,
                                                                              tournament_owners.role,
@@ -606,7 +1093,11 @@ export async function getOrganizers(tournamentID: string): Promise<IOrganizer[]>
                                                                           ORDER BY sent_at DESC
                                                                           LIMIT 1
                                                                           ) em ON true
-                                                                      WHERE tournament_id = $1`, [tournamentID]), dbQuery<IOrganizer>(`SELECT id,
+                                                                      WHERE tournament_id = $1`,
+      [tournamentID],
+    ),
+    dbQuery<IOrganizer>(
+      `SELECT id,
                                                                                                                                               name,
                                                                                                                                               email,
                                                                                                                                               'delegate' AS role,
@@ -624,93 +1115,260 @@ export async function getOrganizers(tournamentID: string): Promise<IOrganizer[]>
                                                                                                                                            LIMIT 1
                                                                                                                                            ) em
                                                                                                                                                           ON true
-                                                                                                                                       WHERE tournament_id = $1`, [tournamentID]),]);
-    if (!active || !invited) throw new DbError('getOrganizers');
-    return [...active.rows, ...invited.rows];
+                                                                                                                                       WHERE tournament_id = $1`,
+      [tournamentID],
+    ),
+  ]);
+  if (!active || !invited) throw new DbError("getOrganizers");
+  return [...active.rows, ...invited.rows];
 }
 
-export async function addOrganizer(tournamentID: string, name: string, email: string, role: 'owner' | 'delegate'): Promise<IOrganizer> {
-    const user = (await dbQuery<IAuthRow>('SELECT * FROM auth WHERE LOWER(email) = $1', [email.toLowerCase()]))?.rows[0];
-    if (!user) {
-        const existing = (await dbQuery<ITournamentDelegateInviteRow>('SELECT id FROM tournament_delegate_invites WHERE tournament_id=$1 AND LOWER(email)=$2', [tournamentID, email.toLowerCase()]))?.rows[0];
-        if (existing) throw new AlreadyExistsError('delegate');
-        const row = (await dbQuery<ITournamentDelegateInviteRow>('INSERT INTO tournament_delegate_invites (tournament_id, name, email) VALUES ($1,$2,$3) RETURNING *', [tournamentID, name, email]))?.rows[0];
-        if (!row) throw new DbError('addOrganizer invite insert');
-        return {...row, role: 'delegate', has_joined: false};
-    }
-    const existing = (await dbQuery<ITournamentOwnerRow>('SELECT tournament_id FROM tournament_owners WHERE tournament_id=$1 AND delegate_id=$2', [tournamentID, user.user_id]))?.rows[0];
-    if (existing) throw new AlreadyExistsError('delegate');
-    const row = (await dbQuery<ITournamentOwnerRow>('INSERT INTO tournament_owners (tournament_id, delegate_id, role) VALUES ($1,$2,$3) RETURNING *', [tournamentID, user.user_id, role]))?.rows[0];
-    if (!row) throw new DbError('addOrganizer owner insert');
-    return {...row, name: `${user.first_name} ${user.last_name}`, email: user.email, has_joined: true};
+export async function addOrganizer(
+  tournamentID: string,
+  name: string,
+  email: string,
+  role: "owner" | "delegate",
+): Promise<IOrganizer> {
+  const user = (
+    await dbQuery<IAuthRow>("SELECT * FROM auth WHERE LOWER(email) = $1", [
+      email.toLowerCase(),
+    ])
+  )?.rows[0];
+  if (!user) {
+    const existing = (
+      await dbQuery<ITournamentDelegateInviteRow>(
+        "SELECT id FROM tournament_delegate_invites WHERE tournament_id=$1 AND LOWER(email)=$2",
+        [tournamentID, email.toLowerCase()],
+      )
+    )?.rows[0];
+    if (existing) throw new AlreadyExistsError("delegate");
+    const row = (
+      await dbQuery<ITournamentDelegateInviteRow>(
+        "INSERT INTO tournament_delegate_invites (tournament_id, name, email) VALUES ($1,$2,$3) RETURNING *",
+        [tournamentID, name, email],
+      )
+    )?.rows[0];
+    if (!row) throw new DbError("addOrganizer invite insert");
+    return { ...row, role: "delegate", has_joined: false };
+  }
+  const existing = (
+    await dbQuery<ITournamentOwnerRow>(
+      "SELECT tournament_id FROM tournament_owners WHERE tournament_id=$1 AND delegate_id=$2",
+      [tournamentID, user.user_id],
+    )
+  )?.rows[0];
+  if (existing) throw new AlreadyExistsError("delegate");
+  const row = (
+    await dbQuery<ITournamentOwnerRow>(
+      "INSERT INTO tournament_owners (tournament_id, delegate_id, role) VALUES ($1,$2,$3) RETURNING *",
+      [tournamentID, user.user_id, role],
+    )
+  )?.rows[0];
+  if (!row) throw new DbError("addOrganizer owner insert");
+  return {
+    ...row,
+    name: `${user.first_name} ${user.last_name}`,
+    email: user.email,
+    has_joined: true,
+  };
 }
 
-export async function updateOrganizer(organizer: IOrganizer): Promise<IOrganizer> {
-    if (organizer.has_joined) throw new OrganizerAlreadyJoinedError();
-    const row = (await dbQuery<ITournamentDelegateInviteRow>('UPDATE tournament_delegate_invites SET email=$1, name=$2 WHERE id=$3 RETURNING *', [organizer.email, organizer.name, organizer.id]))?.rows[0];
-    if (!row) throw new NotFoundError('organizer invite');
-    return {...row, role: 'delegate', has_joined: false};
+export async function updateOrganizer(
+  organizer: IOrganizer,
+): Promise<IOrganizer> {
+  if (organizer.has_joined) throw new OrganizerAlreadyJoinedError();
+  const row = (
+    await dbQuery<ITournamentDelegateInviteRow>(
+      "UPDATE tournament_delegate_invites SET email=$1, name=$2 WHERE id=$3 RETURNING *",
+      [organizer.email, organizer.name, organizer.id],
+    )
+  )?.rows[0];
+  if (!row) throw new NotFoundError("organizer invite");
+  return { ...row, role: "delegate", has_joined: false };
 }
 
 export async function deleteOrganizer(organizer: IOrganizer): Promise<void> {
-    if (organizer.has_joined) {
-        const row = (await dbQuery<ITournamentOwnerRow>('DELETE FROM tournament_owners WHERE delegate_id=$1 RETURNING *', [organizer.id]))?.rows[0];
-        if (!row) throw new NotFoundError('organizer');
-    } else {
-        const row = (await dbQuery<ITournamentDelegateInviteRow>('DELETE FROM tournament_delegate_invites WHERE id=$1 RETURNING *', [organizer.id]))?.rows[0];
-        if (!row) throw new NotFoundError('organizer invite');
-    }
+  if (organizer.has_joined) {
+    const row = (
+      await dbQuery<ITournamentOwnerRow>(
+        "DELETE FROM tournament_owners WHERE delegate_id=$1 RETURNING *",
+        [organizer.id],
+      )
+    )?.rows[0];
+    if (!row) throw new NotFoundError("organizer");
+  } else {
+    const row = (
+      await dbQuery<ITournamentDelegateInviteRow>(
+        "DELETE FROM tournament_delegate_invites WHERE id=$1 RETURNING *",
+        [organizer.id],
+      )
+    )?.rows[0];
+    if (!row) throw new NotFoundError("organizer invite");
+  }
 }
 
-export async function getCourtrooms(tournamentId: string): Promise<ICourtroomRow[]> {
-    const result = await dbQuery<ICourtroomRow>('SELECT * FROM courtrooms WHERE tournament_id=$1', [tournamentId]);
-    if (!result) throw new DbError('getCourtrooms');
-    return result.rows;
+export async function getCourtrooms(
+  tournamentId: string,
+): Promise<ICourtroomRow[]> {
+  const result = await dbQuery<ICourtroomRow>(
+    "SELECT * FROM courtrooms WHERE tournament_id=$1",
+    [tournamentId],
+  );
+  if (!result) throw new DbError("getCourtrooms");
+  return result.rows;
 }
 
-export async function addCourtroom(tournamentId: string, courtroom: ICourtroom): Promise<ICourtroomRow> {
-    const row = (await dbQuery<ICourtroomRow>('INSERT INTO courtrooms (id, tournament_id, name, location) VALUES ($1,$2,$3,$4) RETURNING *', [courtroom.id, tournamentId, courtroom.name, courtroom.location ?? null]))?.rows[0];
-    if (!row) throw new DbError('addCourtroom');
-    return row;
+export async function addCourtroom(
+  tournamentId: string,
+  courtroom: ICourtroom,
+): Promise<ICourtroomRow> {
+  const row = (
+    await dbQuery<ICourtroomRow>(
+      "INSERT INTO courtrooms (id, tournament_id, name, location) VALUES ($1,$2,$3,$4) RETURNING *",
+      [courtroom.id, tournamentId, courtroom.name, courtroom.location ?? null],
+    )
+  )?.rows[0];
+  if (!row) throw new DbError("addCourtroom");
+  return row;
 }
 
-export async function updateCourtroom(courtroom: ICourtroom): Promise<ICourtroomRow> {
-    const row = (await dbQuery<ICourtroomRow>('UPDATE courtrooms SET name=$1, location=$2 WHERE id=$3 RETURNING *', [courtroom.name, courtroom.location ?? null, courtroom.id]))?.rows[0];
-    if (!row) throw new NotFoundError('courtroom');
-    return row;
+export async function updateCourtroom(
+  courtroom: ICourtroom,
+): Promise<ICourtroomRow> {
+  const row = (
+    await dbQuery<ICourtroomRow>(
+      "UPDATE courtrooms SET name=$1, location=$2 WHERE id=$3 RETURNING *",
+      [courtroom.name, courtroom.location ?? null, courtroom.id],
+    )
+  )?.rows[0];
+  if (!row) throw new NotFoundError("courtroom");
+  return row;
 }
 
 export async function deleteCourtroom(courtroomId: string): Promise<void> {
-    const row = (await dbQuery<ICourtroomRow>('DELETE FROM courtrooms WHERE id=$1 RETURNING id', [courtroomId]))?.rows[0];
-    if (!row) throw new NotFoundError('courtroom');
+  const row = (
+    await dbQuery<ICourtroomRow>(
+      "DELETE FROM courtrooms WHERE id=$1 RETURNING id",
+      [courtroomId],
+    )
+  )?.rows[0];
+  if (!row) throw new NotFoundError("courtroom");
 }
 
 export async function getRounds(tournamentId: string): Promise<IRoundRow[]> {
-    const result = await dbQuery<IRoundRow>('SELECT * FROM rounds WHERE tournament_id=$1 ORDER BY round_time', [tournamentId]);
-    if (!result) throw new DbError('getRounds');
-    return result.rows;
+  const result = await dbQuery<IRoundRow>(
+    "SELECT * FROM rounds WHERE tournament_id=$1 ORDER BY round_time",
+    [tournamentId],
+  );
+  if (!result) throw new DbError("getRounds");
+  return result.rows;
 }
 
-export async function getRound(tournamentID: string, roundID: string): Promise<IRoundRow> {
-    const row = (await dbQuery<IRoundRow>('SELECT * FROM rounds WHERE round_id=$1 AND tournament_id=$2', [roundID, tournamentID]))?.rows[0];
-    if (!row) throw new NotFoundError('round');
-    return row;
+/** One payload for the rounds list, including its operational-readiness summary. */
+export async function getRoundsReadiness(tournamentId: string) {
+  const rounds = await getRounds(tournamentId);
+  return Promise.all(
+    rounds.map(async (round) => {
+      const [pairings, ballotStatuses, rosterStatuses] = await Promise.all([
+        getPairings(round.round_id),
+        getBallotStatus(round.round_id),
+        getRoundPairingRosterStatuses(round.round_id),
+      ]);
+      const scorers = await Promise.all(
+        pairings.map((pairing) => getPairingScorers(pairing.pairing_id)),
+      );
+      const warnings: { issue: string; label: string }[] = [];
+      const courtroomAssignments = new Map<string, number>();
+      for (const pairing of pairings) {
+        if (pairing.courtroom)
+          courtroomAssignments.set(
+            pairing.courtroom,
+            (courtroomAssignments.get(pairing.courtroom) ?? 0) + 1,
+          );
+      }
+      if (!pairings.length)
+        warnings.push({ issue: "no-pairings", label: "No matchups" });
+      if (pairings.some((pairing) => !pairing.courtroom))
+        warnings.push({
+          issue: "missing-courtroom",
+          label: "Missing courtroom",
+        });
+      if ([...courtroomAssignments.values()].some((count) => count > 1))
+        warnings.push({
+          issue: "double-booked-courtroom",
+          label: "Double-booked courtroom",
+        });
+      if (scorers.some((list) => !list.length))
+        warnings.push({ issue: "missing-scorers", label: "Missing scorers" });
+      if (scorers.some((list) => !list.some((scorer) => scorer.is_presider)))
+        warnings.push({ issue: "missing-presider", label: "Missing presider" });
+      if (rosterStatuses.some((status) => status.roster_status === "none"))
+        warnings.push({ issue: "missing-roster", label: "Missing roster" });
+      if (rosterStatuses.some((status) => status.call_order_status === "none"))
+        warnings.push({
+          issue: "missing-call-order",
+          label: "Missing call order",
+        });
+      return {
+        ...round,
+        ballot: {
+          total: ballotStatuses.reduce(
+            (sum, status) => sum + status.total_scorers,
+            0,
+          ),
+          submitted: ballotStatuses.reduce(
+            (sum, status) => sum + status.submitted,
+            0,
+          ),
+        },
+        readiness: { pairings: pairings.length, warnings },
+      };
+    }),
+  );
+}
+
+export async function getRound(
+  tournamentID: string,
+  roundID: string,
+): Promise<IRoundRow> {
+  const row = (
+    await dbQuery<IRoundRow>(
+      "SELECT * FROM rounds WHERE round_id=$1 AND tournament_id=$2",
+      [roundID, tournamentID],
+    )
+  )?.rows[0];
+  if (!row) throw new NotFoundError("round");
+  return row;
 }
 
 export async function createRound(tournamentID: string): Promise<IRoundRow> {
-    const length = (await dbQuery<{
-        num_rounds: string
-    }>('SELECT count(*) AS num_rounds FROM rounds WHERE tournament_id=$1', [tournamentID]))?.rows[0];
-    const pos = parseInt(length?.num_rounds ?? '0') + 1;
-    const row = (await dbQuery<IRoundRow>('INSERT INTO rounds (tournament_id, name) VALUES ($1, $2) RETURNING *', [tournamentID, `Round ${pos}`]))?.rows[0];
-    if (!row) throw new DbError('createRound');
-    return row;
+  const length = (
+    await dbQuery<{
+      num_rounds: string;
+    }>("SELECT count(*) AS num_rounds FROM rounds WHERE tournament_id=$1", [
+      tournamentID,
+    ])
+  )?.rows[0];
+  const pos = parseInt(length?.num_rounds ?? "0") + 1;
+  const row = (
+    await dbQuery<IRoundRow>(
+      "INSERT INTO rounds (tournament_id, name) VALUES ($1, $2) RETURNING *",
+      [tournamentID, `Round ${pos}`],
+    )
+  )?.rows[0];
+  if (!row) throw new DbError("createRound");
+  return row;
 }
 
 export async function deleteRound(roundID: string): Promise<IRoundRow> {
-    const row = (await dbQuery<IRoundRow>('DELETE FROM rounds WHERE round_id=$1 RETURNING *', [roundID]))?.rows[0];
-    if (!row) throw new NotFoundError('round');
-    return row;
+  const row = (
+    await dbQuery<IRoundRow>(
+      "DELETE FROM rounds WHERE round_id=$1 RETURNING *",
+      [roundID],
+    )
+  )?.rows[0];
+  if (!row) throw new NotFoundError("round");
+  return row;
 }
 
 /**
@@ -727,32 +1385,49 @@ export async function deleteRound(roundID: string): Promise<IRoundRow> {
  * atomically with the lock so a round is never observed as locked without its
  * inherited assignments in place.
  */
-export async function updateRound(roundID: string, roundData: IRound): Promise<IRound> {
-    return await withTransaction(async (client) => {
-        const current = (await client.query<{
-            locked: boolean
-        }>('SELECT locked FROM rounds WHERE round_id=$1 FOR UPDATE', [roundID],)).rows[0];
-        if (!current) throw new NotFoundError('round');
+export async function updateRound(
+  roundID: string,
+  roundData: IRound,
+): Promise<IRound> {
+  return await withTransaction(async (client) => {
+    const current = (
+      await client.query<{
+        locked: boolean;
+      }>("SELECT locked FROM rounds WHERE round_id=$1 FOR UPDATE", [roundID])
+    ).rows[0];
+    if (!current) throw new NotFoundError("round");
 
-        // One-way lock: never transition true → false.
-        const willLock = current.locked || roundData.locked === true;
-        const isLockingNow = !current.locked && willLock;
+    // One-way lock: never transition true → false.
+    const willLock = current.locked || roundData.locked === true;
+    const isLockingNow = !current.locked && willLock;
 
-        const row = (await client.query<IRound>(`UPDATE rounds
+    const row = (
+      await client.query<IRound>(
+        `UPDATE rounds
                                                  SET round_time=$1,
                                                      name=$2,
                                                      teams_public=$3,
                                                      results_public=$4,
                                                      locked=$5
                                                  WHERE round_id = $6
-                                                 RETURNING *`, [roundData.round_time, roundData.name, roundData.teams_public, roundData.results_public, willLock, roundID],)).rows[0];
-        if (!row) throw new NotFoundError('round');
+                                                 RETURNING *`,
+        [
+          roundData.round_time,
+          roundData.name,
+          roundData.teams_public,
+          roundData.results_public,
+          willLock,
+          roundID,
+        ],
+      )
+    ).rows[0];
+    if (!row) throw new NotFoundError("round");
 
-        if (isLockingNow) {
-            await copyDefaultsForRound(client, roundID);
-        }
-        return row;
-    });
+    if (isLockingNow) {
+      await copyDefaultsForRound(client, roundID);
+    }
+    return row;
+  });
 }
 
 /**
@@ -765,9 +1440,13 @@ export async function updateRound(roundID: string, roundData: IRound): Promise<I
  * `ON CONFLICT DO NOTHING` guards the unique constraints as an extra safety net;
  * the `NOT EXISTS` clause is what actually implements "only if the coach set none".
  */
-async function copyDefaultsForRound(client: PoolClient, roundID: string): Promise<void> {
-    // Witness call order: copy per (pairing, team) where that team has no call order yet.
-    await client.query(`INSERT INTO witness_call_order (pairing_id, team_id, witness_id, position)
+async function copyDefaultsForRound(
+  client: PoolClient,
+  roundID: string,
+): Promise<void> {
+  // Witness call order: copy per (pairing, team) where that team has no call order yet.
+  await client.query(
+    `INSERT INTO witness_call_order (pairing_id, team_id, witness_id, position)
                         SELECT pt.pairing_id, pt.team_id, d.witness_id, d.position
                         FROM (SELECT pairing_id, p_team AS team_id, 'P'::char AS side
                               FROM pairings
@@ -781,10 +1460,13 @@ async function copyDefaultsForRound(client: PoolClient, roundID: string): Promis
                                           FROM witness_call_order w
                                           WHERE w.pairing_id = pt.pairing_id
                                             AND w.team_id = pt.team_id)
-                        ON CONFLICT (pairing_id, team_id, position) DO NOTHING`, [roundID],);
+                        ON CONFLICT (pairing_id, team_id, position) DO NOTHING`,
+    [roundID],
+  );
 
-    // Role assignments: copy per (pairing, team) where that team has no assignments yet.
-    await client.query(`INSERT INTO student_assignments (pairing_id, team_id, field_id, side, witness_id, student_id)
+  // Role assignments: copy per (pairing, team) where that team has no assignments yet.
+  await client.query(
+    `INSERT INTO student_assignments (pairing_id, team_id, field_id, side, witness_id, student_id)
                         SELECT pt.pairing_id, pt.team_id, d.field_id, d.side, d.witness_id, d.student_id
                         FROM (SELECT pairing_id, p_team AS team_id, 'P'::char AS side
                               FROM pairings
@@ -798,11 +1480,39 @@ async function copyDefaultsForRound(client: PoolClient, roundID: string): Promis
                                           FROM student_assignments s
                                           WHERE s.pairing_id = pt.pairing_id
                                             AND s.team_id = pt.team_id)
-                        ON CONFLICT ON CONSTRAINT student_assignments_pairing_team_field_witness_key DO NOTHING`, [roundID],);
+                        ON CONFLICT ON CONSTRAINT student_assignments_pairing_team_field_witness_key DO NOTHING`,
+    [roundID],
+  );
 }
 
-export async function getTeams(tournamentID: string): Promise<ITeam[]> {
-    const joined = (await dbQuery<ITeam>(`SELECT t.id,
+export type TeamIssueFilter =
+  | "without-rosters"
+  | "without-default-assignments"
+  | "without-default-call-orders"
+  | "without-coaches";
+
+export async function getTeams(
+  tournamentID: string,
+  issues: TeamIssueFilter[] = [],
+): Promise<ITeam[]> {
+  const issueClauses: Record<TeamIssueFilter, string> = {
+    "without-rosters":
+      "AND NOT EXISTS (SELECT 1 FROM team_rostered_students trs WHERE trs.team_id = t.id)",
+    "without-default-assignments":
+      "AND NOT EXISTS (SELECT 1 FROM default_student_assignments dsa WHERE dsa.team_id = t.id)",
+    "without-default-call-orders":
+      "AND NOT EXISTS (SELECT 1 FROM default_witness_call_order dwco WHERE dwco.team_id = t.id)",
+    "without-coaches":
+      "AND NOT EXISTS (SELECT 1 FROM team_coaches tc WHERE tc.team_id = t.id)",
+  };
+  const filter =
+    issues.length > 0
+      ? `AND (${issues.map((issue) => issueClauses[issue].replace("AND ", "")).join(" OR ")})`
+      : "";
+  const joined =
+    (
+      await dbQuery<ITeam>(
+        `SELECT t.id,
                                                  t.tournament_id,
                                                  t.name,
                                                  t.code,
@@ -821,8 +1531,14 @@ export async function getTeams(tournamentID: string): Promise<ITeam[]> {
                                               ORDER BY sent_at DESC
                                               LIMIT 1
                                               ) em ON true
-                                          WHERE t.tournament_id = $1`, [tournamentID]))?.rows ?? [];
-    const invited = (await dbQuery<ITeam>(`SELECT t.id,
+                                          WHERE t.tournament_id = $1 ${filter}`,
+        [tournamentID],
+      )
+    )?.rows ?? [];
+  const invited =
+    (
+      await dbQuery<ITeam>(
+        `SELECT t.id,
                                                   t.tournament_id,
                                                   t.name,
                                                   t.code,
@@ -840,139 +1556,243 @@ export async function getTeams(tournamentID: string): Promise<ITeam[]> {
                                                ORDER BY sent_at DESC
                                                LIMIT 1
                                                ) em ON true
-                                           WHERE t.tournament_id = $1
+                                           WHERE t.tournament_id = $1 ${filter}
                                              AND NOT EXISTS (SELECT 1
                                                              FROM team_coaches tc
                                                              WHERE tc.team_id = t.id
-                                                               AND tc.is_owner = true)`, [tournamentID]))?.rows ?? [];
-    return [...joined, ...invited];
+                                                               AND tc.is_owner = true)`,
+        [tournamentID],
+      )
+    )?.rows ?? [];
+  return [...joined, ...invited];
 }
 
-export async function teamNameExists(tournamentID: string, name: string, excludeId?: string): Promise<boolean> {
-    const row = (await dbQuery<{ id: string }>(`SELECT id
+export async function teamNameExists(
+  tournamentID: string,
+  name: string,
+  excludeId?: string,
+): Promise<boolean> {
+  const row = (
+    await dbQuery<{ id: string }>(
+      `SELECT id
                                                 FROM teams
                                                 WHERE tournament_id = $1
-                                                  AND LOWER(name) = LOWER($2) ${excludeId ? ' AND id != $3' : ''}`, excludeId ? [tournamentID, name, excludeId] : [tournamentID, name]))?.rows[0];
-    return !!row;
+                                                  AND LOWER(name) = LOWER($2) ${excludeId ? " AND id != $3" : ""}`,
+      excludeId ? [tournamentID, name, excludeId] : [tournamentID, name],
+    )
+  )?.rows[0];
+  return !!row;
 }
 
-export async function addTeam(tournamentID: string, name: string, coachEmail: string, code: string): Promise<ITeam> {
-    const teamId = randomUUID();
-    const teamInsert = await dbQuery<ITeamRow>('INSERT INTO teams (id, tournament_id, name, code) VALUES ($1,$2,$3,$4) RETURNING *', [teamId, tournamentID, name, code]);
-    if (!teamInsert?.rows[0]) throw new DbError('addTeam');
-    const user = (await dbQuery<IAuthRow>('SELECT * FROM auth WHERE LOWER(email) = LOWER($1)', [coachEmail]))?.rows[0];
-    if (!user) {
-        await dbQuery('INSERT INTO team_invites (team_id, invite_email, is_owner) VALUES ($1,$2,$3)', [teamId, coachEmail, true]);
-        return {id: teamId, tournament_id: tournamentID, name, code, coach_email: coachEmail, has_joined: false};
-    }
-    await dbQuery('INSERT INTO team_coaches (coach_id, team_id, is_owner) VALUES ($1,$2,$3)', [user.user_id, teamId, true]);
-    return {id: teamId, tournament_id: tournamentID, name, code, coach_email: user.email, has_joined: true};
+export async function addTeam(
+  tournamentID: string,
+  name: string,
+  coachEmail: string,
+  code: string,
+): Promise<ITeam> {
+  const teamId = randomUUID();
+  const teamInsert = await dbQuery<ITeamRow>(
+    "INSERT INTO teams (id, tournament_id, name, code) VALUES ($1,$2,$3,$4) RETURNING *",
+    [teamId, tournamentID, name, code],
+  );
+  if (!teamInsert?.rows[0]) throw new DbError("addTeam");
+  const user = (
+    await dbQuery<IAuthRow>(
+      "SELECT * FROM auth WHERE LOWER(email) = LOWER($1)",
+      [coachEmail],
+    )
+  )?.rows[0];
+  if (!user) {
+    await dbQuery(
+      "INSERT INTO team_invites (team_id, invite_email, is_owner) VALUES ($1,$2,$3)",
+      [teamId, coachEmail, true],
+    );
+    return {
+      id: teamId,
+      tournament_id: tournamentID,
+      name,
+      code,
+      coach_email: coachEmail,
+      has_joined: false,
+    };
+  }
+  await dbQuery(
+    "INSERT INTO team_coaches (coach_id, team_id, is_owner) VALUES ($1,$2,$3)",
+    [user.user_id, teamId, true],
+  );
+  return {
+    id: teamId,
+    tournament_id: tournamentID,
+    name,
+    code,
+    coach_email: user.email,
+    has_joined: true,
+  };
 }
-export async function getTeam(teamId: string) : Promise<ITeam> {
-    const result = await dbQuery<ITeamRow>('SELECT * FROM teams WHERE id=$1', [teamId]);
-    if (!result) throw new DbError('getTeam');
-    const team = result.rows[0];
-    if (!team) throw new NotFoundError('team');
+export async function getTeam(teamId: string): Promise<ITeam> {
+  const result = await dbQuery<ITeamRow>("SELECT * FROM teams WHERE id=$1", [
+    teamId,
+  ]);
+  if (!result) throw new DbError("getTeam");
+  const team = result.rows[0];
+  if (!team) throw new NotFoundError("team");
 
-    const coachId =  (await dbQuery<{
-        coach_id: string
-    }>('SELECT coach_id FROM team_coaches WHERE team_id=$1 AND is_owner=true LIMIT 1', [teamId]))?.rows[0]
+  const coachId = (
+    await dbQuery<{
+      coach_id: string;
+    }>(
+      "SELECT coach_id FROM team_coaches WHERE team_id=$1 AND is_owner=true LIMIT 1",
+      [teamId],
+    )
+  )?.rows[0];
 
-    // A team without an owner in team_coaches is still pending an invite.  In
-    // that case its contact address lives in team_invites; a joined team gets
-    // it from auth through the owner record instead.
-    if (!coachId) {
-        const invite = (await dbQuery<ITeamInviteRow>(`Select *
+  // A team without an owner in team_coaches is still pending an invite.  In
+  // that case its contact address lives in team_invites; a joined team gets
+  // it from auth through the owner record instead.
+  if (!coachId) {
+    const invite =
+      (
+        await dbQuery<ITeamInviteRow>(
+          `Select *
                                                        from team_invites
                                                        where team_id = $1
                                                          and is_owner = true
-                                                       limit 1`, [teamId]))?.rows[0] ?? null;
-        if (!invite) throw new NotFoundError('Could not found coach invite');
-        return {
-            ...team,
-            coach_email: invite.invite_email,
-            code: team.code || team.name,
-            has_joined: false
-        };
-    }
+                                                       limit 1`,
+          [teamId],
+        )
+      )?.rows[0] ?? null;
+    if (!invite) throw new NotFoundError("Could not found coach invite");
+    return {
+      ...team,
+      coach_email: invite.invite_email,
+      code: team.code || team.name,
+      has_joined: false,
+    };
+  }
 
-    const coachEmail = (await dbQuery<{email : string}>(`select email from auth where user_id = $1`, [coachId.coach_id]))?.rows[0]?.email;
+  const coachEmail = (
+    await dbQuery<{ email: string }>(
+      `select email from auth where user_id = $1`,
+      [coachId.coach_id],
+    )
+  )?.rows[0]?.email;
 
-    if (!coachEmail) throw new DbError("coach does not have an email");
+  if (!coachEmail) throw new DbError("coach does not have an email");
 
-    return {...team,
+  return {
+    ...team,
     coach_email: coachEmail,
-        code: team.code || team.name,
-    has_joined: true}
+    code: team.code || team.name,
+    has_joined: true,
+  };
 }
 
-export async function updateTeam(teamId: string, name: string, coachEmail: string, code: string): Promise<ITeam> {
-    const result = await dbQuery<ITeamRow>('SELECT * FROM teams WHERE id=$1', [teamId]);
-    if (!result) throw new DbError('updateTeam');
-    const team = result.rows[0];
-    if (!team) throw new NotFoundError('team');
+export async function updateTeam(
+  teamId: string,
+  name: string,
+  coachEmail: string,
+  code: string,
+): Promise<ITeam> {
+  const result = await dbQuery<ITeamRow>("SELECT * FROM teams WHERE id=$1", [
+    teamId,
+  ]);
+  if (!result) throw new DbError("updateTeam");
+  const team = result.rows[0];
+  if (!team) throw new NotFoundError("team");
 
-    await dbQuery('UPDATE teams SET name=$1, code=$2 WHERE id=$3', [name, code || name, teamId]);
-    const hasJoinedCoach = !!(await dbQuery<{
-        coach_id: string
-    }>('SELECT coach_id FROM team_coaches WHERE team_id=$1 AND is_owner=true LIMIT 1', [teamId]))?.rows[0];
-    if (!hasJoinedCoach) {
-        const existing = (await dbQuery('SELECT id FROM team_invites WHERE team_id=$1', [teamId]))?.rows[0];
-        if (existing) {
-            await dbQuery('UPDATE team_invites SET invite_email=$1 WHERE team_id=$2', [coachEmail, teamId]);
-        } else {
-            await dbQuery('INSERT INTO team_invites (team_id, invite_email) VALUES ($1,$2)', [teamId, coachEmail]);
-        }
-        return {
-            id: teamId,
-            tournament_id: team.tournament_id,
-            name,
-            code: code || name,
-            coach_email: coachEmail,
-            has_joined: false
-        };
+  await dbQuery("UPDATE teams SET name=$1, code=$2 WHERE id=$3", [
+    name,
+    code || name,
+    teamId,
+  ]);
+  const hasJoinedCoach = !!(
+    await dbQuery<{
+      coach_id: string;
+    }>(
+      "SELECT coach_id FROM team_coaches WHERE team_id=$1 AND is_owner=true LIMIT 1",
+      [teamId],
+    )
+  )?.rows[0];
+  if (!hasJoinedCoach) {
+    const existing = (
+      await dbQuery("SELECT id FROM team_invites WHERE team_id=$1", [teamId])
+    )?.rows[0];
+    if (existing) {
+      await dbQuery(
+        "UPDATE team_invites SET invite_email=$1 WHERE team_id=$2",
+        [coachEmail, teamId],
+      );
+    } else {
+      await dbQuery(
+        "INSERT INTO team_invites (team_id, invite_email) VALUES ($1,$2)",
+        [teamId, coachEmail],
+      );
     }
     return {
-        id: teamId,
-        tournament_id: team.tournament_id,
-        name,
-        code: code || name,
-        coach_email: coachEmail,
-        has_joined: true
+      id: teamId,
+      tournament_id: team.tournament_id,
+      name,
+      code: code || name,
+      coach_email: coachEmail,
+      has_joined: false,
     };
+  }
+  return {
+    id: teamId,
+    tournament_id: team.tournament_id,
+    name,
+    code: code || name,
+    coach_email: coachEmail,
+    has_joined: true,
+  };
 }
 
 export async function deleteTeam(teamId: string): Promise<void> {
-    await withTransaction(async client => {
-        // Ballots deliberately do not cascade from a team or pairing. Remove
-        // them first, along with presider links that otherwise reference the
-        // pairings being cascaded away by the team deletion.
-        await client.query(
-            `DELETE FROM ballots
+  await withTransaction(async (client) => {
+    // Ballots deliberately do not cascade from a team or pairing. Remove
+    // them first, along with presider links that otherwise reference the
+    // pairings being cascaded away by the team deletion.
+    await client.query(
+      `DELETE FROM ballots
              WHERE p_team_id=$1 OR d_team_id=$1
                 OR pairing_id IN (SELECT pairing_id FROM pairings WHERE p_team=$1 OR d_team=$1)`,
-            [teamId],
-        );
-        await client.query(
-            `DELETE FROM scorer_presider_assignment
+      [teamId],
+    );
+    await client.query(
+      `DELETE FROM scorer_presider_assignment
              WHERE pairing_id IN (SELECT pairing_id FROM pairings WHERE p_team=$1 OR d_team=$1)`,
-            [teamId],
-        );
-        const row = (await client.query('DELETE FROM teams WHERE id=$1 RETURNING id', [teamId])).rows[0];
-        if (!row) throw new NotFoundError('team');
-    });
+      [teamId],
+    );
+    const row = (
+      await client.query("DELETE FROM teams WHERE id=$1 RETURNING id", [teamId])
+    ).rows[0];
+    if (!row) throw new NotFoundError("team");
+  });
 }
 
-export async function createRoundPairing(roundID: string, prosecution: string, defense: string, courtroomID: string | null): Promise<IPairingRow> {
-    const row = (await dbQuery<IPairingRow>('INSERT INTO pairings (round_id, p_team, d_team, courtroom) VALUES ($1,$2,$3,$4) RETURNING *', [roundID, prosecution, defense, courtroomID]))?.rows[0];
-    if (!row) throw new DbError('createRoundPairing');
-    return row;
+export async function createRoundPairing(
+  roundID: string,
+  prosecution: string,
+  defense: string,
+  courtroomID: string | null,
+): Promise<IPairingRow> {
+  const row = (
+    await dbQuery<IPairingRow>(
+      "INSERT INTO pairings (round_id, p_team, d_team, courtroom) VALUES ($1,$2,$3,$4) RETURNING *",
+      [roundID, prosecution, defense, courtroomID],
+    )
+  )?.rows[0];
+  if (!row) throw new DbError("createRoundPairing");
+  return row;
 }
 
 export async function getPairings(roundID: string): Promise<IPairingRow[]> {
-    const result = await dbQuery<IPairingRow>('SELECT * FROM pairings WHERE round_id=$1', [roundID]);
-    if (!result) throw new DbError('getPairings');
-    return result.rows;
+  const result = await dbQuery<IPairingRow>(
+    "SELECT * FROM pairings WHERE round_id=$1",
+    [roundID],
+  );
+  if (!result) throw new DbError("getPairings");
+  return result.rows;
 }
 
 /**
@@ -980,18 +1800,21 @@ export async function getPairings(roundID: string): Promise<IPairingRow[]> {
  * Role assignments and witness call orders are reported independently, so an
  * organizer can see exactly which part of a team's lineup remains unfinished.
  */
-export async function getRoundPairingRosterStatuses(roundID: string): Promise<{
+export async function getRoundPairingRosterStatuses(roundID: string): Promise<
+  {
     pairing_id: string;
     team_id: string;
-    roster_status: 'none' | 'default' | 'complete';
-    call_order_status: 'none' | 'default' | 'complete';
-}[]> {
-    const result = await dbQuery<{
-        pairing_id: string;
-        team_id: string;
-        roster_status: 'none' | 'default' | 'complete';
-        call_order_status: 'none' | 'default' | 'complete';
-    }>(`
+    roster_status: "none" | "default" | "complete";
+    call_order_status: "none" | "default" | "complete";
+  }[]
+> {
+  const result = await dbQuery<{
+    pairing_id: string;
+    team_id: string;
+    roster_status: "none" | "default" | "complete";
+    call_order_status: "none" | "default" | "complete";
+  }>(
+    `
         WITH pairing_teams AS (
             SELECT pairing_id, p_team AS team_id FROM pairings WHERE round_id = $1
             UNION ALL
@@ -1020,46 +1843,70 @@ export async function getRoundPairingRosterStatuses(roundID: string): Promise<{
                    ELSE 'none'
                END AS call_order_status
         FROM pairing_teams pt
-    `, [roundID]);
-    if (!result) throw new DbError('getRoundPairingRosterStatuses');
-    return result.rows;
+    `,
+    [roundID],
+  );
+  if (!result) throw new DbError("getRoundPairingRosterStatuses");
+  return result.rows;
 }
 
 export async function getPairing(pairingId: string): Promise<IPairingRow> {
-    const result = await dbQuery<IPairingRow>('SELECT * FROM pairings WHERE pairing_id=$1', [pairingId]);
-    if (!result) throw new DbError('getPairing');
-    return result.rows[0];
+  const result = await dbQuery<IPairingRow>(
+    "SELECT * FROM pairings WHERE pairing_id=$1",
+    [pairingId],
+  );
+  if (!result) throw new DbError("getPairing");
+  return result.rows[0];
 }
 
-export async function updatePairing(pairingID: string, prosecution: string, defense: string, courtroomID: string | null): Promise<IPairingRow> {
-    const result = await dbQuery<IPairingRow>('UPDATE pairings SET p_team=$1, d_team=$2, courtroom=$3 WHERE pairing_id=$4 RETURNING *', [prosecution, defense, courtroomID, pairingID]);
-    if (!result) throw new DbError('updatePairing');
-    const row = result.rows[0];
-    if (!row) throw new NotFoundError('pairing');
-    return row;
+export async function updatePairing(
+  pairingID: string,
+  prosecution: string,
+  defense: string,
+  courtroomID: string | null,
+): Promise<IPairingRow> {
+  const result = await dbQuery<IPairingRow>(
+    "UPDATE pairings SET p_team=$1, d_team=$2, courtroom=$3 WHERE pairing_id=$4 RETURNING *",
+    [prosecution, defense, courtroomID, pairingID],
+  );
+  if (!result) throw new DbError("updatePairing");
+  const row = result.rows[0];
+  if (!row) throw new NotFoundError("pairing");
+  return row;
 }
 
-export async function getBallotStatus(roundID: string): Promise<IBallotStatus[]> {
-    const result = await dbQuery<IBallotStatus>(`SELECT p.pairing_id,
+export async function getBallotStatus(
+  roundID: string,
+): Promise<IBallotStatus[]> {
+  const result = await dbQuery<IBallotStatus>(
+    `SELECT p.pairing_id,
                                                         COUNT(spa.assignment_id)::int AS total_scorers,
                                                         COUNT(b.ballot_id)::int       AS submitted
                                                  FROM pairings p
                                                           LEFT JOIN scorer_pairing_assignments spa ON spa.pairing_id = p.pairing_id
                                                           LEFT JOIN ballots b ON b.scorer_assignment_id = spa.assignment_id
                                                  WHERE p.round_id = $1
-                                                 GROUP BY p.pairing_id`, [roundID]);
-    if (!result) throw new DbError('getBallotStatus');
-    return result.rows;
+                                                 GROUP BY p.pairing_id`,
+    [roundID],
+  );
+  if (!result) throw new DbError("getBallotStatus");
+  return result.rows;
 }
 
 export async function deletePairing(pairingID: string): Promise<void> {
-    const row = (await dbQuery('DELETE FROM pairings WHERE pairing_id=$1 RETURNING pairing_id', [pairingID]))?.rows[0];
-    if (!row) throw new NotFoundError('pairing');
+  const row = (
+    await dbQuery(
+      "DELETE FROM pairings WHERE pairing_id=$1 RETURNING pairing_id",
+      [pairingID],
+    )
+  )?.rows[0];
+  if (!row) throw new NotFoundError("pairing");
 }
 
-export async function getPairingScorers(pairingID: string): Promise<{
+export async function getPairingScorers(pairingID: string): Promise<
+  {
     assignment_id: string;
-    type: 'registered' | 'paper';
+    type: "registered" | "paper";
     scorer_id: string;
     name: string;
     is_presider: boolean;
@@ -1067,16 +1914,26 @@ export async function getPairingScorers(pairingID: string): Promise<{
     conflict_reported: boolean;
     p_points: number | null;
     d_points: number | null;
-    email_status: EmailStatus | null,
-    ballot_id: string | null
-}[]> {
-    const presiderRow = (await dbQuery<{
-        scorer_assignment_id: string;
-        show_scores: boolean
-    }>('SELECT scorer_assignment_id, show_scores FROM scorer_presider_assignment WHERE pairing_id=$1', [pairingID]))?.rows[0];
-    const presiderAssignmentId = presiderRow?.scorer_assignment_id ?? null;
-    const presiderOnlyTiebreaker = presiderRow ? presiderRow.show_scores === false : false;
-    const rows = (await dbQuery<{
+    email_status: EmailStatus | null;
+    ballot_id: string | null;
+  }[]
+> {
+  const presiderRow = (
+    await dbQuery<{
+      scorer_assignment_id: string;
+      show_scores: boolean;
+    }>(
+      "SELECT scorer_assignment_id, show_scores FROM scorer_presider_assignment WHERE pairing_id=$1",
+      [pairingID],
+    )
+  )?.rows[0];
+  const presiderAssignmentId = presiderRow?.scorer_assignment_id ?? null;
+  const presiderOnlyTiebreaker = presiderRow
+    ? presiderRow.show_scores === false
+    : false;
+  const rows =
+    (
+      await dbQuery<{
         assignment_id: string;
         scorer_id: string;
         name: string;
@@ -1084,9 +1941,10 @@ export async function getPairingScorers(pairingID: string): Promise<{
         conflict_reported: boolean;
         p_points: number | null;
         d_points: number | null;
-        email_status: EmailStatus | null,
-        ballot_id: string | null
-    }>(`SELECT spa.assignment_id,
+        email_status: EmailStatus | null;
+        ballot_id: string | null;
+      }>(
+        `SELECT spa.assignment_id,
                s.scorer_id,
                s.name,
                s.is_paper,
@@ -1106,41 +1964,45 @@ export async function getPairingScorers(pairingID: string): Promise<{
             ORDER BY sent_at DESC
             LIMIT 1
             ) em ON true
-        WHERE spa.pairing_id = $1`, [pairingID]))?.rows ?? [];
-    return rows.map(r => ({
-        assignment_id: r.assignment_id,
-        type: (r.is_paper ? 'paper' : 'registered') as 'registered' | 'paper',
-        scorer_id: r.scorer_id,
-        name: r.name.trim(),
-        is_presider: r.assignment_id === presiderAssignmentId,
-        presider_only_tiebreaker: r.assignment_id === presiderAssignmentId && presiderOnlyTiebreaker,
-        conflict_reported: r.conflict_reported,
-        p_points: r.p_points,
-        d_points: r.d_points,
-        // Paper scorers are never emailed a scoring link, so suppress any status.
-        email_status: r.is_paper ? null : r.email_status,
-        ballot_id: r.ballot_id
-    }));
+        WHERE spa.pairing_id = $1`,
+        [pairingID],
+      )
+    )?.rows ?? [];
+  return rows.map((r) => ({
+    assignment_id: r.assignment_id,
+    type: (r.is_paper ? "paper" : "registered") as "registered" | "paper",
+    scorer_id: r.scorer_id,
+    name: r.name.trim(),
+    is_presider: r.assignment_id === presiderAssignmentId,
+    presider_only_tiebreaker:
+      r.assignment_id === presiderAssignmentId && presiderOnlyTiebreaker,
+    conflict_reported: r.conflict_reported,
+    p_points: r.p_points,
+    d_points: r.d_points,
+    // Paper scorers are never emailed a scoring link, so suppress any status.
+    email_status: r.is_paper ? null : r.email_status,
+    ballot_id: r.ballot_id,
+  }));
 }
 
-
 export async function getRoundEmailContext(roundID: string): Promise<{
-    tournamentName: string
-    roundName: string
-    coaches: {
-        coach_name: string
-        coach_email: string
-        team_id: string
-    }[]
+  tournamentName: string;
+  roundName: string;
+  coaches: {
+    coach_name: string;
+    coach_email: string;
+    team_id: string;
+  }[];
 } | null> {
-    const res = await dbQuery<{
-        tournament_name: string
-        round_name: string
-        coach_first_name: string
-        coach_last_name: string
-        coach_email: string
-        team_id: string
-    }>(`
+  const res = await dbQuery<{
+    tournament_name: string;
+    round_name: string;
+    coach_first_name: string;
+    coach_last_name: string;
+    coach_email: string;
+    team_id: string;
+  }>(
+    `
         SELECT
             t.name AS tournament_name,
             r.name AS round_name,
@@ -1159,32 +2021,43 @@ export async function getRoundEmailContext(roundID: string): Promise<{
                       ON a.user_id = tc.coach_id
         WHERE tc.notifications = true
           AND r.round_id = $1
-    `, [roundID])
+    `,
+    [roundID],
+  );
 
-    const rows = res?.rows ?? null
+  const rows = res?.rows ?? null;
 
-    if (!rows || rows.length === 0) {
-        return null
-    }
+  if (!rows || rows.length === 0) {
+    return null;
+  }
 
-    return {
-        tournamentName: rows[0].tournament_name,
-        roundName: rows[0].round_name,
-        coaches: rows.map(row => ({
-            coach_name: `${row.coach_first_name} ${row.coach_last_name}`.trim(),
-            coach_email: row.coach_email,
-            team_id: row.team_id,
-        })),
-    }
+  return {
+    tournamentName: rows[0].tournament_name,
+    roundName: rows[0].round_name,
+    coaches: rows.map((row) => ({
+      coach_name: `${row.coach_first_name} ${row.coach_last_name}`.trim(),
+      coach_email: row.coach_email,
+      team_id: row.team_id,
+    })),
+  };
 }
 
 /** Returns the data needed to send scorer invite emails for every registered scorer in a round. */
-export async function getScorerInviteContextsForRound(roundId: string): Promise<{
-    email: string; tournamentName: string; assignmentId: string;
-}[]> {
-    const rows = (await dbQuery<{
-        email: string; tournament_name: string; assignment_id: string;
-    }>(`
+export async function getScorerInviteContextsForRound(roundId: string): Promise<
+  {
+    email: string;
+    tournamentName: string;
+    assignmentId: string;
+  }[]
+> {
+  const rows =
+    (
+      await dbQuery<{
+        email: string;
+        tournament_name: string;
+        assignment_id: string;
+      }>(
+        `
         SELECT s.email,
                t.name AS tournament_name,
                spa.assignment_id
@@ -1196,13 +2069,16 @@ export async function getScorerInviteContextsForRound(roundId: string): Promise<
         WHERE r.round_id = $1
           AND s.is_paper = false
           AND s.email IS NOT NULL
-    `, [roundId]))?.rows ?? [];
+    `,
+        [roundId],
+      )
+    )?.rows ?? [];
 
-    return rows.map(r => ({
-        email: r.email,
-        tournamentName: r.tournament_name,
-        assignmentId: r.assignment_id,
-    }));
+  return rows.map((r) => ({
+    email: r.email,
+    tournamentName: r.tournament_name,
+    assignmentId: r.assignment_id,
+  }));
 }
 
 /**
@@ -1210,26 +2086,41 @@ export async function getScorerInviteContextsForRound(roundId: string): Promise<
  * the round's scorer assignments. Used to make the bulk "send scoring links"
  * action one-time per round (individual resends use their own endpoint).
  */
-export async function hasSentScoringLinksForRound(roundId: string): Promise<boolean> {
-    const row = (await dbQuery<{ exists: boolean }>(`
+export async function hasSentScoringLinksForRound(
+  roundId: string,
+): Promise<boolean> {
+  const row = (
+    await dbQuery<{ exists: boolean }>(
+      `
         SELECT EXISTS (SELECT 1
                        FROM email_messages em
                                 JOIN scorer_pairing_assignments spa ON spa.assignment_id = em.context_id
                                 JOIN pairings p ON p.pairing_id = spa.pairing_id
                        WHERE em.context_type = 'scoring_link'
                          AND p.round_id = $1) AS exists
-    `, [roundId]))?.rows[0];
-    return row?.exists ?? false;
+    `,
+      [roundId],
+    )
+  )?.rows[0];
+  return row?.exists ?? false;
 }
 
-
 /** Returns the data needed to send scorer invite email for a single assignment. */
-export async function getScorerInviteContextForAssignment(assignmentId: string): Promise<{
-    email: string; tournamentName: string; assignmentId: string;
+export async function getScorerInviteContextForAssignment(
+  assignmentId: string,
+): Promise<{
+  email: string;
+  tournamentName: string;
+  assignmentId: string;
 } | null> {
-    const rows = (await dbQuery<{
-        email: string; tournament_name: string; assignment_id: string;
-    }>(`
+  const rows =
+    (
+      await dbQuery<{
+        email: string;
+        tournament_name: string;
+        assignment_id: string;
+      }>(
+        `
         SELECT s.email,
                t.name AS tournament_name,
                spa.assignment_id
@@ -1241,21 +2132,34 @@ export async function getScorerInviteContextForAssignment(assignmentId: string):
         WHERE spa.assignment_id = $1
           AND s.is_paper = false
           AND s.email IS NOT NULL
-    `, [assignmentId]))?.rows ?? [];
+    `,
+        [assignmentId],
+      )
+    )?.rows ?? [];
 
-    return rows.map(r => ({
-        email: r.email,
-        tournamentName: r.tournament_name,
-        assignmentId: r.assignment_id,
-    }))[0] ?? null;
+  return (
+    rows.map((r) => ({
+      email: r.email,
+      tournamentName: r.tournament_name,
+      assignmentId: r.assignment_id,
+    }))[0] ?? null
+  );
 }
 
-export async function assignScorerToPairing(pairingID: string, scorerID: string): Promise<{ assignment_id: string }> {
-    const row = (await dbQuery<{
-        assignment_id: string
-    }>('INSERT INTO scorer_pairing_assignments (pairing_id, scorer_id) VALUES ($1,$2) RETURNING assignment_id', [pairingID, scorerID]))?.rows[0];
-    if (!row) throw new DbError('assignScorerToPairing');
-    return row;
+export async function assignScorerToPairing(
+  pairingID: string,
+  scorerID: string,
+): Promise<{ assignment_id: string }> {
+  const row = (
+    await dbQuery<{
+      assignment_id: string;
+    }>(
+      "INSERT INTO scorer_pairing_assignments (pairing_id, scorer_id) VALUES ($1,$2) RETURNING assignment_id",
+      [pairingID, scorerID],
+    )
+  )?.rows[0];
+  if (!row) throw new DbError("assignScorerToPairing");
+  return row;
 }
 
 /**
@@ -1264,67 +2168,109 @@ export async function assignScorerToPairing(pairingID: string, scorerID: string)
  * the pairing and can be reused / given conflicts / preferences like any scorer.
  * The name is split on the first space into first/last.
  */
-export async function addPaperScorer(pairingID: string, name: string): Promise<{
-    assignment_id: string;
-    scorer_id: string
+export async function addPaperScorer(
+  pairingID: string,
+  name: string,
+): Promise<{
+  assignment_id: string;
+  scorer_id: string;
 }> {
-    const tourney = (await dbQuery<{ tournament_id: string }>(
-        `SELECT r.tournament_id
+  const tourney = (
+    await dbQuery<{ tournament_id: string }>(
+      `SELECT r.tournament_id
          FROM pairings p
                   JOIN rounds r ON r.round_id = p.round_id
          WHERE p.pairing_id = $1`,
-        [pairingID],
-    ))?.rows[0];
-    if (!tourney) throw new NotFoundError('pairing');
+      [pairingID],
+    )
+  )?.rows[0];
+  if (!tourney) throw new NotFoundError("pairing");
 
-    const ps = (await dbQuery<{
-        scorer_id: string
+  const ps = (
+    await dbQuery<{
+      scorer_id: string;
     }>(
-        `INSERT INTO scorers (tournament_id, name, email, is_paper, willing_to_preside)
+      `INSERT INTO scorers (tournament_id, name, email, is_paper, willing_to_preside)
          VALUES ($1,$2,NULL,true,true) RETURNING scorer_id`,
-        [tourney.tournament_id, name.trim()],
-    ))?.rows[0];
-    if (!ps) throw new DbError('addPaperScorer');
+      [tourney.tournament_id, name.trim()],
+    )
+  )?.rows[0];
+  if (!ps) throw new DbError("addPaperScorer");
 
-    const row = (await dbQuery<{
-        assignment_id: string;
-        scorer_id: string
-    }>('INSERT INTO scorer_pairing_assignments (pairing_id, scorer_id) VALUES ($1,$2) RETURNING assignment_id, $2::uuid AS scorer_id', [pairingID, ps.scorer_id]))?.rows[0];
-    if (!row) throw new DbError('addPaperScorer assignment');
-    return row;
+  const row = (
+    await dbQuery<{
+      assignment_id: string;
+      scorer_id: string;
+    }>(
+      "INSERT INTO scorer_pairing_assignments (pairing_id, scorer_id) VALUES ($1,$2) RETURNING assignment_id, $2::uuid AS scorer_id",
+      [pairingID, ps.scorer_id],
+    )
+  )?.rows[0];
+  if (!row) throw new DbError("addPaperScorer assignment");
+  return row;
 }
 
-export async function removeScorerAssignment(assignmentID: string): Promise<void> {
-    // Delete any submitted ballot first (FK constraint prevents assignment deletion otherwise)
-    await dbQuery('DELETE FROM ballots WHERE scorer_assignment_id=$1', [assignmentID]);
-    // Paper scorers are now persistent tournament-level `scorers` rows, so removing an
-    // assignment only detaches the scorer from this pairing — it never deletes the scorer.
-    const row = (await dbQuery<{
-        assignment_id: string
-    }>('DELETE FROM scorer_pairing_assignments WHERE assignment_id=$1 RETURNING assignment_id', [assignmentID]))?.rows[0];
-    if (!row) throw new NotFoundError('scorer assignment');
+export async function removeScorerAssignment(
+  assignmentID: string,
+): Promise<void> {
+  // Delete any submitted ballot first (FK constraint prevents assignment deletion otherwise)
+  await dbQuery("DELETE FROM ballots WHERE scorer_assignment_id=$1", [
+    assignmentID,
+  ]);
+  // Paper scorers are now persistent tournament-level `scorers` rows, so removing an
+  // assignment only detaches the scorer from this pairing — it never deletes the scorer.
+  const row = (
+    await dbQuery<{
+      assignment_id: string;
+    }>(
+      "DELETE FROM scorer_pairing_assignments WHERE assignment_id=$1 RETURNING assignment_id",
+      [assignmentID],
+    )
+  )?.rows[0];
+  if (!row) throw new NotFoundError("scorer assignment");
 }
 
-export async function setPresider(pairingID: string, assignmentID: string, showScores = true): Promise<void> {
-    const result = await dbQuery(`INSERT INTO scorer_presider_assignment (scorer_assignment_id, pairing_id, show_scores)
+export async function setPresider(
+  pairingID: string,
+  assignmentID: string,
+  showScores = true,
+): Promise<void> {
+  const result = await dbQuery(
+    `INSERT INTO scorer_presider_assignment (scorer_assignment_id, pairing_id, show_scores)
                                   VALUES ($1, $2, $3)
                                   ON CONFLICT (pairing_id) DO UPDATE SET scorer_assignment_id = EXCLUDED.scorer_assignment_id,
-                                                                         show_scores          = EXCLUDED.show_scores`, [assignmentID, pairingID, showScores]);
-    if (!result) throw new DbError('setPresider');
+                                                                         show_scores          = EXCLUDED.show_scores`,
+    [assignmentID, pairingID, showScores],
+  );
+  if (!result) throw new DbError("setPresider");
 }
 
 export async function clearPresider(pairingID: string): Promise<void> {
-    await dbQuery('DELETE FROM scorer_presider_assignment WHERE pairing_id=$1', [pairingID]);
+  await dbQuery("DELETE FROM scorer_presider_assignment WHERE pairing_id=$1", [
+    pairingID,
+  ]);
 }
 
-async function duplicateWitnesses(sourceCaseFormatID: string, newFormatID: string): Promise<void> {
-    const witnesses = await dbQuery<{
-        side: string;
-        name: string
-    }>('SELECT side, name FROM case_witnesses WHERE case_format=$1', [sourceCaseFormatID]);
-    if (witnesses?.rows.length) {
-        await Promise.all(witnesses.rows.map(w => dbQuery('INSERT INTO case_witnesses (case_format, side, name) VALUES ($1,$2,$3)', [newFormatID, w.side, w.name])));
-    }
+async function duplicateWitnesses(
+  sourceCaseFormatID: string,
+  newFormatID: string,
+): Promise<void> {
+  const witnesses = await dbQuery<{
+    side: string;
+    name: string;
+  }>("SELECT side, name FROM case_witnesses WHERE case_format=$1", [
+    sourceCaseFormatID,
+  ]);
+  if (witnesses?.rows.length) {
+    await Promise.all(
+      witnesses.rows.map((w) =>
+        dbQuery(
+          "INSERT INTO case_witnesses (case_format, side, name) VALUES ($1,$2,$3)",
+          [newFormatID, w.side, w.name],
+        ),
+      ),
+    );
+  }
 }
 
 /**
@@ -1332,27 +2278,63 @@ async function duplicateWitnesses(sourceCaseFormatID: string, newFormatID: strin
  * tournament and returns a map from each source award-category UUID to its new
  * UUID, so scoring-field links can be remapped when both are duplicated.
  */
-async function duplicateAwardCategories(sourceTournamentID: string, newTournamentID: string): Promise<Map<string, string>> {
-    const map = new Map<string, string>();
-    const cats = (await dbQuery<{
+async function duplicateAwardCategories(
+  sourceTournamentID: string,
+  newTournamentID: string,
+): Promise<Map<string, string>> {
+  const map = new Map<string, string>();
+  const cats =
+    (
+      await dbQuery<{
         id: string;
         name: string;
         min_nominees: number;
-        max_nominees: number
-    }>('SELECT id, name, min_nominees, max_nominees FROM individual_award_categories WHERE tournament_id=$1', [sourceTournamentID]))?.rows ?? [];
-    await Promise.all(cats.map(async c => {
-        const newId = (await dbQuery<{
-            id: string
-        }>('INSERT INTO individual_award_categories (tournament_id, name, min_nominees, max_nominees) VALUES ($1,$2,$3,$4) RETURNING id', [newTournamentID, c.name, c.min_nominees, c.max_nominees]))?.rows[0]?.id;
-        if (newId) map.set(c.id, newId);
-    }));
-    return map;
+        max_nominees: number;
+        open_to_all: boolean;
+      }>(
+        "SELECT id, name, min_nominees, max_nominees, open_to_all FROM individual_award_categories WHERE tournament_id=$1",
+        [sourceTournamentID],
+      )
+    )?.rows ?? [];
+  await Promise.all(
+    cats.map(async (c) => {
+      const newId = (
+        await dbQuery<{
+          id: string;
+        }>(
+          "INSERT INTO individual_award_categories (tournament_id, name, min_nominees, max_nominees, open_to_all) VALUES ($1,$2,$3,$4,$5) RETURNING id",
+          [
+            newTournamentID,
+            c.name,
+            c.min_nominees,
+            c.max_nominees,
+            c.open_to_all,
+          ],
+        )
+      )?.rows[0]?.id;
+      if (newId) map.set(c.id, newId);
+    }),
+  );
+  return map;
 }
 
-async function duplicateScoringCategories(sourceTournamentID: string, newTournamentID: string, awardIdMap: Map<string, string> = new Map(),): Promise<void> {
-    const cats = (await dbQuery<IScoringCategoryRow>('SELECT id, name, witness_category, position FROM scoring_categories WHERE tournament_id=$1 ORDER BY position', [sourceTournamentID]))?.rows ?? [];
-    if (!cats.length) return;
-    const fields = (await dbQuery<IScoringFieldRow>(`SELECT category_id,
+async function duplicateScoringCategories(
+  sourceTournamentID: string,
+  newTournamentID: string,
+  awardIdMap: Map<string, string> = new Map(),
+): Promise<void> {
+  const cats =
+    (
+      await dbQuery<IScoringCategoryRow>(
+        "SELECT id, name, witness_category, position FROM scoring_categories WHERE tournament_id=$1 ORDER BY position",
+        [sourceTournamentID],
+      )
+    )?.rows ?? [];
+  if (!cats.length) return;
+  const fields =
+    (
+      await dbQuery<IScoringFieldRow>(
+        `SELECT category_id,
                                                             label,
                                                             min_score,
                                                             max_score,
@@ -1366,115 +2348,258 @@ async function duplicateScoringCategories(sourceTournamentID: string, newTournam
                                                             position,
                                                             award_category_id
                                                      FROM scoring_fields
-                                                     WHERE category_id IN (${cats.map((_, i) => `$${i + 1}`).join(',')})
-                                                     ORDER BY position`, cats.map(c => c.id)))?.rows ?? [];
-    // Remap a field's source award-category link to the new tournament's award
-    // category. If the awards weren't duplicated (empty map), the link is dropped.
-    const remapAward = (awardId: string | null): string | null => awardId ? (awardIdMap.get(awardId) ?? null) : null;
-    await Promise.all(cats.map(async cat => {
-        const newCatID = randomUUID();
-        await dbQuery('INSERT INTO scoring_categories (id, tournament_id, name, witness_category, position) VALUES ($1,$2,$3,$4,$5)', [newCatID, newTournamentID, cat.name, cat.witness_category, cat.position]);
-        await Promise.all(fields.filter(f => f.category_id === cat.id).map(f => dbQuery('INSERT INTO scoring_fields (category_id, label, min_score, max_score, multiplier, assignable, visible_to_scorers, prosecution, defense, calling, crossing, position, award_category_id) VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13)', [newCatID, f.label, f.min_score, f.max_score, f.multiplier, f.assignable, f.visible_to_scorers, f.prosecution, f.defense, f.calling, f.crossing, f.position, remapAward(f.award_category_id)])));
-    }));
+                                                     WHERE category_id IN (${cats.map((_, i) => `$${i + 1}`).join(",")})
+                                                     ORDER BY position`,
+        cats.map((c) => c.id),
+      )
+    )?.rows ?? [];
+  // Remap a field's source award-category link to the new tournament's award
+  // category. If the awards weren't duplicated (empty map), the link is dropped.
+  const remapAward = (awardId: string | null): string | null =>
+    awardId ? (awardIdMap.get(awardId) ?? null) : null;
+  await Promise.all(
+    cats.map(async (cat) => {
+      const newCatID = randomUUID();
+      await dbQuery(
+        "INSERT INTO scoring_categories (id, tournament_id, name, witness_category, position) VALUES ($1,$2,$3,$4,$5)",
+        [
+          newCatID,
+          newTournamentID,
+          cat.name,
+          cat.witness_category,
+          cat.position,
+        ],
+      );
+      await Promise.all(
+        fields
+          .filter((f) => f.category_id === cat.id)
+          .map((f) =>
+            dbQuery(
+              "INSERT INTO scoring_fields (category_id, label, min_score, max_score, multiplier, assignable, visible_to_scorers, prosecution, defense, calling, crossing, position, award_category_id) VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13)",
+              [
+                newCatID,
+                f.label,
+                f.min_score,
+                f.max_score,
+                f.multiplier,
+                f.assignable,
+                f.visible_to_scorers,
+                f.prosecution,
+                f.defense,
+                f.calling,
+                f.crossing,
+                f.position,
+                remapAward(f.award_category_id),
+              ],
+            ),
+          ),
+      );
+    }),
+  );
 }
 
-async function duplicateScorers(sourceTournamentID: string, newTournamentID: string): Promise<void> {
-    const scorers = await dbQuery<IScorer>('SELECT scorer_id, name, email, is_paper, willing_to_preside FROM scorers WHERE tournament_id=$1', [sourceTournamentID]);
-    if (scorers?.rows.length) {
-        await Promise.all(scorers.rows.map(s => dbQuery('INSERT INTO scorers (scorer_id, tournament_id, name, email, is_paper, willing_to_preside) VALUES ($1,$2,$3,$4,$5,$6)', [randomUUID(), newTournamentID, s.name, s.email, s.is_paper, s.willing_to_preside])));
-    }
+async function duplicateScorers(
+  sourceTournamentID: string,
+  newTournamentID: string,
+): Promise<void> {
+  const scorers = await dbQuery<IScorer>(
+    "SELECT scorer_id, name, email, is_paper, willing_to_preside, notes FROM scorers WHERE tournament_id=$1",
+    [sourceTournamentID],
+  );
+  if (scorers?.rows.length) {
+    await Promise.all(
+      scorers.rows.map((s) =>
+        dbQuery(
+          "INSERT INTO scorers (scorer_id, tournament_id, name, email, is_paper, willing_to_preside, notes) VALUES ($1,$2,$3,$4,$5,$6,$7)",
+          [
+            randomUUID(),
+            newTournamentID,
+            s.name,
+            s.email,
+            s.is_paper,
+            s.willing_to_preside,
+            s.notes,
+          ],
+        ),
+      ),
+    );
+  }
 }
 
-async function duplicateCourtrooms(sourceTournamentID: string, newTournamentID: string): Promise<void> {
-    const courtrooms = await dbQuery<ICourtroomRow>('SELECT name, location FROM courtrooms WHERE tournament_id=$1', [sourceTournamentID]);
-    if (courtrooms?.rows.length) {
-        await Promise.all(courtrooms.rows.map(c => dbQuery('INSERT INTO courtrooms (id, tournament_id, name, location) VALUES ($1,$2,$3,$4)', [randomUUID(), newTournamentID, c.name, c.location ?? null])));
-    }
+async function duplicateCourtrooms(
+  sourceTournamentID: string,
+  newTournamentID: string,
+): Promise<void> {
+  const courtrooms = await dbQuery<ICourtroomRow>(
+    "SELECT name, location FROM courtrooms WHERE tournament_id=$1",
+    [sourceTournamentID],
+  );
+  if (courtrooms?.rows.length) {
+    await Promise.all(
+      courtrooms.rows.map((c) =>
+        dbQuery(
+          "INSERT INTO courtrooms (id, tournament_id, name, location) VALUES ($1,$2,$3,$4)",
+          [randomUUID(), newTournamentID, c.name, c.location ?? null],
+        ),
+      ),
+    );
+  }
 }
 
-async function duplicateTiebreaker(sourceTournamentID: string, newTournamentID: string): Promise<void> {
-    const sourceConfig = await dbQuery<{ id: string; standings_dsl: string }>(`SELECT sc.id, sc.standings_dsl
+async function duplicateTiebreaker(
+  sourceTournamentID: string,
+  newTournamentID: string,
+): Promise<void> {
+  const sourceConfig = await dbQuery<{ id: string; standings_dsl: string }>(
+    `SELECT sc.id, sc.standings_dsl
                                                                                FROM tournaments t
                                                                                         JOIN standings_configs sc ON sc.id = t.standings_config_id
-                                                                               WHERE t.id = $1`, [sourceTournamentID]);
-    const cfg = sourceConfig?.rows[0];
-    if (!cfg) return;
-    const isTemplate = !!(await dbQuery<{
-        id: string
-    }>('SELECT id FROM standings_templates WHERE config_id=$1 LIMIT 1', [cfg.id]))?.rows[0];
-    if (isTemplate) {
-        await dbQuery('UPDATE tournaments SET standings_config_id=$1 WHERE id=$2', [cfg.id, newTournamentID]);
-    } else {
-        const newCfg = (await dbQuery<{
-            id: string
-        }>('INSERT INTO standings_configs (standings_dsl) VALUES ($1) RETURNING id', [cfg.standings_dsl]))?.rows[0];
-        if (newCfg) await dbQuery('UPDATE tournaments SET standings_config_id=$1 WHERE id=$2', [newCfg.id, newTournamentID]);
-    }
+                                                                               WHERE t.id = $1`,
+    [sourceTournamentID],
+  );
+  const cfg = sourceConfig?.rows[0];
+  if (!cfg) return;
+  const isTemplate = !!(
+    await dbQuery<{
+      id: string;
+    }>("SELECT id FROM standings_templates WHERE config_id=$1 LIMIT 1", [
+      cfg.id,
+    ])
+  )?.rows[0];
+  if (isTemplate) {
+    await dbQuery("UPDATE tournaments SET standings_config_id=$1 WHERE id=$2", [
+      cfg.id,
+      newTournamentID,
+    ]);
+  } else {
+    const newCfg = (
+      await dbQuery<{
+        id: string;
+      }>(
+        "INSERT INTO standings_configs (standings_dsl) VALUES ($1) RETURNING id",
+        [cfg.standings_dsl],
+      )
+    )?.rows[0];
+    if (newCfg)
+      await dbQuery(
+        "UPDATE tournaments SET standings_config_id=$1 WHERE id=$2",
+        [newCfg.id, newTournamentID],
+      );
+  }
 }
 
 export async function deleteBallot(ballotId: string): Promise<void> {
-    const result = await dbQuery('DELETE FROM ballots WHERE ballot_id=$1 RETURNING ballot_id', [ballotId]);
-    if (!result) throw new DbError('deleteBallot');
-    if (!result.rows[0]) throw new NotFoundError('ballot');
+  const result = await dbQuery(
+    "DELETE FROM ballots WHERE ballot_id=$1 RETURNING ballot_id",
+    [ballotId],
+  );
+  if (!result) throw new DbError("deleteBallot");
+  if (!result.rows[0]) throw new NotFoundError("ballot");
 }
 
-export async function editBallot(assignmentId: string, newPayload: {
-    scores: { assignmentKey: string; side: 'P' | 'D'; score: number; studentId: string | null; categoryId: string }[]
-}, editorEmail: string, reason: string,): Promise<void> {
-    // Get current ballot
-    const result = await dbQuery<{
-        ballot_id: string;
-        ballot_json: string;
-        p_points: number;
-        d_points: number;
-        tournament_id: string
-    }>('SELECT ballot_id, ballot_json, p_points, d_points, tournament_id FROM ballots WHERE scorer_assignment_id=$1', [assignmentId],);
-    if (!result) throw new DbError('editBallot');
-    const current = result.rows[0];
-    if (!current) throw new NotFoundError('ballot');
+export async function editBallot(
+  ballotId: string,
+  newPayload: {
+    scores: {
+      assignmentKey: string;
+      side: "P" | "D";
+      score: number;
+      studentId: string | null;
+      categoryId: string;
+    }[];
+  },
+  editorEmail: string,
+  reason: string,
+): Promise<void> {
+  // Get current ballot
+  const result = await dbQuery<{
+    ballot_id: string;
+    ballot_json: string;
+    p_points: number;
+    d_points: number;
+    tournament_id: string;
+  }>(
+    "SELECT ballot_id, ballot_json, p_points, d_points, tournament_id FROM ballots WHERE ballot_id=$1",
+    [ballotId],
+  );
+  if (!result) throw new DbError("editBallot");
+  const current = result.rows[0];
+  if (!current) throw new NotFoundError("ballot");
 
-    const beforeJson = current.ballot_json;
-    const pPointsBefore = current.p_points;
-    const dPointsBefore = current.d_points;
+  const beforeJson = current.ballot_json;
+  const pPointsBefore = current.p_points;
+  const dPointsBefore = current.d_points;
 
-    // Recompute totals applying per-field multipliers, mirroring submitBallot so
-    // an edited ballot's stored points stay consistent with a freshly submitted one.
-    const multipliers = await getFieldMultipliers(current.tournament_id);
-    const {pPoints: pPointsAfter, dPoints: dPointsAfter} = computeBallotTotals(newPayload.scores, multipliers);
+  // Recompute totals applying per-field multipliers, mirroring submitBallot so
+  // an edited ballot's stored points stay consistent with a freshly submitted one.
+  const multipliers = await getFieldMultipliers(current.tournament_id);
+  const { pPoints: pPointsAfter, dPoints: dPointsAfter } = computeBallotTotals(
+    newPayload.scores,
+    multipliers,
+  );
 
-    // Build new ballot_json (preserve original nominations/tiebreaker, replace scores)
-    const originalBallot = typeof beforeJson === 'string' ? JSON.parse(beforeJson) : beforeJson;
-    const updatedBallot = {...originalBallot, scores: newPayload.scores};
+  // Build new ballot_json (preserve original nominations/tiebreaker, replace scores)
+  const originalBallot =
+    typeof beforeJson === "string" ? JSON.parse(beforeJson) : beforeJson;
+  const updatedBallot = { ...originalBallot, scores: newPayload.scores };
 
-    // Update the ballot
-    const updateResult = await dbQuery('UPDATE ballots SET ballot_json=$1, p_points=$2, d_points=$3 WHERE ballot_id=$4', [JSON.stringify(updatedBallot), pPointsAfter, dPointsAfter, current.ballot_id],);
-    if (!updateResult) throw new DbError('editBallot update');
+  // Update the ballot
+  const updateResult = await dbQuery(
+    "UPDATE ballots SET ballot_json=$1, p_points=$2, d_points=$3 WHERE ballot_id=$4",
+    [
+      JSON.stringify(updatedBallot),
+      pPointsAfter,
+      dPointsAfter,
+      current.ballot_id,
+    ],
+  );
+  if (!updateResult) throw new DbError("editBallot update");
 
-    // Insert audit log entry
-    await dbQuery(`INSERT INTO ballot_edit_log (ballot_id, editor_email, reason, before_json, after_json,
+  // Insert audit log entry
+  await dbQuery(
+    `INSERT INTO ballot_edit_log (ballot_id, editor_email, reason, before_json, after_json,
                                                 p_points_before, p_points_after, d_points_before, d_points_after)
                    VALUES ($1, $2, $3, $4, $5, $6, $7, $8,
-                           $9)`, [current.ballot_id, editorEmail, reason, JSON.stringify(typeof beforeJson === 'string' ? JSON.parse(beforeJson) : beforeJson), JSON.stringify(updatedBallot), pPointsBefore, pPointsAfter, dPointsBefore, dPointsAfter],);
+                           $9)`,
+    [
+      current.ballot_id,
+      editorEmail,
+      reason,
+      JSON.stringify(
+        typeof beforeJson === "string" ? JSON.parse(beforeJson) : beforeJson,
+      ),
+      JSON.stringify(updatedBallot),
+      pPointsBefore,
+      pPointsAfter,
+      dPointsBefore,
+      dPointsAfter,
+    ],
+  );
 }
 
-export async function getBallotEditLog(ballotId: string): Promise<{
+export async function getBallotEditLog(ballotId: string): Promise<
+  {
     editor_email: string;
     edited_at: string;
     reason: string;
     p_points_before: number;
     p_points_after: number;
     d_points_before: number;
-    d_points_after: number
-}[]> {
-    return (await dbQuery<{
+    d_points_after: number;
+  }[]
+> {
+  return (
+    (
+      await dbQuery<{
         editor_email: string;
         edited_at: string;
         reason: string;
         p_points_before: number;
         p_points_after: number;
         d_points_before: number;
-        d_points_after: number
-    }>(`SELECT bel.editor_email,
+        d_points_after: number;
+      }>(
+        `SELECT bel.editor_email,
                bel.edited_at,
                bel.reason,
                bel.p_points_before,
@@ -1484,91 +2609,201 @@ export async function getBallotEditLog(ballotId: string): Promise<{
         FROM ballot_edit_log bel
                  JOIN ballots b ON b.ballot_id = bel.ballot_id
         WHERE b.ballot_id = $1
-        ORDER BY bel.edited_at DESC`, [ballotId],))?.rows ?? [];
+        ORDER BY bel.edited_at DESC`,
+        [ballotId],
+      )
+    )?.rows ?? []
+  );
 }
 
-export async function duplicateTournament(sourceTournamentID: string, options: IDuplicateOptions): Promise<ITournament> {
-    const source = await getTournament(sourceTournamentID);
-    const newTournamentID = randomUUID();
-    const newFormatID = randomUUID();
+export async function duplicateTournament(
+  sourceTournamentID: string,
+  options: IDuplicateOptions,
+): Promise<ITournament> {
+  const source = await getTournament(sourceTournamentID);
+  const newTournamentID = randomUUID();
+  const newFormatID = randomUUID();
 
-    let formatRow = {
-        case_name: '',
-        criminal_case: false,
-        p_witnesses_called: null as number | null,
-        d_witnesses_called: null as number | null,
-        has_swing: false
-    };
-    if (options.format || options.witnesses) {
-        const existing = await dbQuery<typeof formatRow>('SELECT case_name, criminal_case, p_witnesses_called, d_witnesses_called, has_swing FROM tournament_format WHERE format_id=$1', [source.case_format_id]);
-        if (existing?.rows[0]) formatRow = existing.rows[0];
-    }
+  let formatRow = {
+    case_name: "",
+    criminal_case: false,
+    p_witnesses_called: null as number | null,
+    d_witnesses_called: null as number | null,
+    has_swing: false,
+  };
+  if (options.format || options.witnesses) {
+    const existing = await dbQuery<typeof formatRow>(
+      "SELECT case_name, criminal_case, p_witnesses_called, d_witnesses_called, has_swing FROM tournament_format WHERE format_id=$1",
+      [source.case_format_id],
+    );
+    if (existing?.rows[0]) formatRow = existing.rows[0];
+  }
 
-    await dbQuery('INSERT INTO tournament_format (format_id, case_name, criminal_case, p_witnesses_called, d_witnesses_called, has_swing) VALUES ($1,$2,$3,$4,$5,$6)', [newFormatID, options.format ? formatRow.case_name : '', options.format ? formatRow.criminal_case : false, options.format ? formatRow.p_witnesses_called : null, options.format ? formatRow.d_witnesses_called : null, options.format ? formatRow.has_swing : false]);
-    await dbQuery('INSERT INTO tournaments (id, name, location, start_date, end_date, case_format_id, share_individual_rankings) VALUES ($1,$2,$3,$4,$5,$6,$7)', [newTournamentID, `${source.name} (copy)`, source.location, null, null, newFormatID, source.share_individual_rankings]);
+  await dbQuery(
+    "INSERT INTO tournament_format (format_id, case_name, criminal_case, p_witnesses_called, d_witnesses_called, has_swing) VALUES ($1,$2,$3,$4,$5,$6)",
+    [
+      newFormatID,
+      options.format ? formatRow.case_name : "",
+      options.format ? formatRow.criminal_case : false,
+      options.format ? formatRow.p_witnesses_called : null,
+      options.format ? formatRow.d_witnesses_called : null,
+      options.format ? formatRow.has_swing : false,
+    ],
+  );
+  await dbQuery(
+    "INSERT INTO tournaments (id, name, location, start_date, end_date, case_format_id, share_individual_rankings) VALUES ($1,$2,$3,$4,$5,$6,$7)",
+    [
+      newTournamentID,
+      `${source.name} (copy)`,
+      source.location,
+      null,
+      null,
+      newFormatID,
+      source.share_individual_rankings,
+    ],
+  );
 
-    // Award categories must be duplicated before scoring categories so that a
-    // field's award-category link can be remapped to the new award UUID.
-    const awardIdMap = options.awards ? await duplicateAwardCategories(sourceTournamentID, newTournamentID) : new Map<string, string>();
+  // Award categories must be duplicated before scoring categories so that a
+  // field's award-category link can be remapped to the new award UUID.
+  const awardIdMap = options.awards
+    ? await duplicateAwardCategories(sourceTournamentID, newTournamentID)
+    : new Map<string, string>();
 
-    await Promise.all([options.witnesses && duplicateWitnesses(source.case_format_id, newFormatID), options.scoringCategories && duplicateScoringCategories(sourceTournamentID, newTournamentID, awardIdMap), options.scorers && duplicateScorers(sourceTournamentID, newTournamentID), options.courtrooms && duplicateCourtrooms(sourceTournamentID, newTournamentID), options.tiebreaker && duplicateTiebreaker(sourceTournamentID, newTournamentID),].filter(Boolean));
+  await Promise.all(
+    [
+      options.witnesses &&
+        duplicateWitnesses(source.case_format_id, newFormatID),
+      options.scoringCategories &&
+        duplicateScoringCategories(
+          sourceTournamentID,
+          newTournamentID,
+          awardIdMap,
+        ),
+      options.scorers && duplicateScorers(sourceTournamentID, newTournamentID),
+      options.courtrooms &&
+        duplicateCourtrooms(sourceTournamentID, newTournamentID),
+      options.tiebreaker &&
+        duplicateTiebreaker(sourceTournamentID, newTournamentID),
+    ].filter(Boolean),
+  );
 
-    const row = (await dbQuery<ITournament>('SELECT * FROM tournaments WHERE id=$1', [newTournamentID]))?.rows[0];
-    if (!row) throw new DbError('duplicateTournament select');
-    return row;
+  const row = (
+    await dbQuery<ITournament>("SELECT * FROM tournaments WHERE id=$1", [
+      newTournamentID,
+    ])
+  )?.rows[0];
+  if (!row) throw new DbError("duplicateTournament select");
+  return row;
 }
 
 // ─── Individual Award Categories ──────────────────────────────────────────────
 
-export async function getAwardCategories(tournamentId: string): Promise<IIndividualAwardCategory[]> {
-    const result = await dbQuery<{
-        id: string;
-        name: string;
-        min_nominees: number;
-        max_nominees: number
-    }>('SELECT id, name, min_nominees, max_nominees FROM individual_award_categories WHERE tournament_id = $1 ORDER BY name', [tournamentId]);
-    if (!result) throw new DbError('getAwardCategories');
-    return result.rows.map(r => ({
-        id: r.id, name: r.name, minNominees: r.min_nominees, maxNominees: r.max_nominees,
-    }));
+export async function getAwardCategories(
+  tournamentId: string,
+): Promise<IIndividualAwardCategory[]> {
+  const result = await dbQuery<{
+    id: string;
+    name: string;
+    min_nominees: number;
+    max_nominees: number;
+    open_to_all: boolean;
+  }>(
+    "SELECT id, name, min_nominees, max_nominees, open_to_all FROM individual_award_categories WHERE tournament_id = $1 ORDER BY name",
+    [tournamentId],
+  );
+  if (!result) throw new DbError("getAwardCategories");
+  return result.rows.map((r) => ({
+    id: r.id,
+    name: r.name,
+    minNominees: r.min_nominees,
+    maxNominees: r.max_nominees,
+    openToAll: r.open_to_all ?? false,
+  }));
 }
 
-export async function createAwardCategory(tournamentId: string, name: string, minNominees: number, maxNominees: number,): Promise<IIndividualAwardCategory> {
-    const row = (await dbQuery<{
-        id: string;
-        name: string;
-        min_nominees: number;
-        max_nominees: number
-    }>(`INSERT INTO individual_award_categories (tournament_id, name, min_nominees, max_nominees)
-        VALUES ($1, $2, $3, $4)
-        RETURNING id, name, min_nominees, max_nominees`, [tournamentId, name, minNominees, maxNominees]))?.rows[0];
-    if (!row) throw new DbError('createAwardCategory');
-    return {id: row.id, name: row.name, minNominees: row.min_nominees, maxNominees: row.max_nominees};
+export async function createAwardCategory(
+  tournamentId: string,
+  name: string,
+  minNominees: number,
+  maxNominees: number,
+  openToAll = false,
+): Promise<IIndividualAwardCategory> {
+  const row = (
+    await dbQuery<{
+      id: string;
+      name: string;
+      min_nominees: number;
+      max_nominees: number;
+      open_to_all: boolean;
+    }>(
+      `INSERT INTO individual_award_categories (tournament_id, name, min_nominees, max_nominees, open_to_all)
+        VALUES ($1, $2, $3, $4, $5)
+        RETURNING id, name, min_nominees, max_nominees, open_to_all`,
+      [tournamentId, name, minNominees, maxNominees, openToAll],
+    )
+  )?.rows[0];
+  if (!row) throw new DbError("createAwardCategory");
+  return {
+    id: row.id,
+    name: row.name,
+    minNominees: row.min_nominees,
+    maxNominees: row.max_nominees,
+    openToAll: row.open_to_all ?? false,
+  };
 }
 
-export async function updateAwardCategory(categoryId: string, name: string, minNominees: number, maxNominees: number,): Promise<IIndividualAwardCategory> {
-    const row = (await dbQuery<{
-        id: string;
-        name: string;
-        min_nominees: number;
-        max_nominees: number
-    }>(`UPDATE individual_award_categories
+export async function updateAwardCategory(
+  categoryId: string,
+  name: string,
+  minNominees: number,
+  maxNominees: number,
+  openToAll = false,
+): Promise<IIndividualAwardCategory> {
+  const row = (
+    await dbQuery<{
+      id: string;
+      name: string;
+      min_nominees: number;
+      max_nominees: number;
+      open_to_all: boolean;
+    }>(
+      `UPDATE individual_award_categories
         SET name         = $1,
             min_nominees = $2,
-            max_nominees = $3
-        WHERE id = $4
-        RETURNING id, name, min_nominees, max_nominees`, [name, minNominees, maxNominees, categoryId]))?.rows[0];
-    if (!row) throw new NotFoundError('award category');
-    return {id: row.id, name: row.name, minNominees: row.min_nominees, maxNominees: row.max_nominees};
+            max_nominees = $3,
+            open_to_all = $4
+        WHERE id = $5
+        RETURNING id, name, min_nominees, max_nominees, open_to_all`,
+      [name, minNominees, maxNominees, openToAll, categoryId],
+    )
+  )?.rows[0];
+  if (!row) throw new NotFoundError("award category");
+  return {
+    id: row.id,
+    name: row.name,
+    minNominees: row.min_nominees,
+    maxNominees: row.max_nominees,
+    openToAll: row.open_to_all ?? false,
+  };
 }
 
 export async function deleteAwardCategory(categoryId: string): Promise<void> {
-    const row = (await dbQuery('DELETE FROM individual_award_categories WHERE id = $1 RETURNING id', [categoryId]))?.rows[0];
-    if (!row) throw new NotFoundError('award category');
+  const row = (
+    await dbQuery(
+      "DELETE FROM individual_award_categories WHERE id = $1 RETURNING id",
+      [categoryId],
+    )
+  )?.rows[0];
+  if (!row) throw new NotFoundError("award category");
 }
 
-export async function getTournamentSummary(tournamentId: string): Promise<ITournamentSummary> {
-    const row = (await dbQuery<ITournamentSummaryRow>(`
+export async function getTournamentSummary(
+  tournamentId: string,
+): Promise<ITournamentSummary> {
+  const row =
+    (
+      await dbQuery<ITournamentSummaryRow>(
+        `
         WITH params AS (SELECT $1::uuid AS tournament_id),
 
 -- ============================================================
@@ -1775,133 +3010,200 @@ export async function getTournamentSummary(tournamentId: string): Promise<ITourn
              FROM tournament_scorers)                            AS scorers_total,
 
             (SELECT COUNT(*)
-             FROM scorers_with_conflicts)                        AS scorers_with_conflicts;`, [tournamentId]))?.rows[0] ?? null;
+             FROM scorers_with_conflicts)                        AS scorers_with_conflicts;`,
+        [tournamentId],
+      )
+    )?.rows[0] ?? null;
 
-    if (!row) {
-        throw new NotFoundError();
-    }
-    return {
-        teams: {
-            total: row.teams_total,
-            withRosters: row.teams_with_rosters,
-            withoutRosters: row.teams_without_rosters,
-            withDefaultAssignments: row.teams_with_default_assignments,
-            withoutDefaultAssignments: row.teams_without_default_assignments,
-            withDefaultCallOrders: row.teams_with_default_call_orders,
-            withoutDefaultCallOrders: row.teams_without_default_call_orders,
-            withCoaches: row.teams_with_coaches,
-            withoutCoaches: row.teams_without_coaches,
-        },
+  if (!row) {
+    throw new NotFoundError();
+  }
+  return {
+    teams: {
+      total: row.teams_total,
+      withRosters: row.teams_with_rosters,
+      withoutRosters: row.teams_without_rosters,
+      withDefaultAssignments: row.teams_with_default_assignments,
+      withoutDefaultAssignments: row.teams_without_default_assignments,
+      withDefaultCallOrders: row.teams_with_default_call_orders,
+      withoutDefaultCallOrders: row.teams_without_default_call_orders,
+      withCoaches: row.teams_with_coaches,
+      withoutCoaches: row.teams_without_coaches,
+    },
 
-        rounds: {
-            total: row.rounds_total,
-            withPairings: row.rounds_with_pairings,
-            withoutPairings: row.rounds_without_pairings,
-        },
+    rounds: {
+      total: row.rounds_total,
+      withPairings: row.rounds_with_pairings,
+      withoutPairings: row.rounds_without_pairings,
+    },
 
-        pairings: {
-            total: row.pairings_total,
-            withScorers: row.pairings_with_scorers,
-            withoutScorers: row.pairings_without_scorers,
-            withPresiders: row.pairings_with_presiders,
-            withoutPresiders: row.pairings_without_presiders,
-            withCourtrooms: row.pairings_with_courtrooms,
-            withoutCourtrooms: row.pairings_without_courtrooms,
-            courtroomsDoubleBooked: row.courtrooms_double_booked,
-            pairingsInDoubleBookedCourtrooms: row.pairings_in_double_booked_courtrooms,
-        },
+    pairings: {
+      total: row.pairings_total,
+      withScorers: row.pairings_with_scorers,
+      withoutScorers: row.pairings_without_scorers,
+      withPresiders: row.pairings_with_presiders,
+      withoutPresiders: row.pairings_without_presiders,
+      withCourtrooms: row.pairings_with_courtrooms,
+      withoutCourtrooms: row.pairings_without_courtrooms,
+      courtroomsDoubleBooked: row.courtrooms_double_booked,
+      pairingsInDoubleBookedCourtrooms:
+        row.pairings_in_double_booked_courtrooms,
+    },
 
-        ballots: {
-            submitted: row.ballots_submitted, paperAwaitingInput: row.paper_ballots_awaiting_input,
-        },
+    ballots: {
+      submitted: row.ballots_submitted,
+      paperAwaitingInput: row.paper_ballots_awaiting_input,
+    },
 
-        scorers: {
-            total: row.scorers_total, withConflicts: row.scorers_with_conflicts,
-        },
-    };
+    scorers: {
+      total: row.scorers_total,
+      withConflicts: row.scorers_with_conflicts,
+    },
+  };
 }
 
-export async function getCustomRosterColumns(tournamentId: string): Promise<ICustomRosterColumn[]> {
-    const rows = (await dbQuery<ICustomRosterColumnRow>(`SELECT *
+export async function getCustomRosterColumns(
+  tournamentId: string,
+): Promise<ICustomRosterColumn[]> {
+  const rows = (
+    await dbQuery<ICustomRosterColumnRow>(
+      `SELECT *
                                                          from custom_roster_column_definitions
                                                          where tournament_id = $1
-                                                         ORDER BY position`, [tournamentId]))?.rows;
-    if (rows === undefined) throw new NotFoundError('Could not query columns');
+                                                         ORDER BY position`,
+      [tournamentId],
+    )
+  )?.rows;
+  if (rows === undefined) throw new NotFoundError("Could not query columns");
 
-    return rows.map<ICustomRosterColumn>(row => ({field: row.column_name, type: row.type}));
+  return rows.map<ICustomRosterColumn>((row) => ({
+    field: row.column_name,
+    type: row.type,
+  }));
 }
 
 export interface IRosterExportRow {
-    team_name: string;
-    student_name: string;
-    pronouns: string | null;
-    custom_data: { field: string; type: string; value: string | number }[] | null;
+  team_name: string;
+  student_name: string;
+  pronouns: string | null;
+  custom_data: { field: string; type: string; value: string | number }[] | null;
 }
 
 /** All rostered students across every team in the tournament, ordered by team then student. */
-export async function getAllRosters(tournamentId: string): Promise<IRosterExportRow[]> {
-    const result = await dbQuery<IRosterExportRow>(`SELECT t.name AS team_name,
+export async function getAllRosters(
+  tournamentId: string,
+): Promise<IRosterExportRow[]> {
+  const result = await dbQuery<IRosterExportRow>(
+    `SELECT t.name AS team_name,
                                                            trs.student_name,
                                                            trs.pronouns,
                                                            trs.custom_data
                                                     FROM teams t
                                                              JOIN team_rostered_students trs ON trs.team_id = t.id
                                                     WHERE t.tournament_id = $1
-                                                    ORDER BY t.name, trs.student_name`, [tournamentId]);
-    if (!result) throw new DbError('getAllRosters');
-    return result.rows;
+                                                    ORDER BY t.name, trs.student_name`,
+    [tournamentId],
+  );
+  if (!result) throw new DbError("getAllRosters");
+  return result.rows;
 }
 
-export async function addCustomRosterColumn(tournamentId: string, field: string, type: 'int' | 'string'): Promise<ICustomRosterColumn> {
-    // Reject a duplicate column name within the tournament — student custom_data
-    // is keyed by column name, so names must be unique per tournament.
-    const existing = (await dbQuery<{
-        column_name: string
-    }>('SELECT column_name FROM custom_roster_column_definitions WHERE tournament_id=$1 AND LOWER(column_name)=LOWER($2)', [tournamentId, field]))?.rows[0];
-    if (existing) throw new AlreadyExistsError('A column with that name already exists');
+export async function addCustomRosterColumn(
+  tournamentId: string,
+  field: string,
+  type: "int" | "string",
+): Promise<ICustomRosterColumn> {
+  // Reject a duplicate column name within the tournament — student custom_data
+  // is keyed by column name, so names must be unique per tournament.
+  const existing = (
+    await dbQuery<{
+      column_name: string;
+    }>(
+      "SELECT column_name FROM custom_roster_column_definitions WHERE tournament_id=$1 AND LOWER(column_name)=LOWER($2)",
+      [tournamentId, field],
+    )
+  )?.rows[0];
+  if (existing)
+    throw new AlreadyExistsError("A column with that name already exists");
 
-    // Append after the current highest position.
-    const row = (await dbQuery<ICustomRosterColumnRow>(`INSERT INTO custom_roster_column_definitions (tournament_id, position, type, column_name)
+  // Append after the current highest position.
+  const row = (
+    await dbQuery<ICustomRosterColumnRow>(
+      `INSERT INTO custom_roster_column_definitions (tournament_id, position, type, column_name)
                                                         VALUES ($1, COALESCE((SELECT MAX(position) + 1
                                                                               FROM custom_roster_column_definitions
                                                                               WHERE tournament_id = $1), 0), $2, $3)
-                                                        RETURNING *`, [tournamentId, type, field]))?.rows[0];
-    if (!row) throw new DbError('addCustomRosterColumn');
-    return {field: row.column_name, type: row.type};
+                                                        RETURNING *`,
+      [tournamentId, type, field],
+    )
+  )?.rows[0];
+  if (!row) throw new DbError("addCustomRosterColumn");
+  return { field: row.column_name, type: row.type };
 }
 
-export async function updateCustomRosterColumn(tournamentId: string, originalField: string, field: string, type: 'int' | 'string'): Promise<ICustomRosterColumn> {
-    // When renaming, ensure the new name does not collide with a different column.
-    if (originalField.toLowerCase() !== field.toLowerCase()) {
-        const clash = (await dbQuery<{
-            column_name: string
-        }>('SELECT column_name FROM custom_roster_column_definitions WHERE tournament_id=$1 AND LOWER(column_name)=LOWER($2)', [tournamentId, field]))?.rows[0];
-        if (clash) throw new AlreadyExistsError('A column with that name already exists');
-    }
+export async function updateCustomRosterColumn(
+  tournamentId: string,
+  originalField: string,
+  field: string,
+  type: "int" | "string",
+): Promise<ICustomRosterColumn> {
+  // When renaming, ensure the new name does not collide with a different column.
+  if (originalField.toLowerCase() !== field.toLowerCase()) {
+    const clash = (
+      await dbQuery<{
+        column_name: string;
+      }>(
+        "SELECT column_name FROM custom_roster_column_definitions WHERE tournament_id=$1 AND LOWER(column_name)=LOWER($2)",
+        [tournamentId, field],
+      )
+    )?.rows[0];
+    if (clash)
+      throw new AlreadyExistsError("A column with that name already exists");
+  }
 
-    const row = (await dbQuery<ICustomRosterColumnRow>('UPDATE custom_roster_column_definitions SET column_name=$1, type=$2 WHERE tournament_id=$3 AND column_name=$4 RETURNING *', [field, type, tournamentId, originalField]))?.rows[0];
-    if (!row) throw new NotFoundError('roster column');
-    return {field: row.column_name, type: row.type};
+  const row = (
+    await dbQuery<ICustomRosterColumnRow>(
+      "UPDATE custom_roster_column_definitions SET column_name=$1, type=$2 WHERE tournament_id=$3 AND column_name=$4 RETURNING *",
+      [field, type, tournamentId, originalField],
+    )
+  )?.rows[0];
+  if (!row) throw new NotFoundError("roster column");
+  return { field: row.column_name, type: row.type };
 }
 
-export async function deleteCustomRosterColumn(tournamentId: string, field: string): Promise<void> {
-    const row = (await dbQuery<{
-        column_name: string
-    }>('DELETE FROM custom_roster_column_definitions WHERE tournament_id=$1 AND column_name=$2 RETURNING column_name', [tournamentId, field]))?.rows[0];
-    if (!row) throw new NotFoundError('roster column');
+export async function deleteCustomRosterColumn(
+  tournamentId: string,
+  field: string,
+): Promise<void> {
+  const row = (
+    await dbQuery<{
+      column_name: string;
+    }>(
+      "DELETE FROM custom_roster_column_definitions WHERE tournament_id=$1 AND column_name=$2 RETURNING column_name",
+      [tournamentId, field],
+    )
+  )?.rows[0];
+  if (!row) throw new NotFoundError("roster column");
 }
 
-export async function listSubmittedBallots(pairingID: string): Promise<{ ballot_id: string }[]> {
-    const ballots = (await dbQuery<{ ballot_id: string }>(`Select ballot_id
+export async function listSubmittedBallots(
+  pairingID: string,
+): Promise<{ ballot_id: string }[]> {
+  const ballots = await dbQuery<{ ballot_id: string }>(
+    `Select ballot_id
                                                            from ballots
-                                                           where pairing_id = $1`, [pairingID]));
-    if (!ballots) throw new NotFoundError('Could not find the given pairing.')
-    return ballots.rows;
+                                                           where pairing_id = $1`,
+    [pairingID],
+  );
+  if (!ballots) throw new NotFoundError("Could not find the given pairing.");
+  return ballots.rows;
 }
 
-export async function getAwardsSummary(tournamentId: string): Promise<IAwardNomination[]> {
-
-    const res = await dbQuery<IAwardNomination>(`SELECT students.student_name,
+export async function getAwardsSummary(
+  tournamentId: string,
+): Promise<IAwardNomination[]> {
+  const res = await dbQuery<IAwardNomination>(
+    `SELECT students.student_name,
                                                         students.student_id,
                                                         students.team_id,
 
@@ -1957,8 +3259,9 @@ export async function getAwardsSummary(tournamentId: string): Promise<IAwardNomi
                                                  ORDER BY iac.name,
                                                           students.student_name,
                                                           r.name,
-                                                          nominations.rank;`, [tournamentId]);
-    if (!res) throw new NotFoundError("unable to pull award nominations");
-    return res.rows ?? [];
-
+                                                          nominations.rank;`,
+    [tournamentId],
+  );
+  if (!res) throw new NotFoundError("unable to pull award nominations");
+  return res.rows ?? [];
 }

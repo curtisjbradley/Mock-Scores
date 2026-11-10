@@ -1,7 +1,10 @@
-import { useMemo } from 'react';
-import { dummyTeams } from './dummyTeams.js';
-import { formatRank } from './formatRank.js';
-import { computeStandings, type StandingsConfig } from '@mock-scores/standings-dsl';
+import { useMemo } from "react";
+import { dummyTeams } from "./dummyTeams.js";
+import { formatRank } from "./formatRank.js";
+import {
+  computeStandings,
+  type StandingsConfig,
+} from "@mock-scores/standings-dsl";
 
 export interface StandingsPreviewProps {
   config: StandingsConfig;
@@ -9,7 +12,10 @@ export interface StandingsPreviewProps {
   teams?: typeof dummyTeams;
 }
 
-export default function StandingsPreview({ config, teams = dummyTeams }: StandingsPreviewProps) {
+export default function StandingsPreview({
+  config,
+  teams = dummyTeams,
+}: StandingsPreviewProps) {
   const rows = useMemo(() => computeStandings(teams, config), [config, teams]);
   const cols = config.columns;
 
@@ -18,15 +24,20 @@ export default function StandingsPreview({ config, teams = dummyTeams }: Standin
       <h4 className="sb-preview-title">Live Preview (dummy data)</h4>
       {cols.length === 0 ? (
         <p className="sb-preview-empty">
-          Add "show column" blocks under "Define Visible Stats" to see standings.
+          Add "show column" blocks under "Define Visible Stats" to see
+          standings.
         </p>
       ) : (
         <div className="dash-table-scroll">
           <table className="dash-standings-table">
             <thead>
               <tr>
-                <th>#</th><th>Code</th><th>Team</th>
-                {cols.map((c, i) => <th key={i}>{c.label}</th>)}
+                <th>#</th>
+                <th>Code</th>
+                <th>Team</th>
+                {cols.map((c, i) => (
+                  <th key={i}>{c.label}</th>
+                ))}
               </tr>
             </thead>
             <tbody>
@@ -37,8 +48,12 @@ export default function StandingsPreview({ config, teams = dummyTeams }: Standin
                   <td>{row.name}</td>
                   {cols.map((c, j) => {
                     const val = row[c.stat];
-                    const num = typeof val === 'number' ? val : NaN;
-                    const display = isNaN(num) ? '—' : Number.isInteger(num) ? num : num.toFixed(3);
+                    const num = typeof val === "number" ? val : NaN;
+                    const display = isNaN(num)
+                      ? "—"
+                      : Number.isInteger(num)
+                        ? num
+                        : num.toFixed(3);
                     return <td key={j}>{display}</td>;
                   })}
                 </tr>

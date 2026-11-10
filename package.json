@@ -18,7 +18,7 @@
     "build": "npm run build -w shared && npm run build -w standings-dsl && npm run build -w frontend && npm run build -w backend && npm run build -w landing",
     "lint": "npm run lint -w frontend && npm run lint -w backend && npm run lint -w landing",
     "start": "npm run start -w backend",
-    "prepare": "node -e \"if(process.env.NODE_ENV !== 'production') require('child_process').execSync('husky', {stdio:'inherit'})\"",
+    "prepare": "husky",
     "backend-coverage": "npm run build -w shared && cd backend && npm run test:coverage",
     "test": "npm run build -w shared && npm run test -w shared && npm run build -w standings-dsl && npm run test -w standings-dsl && npm run test -w backend && npm run cy:run -w frontend"
   },
@@ -39,7 +39,10 @@
     }
   },
   "devDependencies": {
-    "fallow": "^3.34.0"
+    "fallow": "^3.34.0",
+    "husky": "^9.1.7",
+    "lint-staged": "^17.6.0",
+    "prettier": "^3.9.10"
   },
   "dependencies": {
     "cypress-axe": "^1.7.0"

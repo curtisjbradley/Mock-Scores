@@ -18,42 +18,42 @@
 
 /** Per-pairing fields available to `(pairing ...)` / `(ballot ...)`. */
 export const PAIRING_FIELDS = [
-  'ballots_won',
-  'ballots_lost',
-  'ballots_tied',
-  'points_for',
-  'points_against',
-  'won_presider_tb',
-  'ballot_pf',
-  'ballot_pa',
-  'ballot_pd',
-  'ballot_raw',
-  'num_ballots',
-  'num_scorers',
+  "ballots_won",
+  "ballots_lost",
+  "ballots_tied",
+  "points_for",
+  "points_against",
+  "won_presider_tb",
+  "ballot_pf",
+  "ballot_pa",
+  "ballot_pd",
+  "ballot_raw",
+  "num_ballots",
+  "num_scorers",
 ] as const;
 export type PairingField = (typeof PAIRING_FIELDS)[number];
 
 /** Team-level builtin fields available to `(team ...)`. */
 export const TEAM_FIELDS = [
-  'ballots_won',
-  'ballots_lost',
-  'ballots_tied',
-  'points_for',
-  'points_against',
-  'won_presider_tb',
-  'ballot_pf',
-  'ballot_pa',
-  'ballot_pd',
-  'ballot_raw',
-  'num_scorers',
-  'num_pairings',
+  "ballots_won",
+  "ballots_lost",
+  "ballots_tied",
+  "points_for",
+  "points_against",
+  "won_presider_tb",
+  "ballot_pf",
+  "ballot_pa",
+  "ballot_pd",
+  "ballot_raw",
+  "num_scorers",
+  "num_pairings",
 ] as const;
 export type TeamField = (typeof TEAM_FIELDS)[number];
 
-export const AGGS = ['sum', 'avg', 'max', 'min', 'count'] as const;
+export const AGGS = ["sum", "avg", "max", "min", "count"] as const;
 export type Agg = (typeof AGGS)[number];
 
-export const ORDERS = ['asc', 'desc'] as const;
+export const ORDERS = ["asc", "desc"] as const;
 export type Order = (typeof ORDERS)[number];
 
 /**
@@ -66,24 +66,38 @@ export type Order = (typeof ORDERS)[number];
  *   - `average` — every tied team gets the average of the group's ranks.
  *   - `dense`   — like `min`, but the next group's rank is only +1 (no gaps).
  */
-export const RANK_METHODS = ['average', 'min', 'max', 'first', 'dense'] as const;
+export const RANK_METHODS = [
+  "average",
+  "min",
+  "max",
+  "first",
+  "dense",
+] as const;
 export type RankMethod = (typeof RANK_METHODS)[number];
 
 /** Team identity fields usable for alphabetical ordering. */
-export const ALPHA_FIELDS = ['code', 'name'] as const;
+export const ALPHA_FIELDS = ["code", "name"] as const;
 export type AlphaField = (typeof ALPHA_FIELDS)[number];
 
-export const ARITH_OPS = ['+', '-', '*', '/', '**'] as const;
+export const ARITH_OPS = ["+", "-", "*", "/", "**"] as const;
 export type ArithOp = (typeof ARITH_OPS)[number];
 
-export const COMPARE_OPS = ['=', '!=', '<', '<=', '>', '>='] as const;
+export const COMPARE_OPS = ["=", "!=", "<", "<=", ">", ">="] as const;
 export type CompareOp = (typeof COMPARE_OPS)[number];
 
-export const LOGIC_OPS = ['and', 'or'] as const;
+export const LOGIC_OPS = ["and", "or"] as const;
 export type LogicOp = (typeof LOGIC_OPS)[number];
 
 /** Unary math functions. */
-export const MATH_FNS = ['sqrt', 'abs', 'neg', 'ln', 'log10', 'exp', 'pow10'] as const;
+export const MATH_FNS = [
+  "sqrt",
+  "abs",
+  "neg",
+  "ln",
+  "log10",
+  "exp",
+  "pow10",
+] as const;
 export type MathFn = (typeof MATH_FNS)[number];
 
 // ── Typed expression AST ───────────────────────────────────────────────────────
@@ -92,22 +106,64 @@ export type MathFn = (typeof MATH_FNS)[number];
 // object (no functions, no class instances), so a `StandingsConfig` round-trips
 // cleanly through `JSON.stringify` and `toEqual` in tests.
 
-export interface NumberExpr { kind: 'number'; value: number; }
+export interface NumberExpr {
+  kind: "number";
+  value: number;
+}
 /** `(pairing FIELD)` / `(ballot FIELD)` — a per-pairing field read. */
-export interface PairingFieldExpr { kind: 'pairingField'; field: PairingField; }
+export interface PairingFieldExpr {
+  kind: "pairingField";
+  field: PairingField;
+}
 /** `(team FIELD)` — a team-level builtin field read. */
-export interface TeamFieldExpr { kind: 'teamField'; field: TeamField; }
+export interface TeamFieldExpr {
+  kind: "teamField";
+  field: TeamField;
+}
 /** `(stat "Name")` — reference to a declared stat/trimmed/team-stat. */
-export interface StatRefExpr { kind: 'statRef'; name: string; }
+export interface StatRefExpr {
+  kind: "statRef";
+  name: string;
+}
 /** `(intermediate "Name")` — reference to a declared intermediate. */
-export interface IntermediateRefExpr { kind: 'intermediateRef'; name: string; }
+export interface IntermediateRefExpr {
+  kind: "intermediateRef";
+  name: string;
+}
 /** `(opponent "Name")` — reference to the opponent's value of a declared stat. */
-export interface OpponentRefExpr { kind: 'opponentRef'; name: string; }
-export interface ArithExpr { kind: 'arith'; op: ArithOp; left: Expr; right: Expr; }
-export interface CompareExpr { kind: 'compare'; op: CompareOp; left: Expr; right: Expr; }
-export interface LogicExpr { kind: 'logic'; op: LogicOp; left: Expr; right: Expr; }
-export interface IfExpr { kind: 'if'; test: Expr; then: Expr; else: Expr; }
-export interface CallExpr { kind: 'call'; fn: MathFn; arg: Expr; }
+export interface OpponentRefExpr {
+  kind: "opponentRef";
+  name: string;
+}
+export interface ArithExpr {
+  kind: "arith";
+  op: ArithOp;
+  left: Expr;
+  right: Expr;
+}
+export interface CompareExpr {
+  kind: "compare";
+  op: CompareOp;
+  left: Expr;
+  right: Expr;
+}
+export interface LogicExpr {
+  kind: "logic";
+  op: LogicOp;
+  left: Expr;
+  right: Expr;
+}
+export interface IfExpr {
+  kind: "if";
+  test: Expr;
+  then: Expr;
+  else: Expr;
+}
+export interface CallExpr {
+  kind: "call";
+  fn: MathFn;
+  arg: Expr;
+}
 
 export type Expr =
   | NumberExpr
@@ -142,10 +198,10 @@ export interface ColumnConfig {
 }
 
 export type TiebreakerRule =
-  | { type: 'stat'; stat: string; order: Order }
-  | { type: 'h2h_conditional'; stat: string; order: Order }
-  | { type: 'alpha'; field: AlphaField; order: Order }
-  | { type: 'when_tied'; min: number; max: number; rules: TiebreakerRule[] };
+  | { type: "stat"; stat: string; order: Order }
+  | { type: "h2h_conditional"; stat: string; order: Order }
+  | { type: "alpha"; field: AlphaField; order: Order }
+  | { type: "when_tied"; min: number; max: number; rules: TiebreakerRule[] };
 
 /**
  * The tiebreaker configuration: an ordered list of rules plus the final

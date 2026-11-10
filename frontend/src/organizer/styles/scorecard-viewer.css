@@ -1,0 +1,444 @@
+.sv-page {
+  flex: 1;
+  display: flex;
+  justify-content: center;
+  padding: 2rem 1rem;
+}
+
+.sv-page-container {
+  width: min(100%, 72rem);
+  display: flex;
+  flex-direction: column;
+  gap: 1.25rem;
+}
+
+.sv-back-button {
+  align-self: flex-start;
+  padding: 0.4rem 0.9rem;
+  border: 1px solid var(--primary);
+  border-radius: var(--radius);
+  background: var(--primary-subtle);
+  color: var(--primary);
+  font: 600 0.9rem inherit;
+  cursor: pointer;
+  transition:
+    background 120ms ease,
+    color 120ms ease;
+}
+
+.sv-back-button:hover {
+  background: var(--primary);
+  color: var(--white);
+}
+
+.sv-card,
+.sv-trial-info {
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  background: var(--surface);
+  box-shadow: var(--shadow);
+}
+
+.sv-card {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  padding: 1.25rem;
+}
+
+.sv-empty {
+  color: var(--text-muted);
+  font-size: 0.9rem;
+}
+
+.sv-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+}
+
+.sv-header h2 {
+  margin: 0;
+  font-size: 1rem;
+  font-weight: 700;
+}
+.sv-header-actions,
+.sv-edit-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+}
+
+.sv-save-button,
+.sv-cancel-button {
+  height: 2rem;
+  padding: 0 0.75rem;
+  border-radius: var(--radius);
+  font: 600 0.82rem inherit;
+  cursor: pointer;
+}
+
+.sv-save-button {
+  border: 0;
+  background: var(--primary);
+  color: var(--white);
+}
+.sv-save-button:hover {
+  background: var(--primary-dark);
+}
+.sv-cancel-button {
+  border: 1px solid var(--border-strong);
+  background: var(--surface-muted);
+  color: var(--text-muted);
+}
+.sv-cancel-button:hover {
+  background: var(--surface-hover);
+  color: var(--text);
+}
+
+.sv-editlog-section {
+  margin-bottom: 1rem;
+}
+.sv-editlog-toggle {
+  padding: 0;
+  border: 0;
+  background: none;
+  color: var(--primary);
+  font-size: 0.875rem;
+  font-weight: 600;
+  text-decoration: underline;
+  cursor: pointer;
+}
+.sv-editlog-list {
+  margin-top: 0.75rem;
+  overflow: hidden;
+  border: 1px solid var(--border);
+  border-radius: 0.75rem;
+}
+.sv-editlog-entry {
+  padding: 0.75rem 1rem;
+  border-bottom: 1px solid var(--border);
+  font-size: 0.85rem;
+}
+.sv-editlog-entry:last-child {
+  border-bottom: 0;
+}
+.sv-editlog-entry-head {
+  display: flex;
+  justify-content: space-between;
+  margin-bottom: 0.25rem;
+}
+.sv-editlog-time,
+.sv-editlog-diff {
+  color: var(--text-muted);
+}
+.sv-editlog-diff {
+  margin-bottom: 0.25rem;
+}
+.sv-editlog-reason,
+.sv-empty-italic {
+  font-style: italic;
+}
+.sv-edit-actions {
+  margin-bottom: 1rem;
+}
+
+.sv-trial-info {
+  margin-bottom: 1rem;
+  padding: 1rem 1.25rem;
+}
+.sv-trial-meta {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  margin-bottom: 0.5rem;
+  color: var(--text-muted);
+  font-size: 0.85rem;
+}
+.sv-courtroom {
+  color: var(--primary-dark);
+  font-weight: 600;
+}
+.sv-presider {
+  font-style: italic;
+}
+.sv-case-name {
+  margin: 0 0 0.75rem;
+  color: var(--text-muted);
+  font-size: 1.05rem;
+  font-style: italic;
+}
+.sv-team-labels {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 0.75rem;
+}
+.sv-team-label {
+  display: flex;
+  flex-direction: column;
+  gap: 0.15rem;
+  padding: 0.6rem 0.75rem;
+  border: 1px solid var(--border);
+  border-radius: 0.75rem;
+  background: var(--surface-muted);
+}
+.sv-team-code {
+  color: var(--primary-dark);
+  font-size: 1.4rem;
+  font-weight: 600;
+  line-height: 1;
+}
+.sv-team-code--defense {
+  color: var(--text);
+}
+.sv-team-role {
+  color: var(--text-muted);
+  font-size: 0.75rem;
+  font-weight: 500;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+}
+
+.sv-score-container {
+  width: 100%;
+}
+.sv-score-table {
+  width: 100%;
+  border: 1px solid var(--border);
+  border-spacing: 0;
+  border-radius: 1.25rem;
+  background: var(--surface);
+  box-shadow: var(--shadow);
+}
+.sv-score-table th,
+.sv-score-table td {
+  padding: 0.85rem 1rem;
+  border-bottom: 1px solid var(--border);
+  vertical-align: top;
+}
+.sv-score-table td:first-child {
+  vertical-align: middle;
+}
+.sv-score-table td + td,
+.sv-score-table th + th {
+  border-left: 1px solid var(--border);
+}
+.sv-score-table-header th {
+  position: sticky;
+  top: 0;
+  z-index: 2;
+  color: var(--text-muted);
+  background: var(--surface);
+  font-size: 1rem;
+  font-weight: 600;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+.sv-category-name th {
+  padding: 0.6rem 1rem;
+  color: var(--primary-dark);
+  background: var(--surface-muted);
+  font-size: 0.875rem;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  text-align: left;
+  text-transform: uppercase;
+}
+.sv-score-row:hover td {
+  background: var(--surface-muted);
+}
+.sv-score-box {
+  display: flex;
+  flex-direction: column;
+  gap: 0.3rem;
+}
+.sv-score-input {
+  display: inline-block;
+  width: 100%;
+  min-height: 2.75rem;
+  padding: 0.45rem 0.5rem;
+  border: 1px solid var(--border-strong);
+  border-radius: var(--radius);
+  background: var(--surface);
+  color: var(--text);
+  font-size: 1rem;
+  text-align: center;
+}
+.sv-score-input-edit {
+  width: 4rem;
+  font-weight: 700;
+}
+.sv-score-input-view {
+  min-width: 2.5rem;
+  border-color: transparent;
+  font-weight: 700;
+}
+.sv-score-input:focus-visible {
+  outline: none;
+  border-color: var(--primary);
+  box-shadow: 0 0 0 0.25rem var(--focus);
+}
+.sv-student-name {
+  margin: 0;
+  color: var(--text);
+  font-size: 0.9rem;
+  line-height: 1.25;
+}
+
+.sv-section {
+  margin-top: 1.5rem;
+}
+.sv-section--sm {
+  margin-top: 1rem;
+}
+.sv-nominations-list {
+  padding-left: 1.25rem;
+}
+.sv-nominations-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(15rem, 1fr));
+}
+.sv-nomination-side {
+  margin-left: 1rem;
+  color: var(--text-muted);
+  font-size: small;
+}
+.sv-nomination-group {
+  margin-top: 0.75rem;
+}
+.sv-nomination-award {
+  margin: 0 0 0.25rem;
+  font-size: 0.95rem;
+  font-weight: 600;
+}
+.sv-totals {
+  display: flex;
+  gap: 2rem;
+  margin-top: 1rem;
+}
+
+.modal-backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 10000;
+  display: grid;
+  place-items: center;
+  padding: 1rem;
+  overflow-y: auto;
+  background: var(--overlay-bg);
+}
+.sv-dialog {
+  width: min(100%, 30rem);
+  max-height: 90vh;
+  padding: 1.5rem;
+  overflow-y: auto;
+  border-radius: 1.25rem;
+  background: var(--surface);
+  box-shadow: var(--shadow);
+}
+.sv-modal-title,
+.sv-modal-title--danger {
+  margin: 0 0 0.75rem;
+}
+.sv-modal-title--danger {
+  color: var(--danger);
+}
+.sv-modal-text {
+  margin: 0 0 0.5rem;
+  line-height: 1.6;
+}
+.sv-modal-text--muted {
+  margin: 0 0 1rem;
+  color: var(--text-muted);
+  font-size: 0.85rem;
+}
+.sv-modal-text--intro {
+  margin: 0 0 1rem;
+  font-size: 0.9rem;
+  line-height: 1.6;
+}
+.sv-reason-label {
+  display: block;
+  margin-bottom: 0.4rem;
+  font-size: 0.85rem;
+  font-weight: 600;
+}
+.sv-dialog-input {
+  width: 100%;
+  min-height: 5rem;
+  padding: 0.5rem 0.75rem;
+  border: 1px solid var(--border-strong);
+  border-radius: var(--radius);
+  background: var(--surface);
+  color: var(--text);
+  font: inherit;
+  resize: vertical;
+}
+.sv-dialog-actions {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 0.75rem;
+  margin-top: 1.25rem;
+}
+.sv-dialog-actions button {
+  min-height: 2.75rem;
+  border: 0;
+  border-radius: var(--radius);
+  font-size: 0.95rem;
+  font-weight: 800;
+  cursor: pointer;
+}
+.sv-dialog-actions button:first-child {
+  background: var(--nav-btn-bg);
+  color: var(--nav-btn-text);
+}
+.sv-dialog-actions button:last-child {
+  background: var(--primary);
+  color: var(--white);
+}
+.sv-dialog-actions button:disabled {
+  cursor: not-allowed;
+  opacity: 0.5;
+}
+.sv-modal-confirm-danger {
+  background: var(--danger) !important;
+}
+.sv-modal-actions-spaced {
+  margin-top: 1rem;
+}
+
+@media (max-width: 48rem) {
+  .sv-page {
+    padding: 1rem 0.5rem;
+  }
+  .sv-card {
+    padding: 1rem;
+  }
+  .sv-score-table th,
+  .sv-score-table td {
+    padding: 0.65rem 0.4rem;
+  }
+  .sv-score-table td:first-child {
+    max-width: 6rem;
+    font-size: 0.82rem;
+    overflow-wrap: anywhere;
+  }
+  .sv-score-table-header th {
+    font-size: 0.8rem;
+    letter-spacing: 0.03em;
+  }
+  .sv-dialog {
+    padding: 1.25rem;
+  }
+  .sv-dialog-actions button {
+    min-height: 3.25rem;
+    font-size: 1rem;
+  }
+}
+
+.points-change-icon {
+  margin: 0 !important;
+  height: 1rem !important;
+}

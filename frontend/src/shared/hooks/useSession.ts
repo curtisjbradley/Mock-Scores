@@ -1,5 +1,5 @@
-import { useEffect, useState } from 'react'
-import { getSession, type Session } from '../../auth/auth'
+import { useEffect, useState } from "react";
+import { getSession, type Session } from "../../auth/auth";
 
 /**
  * Returns the current session and re-fetches whenever the in-memory access
@@ -10,14 +10,14 @@ import { getSession, type Session } from '../../auth/auth'
  * refresh cookie before concluding the user is unauthenticated.
  */
 export function useSession(): Session | null {
-    const [session, setSession] = useState<Session | null>(null)
+  const [session, setSession] = useState<Session | null>(null);
 
-    useEffect(() => {
-        getSession().then(setSession)
-        const onAuthChanged = () => getSession().then(setSession)
-        window.addEventListener('auth-changed', onAuthChanged)
-        return () => window.removeEventListener('auth-changed', onAuthChanged)
-    }, [])
+  useEffect(() => {
+    getSession().then(setSession);
+    const onAuthChanged = () => getSession().then(setSession);
+    window.addEventListener("auth-changed", onAuthChanged);
+    return () => window.removeEventListener("auth-changed", onAuthChanged);
+  }, []);
 
-    return session
+  return session;
 }

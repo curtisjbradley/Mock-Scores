@@ -1,7 +1,16 @@
-import { useEffect, useState } from 'react'
-import { useNavigate } from 'react-router-dom'
-import { apiFetch } from '../../auth/auth'
-import type { IBallotStatus, ICourtroom, IPairing, IPairingRosterStatus, IPairingScorer, IRound, IScorer, ITeam } from '@mock-scores/shared'
+import { useEffect, useState } from "react";
+import { useNavigate } from "react-router-dom";
+import { apiFetch } from "../../auth/auth";
+import type {
+  IBallotStatus,
+  ICourtroom,
+  IPairing,
+  IPairingRosterStatus,
+  IPairingScorer,
+  IRound,
+  IScorer,
+  ITeam,
+} from "@mock-scores/shared";
 
 /**
  * Loads all data needed to display and manage a single tournament round.
@@ -13,195 +22,320 @@ import type { IBallotStatus, ICourtroom, IPairing, IPairingRosterStatus, IPairin
  * @param id - Tournament ID from the route param
  * @param roundId - Round ID from the route param
  */
-export function useRoundView(id: string | undefined, roundId: string | undefined) {
-    const navigate = useNavigate()
-    const [round, setRound] = useState<IRound | null>(null)
-    const [teams, setTeams] = useState<ITeam[]>([])
-    const [courtrooms, setCourtrooms] = useState<ICourtroom[]>([])
-    const [pairings, setPairings] = useState<IPairing[]>([])
-    const [scorers, setScorers] = useState<IScorer[]>([])
-    const [pairingScorers, setPairingScorers] = useState<Record<string, IPairingScorer[]>>({})
-    const [ballotStatus, setBallotStatus] = useState<Record<string, IBallotStatus>>({})
-    const [rosterStatus, setRosterStatus] = useState<Record<string, Record<string, IPairingRosterStatus>>>({})
-    const [conflictSet, setConflictSet] = useState<Set<string>>(new Set())
-    const [error, setError] = useState('')
-    const [notFound, setNotFound] = useState(false)
+export function useRoundView(
+  id: string | undefined,
+  roundId: string | undefined,
+) {
+  const navigate = useNavigate();
+  const [round, setRound] = useState<IRound | null>(null);
+  const [teams, setTeams] = useState<ITeam[]>([]);
+  const [courtrooms, setCourtrooms] = useState<ICourtroom[]>([]);
+  const [pairings, setPairings] = useState<IPairing[]>([]);
+  const [scorers, setScorers] = useState<IScorer[]>([]);
+  const [pairingScorers, setPairingScorers] = useState<
+    Record<string, IPairingScorer[]>
+  >({});
+  const [ballotStatus, setBallotStatus] = useState<
+    Record<string, IBallotStatus>
+  >({});
+  const [rosterStatus, setRosterStatus] = useState<
+    Record<string, Record<string, IPairingRosterStatus>>
+  >({});
+  const [conflictSet, setConflictSet] = useState<Set<string>>(new Set());
+  const [error, setError] = useState("");
+  const [notFound, setNotFound] = useState(false);
 
-    useEffect(() => {
-        if (!id || !roundId) { navigate('/'); return }
-        Promise.all([
-            apiFetch(`/organizer/tournament/${id}/rounds/${roundId}`).then(r => {
-                if (r.status === 404) { setNotFound(true); throw new Error('not found') }
-                if (!r.ok) throw new Error('Round not found')
-                return r.json()
-            }),
-            apiFetch(`/organizer/tournament/${id}/teams`).then(r => r.json()),
-            apiFetch(`/organizer/tournament/${id}/courtrooms`).then(r => r.json()),
-            apiFetch(`/organizer/tournament/${id}/rounds/${roundId}/pairings`).then(r => r.json()),
-            apiFetch(`/organizer/tournament/${id}/scorers`).then(r => r.json()),
-        ]).then(([roundData, teamsData, courtroomsData, pairingsData, scorersData]) => {
-            setRound(roundData); setTeams(teamsData); setCourtrooms(courtroomsData)
-            setPairings(pairingsData); setScorers(Array.isArray(scorersData) ? scorersData : [])
-            return Promise.all([
-                Promise.all((pairingsData as IPairing[]).map((p: IPairing) =>
-                    apiFetch(`/organizer/tournament/${id}/pairings/${p.pairing_id}/scorers`)
-                        .then(r => r.json())
-                        .then((s: IPairingScorer[]) => [p.pairing_id, s] as [string, IPairingScorer[]])
-                )),
-                apiFetch(`/organizer/tournament/${id}/scorer-conflicts`).then(r => r.ok ? r.json() : []),
-                apiFetch(`/organizer/tournament/${id}/rounds/${roundId}/ballot-status`).then(r => r.ok ? r.json() : []),
-                apiFetch(`/organizer/tournament/${id}/rounds/${roundId}/roster-status`).then(r => r.ok ? r.json() : []),
-            ])
-        }).then(([entries, conflicts, ballotStatuses, rosterStatuses]) => {
-            setPairingScorers(Object.fromEntries(entries as [string, IPairingScorer[]][]))
-            setConflictSet(new Set((conflicts as { scorer_id: string; team_id: string }[]).map(c => `${c.scorer_id}:${c.team_id}`)))
-            const statusMap: Record<string, IBallotStatus> = {}
-            for (const s of ballotStatuses as IBallotStatus[]) {
-                statusMap[s.pairing_id] = s
-            }
-            setBallotStatus(statusMap)
-            const rosterStatusMap: Record<string, Record<string, IPairingRosterStatus>> = {}
-            for (const status of rosterStatuses as IPairingRosterStatus[]) {
-                rosterStatusMap[status.pairing_id] ??= {}
-                rosterStatusMap[status.pairing_id][status.team_id] = status
-            }
-            setRosterStatus(rosterStatusMap)
-        }).catch(() => setError('Failed to load round data.'))
-    }, [id, roundId, navigate])
-
-    const saveName = (val: string) => {
-        const name = val.trim() || round?.name || ''
-        if (!round || name === round.name) return
-        const updated = { ...round, name }
-        setRound(updated)
-        apiFetch(`/organizer/tournament/${id}/rounds/${roundId}`, {
-            method: 'PATCH', body: JSON.stringify(updated),
-        }).catch(() => setError('Failed to save name.'))
+  useEffect(() => {
+    if (!id || !roundId) {
+      navigate("/");
+      return;
     }
+    Promise.all([
+      apiFetch(`/organizer/tournament/${id}/rounds/${roundId}`).then((r) => {
+        if (r.status === 404) {
+          setNotFound(true);
+          throw new Error("not found");
+        }
+        if (!r.ok) throw new Error("Round not found");
+        return r.json();
+      }),
+      apiFetch(`/organizer/tournament/${id}/teams`).then((r) => r.json()),
+      apiFetch(`/organizer/tournament/${id}/courtrooms`).then((r) => r.json()),
+      apiFetch(`/organizer/tournament/${id}/rounds/${roundId}/pairings`).then(
+        (r) => r.json(),
+      ),
+      apiFetch(`/organizer/tournament/${id}/scorers`).then((r) => r.json()),
+    ])
+      .then(
+        ([roundData, teamsData, courtroomsData, pairingsData, scorersData]) => {
+          setRound(roundData);
+          setTeams(teamsData);
+          setCourtrooms(courtroomsData);
+          setPairings(pairingsData);
+          setScorers(Array.isArray(scorersData) ? scorersData : []);
+          return Promise.all([
+            Promise.all(
+              (pairingsData as IPairing[]).map((p: IPairing) =>
+                apiFetch(
+                  `/organizer/tournament/${id}/pairings/${p.pairing_id}/scorers`,
+                )
+                  .then((r) => r.json())
+                  .then(
+                    (s: IPairingScorer[]) =>
+                      [p.pairing_id, s] as [string, IPairingScorer[]],
+                  ),
+              ),
+            ),
+            apiFetch(`/organizer/tournament/${id}/scorer-conflicts`).then(
+              (r) => (r.ok ? r.json() : []),
+            ),
+            apiFetch(
+              `/organizer/tournament/${id}/rounds/${roundId}/ballot-status`,
+            ).then((r) => (r.ok ? r.json() : [])),
+            apiFetch(
+              `/organizer/tournament/${id}/rounds/${roundId}/roster-status`,
+            ).then((r) => (r.ok ? r.json() : [])),
+          ]);
+        },
+      )
+      .then(([entries, conflicts, ballotStatuses, rosterStatuses]) => {
+        setPairingScorers(
+          Object.fromEntries(entries as [string, IPairingScorer[]][]),
+        );
+        setConflictSet(
+          new Set(
+            (conflicts as { scorer_id: string; team_id: string }[]).map(
+              (c) => `${c.scorer_id}:${c.team_id}`,
+            ),
+          ),
+        );
+        const statusMap: Record<string, IBallotStatus> = {};
+        for (const s of ballotStatuses as IBallotStatus[]) {
+          statusMap[s.pairing_id] = s;
+        }
+        setBallotStatus(statusMap);
+        const rosterStatusMap: Record<
+          string,
+          Record<string, IPairingRosterStatus>
+        > = {};
+        for (const status of rosterStatuses as IPairingRosterStatus[]) {
+          rosterStatusMap[status.pairing_id] ??= {};
+          rosterStatusMap[status.pairing_id][status.team_id] = status;
+        }
+        setRosterStatus(rosterStatusMap);
+      })
+      .catch(() => setError("Failed to load round data."));
+  }, [id, roundId, navigate]);
 
-    /**
-     * Optimistically PATCHes the round with the given partial fields, reverting
-     * local state if the request fails.
-     */
-    const patchRound = (fields: Partial<IRound>, failMsg: string) => {
-        if (!round) return
-        const prev = round
-        const updated = { ...round, ...fields }
-        setRound(updated)
-        apiFetch(`/organizer/tournament/${id}/rounds/${roundId}`, {
-            method: 'PATCH', body: JSON.stringify(updated),
-        }).then(r => {
-            if (!r.ok) throw new Error()
-        }).catch(() => {
-            setError(failMsg)
-            setRound(prev) // revert optimistic update on failure
-        })
-    }
+  const saveName = (val: string) => {
+    const name = val.trim() || round?.name || "";
+    if (!round || name === round.name) return;
+    const updated = { ...round, name };
+    setRound(updated);
+    apiFetch(`/organizer/tournament/${id}/rounds/${roundId}`, {
+      method: "PATCH",
+      body: JSON.stringify(updated),
+    }).catch(() => setError("Failed to save name."));
+  };
 
-    /**
-     * Locks the round (one-way). Locking opens scoring, permanently stops coaches
-     * from editing witness call orders / role assignments for its pairings, and the
-     * backend copies each team's defaults into any pairing it left unset. Rounds
-     * cannot be unlocked, so this is only ever called with `locked = true`.
-     */
-    const setRoundLocked = (locked: boolean) => {
-        if (!round || round.locked === locked || !locked) return
-        patchRound({ locked }, 'Failed to lock round.')
-    }
+  /**
+   * Optimistically PATCHes the round with the given partial fields, reverting
+   * local state if the request fails.
+   */
+  const patchRound = (fields: Partial<IRound>, failMsg: string) => {
+    if (!round) return;
+    const prev = round;
+    const updated = { ...round, ...fields };
+    setRound(updated);
+    apiFetch(`/organizer/tournament/${id}/rounds/${roundId}`, {
+      method: "PATCH",
+      body: JSON.stringify(updated),
+    })
+      .then((r) => {
+        if (!r.ok) throw new Error();
+      })
+      .catch(() => {
+        setError(failMsg);
+        setRound(prev); // revert optimistic update on failure
+      });
+  };
 
-    /** Publishes the round's pairings so teams can see who they are facing. */
-    const setPairingsPublished = (teams_public: boolean) => {
-        if (!round || round.teams_public === teams_public) return
-        patchRound({ teams_public }, 'Failed to publish pairings.')
-    }
+  /**
+   * Locks the round (one-way). Locking opens scoring, permanently stops coaches
+   * from editing witness call orders / role assignments for its pairings, and the
+   * backend copies each team's defaults into any pairing it left unset. Rounds
+   * cannot be unlocked, so this is only ever called with `locked = true`.
+   */
+  const setRoundLocked = (locked: boolean) => {
+    if (!round || round.locked === locked || !locked) return;
+    patchRound({ locked }, "Failed to lock round.");
+  };
 
-    /** Publishes the round's results so teams can see scores/outcomes. */
-    const setResultsPublished = (results_public: boolean) => {
-        if (!round || round.results_public === results_public) return
-        patchRound({ results_public }, 'Failed to publish results.')
-    }
+  /** Publishes the round's pairings so teams can see who they are facing. */
+  const setPairingsPublished = (teams_public: boolean) => {
+    if (!round || round.teams_public === teams_public) return;
+    patchRound({ teams_public }, "Failed to publish pairings.");
+  };
 
-    const addMatchup = (pros: string, def: string, courtroomId: string, onSuccess: () => void) => {
-        apiFetch(`/organizer/tournament/${id}/rounds/${roundId}/pairings`, {
-            method: 'POST',
-            body: JSON.stringify({ prosectionID: pros, defenseID: def, courtroomID: courtroomId  === "" ? null : courtroomId }),
-        }).then(async r => {
-            const data = await r.json()
-            if (!r.ok) throw new Error(data.message ?? 'Failed to add matchup.')
-            return data
-        }).then((created: IPairing) => {
-            setPairings(prev => [...prev, created])
-            onSuccess()
-        }).catch((e: Error) => setError(e.message))
-    }
+  /** Publishes the round's results so teams can see scores/outcomes. */
+  const setResultsPublished = (results_public: boolean) => {
+    if (!round || round.results_public === results_public) return;
+    patchRound({ results_public }, "Failed to publish results.");
+  };
 
-    const updatePairing = (updated: IPairing) => {
-        setPairings(prev => prev.map(p => p.pairing_id === updated.pairing_id ? updated : p))
-        apiFetch(`/organizer/tournament/${id}/pairings/${updated.pairing_id}`, {
-            method: 'PUT',
-            body: JSON.stringify({
-                prosectionID: updated.p_team,
-                defenseID: updated.d_team,
-                courtroomID: updated.courtroom,
-            }),
-        }).then(async r => {
-            if (!r.ok) {
-                const data = await r.json().catch(() => ({}))
-                throw new Error(data.message ?? 'Failed to update pairing.')
-            }
-            const saved = await r.json() as IPairing
-            setPairings(prev => prev.map(p => p.pairing_id === saved.pairing_id ? saved : p))
-        }).catch((e: Error) => setError(e.message))
-    }
+  const addMatchup = (
+    pros: string,
+    def: string,
+    courtroomId: string,
+    onSuccess: () => void,
+  ) => {
+    apiFetch(`/organizer/tournament/${id}/rounds/${roundId}/pairings`, {
+      method: "POST",
+      body: JSON.stringify({
+        prosectionID: pros,
+        defenseID: def,
+        courtroomID: courtroomId === "" ? null : courtroomId,
+      }),
+    })
+      .then(async (r) => {
+        const data = await r.json();
+        if (!r.ok) throw new Error(data.message ?? "Failed to add matchup.");
+        return data;
+      })
+      .then((created: IPairing) => {
+        setPairings((prev) => [...prev, created]);
+        onSuccess();
+      })
+      .catch((e: Error) => setError(e.message));
+  };
 
-    const removePairing = (pairing: IPairing) => {
-        apiFetch(`/organizer/tournament/${id}/pairings/${pairing.pairing_id}`, { method: 'DELETE' })
-            .catch(() => setError('Failed to remove matchup.'))
-        setPairings(prev => prev.filter(p => p.pairing_id !== pairing.pairing_id))
-    }
+  const updatePairing = (updated: IPairing) => {
+    setPairings((prev) =>
+      prev.map((p) => (p.pairing_id === updated.pairing_id ? updated : p)),
+    );
+    apiFetch(`/organizer/tournament/${id}/pairings/${updated.pairing_id}`, {
+      method: "PUT",
+      body: JSON.stringify({
+        prosectionID: updated.p_team,
+        defenseID: updated.d_team,
+        courtroomID: updated.courtroom,
+      }),
+    })
+      .then(async (r) => {
+        if (!r.ok) {
+          const data = await r.json().catch(() => ({}));
+          throw new Error(data.message ?? "Failed to update pairing.");
+        }
+        const saved = (await r.json()) as IPairing;
+        setPairings((prev) =>
+          prev.map((p) => (p.pairing_id === saved.pairing_id ? saved : p)),
+        );
+      })
+      .catch((e: Error) => setError(e.message));
+  };
 
-    const onScorerAssigned = (pairingId: string, scorer: IPairingScorer) =>
-        setPairingScorers(prev => ({ ...prev, [pairingId]: [...(prev[pairingId] ?? []), scorer] }))
+  const removePairing = (pairing: IPairing) => {
+    apiFetch(`/organizer/tournament/${id}/pairings/${pairing.pairing_id}`, {
+      method: "DELETE",
+    }).catch(() => setError("Failed to remove matchup."));
+    setPairings((prev) =>
+      prev.filter((p) => p.pairing_id !== pairing.pairing_id),
+    );
+  };
 
-    const onScorerCreated = (scorer: IScorer) =>
-        setScorers(prev => [...prev, scorer])
+  const onScorerAssigned = (pairingId: string, scorer: IPairingScorer) =>
+    setPairingScorers((prev) => ({
+      ...prev,
+      [pairingId]: [...(prev[pairingId] ?? []), scorer],
+    }));
 
-    /** Re-fetches every pairing's scorers + ballot status. Used after a bulk operation (auto-assign). */
-    const reloadPairingScorers = () => {
-        if (!id || !roundId) return
-        Promise.all([
-            Promise.all(pairings.map(p =>
-                apiFetch(`/organizer/tournament/${id}/pairings/${p.pairing_id}/scorers`)
-                    .then(r => r.json())
-                    .then((s: IPairingScorer[]) => [p.pairing_id, s] as [string, IPairingScorer[]])
-            )),
-            apiFetch(`/organizer/tournament/${id}/rounds/${roundId}/ballot-status`).then(r => r.ok ? r.json() : []),
-        ]).then(([entries, ballotStatuses]) => {
-            setPairingScorers(Object.fromEntries(entries as [string, IPairingScorer[]][]))
-            const statusMap: Record<string, IBallotStatus> = {}
-            for (const s of ballotStatuses as IBallotStatus[]) statusMap[s.pairing_id] = s
-            setBallotStatus(statusMap)
-        }).catch(() => setError('Failed to refresh scorer assignments.'))
-    }
+  const onScorerCreated = (scorer: IScorer) =>
+    setScorers((prev) => [...prev, scorer]);
 
-    const onScorerRemoved = (pairingId: string, assignmentId: string) =>
-        setPairingScorers(prev => ({ ...prev, [pairingId]: (prev[pairingId] ?? []).filter(s => s.assignment_id !== assignmentId) }))
+  const onCourtroomCreated = (courtroom: ICourtroom) =>
+    setCourtrooms((prev) => [...prev, courtroom]);
 
-    const onPresiderChanged = (pairingId: string, assignmentId: string | null, onlyTiebreaker = false) =>
-        setPairingScorers(prev => ({
-            ...prev,
-            [pairingId]: (prev[pairingId] ?? []).map(s => ({
-                ...s,
-                is_presider: s.assignment_id === assignmentId,
-                presider_only_tiebreaker: s.assignment_id === assignmentId && onlyTiebreaker,
-            })),
-        }))
+  /** Re-fetches every pairing's scorers + ballot status. Used after a bulk operation (auto-assign). */
+  const reloadPairingScorers = () => {
+    if (!id || !roundId) return;
+    Promise.all([
+      Promise.all(
+        pairings.map((p) =>
+          apiFetch(
+            `/organizer/tournament/${id}/pairings/${p.pairing_id}/scorers`,
+          )
+            .then((r) => r.json())
+            .then(
+              (s: IPairingScorer[]) =>
+                [p.pairing_id, s] as [string, IPairingScorer[]],
+            ),
+        ),
+      ),
+      apiFetch(
+        `/organizer/tournament/${id}/rounds/${roundId}/ballot-status`,
+      ).then((r) => (r.ok ? r.json() : [])),
+    ])
+      .then(([entries, ballotStatuses]) => {
+        setPairingScorers(
+          Object.fromEntries(entries as [string, IPairingScorer[]][]),
+        );
+        const statusMap: Record<string, IBallotStatus> = {};
+        for (const s of ballotStatuses as IBallotStatus[])
+          statusMap[s.pairing_id] = s;
+        setBallotStatus(statusMap);
+      })
+      .catch(() => setError("Failed to refresh scorer assignments."));
+  };
 
-    return {
-        round, teams, courtrooms, pairings, scorers, pairingScorers, ballotStatus, rosterStatus, conflictSet,
-        error, notFound,
-        saveName, addMatchup, updatePairing, removePairing, setPairings,
-        setRoundLocked, setPairingsPublished, setResultsPublished,
-        onScorerAssigned, onScorerCreated, onScorerRemoved, onPresiderChanged, reloadPairingScorers,
-    }
+  const onScorerRemoved = (pairingId: string, assignmentId: string) =>
+    setPairingScorers((prev) => ({
+      ...prev,
+      [pairingId]: (prev[pairingId] ?? []).filter(
+        (s) => s.assignment_id !== assignmentId,
+      ),
+    }));
+
+  const onPresiderChanged = (
+    pairingId: string,
+    assignmentId: string | null,
+    onlyTiebreaker = false,
+  ) =>
+    setPairingScorers((prev) => ({
+      ...prev,
+      [pairingId]: (prev[pairingId] ?? []).map((s) => ({
+        ...s,
+        is_presider: s.assignment_id === assignmentId,
+        presider_only_tiebreaker:
+          s.assignment_id === assignmentId && onlyTiebreaker,
+      })),
+    }));
+
+  return {
+    round,
+    teams,
+    courtrooms,
+    pairings,
+    scorers,
+    pairingScorers,
+    ballotStatus,
+    rosterStatus,
+    conflictSet,
+    error,
+    notFound,
+    saveName,
+    addMatchup,
+    updatePairing,
+    removePairing,
+    setPairings,
+    patchRound,
+    setRoundLocked,
+    setPairingsPublished,
+    setResultsPublished,
+    onScorerAssigned,
+    onScorerCreated,
+    onCourtroomCreated,
+    onScorerRemoved,
+    onPresiderChanged,
+    reloadPairingScorers,
+  };
 }

@@ -185,6 +185,7 @@ create table individual_award_categories
         constraint award_categories_min_nominees_check check (min_nominees >= 0),
     max_nominees   smallint default 3                  not null
         constraint award_categories_max_nominees_check check (max_nominees >= 1),
+    open_to_all    boolean default false               not null,
     constraint award_categories_min_max_check check (min_nominees <= max_nominees)
 );
 

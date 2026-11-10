@@ -1,212 +1,327 @@
-import { useEffect, useState } from 'react'
-import type { IStudent, IStudentAssignment, IScoringCategory, ICustomRosterColumn } from '@mock-scores/shared'
-import { apiFetch } from '../../auth/auth'
-import { ConfirmRemoveModal } from '../../organizer/components/modals'
-import { useConfirmRemove } from '../../shared/hooks/useConfirmRemove'
-import EmptyState from '../../shared/components/EmptyState'
-import ModalBackdrop from '../../shared/components/ModalBackdrop'
-import DangerButton from '../../shared/components/DangerButton'
-import AddButton from '../../shared/components/AddButton'
-import { useCoachContext } from '../CoachContext'
-import '../../organizer/styles/organizer.css'
-import '../../organizer/styles/tabs.css'
-import '../../organizer/styles/round-view.css'
-import '../styles/roster.css'
+import { useEffect, useState } from "react";
+import type {
+  IStudent,
+  IStudentAssignment,
+  IScoringCategory,
+  ICustomRosterColumn,
+} from "@mock-scores/shared";
+import { apiFetch } from "../../auth/auth";
+import { ConfirmRemoveModal } from "../../organizer/components/modals";
+import { useConfirmRemove } from "../../shared/hooks/useConfirmRemove";
+import EmptyState from "../../shared/components/EmptyState";
+import ModalBackdrop from "../../shared/components/ModalBackdrop";
+import DangerButton from "../../shared/components/DangerButton";
+import AddButton from "../../shared/components/AddButton";
+import { useCoachContext } from "../CoachContext";
+import "../../organizer/styles/organizer.css";
+import "../../organizer/styles/tabs.css";
+import "../../organizer/styles/round-view.css";
+import "../styles/roster.css";
 
 const PRONOUN_OPTIONS = [
-    { value: 'he/him',    label: 'he/him (Mr)' },
-    { value: 'she/her',   label: 'she/her (Ms)' },
-    { value: 'they/them', label: 'they/them (Mx)' },
-    { value: 'other',     label: 'Other' },
-]
+  { value: "he/him", label: "he/him (Mr)" },
+  { value: "she/her", label: "she/her (Ms)" },
+  { value: "they/them", label: "they/them (Mx)" },
+  { value: "other", label: "Other" },
+];
 
-interface Witness { id: string; name: string; side: string }
-interface DefaultCallOrderRow { witness_id: string; witness_name: string; position: number }
-interface Format { p_witnesses_called: number; d_witnesses_called: number; criminal_case?: boolean }
+interface Witness {
+  id: string;
+  name: string;
+  side: string;
+}
+interface DefaultCallOrderRow {
+  witness_id: string;
+  witness_name: string;
+  position: number;
+}
+interface Format {
+  p_witnesses_called: number;
+  d_witnesses_called: number;
+  criminal_case?: boolean;
+}
 
 // ── Side setup modal ──────────────────────────────────────────────────────────
 
 function SideSetupModal({
-    side, students, teamId, tournamentId, isCriminal, onClose,
+  side,
+  students,
+  teamId,
+  tournamentId,
+  isCriminal,
+  onClose,
 }: {
-    side: 'p' | 'd'
-    students: IStudent[]
-    teamId: string
-    tournamentId: string
-    isCriminal: boolean
-    onClose: () => void
+  side: "p" | "d";
+  students: IStudent[];
+  teamId: string;
+  tournamentId: string;
+  isCriminal: boolean;
+  onClose: () => void;
 }) {
-    const sideLabel = side === 'p' ? (isCriminal ? 'Prosecution' : 'Plaintiff') : 'Defense'
-    const ownSide = side === 'p' ? 'P' : 'D'
-    const oppSide = side === 'p' ? 'D' : 'P'
+  const sideLabel =
+    side === "p" ? (isCriminal ? "Prosecution" : "Plaintiff") : "Defense";
+  const ownSide = side === "p" ? "P" : "D";
+  const oppSide = side === "p" ? "D" : "P";
 
-    const [witnesses, setWitnesses] = useState<Witness[]>([])
-    const [callOrderSlots, setCallOrderSlots] = useState<string[]>([])
-    const [categories, setCategories] = useState<IScoringCategory[]>([])
-    const [assignments, setAssignments] = useState<Map<string, string>>(new Map())
-    const [saving, setSaving] = useState(false)
-    const [saved, setSaved] = useState(false)
+  const [witnesses, setWitnesses] = useState<Witness[]>([]);
+  const [callOrderSlots, setCallOrderSlots] = useState<string[]>([]);
+  const [categories, setCategories] = useState<IScoringCategory[]>([]);
+  const [assignments, setAssignments] = useState<Map<string, string>>(
+    new Map(),
+  );
+  const [saving, setSaving] = useState(false);
+  const [saved, setSaved] = useState(false);
 
-    useEffect(() => {
-        Promise.all([
-            apiFetch(`/coach/tournaments/${tournamentId}/witnesses`).then(r => r.ok ? r.json() : []),
-            apiFetch(`/coach/tournaments/${tournamentId}/format`).then(r => r.ok ? r.json() : null),
-            apiFetch(`/coach/teams/${teamId}/default-witness-order?side=${ownSide}`).then(r => r.ok ? r.json() : []),
-            apiFetch(`/coach/tournaments/${tournamentId}/scoring-categories`).then(r => r.ok ? r.json() : []),
-            apiFetch(`/coach/teams/${teamId}/default-assignments?side=${ownSide}`).then(r => r.ok ? r.json() : []),
-        ]).then(([wits, fmt, callOrder, cats, defaultAssigns]: [
-            Witness[], Format | null, DefaultCallOrderRow[], IScoringCategory[], IStudentAssignment[]
+  useEffect(() => {
+    Promise.all([
+      apiFetch(`/coach/tournaments/${tournamentId}/witnesses`).then((r) =>
+        r.ok ? r.json() : [],
+      ),
+      apiFetch(`/coach/tournaments/${tournamentId}/format`).then((r) =>
+        r.ok ? r.json() : null,
+      ),
+      apiFetch(
+        `/coach/teams/${teamId}/default-witness-order?side=${ownSide}`,
+      ).then((r) => (r.ok ? r.json() : [])),
+      apiFetch(`/coach/tournaments/${tournamentId}/scoring-categories`).then(
+        (r) => (r.ok ? r.json() : []),
+      ),
+      apiFetch(
+        `/coach/teams/${teamId}/default-assignments?side=${ownSide}`,
+      ).then((r) => (r.ok ? r.json() : [])),
+    ])
+      .then(
+        ([wits, fmt, callOrder, cats, defaultAssigns]: [
+          Witness[],
+          Format | null,
+          DefaultCallOrderRow[],
+          IScoringCategory[],
+          IStudentAssignment[],
         ]) => {
-            setWitnesses(wits)
+          setWitnesses(wits);
 
-            const count = fmt ? (side === 'p' ? fmt.p_witnesses_called : fmt.d_witnesses_called) : 0
-            const savedIds = callOrder.map(r => r.witness_id)
-            setCallOrderSlots(Array.from({ length: count }, (_, i) => savedIds[i] ?? ''))
+          const count = fmt
+            ? side === "p"
+              ? fmt.p_witnesses_called
+              : fmt.d_witnesses_called
+            : 0;
+          const savedIds = callOrder.map((r) => r.witness_id);
+          setCallOrderSlots(
+            Array.from({ length: count }, (_, i) => savedIds[i] ?? ""),
+          );
 
-            setCategories(cats)
-            const map = new Map<string, string>()
-            for (const a of defaultAssigns) {
-                const key = a.witness_id ? `${a.field_id}:${a.witness_id}` : a.field_id
-                map.set(key, a.student_id)
-            }
-            setAssignments(map)
-        }).catch(() => {})
-    }, [tournamentId, teamId, side])
+          setCategories(cats);
+          const map = new Map<string, string>();
+          for (const a of defaultAssigns) {
+            const key = a.witness_id
+              ? `${a.field_id}:${a.witness_id}`
+              : a.field_id;
+            map.set(key, a.student_id);
+          }
+          setAssignments(map);
+        },
+      )
+      .catch(() => {});
+  }, [tournamentId, teamId, side]);
 
-    // ── Call order ────────────────────────────────────────────────────────────
-    const ownSideWitnesses = witnesses.filter(w => w.side === ownSide || w.side === 'S')
-    const oppSideWitnesses = witnesses.filter(w => w.side === oppSide || w.side === 'S')
+  // ── Call order ────────────────────────────────────────────────────────────
+  const ownSideWitnesses = witnesses.filter(
+    (w) => w.side === ownSide || w.side === "S",
+  );
+  const oppSideWitnesses = witnesses.filter(
+    (w) => w.side === oppSide || w.side === "S",
+  );
 
-    const setSlot = (index: number, witnessId: string) => {
-        setCallOrderSlots(prev => {
-            const next = [...prev]
-            for (let i = 0; i < next.length; i++) {
-                if (i !== index && next[i] === witnessId) next[i] = ''
-            }
-            next[index] = witnessId
-            return next
-        })
-    }
+  const setSlot = (index: number, witnessId: string) => {
+    setCallOrderSlots((prev) => {
+      const next = [...prev];
+      for (let i = 0; i < next.length; i++) {
+        if (i !== index && next[i] === witnessId) next[i] = "";
+      }
+      next[index] = witnessId;
+      return next;
+    });
+  };
 
-    // ── Role rows ─────────────────────────────────────────────────────────────
-    const roleRows = categories.flatMap(cat =>
-        cat.fields
-            .filter(f => f.assignable && (cat.witnessCategory || (side === 'p' ? f.prosecution : f.defense)))
-            .flatMap(f => {
-                if (!cat.witnessCategory) {
-                    return [{ key: f.id, label: `${f.label} (${cat.name})`, fieldId: f.id, witnessId: null as string | null }]
-                }
-                const applicable = f.crossing ? oppSideWitnesses : ownSideWitnesses
-                return applicable.map(w => ({
-                    key: `${f.id}:${w.id}`,
-                    label: `${f.label}: ${w.name}`,
-                    fieldId: f.id,
-                    witnessId: w.id as string | null,
-                }))
-            })
-    )
-
-    // ── Save ──────────────────────────────────────────────────────────────────
-    const handleSave = async () => {
-        setSaving(true)
-        const selectedAssignments = roleRows.flatMap(r => {
-            const studentId = assignments.get(r.key)
-            return studentId ? [{ field_id: r.fieldId, student_id: studentId, witness_id: r.witnessId }] : []
-        })
-        const response = await apiFetch(`/coach/teams/${teamId}/default-configuration`, {
-            method: 'PUT',
-            body: JSON.stringify({
-                side: ownSide,
-                witness_ids: callOrderSlots.filter(Boolean),
-                assignments: selectedAssignments,
-            }),
-        })
-        if (!response.ok) {
-            setSaving(false)
-            return
+  // ── Role rows ─────────────────────────────────────────────────────────────
+  const roleRows = categories.flatMap((cat) =>
+    cat.fields
+      .filter(
+        (f) =>
+          f.assignable &&
+          (cat.witnessCategory || (side === "p" ? f.prosecution : f.defense)),
+      )
+      .flatMap((f) => {
+        if (!cat.witnessCategory) {
+          return [
+            {
+              key: f.id,
+              label: `${f.label} (${cat.name})`,
+              fieldId: f.id,
+              witnessId: null as string | null,
+            },
+          ];
         }
-        setSaving(false)
-        setSaved(true)
-        setTimeout(() => { setSaved(false); onClose() }, 800)
+        const applicable = f.crossing ? oppSideWitnesses : ownSideWitnesses;
+        return applicable.map((w) => ({
+          key: `${f.id}:${w.id}`,
+          label: `${f.label}: ${w.name}`,
+          fieldId: f.id,
+          witnessId: w.id as string | null,
+        }));
+      }),
+  );
+
+  // ── Save ──────────────────────────────────────────────────────────────────
+  const handleSave = async () => {
+    setSaving(true);
+    const selectedAssignments = roleRows.flatMap((r) => {
+      const studentId = assignments.get(r.key);
+      return studentId
+        ? [
+            {
+              field_id: r.fieldId,
+              student_id: studentId,
+              witness_id: r.witnessId,
+            },
+          ]
+        : [];
+    });
+    const response = await apiFetch(
+      `/coach/teams/${teamId}/default-configuration`,
+      {
+        method: "PUT",
+        body: JSON.stringify({
+          side: ownSide,
+          witness_ids: callOrderSlots.filter(Boolean),
+          assignments: selectedAssignments,
+        }),
+      },
+    );
+    if (!response.ok) {
+      setSaving(false);
+      return;
     }
+    setSaving(false);
+    setSaved(true);
+    setTimeout(() => {
+      setSaved(false);
+      onClose();
+    }, 800);
+  };
 
-    return (
-        <ModalBackdrop onClose={onClose}>
-            <div className="confirm-modal coach-setup-modal" role="dialog" aria-modal="true">
-                <h2>{sideLabel} - Default Setup</h2>
+  return (
+    <ModalBackdrop onClose={onClose}>
+      <div
+        className="confirm-modal coach-setup-modal"
+        role="dialog"
+        aria-modal="true"
+      >
+        <h2>{sideLabel} - Default Setup</h2>
 
-                {callOrderSlots.length > 0 && (
-                    <>
-                        <h3 className="coach-setup-heading">Witness Call Order</h3>
-                        <table className="dash-standings-table coach-setup-table">
-                            <thead><tr><th>Call #</th><th>Witness</th></tr></thead>
-                            <tbody>
-                                {callOrderSlots.map((val, i) => (
-                                    <tr key={i}>
-                                        <td>{i + 1}</td>
-                                        <td>
-                                            <select className="rv-select" value={val}
-                                                onChange={e => setSlot(i, e.target.value)}>
-                                                <option value="">- select -</option>
-                                                {ownSideWitnesses.map(w => (
-                                                    <option key={w.id} value={w.id}
-                                                        disabled={callOrderSlots.includes(w.id) && callOrderSlots[i] !== w.id}>
-                                                        {w.name}{w.side === 'S' ? ' (Swing)' : ''}
-                                                    </option>
-                                                ))}
-                                            </select>
-                                        </td>
-                                    </tr>
-                                ))}
-                            </tbody>
-                        </table>
-                    </>
-                )}
+        {callOrderSlots.length > 0 && (
+          <>
+            <h3 className="coach-setup-heading">Witness Call Order</h3>
+            <table className="dash-standings-table coach-setup-table">
+              <thead>
+                <tr>
+                  <th>Call #</th>
+                  <th>Witness</th>
+                </tr>
+              </thead>
+              <tbody>
+                {callOrderSlots.map((val, i) => (
+                  <tr key={i}>
+                    <td data-label="Call number">{i + 1}</td>
+                    <td data-label="Witness">
+                      <select
+                        className="rv-select"
+                        value={val}
+                        onChange={(e) => setSlot(i, e.target.value)}
+                      >
+                        <option value="">- select -</option>
+                        {ownSideWitnesses.map((w) => (
+                          <option
+                            key={w.id}
+                            value={w.id}
+                            disabled={
+                              callOrderSlots.includes(w.id) &&
+                              callOrderSlots[i] !== w.id
+                            }
+                          >
+                            {w.name}
+                            {w.side === "S" ? " (Swing)" : ""}
+                          </option>
+                        ))}
+                      </select>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </>
+        )}
 
-                {roleRows.length > 0 && students.length > 0 && (
-                    <>
-                        <h3 className="coach-setup-heading">Role Assignments</h3>
-                        <table className="dash-standings-table coach-setup-table">
-                            <thead><tr><th>Role</th><th>Student</th></tr></thead>
-                            <tbody>
-                                {roleRows.map(r => (
-                                    <tr key={r.key}>
-                                        <td>{r.label}</td>
-                                        <td>
-                                            <select className="rv-select"
-                                                value={assignments.get(r.key) ?? ''}
-                                                onChange={e => setAssignments(prev => {
-                                                    const next = new Map(prev)
-                                                    if (e.target.value) next.set(r.key, e.target.value)
-                                                    else next.delete(r.key)
-                                                    return next
-                                                })}>
-                                                <option value="">unassigned</option>
-                                                {students.map(s => (
-                                                    <option key={s.student_id} value={s.student_id}>{s.student_name}</option>
-                                                ))}
-                                            </select>
-                                        </td>
-                                    </tr>
-                                ))}
-                            </tbody>
-                        </table>
-                    </>
-                )}
+        {roleRows.length > 0 && students.length > 0 && (
+          <>
+            <h3 className="coach-setup-heading">Role Assignments</h3>
+            <table className="dash-standings-table coach-setup-table">
+              <thead>
+                <tr>
+                  <th>Role</th>
+                  <th>Student</th>
+                </tr>
+              </thead>
+              <tbody>
+                {roleRows.map((r) => (
+                  <tr key={r.key}>
+                    <td data-label="Role">{r.label}</td>
+                    <td data-label="Student">
+                      <select
+                        className="rv-select"
+                        value={assignments.get(r.key) ?? ""}
+                        onChange={(e) =>
+                          setAssignments((prev) => {
+                            const next = new Map(prev);
+                            if (e.target.value) next.set(r.key, e.target.value);
+                            else next.delete(r.key);
+                            return next;
+                          })
+                        }
+                      >
+                        <option value="">unassigned</option>
+                        {students.map((s) => (
+                          <option key={s.student_id} value={s.student_id}>
+                            {s.student_name}
+                          </option>
+                        ))}
+                      </select>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </>
+        )}
 
-                {callOrderSlots.length === 0 && roleRows.length === 0 && (
-                    <p className="coach-empty">No witnesses or scoring categories configured for this tournament yet.</p>
-                )}
+        {callOrderSlots.length === 0 && roleRows.length === 0 && (
+          <p className="coach-empty">
+            No witnesses or scoring categories configured for this tournament
+            yet.
+          </p>
+        )}
 
-                <div className="confirm-actions">
-                    <button type="button" onClick={onClose} disabled={saving}>Cancel</button>
-                    <button type="button" onClick={handleSave} disabled={saving}>
-                        {saving ? 'Saving…' : saved ? 'Saved!' : 'Save'}
-                    </button>
-                </div>
-            </div>
-        </ModalBackdrop>
-    )
+        <div className="confirm-actions">
+          <button type="button" onClick={onClose} disabled={saving}>
+            Cancel
+          </button>
+          <button type="button" onClick={handleSave} disabled={saving}>
+            {saving ? "Saving…" : saved ? "Saved!" : "Save"}
+          </button>
+        </div>
+      </div>
+    </ModalBackdrop>
+  );
 }
 
 // ── RosterPage ────────────────────────────────────────────────────────────────
@@ -217,158 +332,242 @@ function SideSetupModal({
  * own form and per-side default-setup modal UI state locally.
  */
 export default function RosterPage() {
-    const { tournamentId, teamId, students, rosterColumns, isCriminal, addStudent, removeStudent, setStudentCustomData } = useCoachContext()
+  const {
+    tournamentId,
+    teamId,
+    students,
+    rosterColumns,
+    isCriminal,
+    addStudent,
+    removeStudent,
+    setStudentCustomData,
+  } = useCoachContext();
 
-    const [name, setName] = useState('')
-    const [pronounSelect, setPronounSelect] = useState('')
-    const [customPronouns, setCustomPronouns] = useState('')
-    const [formError, setFormError] = useState('')
-    const [submitted, setSubmitted] = useState(false)
-    const confirmRemove = useConfirmRemove<IStudent>()
-    const [openSide, setOpenSide] = useState<'p' | 'd' | null>(null)
+  const [name, setName] = useState("");
+  const [pronounSelect, setPronounSelect] = useState("");
+  const [customPronouns, setCustomPronouns] = useState("");
+  const [formError, setFormError] = useState("");
+  const [submitted, setSubmitted] = useState(false);
+  const confirmRemove = useConfirmRemove<IStudent>();
+  const [openSide, setOpenSide] = useState<"p" | "d" | null>(null);
 
-    // Reads a student's stored value for a custom column (blank if unset).
-    const customValue = (student: IStudent, field: string): string => {
-        const entry = student.custom_data?.find(d => d.field === field)
-        return entry != null ? String(entry.value) : ''
+  // Reads a student's stored value for a custom column (blank if unset).
+  const customValue = (student: IStudent, field: string): string => {
+    const entry = student.custom_data?.find((d) => d.field === field);
+    return entry != null ? String(entry.value) : "";
+  };
+
+  // Persists an edited custom-column value, merging it into the student's
+  // existing custom_data (dropping empties, coercing numbers for int columns).
+  const commitCustomValue = (
+    student: IStudent,
+    col: ICustomRosterColumn,
+    raw: string,
+  ) => {
+    if (customValue(student, col.field) === raw.trim()) return;
+    const others = (student.custom_data ?? []).filter(
+      (d) => d.field !== col.field,
+    );
+    const trimmed = raw.trim();
+    const next =
+      trimmed === ""
+        ? others
+        : [
+            ...others,
+            {
+              field: col.field,
+              type: col.type,
+              value: col.type === "int" ? Number(trimmed) : trimmed,
+            },
+          ];
+    setStudentCustomData(student.student_id, next);
+  };
+
+  const submit = () => {
+    setSubmitted(true);
+    if (!name.trim()) {
+      setFormError("Please enter a student name.");
+      return;
     }
-
-    // Persists an edited custom-column value, merging it into the student's
-    // existing custom_data (dropping empties, coercing numbers for int columns).
-    const commitCustomValue = (student: IStudent, col: ICustomRosterColumn, raw: string) => {
-        if (customValue(student, col.field) === raw.trim()) return
-        const others = (student.custom_data ?? []).filter(d => d.field !== col.field)
-        const trimmed = raw.trim()
-        const next = trimmed === ''
-            ? others
-            : [...others, { field: col.field, type: col.type, value: col.type === 'int' ? Number(trimmed) : trimmed }]
-        setStudentCustomData(student.student_id, next)
+    if (!pronounSelect) {
+      setFormError("Please select pronouns.");
+      return;
     }
-
-    const submit = () => {
-        setSubmitted(true)
-        if (!name.trim()) { setFormError('Please enter a student name.'); return }
-        if (!pronounSelect) { setFormError('Please select pronouns.'); return }
-        if (pronounSelect === 'other' && !customPronouns.trim()) { setFormError('Please enter custom pronouns.'); return }
-        setFormError('')
-        setSubmitted(false)
-        const pronouns = pronounSelect === 'other' ? customPronouns.trim() : pronounSelect
-        addStudent(name.trim(), pronouns)
-        setName(''); setPronounSelect(''); setCustomPronouns('')
+    if (pronounSelect === "other" && !customPronouns.trim()) {
+      setFormError("Please enter custom pronouns.");
+      return;
     }
+    setFormError("");
+    setSubmitted(false);
+    const pronouns =
+      pronounSelect === "other" ? customPronouns.trim() : pronounSelect;
+    addStudent(name.trim(), pronouns);
+    setName("");
+    setPronounSelect("");
+    setCustomPronouns("");
+  };
 
-    const prosecutionLabel = isCriminal ? 'Prosecution' : 'Plaintiff'
+  const prosecutionLabel = isCriminal ? "Prosecution" : "Plaintiff";
 
-    return (
-        <div className="roster-tab">
-            <form className="roster-add-form" onSubmit={e => { e.preventDefault(); submit() }}>
-                <input
-                    className={`dash-edit-input ${submitted && !name.trim() ? 'dash-edit-input--invalid' : 'dash-edit-input--valid'}`}
-                    placeholder="Student name"
-                    value={name}
-                    onChange={e => { setName(e.target.value); setFormError('') }}
-                    autoComplete="off"
-                />
-                <select
-                    className={`dash-edit-input ${submitted && !pronounSelect ? 'dash-edit-input--invalid' : 'dash-edit-input--valid'}`}
-                    value={pronounSelect}
-                    onChange={e => { setPronounSelect(e.target.value); setFormError('') }}
-                    required
-                >
-                    <option value="" disabled>Pronouns</option>
-                    {PRONOUN_OPTIONS.map(p => <option key={p.value} value={p.value}>{p.label}</option>)}
-                </select>
-                {pronounSelect === 'other' && (
-                    <input
-                        className={`dash-edit-input ${submitted && !customPronouns.trim() ? 'dash-edit-input--invalid' : 'dash-edit-input--valid'}`}
-                        placeholder="Enter pronouns"
-                        value={customPronouns}
-                        onChange={e => { setCustomPronouns(e.target.value); setFormError('') }}
-                    />
-                )}
-                <AddButton type="submit">+ Add</AddButton>
-            </form>
-            {formError && <p className="sb-config-error">{formError}</p>}
+  return (
+    <div className="roster-tab">
+      <form
+        className="roster-add-form"
+        onSubmit={(e) => {
+          e.preventDefault();
+          submit();
+        }}
+      >
+        <input
+          className={`dash-edit-input ${submitted && !name.trim() ? "dash-edit-input--invalid" : "dash-edit-input--valid"}`}
+          placeholder="Student name"
+          value={name}
+          onChange={(e) => {
+            setName(e.target.value);
+            setFormError("");
+          }}
+          autoComplete="off"
+        />
+        <select
+          className={`dash-edit-input ${submitted && !pronounSelect ? "dash-edit-input--invalid" : "dash-edit-input--valid"}`}
+          value={pronounSelect}
+          onChange={(e) => {
+            setPronounSelect(e.target.value);
+            setFormError("");
+          }}
+          required
+        >
+          <option value="" disabled>
+            Pronouns
+          </option>
+          {PRONOUN_OPTIONS.map((p) => (
+            <option key={p.value} value={p.value}>
+              {p.label}
+            </option>
+          ))}
+        </select>
+        {pronounSelect === "other" && (
+          <input
+            className={`dash-edit-input ${submitted && !customPronouns.trim() ? "dash-edit-input--invalid" : "dash-edit-input--valid"}`}
+            placeholder="Enter pronouns"
+            value={customPronouns}
+            onChange={(e) => {
+              setCustomPronouns(e.target.value);
+              setFormError("");
+            }}
+          />
+        )}
+        <AddButton type="submit">+ Add</AddButton>
+      </form>
+      {formError && <p className="sb-config-error">{formError}</p>}
 
-            {students.length === 0
-                ? <EmptyState message="No students on the roster yet." />
-                : rosterColumns.length === 0
-                    ? <ul className="roster-list">
-                        {students.map(s => (
-                            <li key={s.student_id} className="roster-item">
-                                <span className="roster-name">
-                                    {s.student_name}
-                                    {s.pronouns ? <span className="roster-pronouns">({s.pronouns})</span> : null}
-                                </span>
-                                <DangerButton onClick={() => confirmRemove.open(s)}>Remove</DangerButton>
-                            </li>
-                        ))}
-                    </ul>
-                    : <div className="dash-table-scroll">
-                        <table className="dash-standings-table roster-table">
-                            <thead>
-                                <tr>
-                                    <th>Name</th>
-                                    <th>Pronouns</th>
-                                    {rosterColumns.map(col => <th key={col.field}>{col.field}</th>)}
-                                    <th></th>
-                                </tr>
-                            </thead>
-                            <tbody>
-                                {students.map(s => (
-                                    <tr key={s.student_id}>
-                                        <td className="dash-team-code">{s.student_name}</td>
-                                        <td>{s.pronouns ?? '-'}</td>
-                                        {rosterColumns.map(col => (
-                                            <td key={col.field}>
-                                                <input
-                                                    className="rv-select roster-custom-input"
-                                                    type={col.type === 'int' ? 'number' : 'text'}
-                                                    inputMode={col.type === 'int' ? 'numeric' : undefined}
-                                                    defaultValue={customValue(s, col.field)}
-                                                    aria-label={`${col.field} for ${s.student_name}`}
-                                                    onBlur={e => commitCustomValue(s, col, e.target.value)}
-                                                />
-                                            </td>
-                                        ))}
-                                        <td>
-                                            <DangerButton onClick={() => confirmRemove.open(s)}>Remove</DangerButton>
-                                        </td>
-                                    </tr>
-                                ))}
-                            </tbody>
-                        </table>
-                    </div>
-            }
-            {students.length > 0 && <p className="org-header-sub">{students.length} student{students.length !== 1 ? 's' : ''}</p>}
-
-            <div className="coach-roster-actions">
-                <button className="btn-primary" onClick={() => setOpenSide('p')}>
-                    Set {prosecutionLabel} Call Order &amp; Assignments
-                </button>
-                <button className="btn-primary" onClick={() => setOpenSide('d')}>
-                    Set Defense Call Order &amp; Assignments
-                </button>
-            </div>
-
-            {openSide && (
-                <SideSetupModal
-                    side={openSide}
-                    students={students}
-                    teamId={teamId}
-                    tournamentId={tournamentId}
-                    isCriminal={isCriminal}
-                    onClose={() => setOpenSide(null)}
-                />
-            )}
-
-            {confirmRemove.pending && (
-                <ConfirmRemoveModal
-                    message={`Remove ${confirmRemove.pending.student_name} from the roster?`}
-                    onCancel={confirmRemove.clear}
-                    onConfirm={() => { removeStudent(confirmRemove.pending!.student_id); confirmRemove.clear() }}
-                />
-            )}
+      {students.length === 0 ? (
+        <EmptyState message="No students on the roster yet." />
+      ) : rosterColumns.length === 0 ? (
+        <ul className="roster-list">
+          {students.map((s) => (
+            <li key={s.student_id} className="roster-item">
+              <span className="roster-name">
+                {s.student_name}
+                {s.pronouns ? (
+                  <span className="roster-pronouns">({s.pronouns})</span>
+                ) : null}
+              </span>
+              <DangerButton onClick={() => confirmRemove.open(s)}>
+                Remove
+              </DangerButton>
+            </li>
+          ))}
+        </ul>
+      ) : (
+        <div className="dash-table-scroll roster-table-wrap">
+          <table className="dash-standings-table roster-table">
+            <thead>
+              <tr>
+                <th>Name</th>
+                <th>Pronouns</th>
+                {rosterColumns.map((col) => (
+                  <th key={col.field}>{col.field}</th>
+                ))}
+                <th></th>
+              </tr>
+            </thead>
+            <tbody>
+              {students.map((s) => (
+                <tr key={s.student_id}>
+                  <td className="dash-team-code" data-label="Name">
+                    {s.student_name}
+                  </td>
+                  <td data-label="Pronouns">{s.pronouns ?? "-"}</td>
+                  {rosterColumns.map((col) => (
+                    <td key={col.field} data-label={col.field}>
+                      <input
+                        className="rv-select roster-custom-input"
+                        type={col.type === "int" ? "number" : "text"}
+                        inputMode={col.type === "int" ? "numeric" : undefined}
+                        defaultValue={customValue(s, col.field)}
+                        aria-label={`${col.field} for ${s.student_name}`}
+                        onBlur={(e) =>
+                          commitCustomValue(s, col, e.target.value)
+                        }
+                      />
+                    </td>
+                  ))}
+                  <td data-label="Actions">
+                    <DangerButton onClick={() => confirmRemove.open(s)}>
+                      Remove
+                    </DangerButton>
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
         </div>
-    )
+      )}
+      {students.length > 0 && (
+        <p className="org-header-sub">
+          {students.length} student{students.length !== 1 ? "s" : ""}
+        </p>
+      )}
+
+      <div className="coach-roster-actions">
+        <button
+          type="button"
+          className="btn-primary"
+          onClick={() => setOpenSide("p")}
+        >
+          Set {prosecutionLabel} Call Order &amp; Assignments
+        </button>
+        <button
+          type="button"
+          className="btn-primary"
+          onClick={() => setOpenSide("d")}
+        >
+          Set Defense Call Order &amp; Assignments
+        </button>
+      </div>
+
+      {openSide && (
+        <SideSetupModal
+          side={openSide}
+          students={students}
+          teamId={teamId}
+          tournamentId={tournamentId}
+          isCriminal={isCriminal}
+          onClose={() => setOpenSide(null)}
+        />
+      )}
+
+      {confirmRemove.pending && (
+        <ConfirmRemoveModal
+          message={`Remove ${confirmRemove.pending.student_name} from the roster?`}
+          onCancel={confirmRemove.clear}
+          onConfirm={() => {
+            removeStudent(confirmRemove.pending!.student_id);
+            confirmRemove.clear();
+          }}
+        />
+      )}
+    </div>
+  );
 }

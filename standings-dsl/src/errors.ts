@@ -29,7 +29,9 @@ export class DslStructureError extends DslError {}
 /** An operator/form received the wrong number of operands. */
 export class DslArityError extends DslError {
   constructor(op: string, expected: number, got: number) {
-    super(`"${op}" expects ${expected} operand${expected === 1 ? '' : 's'}, got ${got}`);
+    super(
+      `"${op}" expects ${expected} operand${expected === 1 ? "" : "s"}, got ${got}`,
+    );
   }
 }
 
@@ -65,6 +67,6 @@ export class DslInternalError extends DslError {}
  * finite union; TypeScript will error at compile time if a case is missing, and
  * at runtime it throws a `DslInternalError` describing the unexpected value.
  */
-export function assertNever(value: never, context = 'value'): never {
+export function assertNever(value: never, context = "value"): never {
   throw new DslInternalError(`Unexpected ${context}: ${JSON.stringify(value)}`);
 }

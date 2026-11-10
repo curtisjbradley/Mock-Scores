@@ -1,19 +1,19 @@
-import type { ButtonHTMLAttributes, ReactNode } from 'react'
+import type { ButtonHTMLAttributes, ReactNode } from "react";
 
-type AddButtonVariant = 'primary' | 'dashed'
+type AddButtonVariant = "primary" | "dashed";
 
 interface AddButtonProps extends ButtonHTMLAttributes<HTMLButtonElement> {
-    /**
-     * Visual style:
-     * - `primary` — solid primary dashboard action button (`btn-primary`),
-     *   used for list "+ Add X" actions on dashboards.
-     * - `dashed`  — dashed outline add button (`tc-add-btn`), used inside the
-     *   tournament creation wizard to add rows/categories.
-     *
-     * Defaults to `primary`.
-     */
-    variant?: AddButtonVariant
-    children: ReactNode
+  /**
+   * Visual style:
+   * - `primary` — solid primary dashboard action button (`btn-primary`),
+   *   used for list "+ Add X" actions on dashboards.
+   * - `dashed`  — dashed outline add button (`tc-add-btn`), used inside the
+   *   tournament creation wizard to add rows/categories.
+   *
+   * Defaults to `primary`.
+   */
+  variant?: AddButtonVariant;
+  children: ReactNode;
 }
 
 /**
@@ -30,17 +30,17 @@ interface AddButtonProps extends ButtonHTMLAttributes<HTMLButtonElement> {
  * <AddButton variant="dashed" onClick={onAddField}>+ Add field</AddButton>
  */
 export default function AddButton({
-    variant = 'primary',
-    type = 'button',
-    className,
-    children,
-    ...rest
+  variant = "primary",
+  type = "button",
+  className,
+  children,
+  ...rest
 }: AddButtonProps) {
-    const base = variant === 'dashed' ? 'tc-add-btn' : 'btn-primary'
-    const classes = `${base}${className ? ` ${className}` : ''}`
-    return (
-        <button type={type} className={classes} {...rest}>
-            {children}
-        </button>
-    )
+  const base = variant === "dashed" ? "tc-add-btn" : "btn-primary";
+  const classes = `${base}${className ? ` ${className}` : ""}`;
+  return (
+    <button type={type} className={classes} {...rest}>
+      {children}
+    </button>
+  );
 }

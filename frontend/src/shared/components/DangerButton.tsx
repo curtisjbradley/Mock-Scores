@@ -1,20 +1,20 @@
-import type { ButtonHTMLAttributes, ReactNode } from 'react'
-import './styles/danger-button.css'
+import type { ButtonHTMLAttributes, ReactNode } from "react";
+import "./styles/danger-button.css";
 
-type DangerButtonVariant = 'subtle' | 'outline' | 'solid' | 'icon'
+type DangerButtonVariant = "subtle" | "outline" | "solid" | "icon";
 
 interface DangerButtonProps extends ButtonHTMLAttributes<HTMLButtonElement> {
-    /**
-     * Visual style:
-     * - `subtle`  — borderless text-style danger action (list-row "Remove")
-     * - `outline` — outlined danger button (secondary destructive action)
-     * - `solid`   — filled danger button (primary destructive action)
-     * - `icon`    — small square icon button, e.g. "×" to remove a row
-     *
-     * Defaults to `subtle`.
-     */
-    variant?: DangerButtonVariant
-    children: ReactNode
+  /**
+   * Visual style:
+   * - `subtle`  — borderless text-style danger action (list-row "Remove")
+   * - `outline` — outlined danger button (secondary destructive action)
+   * - `solid`   — filled danger button (primary destructive action)
+   * - `icon`    — small square icon button, e.g. "×" to remove a row
+   *
+   * Defaults to `subtle`.
+   */
+  variant?: DangerButtonVariant;
+  children: ReactNode;
 }
 
 /**
@@ -30,16 +30,16 @@ interface DangerButtonProps extends ButtonHTMLAttributes<HTMLButtonElement> {
  * <DangerButton variant="solid" onClick={del}>Delete tournament</DangerButton>
  */
 export default function DangerButton({
-    variant = 'subtle',
-    type = 'button',
-    className,
-    children,
-    ...rest
+  variant = "subtle",
+  type = "button",
+  className,
+  children,
+  ...rest
 }: DangerButtonProps) {
-    const classes = `ds-danger-btn ds-danger-btn--${variant}${className ? ` ${className}` : ''}`
-    return (
-        <button type={type} className={classes} {...rest}>
-            {children}
-        </button>
-    )
+  const classes = `ds-danger-btn ds-danger-btn--${variant}${className ? ` ${className}` : ""}`;
+  return (
+    <button type={type} className={classes} {...rest}>
+      {children}
+    </button>
+  );
 }

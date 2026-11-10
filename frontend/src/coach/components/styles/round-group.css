@@ -4,9 +4,10 @@
    ───────────────────────────────────────────────────────────────────────── */
 
 .coach-round-group {
-    margin-bottom: 16px;
+  margin-bottom: 16px;
+  overflow-x: auto;
 }
 
 .coach-round-heading {
-    margin: 8px 0 6px;
+  margin: 8px 0 6px;
 }

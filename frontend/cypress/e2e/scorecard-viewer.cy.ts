@@ -499,12 +499,12 @@ describe('Scorecard Viewer', () => {
 
     cy.contains('h2', 'Scorecard - FirstName LastName').should('be.visible')
     cy.contains('.sv-case-name', 'People v. Franks').should('be.visible')
-    cy.contains('.trial-info-presider', 'FirstName LastName').should('be.visible')
+    cy.contains('.sv-presider', 'FirstName LastName').should('be.visible')
 
-    cy.get('.team-label--prosecution')
+    cy.get('.sv-team-label--prosecution')
         .should('contain.text', 'HS 1')
         .and('contain.text', 'Prosecution')
-    cy.get('.team-label--defense')
+    cy.get('.sv-team-label--defense')
         .should('contain.text', 'HS 2')
         .and('contain.text', 'Defense')
   })
@@ -512,32 +512,32 @@ describe('Scorecard Viewer', () => {
   it('renders every score category, assignment, score, and student mapping', () => {
     visitScorecard()
 
-    cy.get('#score-table tbody').should('have.length', 14)
-    cy.get('#score-table tr.score-row').should('have.length', 32)
-    cy.get('#score-table .sv-score-input-view')
+    cy.get('.sv-score-table tbody').should('have.length', 14)
+    cy.get('.sv-score-table tr.sv-score-row').should('have.length', 32)
+    cy.get('.sv-score-table .sv-score-input-view')
         .should('have.length', 36)
         .each(($score) => {
           cy.wrap($score).should('have.text', '4')
         })
 
-    cy.contains('#score-table tr.category-name', 'Witnesses - Dylan Mavis')
+    cy.contains('.sv-score-table tr.sv-category-name', 'Witnesses - Dylan Mavis')
         .parent('tbody')
         .within(() => {
-          cy.contains('tr.score-row', 'Atty Direct')
+          cy.contains('tr.sv-score-row', 'Atty Direct')
               .should('contain.text', 'Kevin')
               .and('contain.text', '4')
-          cy.contains('tr.score-row', 'Witness')
+          cy.contains('tr.sv-score-row', 'Witness')
               .should('contain.text', 'Lori')
               .and('contain.text', '4')
         })
 
-    cy.contains('#score-table tr.category-name', 'Witnesses - Karter Lucky')
+    cy.contains('.sv-score-table tr.sv-category-name', 'Witnesses - Karter Lucky')
         .parent('tbody')
         .within(() => {
-          cy.contains('tr.score-row', 'Atty Cross')
+          cy.contains('tr.sv-score-row', 'Atty Cross')
               .should('contain.text', 'Julie')
               .and('contain.text', '4')
-          cy.contains('tr.score-row', 'Witness')
+          cy.contains('tr.sv-score-row', 'Witness')
               .should('contain.text', 'Debbie')
               .and('contain.text', '4')
         })
@@ -691,7 +691,7 @@ describe('Scorecard Viewer', () => {
     cy.wait('@getScorecard')
 
     cy.get('input.sv-score-input-edit').should('not.exist')
-    cy.contains('#score-table tr.score-row', 'Pretrial P').within(() => {
+    cy.contains('.sv-score-table tr.sv-score-row', 'Pretrial P').within(() => {
       cy.get('.sv-score-input-view').should('have.text', '6')
     })
     cy.get('.sv-totals')
@@ -705,7 +705,7 @@ describe('Scorecard Viewer', () => {
 
     cy.get('.sv-editlog-entry')
         .should('contain.text', USER.email)
-        .and('contain.text', 'P: 72 → 76 | D: 72 → 72')
+        .and('contain.text', 'P: 72  76 | D: 72  72')
         .and('contain.text', editReason)
   })
 
@@ -719,7 +719,7 @@ describe('Scorecard Viewer', () => {
     cy.contains('button', 'Cancel').click()
 
     cy.get('input.sv-score-input-edit').should('not.exist')
-    cy.contains('#score-table tr.score-row', 'Pretrial P').within(() => {
+    cy.contains('.sv-score-table tr.sv-score-row', 'Pretrial P').within(() => {
       cy.get('.sv-score-input-view').should('have.text', '4')
     })
     cy.get('.sv-totals')
@@ -767,7 +767,7 @@ describe('Scorecard Viewer', () => {
     cy.window().then((win) => {
       cy.stub(win.history, 'go').as('historyGo')
     })
-    cy.contains('button', '← Back to tournament').click()
+    cy.contains('button', 'Back to tournament').click()
     cy.get('@historyGo').should('have.been.calledWith', -1)
   })
 
@@ -779,7 +779,7 @@ describe('Scorecard Viewer', () => {
 
     cy.contains('h2', 'Scorecard - FirstName LastName').should('be.visible')
     cy.contains('No ballot has been submitted yet.').should('be.visible')
-    cy.get('#score-table').should('not.exist')
+    cy.get('.sv-score-table').should('not.exist')
     cy.contains('button', 'Export CSV').should('not.exist')
     cy.contains('button', 'Edit Scores').should('not.exist')
     cy.contains('button', 'Delete Ballot').should('not.exist')
@@ -789,6 +789,6 @@ describe('Scorecard Viewer', () => {
     visitScorecard({ statusCode: 500, body: { message: 'Server error' } })
 
     cy.contains('Failed to load scorecard').should('be.visible')
-    cy.get('#score-table').should('not.exist')
+    cy.get('.sv-score-table').should('not.exist')
   })
 })

@@ -6,269 +6,270 @@
 
 /* Layout shell: sidebar + content, centered within the page like other views. */
 .dash-shell {
-    width: 100%;
-    display: flex;
-    align-items: flex-start;
-    gap: 1.5rem;
-    height: 100%;
-    flex: 1;
+  width: 100%;
+  display: flex;
+  align-items: flex-start;
+  gap: 1.5rem;
+  min-height: 100%;
+  flex: 1;
 }
 
 /* ── Sidebar ─────────────────────────────────────────────────────────────── */
 .site-header {
-    border-bottom: 0;
+  border-bottom: 0;
 }
 .dash-sidebar {
-    position: sticky;
-    /* Cap to the viewport (matching the 1.5rem top offset top and bottom) so a
+  position: sticky;
+  /* Cap to the viewport (matching the 1.5rem top offset top and bottom) so a
        long nav list scrolls inside the sidebar rather than extending past it. */
-    width: 12rem;
-    display: flex;
-    flex-direction: column;
-    gap: 0.75rem;
-    background: var(--surface);
-    transition: width 160ms ease;
-    padding-left: 1rem;
-    align-self: stretch;
-    height: auto;
+  width: 12rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+  background: var(--surface);
+  transition: width 160ms ease;
+  padding-left: 1rem;
+  align-self: stretch;
+  height: auto;
 }
 
 .site-footer {
-    border: 0;
+  border: 0;
 }
 
 .dash-sidebar--collapsed {
-    width: 3.75rem;
-    padding: 1rem 0.5rem;
+  width: 3.75rem;
+  padding: 1rem 0.5rem;
 }
 
 .dash-sidebar-head {
-    /* Stays pinned while the nav below scrolls. */
-    flex-shrink: 0;
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    gap: 0.5rem;
-    min-height: 2.25rem;
-    padding: 0 0.35rem;
+  /* Stays pinned while the nav below scrolls. */
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.5rem;
+  min-height: 2.25rem;
+  padding: 0 0.35rem;
 }
 
 .dash-sidebar--collapsed .dash-sidebar-head {
-    justify-content: center;
-    padding: 0;
+  justify-content: center;
+  padding: 0;
 }
 
 .dash-sidebar-titles {
-    display: flex;
-    flex-direction: column;
-    min-width: 0;
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
 }
 
 .dash-sidebar-title {
-    font-size: 1rem;
-    font-weight: 700;
-    color: var(--text);
-    overflow: hidden;
-    text-overflow: ellipsis;
-    white-space: nowrap;
+  font-size: 1rem;
+  font-weight: 700;
+  color: var(--text);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 .dash-sidebar-subtitle {
-    font-size: 0.78rem;
-    color: var(--text-muted);
-    overflow: hidden;
-    text-overflow: ellipsis;
-    white-space: nowrap;
+  font-size: 0.78rem;
+  color: var(--text-muted);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 .dash-sidebar-toggle {
-    flex-shrink: 0;
-    width: 2rem;
-    height: 2rem;
-    display: grid;
-    place-items: center;
-    border: 0;
-    border-radius: 0.6rem;
-    color: var(--text-muted);
-    font-size: 1rem;
-    line-height: 1;
-    font-family: inherit;
-    cursor: pointer;
-    background-color: transparent;
+  flex-shrink: 0;
+  width: 2rem;
+  height: 2rem;
+  display: grid;
+  place-items: center;
+  border: 0;
+  border-radius: 0.6rem;
+  color: var(--text-muted);
+  font-size: 1rem;
+  line-height: 1;
+  font-family: inherit;
+  cursor: pointer;
+  background-color: transparent;
 }
 
 .dash-sidebar-toggle:hover {
-    background: var(--primary-subtle);
-    color: var(--primary);
-    border-color: var(--primary);
+  background: var(--primary-subtle);
+  color: var(--primary);
+  border-color: var(--primary);
 }
 
 .app-icon.dash-sidebar-toggle-icon {
-    width: 1rem;
-    height: 1rem;
-    background-color: var(--text);
+  width: 1rem;
+  height: 1rem;
+  background-color: var(--text);
 }
 
 .dash-sidebar-nav {
-    display: flex;
-    flex-direction: column;
-    gap: 0.25rem;
-    /* Take the remaining sidebar height and scroll internally when the list is
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+  /* Take the remaining sidebar height and scroll internally when the list is
        taller than the available space, keeping items inside the sidebar. */
-    flex: 1;
-    min-height: 0;
-    overflow-y: auto;
-    scrollbar-width: thin;
+  flex: 1;
+  min-height: 0;
+  overflow-y: auto;
+  scrollbar-width: thin;
 }
 
 .dash-nav-item {
-    display: flex;
-    align-items: center;
-    gap: 0.75rem;
-    width: 100%;
-    padding: 0.6rem 0.7rem;
-    border: none;
-    border-radius: 0.7rem;
-    background: transparent;
-    color: var(--text-muted);
-    font-family: inherit;
-    font-size: 0.92rem;
-    font-weight: 600;
-    text-align: left;
-    cursor: pointer;
-    transition: background 120ms ease, color 120ms ease;
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  width: 100%;
+  padding: 0.6rem 0.7rem;
+  border: none;
+  border-radius: 0.7rem;
+  background: transparent;
+  color: var(--text-muted);
+  font-family: inherit;
+  font-size: 0.92rem;
+  font-weight: 600;
+  text-align: left;
+  cursor: pointer;
+  transition:
+    background 120ms ease,
+    color 120ms ease;
 }
 
 .dash-sidebar--collapsed .dash-nav-item {
-    justify-content: center;
-    padding: 0.6rem 0;
+  justify-content: center;
+  padding: 0.6rem 0;
 }
 
 .dash-sidebar--collapsed .dash-nav-label {
-    display: none;
+  display: none;
 }
 
 .dash-nav-item:hover {
-    background: var(--surface-muted);
-    color: var(--text);
+  background: var(--surface-muted);
+  color: var(--text);
 }
 
 .dash-nav-item--active,
 .dash-nav-item--active:hover {
-    background: var(--primary-subtle);
-    color: var(--primary);
+  background: var(--primary-subtle);
+  color: var(--primary);
 }
 
 /* `.app-icon` (from <Icon>) provides the mask. Nav labels are muted/active-
    colored, but the icons themselves are always var(--text) per design. */
 .app-icon.dash-nav-icon {
-    width: 1.25rem;
-    height: 1.25rem;
-    background-color: var(--text);
+  width: 1.25rem;
+  height: 1.25rem;
+  background-color: var(--text);
 }
 
 .dash-nav-label {
-    overflow: hidden;
-    text-overflow: ellipsis;
-    white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 /* ── Content column ──────────────────────────────────────────────────────── */
 .dash-content {
-    flex: 1;
-    width: 100%;
-    min-width: 0;
-    display: flex;
-    flex-direction: column;
-    gap: 1.25rem;
-    padding: 1rem;
-    overflow: auto;
+  flex: 1;
+  width: 100%;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 1.25rem;
+  padding: 1rem;
+  overflow: visible;
 }
 
 /* ── Overview / dashboard landing ────────────────────────────────────────── */
 .dash-overview {
-    display: flex;
-    flex-direction: column;
-    gap: 1rem;
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
 }
 
 .dash-overview-grid {
-    display: grid;
-    grid-template-columns: repeat(auto-fill, minmax(13rem, 1fr));
-    gap: 1rem;
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(13rem, 1fr));
+  gap: 1rem;
 }
-
-
 
 /* The feature card spans the full row on wider layouts. */
 .dash-stat-card--feature {
-    grid-column: 1 / -1;
-    border-color: var(--primary);
+  grid-column: 1 / -1;
+  border-color: var(--primary);
 }
 
 .dash-stat-card--alert {
-    border-color: var(--danger);
+  border-color: var(--danger);
 }
 
-
-
 .dash-stat-value {
-    margin: 0;
-    font-size: 1.9rem;
-    font-weight: 700;
-    line-height: 1.1;
-    color: var(--text);
+  margin: 0;
+  font-size: 1.9rem;
+  font-weight: 700;
+  line-height: 1.1;
+  color: var(--text);
 }
 
 .dash-stat-card--feature .dash-stat-value {
-    color: var(--primary);
+  color: var(--primary);
 }
-
+.dash-courtroom-name > a {
+  color: var(--primary);
+  text-decoration: none;
+  font-weight: bold;
+}
 
 /* ── Responsive: stack the sidebar on top as a horizontal rail on mobile ──── */
 @media (max-width: 48rem) {
-    .dash-shell {
-        flex-direction: column;
-        gap: 1rem;
-    }
-    .org-main {
-        padding-right: 0;
-    }
-    .site-header{
-        border-bottom: 1px solid var(--border);
-    }
-    .dash-sidebar,
-    .dash-sidebar--collapsed {
-        position: static;
-        width: 100%;
-        max-height: none;
-        padding: 0.75rem;
-        height: auto;
-        margin: .5rem 0;
-        border-radius: var(--radius);
-        transition: none;
+  .dash-shell {
+    flex-direction: column;
+    gap: 1rem;
+  }
+  .org-main {
+    padding-right: 0;
+  }
+  .site-header {
+    border-bottom: 1px solid var(--border);
+  }
+  .dash-sidebar,
+  .dash-sidebar--collapsed {
+    position: static;
+    width: 100%;
+    max-height: none;
+    padding: 0.75rem;
+    height: auto;
+    margin: 0.5rem 0;
+    border-radius: var(--radius);
+    transition: none;
+  }
 
-    }
+  .dash-sidebar-nav {
+    flex-direction: row;
+    flex-wrap: wrap;
+    gap: 0.35rem;
+    overflow-y: visible;
+  }
 
-    .dash-sidebar-nav {
-        flex-direction: row;
-        flex-wrap: wrap;
-        gap: 0.35rem;
-        overflow-y: visible;
-    }
+  .dash-nav-item,
+  .dash-sidebar--collapsed .dash-nav-item {
+    width: auto;
+    padding: 0.5rem 0.85rem;
+  }
 
-    .dash-nav-item,
-    .dash-sidebar--collapsed .dash-nav-item {
-        width: auto;
-        padding: 0.5rem 0.85rem;
-    }
+  /* On mobile the collapse toggle is not useful; hide it and always show labels. */
+  .dash-sidebar-toggle {
+    display: none;
+  }
 
-    /* On mobile the collapse toggle is not useful; hide it and always show labels. */
-    .dash-sidebar-toggle {
-        display: none;
-    }
-
-    .dash-sidebar--collapsed .dash-nav-label {
-        display: inline;
-    }
+  .dash-sidebar--collapsed .dash-nav-label {
+    display: inline;
+  }
 }

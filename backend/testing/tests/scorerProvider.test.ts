@@ -106,9 +106,7 @@ function queueBuildQueries(options: BuildOptions = {}) {
     mockDbQuery.mockResolvedValueOnce({ rows: witnesses, rowCount: witnesses.length } as any);
     mockDbQuery.mockResolvedValueOnce({ rows: callOrder, rowCount: callOrder.length } as any);
     mockDbQuery.mockResolvedValueOnce({ rows: assignments, rowCount: assignments.length } as any);
-    if (assignments.length > 0) {
-        mockDbQuery.mockResolvedValueOnce({ rows: students, rowCount: students.length } as any);
-    }
+    mockDbQuery.mockResolvedValueOnce({ rows: students, rowCount: students.length } as any);
     mockDbQuery.mockResolvedValueOnce({ rows: awards, rowCount: awards.length } as any);
 }
 
@@ -255,7 +253,7 @@ describe('scoresheet construction', () => {
                     id: 'direct', category_id: 'wcat', label: 'Direct', min_score: 1, max_score: 10,
                     multiplier: 1, assignable: true, prosecution: true, defense: true,
                     calling: true, crossing: false, visible_to_scorers: true, position: 1,
-                    award_category_id: 'award1',
+                    award_category_id: 'award2',
                 },
                 {
                     id: 'cross', category_id: 'wcat', label: 'Cross', min_score: 1, max_score: 10,
@@ -280,8 +278,12 @@ describe('scoresheet construction', () => {
             students: [
                 { student_id: 'stu-p', student_name: 'Pat P', pronouns: 'she/her', team_id: P_TEAM },
                 { student_id: 'stu-d', student_name: 'Dev D', pronouns: null, team_id: D_TEAM },
+                { student_id: 'stu-unassigned', student_name: 'Taylor P', pronouns: null, team_id: P_TEAM },
             ],
-            awards: [{ id: 'award1', name: 'Best Witness', min_nominees: 1, max_nominees: 2 }],
+            awards: [
+                { id: 'award1', name: 'Best Witness', min_nominees: 1, max_nominees: 2, open_to_all: true },
+                { id: 'award2', name: 'Best Attorney', min_nominees: 1, max_nominees: 2, open_to_all: false },
+            ],
         });
 
         const sheet = await getPairingBallotFormat(PAIRING);
@@ -300,7 +302,8 @@ describe('scoresheet construction', () => {
         }));
         expect(sheet.scoringCategories['wcat__wd'].categoryAssignments[0].side).toBe('D');
         expect(sheet.scoringCategories['wcat__wd'].categoryAssignments[1].side).toBe('P');
-        expect(sheet.awardCategories.award1.eligibleStudentIds).toEqual(['stu-p']);
+        expect(sheet.awardCategories.award1.eligibleStudentIds).toEqual(['stu-p', 'stu-d', 'stu-unassigned']);
+        expect(sheet.awardCategories.award2.eligibleStudentIds).toEqual(['stu-p']);
     });
 
     it('falls back to configured witness lists when no explicit call order exists', async () => {

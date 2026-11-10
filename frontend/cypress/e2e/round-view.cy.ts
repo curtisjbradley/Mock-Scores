@@ -101,9 +101,10 @@ describe('Round View', () => {
 
   it('can inline-edit the round name', () => {
     cy.intercept('PATCH', '/organizer/tournament/tourney-1/rounds/round-1', { statusCode: 200, body: {} }).as('patchRound')
-    cy.get('button.rv-name-btn').click();
-    cy.get('input.rv-name-input').type('Round One');
-    cy.get('input.rv-name-input').type('{enter}');
+    cy.contains('button', 'Round actions').click()
+    cy.contains('button', 'Edit round details').click()
+    cy.get('input#round-name').clear().type('Round One')
+    cy.contains('button', 'Save changes').click()
     cy.wait('@patchRound');
     cy.contains('Round One').should('be.visible');
   })

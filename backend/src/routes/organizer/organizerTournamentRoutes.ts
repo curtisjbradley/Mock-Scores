@@ -1,29 +1,71 @@
 import { NextFunction, Request, Response, Router } from "express";
-import { IRound, TournamentPayload, IWitnesses, IOrganizer, IScorer, ITeam } from "@mock-scores/shared";
-import { AlreadyExistsError, DbError, NotFoundError, OrganizerAlreadyJoinedError } from "../../errors";
+import {
+  IRound,
+  TournamentPayload,
+  IWitnesses,
+  IOrganizer,
+  IScorer,
+  ITeam,
+} from "@mock-scores/shared";
+import {
+  AlreadyExistsError,
+  DbError,
+  NotFoundError,
+  OrganizerAlreadyJoinedError,
+} from "../../errors";
 import * as organizer from "../../providers/organizerProvider";
 import * as coachProvider from "../../providers/coachProvider";
 import roundRoutes from "./organizerRoundRoutes";
 import pairingRoutes from "./organizerPairingRoutes";
 import { uuidRegex } from "../../authUtils";
-import { replaceTeamOwner, transferOwnership } from "../../providers/coachProvider";
+import {
+  replaceTeamOwner,
+  transferOwnership,
+} from "../../providers/coachProvider";
 import { TournamentRequest } from "../../types/express";
-import { tournamentHandler, scorerHandler, organizerHandler, teamHandler } from "../../types/handlers";
-import {EmailTemplate, isValidEmail, organizerAddedEmail, sendTrackedEmail, teamAddedEmail} from "../../email";
-import { removeCoachHandler, addStudentHandler, updateStudentCustomDataHandler } from "../teamHandlers";
+import {
+  tournamentHandler,
+  scorerHandler,
+  organizerHandler,
+  teamHandler,
+} from "../../types/handlers";
+import {
+  EmailTemplate,
+  isValidEmail,
+  organizerAddedEmail,
+  sendTrackedEmail,
+  teamAddedEmail,
+} from "../../email";
+import {
+  removeCoachHandler,
+  addStudentHandler,
+  updateStudentCustomDataHandler,
+} from "../teamHandlers";
 import { dbQuery } from "../../db";
 
-function validateWitnessCounts(format: TournamentPayload['caseFormat'], witnesses: IWitnesses): string | null {
-    const swing = witnesses.swingWitnessNames.length;
-    if (format.pWitnessesCalled != null && witnesses.pWitnessNames.length + swing > 0 &&
-        format.pWitnessesCalled > witnesses.pWitnessNames.length + swing)
-        return 'P witnesses called exceeds available witnesses';
-    if (format.dWitnessesCalled != null && witnesses.dWitnessNames.length + swing > 0 &&
-        format.dWitnessesCalled > witnesses.dWitnessNames.length + swing)
-        return 'D witnesses called exceeds available witnesses';
-    return null;
+function validateWitnessCounts(
+  format: TournamentPayload["caseFormat"],
+  witnesses: IWitnesses,
+): string | null {
+  const swing = witnesses.swingWitnessNames.length;
+  if (
+    format.pWitnessesCalled != null &&
+    witnesses.pWitnessNames.length + swing > 0 &&
+    format.pWitnessesCalled > witnesses.pWitnessNames.length + swing
+  )
+    return "P witnesses called exceeds available witnesses";
+  if (
+    format.dWitnessesCalled != null &&
+    witnesses.dWitnessNames.length + swing > 0 &&
+    format.dWitnessesCalled > witnesses.dWitnessNames.length + swing
+  )
+    return "D witnesses called exceeds available witnesses";
+  return null;
 }
-import {getAwardsSummary, getTournament} from "../../providers/organizerProvider";
+import {
+  getAwardsSummary,
+  getTournament,
+} from "../../providers/organizerProvider";
 
 const router = Router();
 
@@ -44,14 +86,20 @@ const router = Router();
  *       200: { description: Tournament object }
  *       404: { description: Not found }
  */
-router.get("/", tournamentHandler(async (req, res) => {
+router.get(
+  "/",
+  tournamentHandler(async (req, res) => {
     try {
-        return res.status(200).json(await organizer.getTournament(req.tournament));
+      return res
+        .status(200)
+        .json(await organizer.getTournament(req.tournament));
     } catch (e) {
-        if (e instanceof NotFoundError) return res.status(404).json({ message: e.message });
-        throw e;
+      if (e instanceof NotFoundError)
+        return res.status(404).json({ message: e.message });
+      throw e;
     }
-}));
+  }),
+);
 
 /**
  * @swagger
@@ -79,18 +127,26 @@ router.get("/", tournamentHandler(async (req, res) => {
  *       404: { description: Not found }
  *       500: { description: Unable to update tournament }
  */
-router.patch("/", tournamentHandler(async (req, res) => {
-    const { tournament: t } = req.body as { tournament: TournamentPayload['tournament'] };
-    if (!t) return res.status(400).json({ message: 'Missing tournament in body' });
+router.patch(
+  "/",
+  tournamentHandler(async (req, res) => {
+    const { tournament: t } = req.body as {
+      tournament: TournamentPayload["tournament"];
+    };
+    if (!t)
+      return res.status(400).json({ message: "Missing tournament in body" });
     try {
-        await organizer.updateTournamentDetails(req.tournament, t);
-        return res.status(200).json({ success: true });
+      await organizer.updateTournamentDetails(req.tournament, t);
+      return res.status(200).json({ success: true });
     } catch (e) {
-        if (e instanceof NotFoundError) return res.status(404).json({ message: e.message });
-        if (e instanceof DbError) return res.status(500).json({ message: 'Unable to update tournament' });
-        throw e;
+      if (e instanceof NotFoundError)
+        return res.status(404).json({ message: e.message });
+      if (e instanceof DbError)
+        return res.status(500).json({ message: "Unable to update tournament" });
+      throw e;
     }
-}));
+  }),
+);
 
 /**
  * @swagger
@@ -118,19 +174,29 @@ router.patch("/", tournamentHandler(async (req, res) => {
  *       404: { description: Not found }
  *       500: { description: Unable to update status }
  */
-router.patch("/status", tournamentHandler(async (req, res) => {
+router.patch(
+  "/status",
+  tournamentHandler(async (req, res) => {
     const { status } = req.body as { status?: string };
-    if (!status || !['active', 'completed', 'archived'].includes(status))
-        return res.status(400).json({ message: 'Status must be active, completed, or archived' });
+    if (!status || !["active", "completed", "archived"].includes(status))
+      return res
+        .status(400)
+        .json({ message: "Status must be active, completed, or archived" });
     try {
-        await organizer.updateTournamentStatus(req.tournament, status as 'active' | 'completed' | 'archived');
-        return res.status(200).json({ success: true });
+      await organizer.updateTournamentStatus(
+        req.tournament,
+        status as "active" | "completed" | "archived",
+      );
+      return res.status(200).json({ success: true });
     } catch (e) {
-        if (e instanceof NotFoundError) return res.status(404).json({ message: e.message });
-        if (e instanceof DbError) return res.status(500).json({ message: 'Unable to update status' });
-        throw e;
+      if (e instanceof NotFoundError)
+        return res.status(404).json({ message: e.message });
+      if (e instanceof DbError)
+        return res.status(500).json({ message: "Unable to update status" });
+      throw e;
     }
-}));
+  }),
+);
 
 // ── Format & Witnesses ────────────────────────────────────────────────────────
 
@@ -149,14 +215,18 @@ router.patch("/status", tournamentHandler(async (req, res) => {
  *       200: { description: Case format }
  *       404: { description: Not found }
  */
-router.get("/format", tournamentHandler(async (req, res) => {
+router.get(
+  "/format",
+  tournamentHandler(async (req, res) => {
     try {
-        return res.status(200).json(await organizer.getFormat(req.tournament));
+      return res.status(200).json(await organizer.getFormat(req.tournament));
     } catch (e) {
-        if (e instanceof NotFoundError) return res.status(404).json({ message: e.message });
-        throw e;
+      if (e instanceof NotFoundError)
+        return res.status(404).json({ message: e.message });
+      throw e;
     }
-}));
+  }),
+);
 
 /**
  * @swagger
@@ -185,28 +255,44 @@ router.get("/format", tournamentHandler(async (req, res) => {
  *       404: { description: Not found }
  *       500: { description: Unable to update format }
  */
-async function checkWitnessCountsForFormat(tournament: string, format: TournamentPayload['caseFormat']): Promise<string | null> {
-    if (format.pWitnessesCalled == null && format.dWitnessesCalled == null) return null;
-    const witnesses = await organizer.getWitnesses(tournament);
-    return validateWitnessCounts(format, witnesses);
+async function checkWitnessCountsForFormat(
+  tournament: string,
+  format: TournamentPayload["caseFormat"],
+): Promise<string | null> {
+  if (format.pWitnessesCalled == null && format.dWitnessesCalled == null)
+    return null;
+  const witnesses = await organizer.getWitnesses(tournament);
+  return validateWitnessCounts(format, witnesses);
 }
 
-router.patch("/format", tournamentHandler(async (req, res) => {
-    const format = req.body as TournamentPayload['caseFormat'];
-    if ((format.pWitnessesCalled != null && format.pWitnessesCalled < 0) ||
-        (format.dWitnessesCalled != null && format.dWitnessesCalled < 0))
-        return res.status(400).json({ message: 'Witnesses called cannot be negative' });
+router.patch(
+  "/format",
+  tournamentHandler(async (req, res) => {
+    const format = req.body as TournamentPayload["caseFormat"];
+    if (
+      (format.pWitnessesCalled != null && format.pWitnessesCalled < 0) ||
+      (format.dWitnessesCalled != null && format.dWitnessesCalled < 0)
+    )
+      return res
+        .status(400)
+        .json({ message: "Witnesses called cannot be negative" });
     try {
-        const countError = await checkWitnessCountsForFormat(req.tournament, format);
-        if (countError) return res.status(400).json({ message: countError });
-        await organizer.updateFormat(req.tournament, format);
-        return res.status(200).json({ success: true });
+      const countError = await checkWitnessCountsForFormat(
+        req.tournament,
+        format,
+      );
+      if (countError) return res.status(400).json({ message: countError });
+      await organizer.updateFormat(req.tournament, format);
+      return res.status(200).json({ success: true });
     } catch (e) {
-        if (e instanceof NotFoundError) return res.status(404).json({ message: e.message });
-        if (e instanceof DbError) return res.status(500).json({ message: 'Unable to update format' });
-        throw e;
+      if (e instanceof NotFoundError)
+        return res.status(404).json({ message: e.message });
+      if (e instanceof DbError)
+        return res.status(500).json({ message: "Unable to update format" });
+      throw e;
     }
-}));
+  }),
+);
 
 /**
  * @swagger
@@ -223,14 +309,18 @@ router.patch("/format", tournamentHandler(async (req, res) => {
  *       200: { description: Witnesses }
  *       404: { description: Not found }
  */
-router.get("/witnesses", tournamentHandler(async (req, res) => {
+router.get(
+  "/witnesses",
+  tournamentHandler(async (req, res) => {
     try {
-        return res.status(200).json(await organizer.getWitnesses(req.tournament));
+      return res.status(200).json(await organizer.getWitnesses(req.tournament));
     } catch (e) {
-        if (e instanceof NotFoundError) return res.status(404).json({ message: e.message });
-        throw e;
+      if (e instanceof NotFoundError)
+        return res.status(404).json({ message: e.message });
+      throw e;
     }
-}));
+  }),
+);
 
 /**
  * @swagger
@@ -259,19 +349,29 @@ router.get("/witnesses", tournamentHandler(async (req, res) => {
  *       404: { description: Not found }
  *       500: { description: Unable to update witnesses }
  */
-router.patch("/witnesses", tournamentHandler(async (req, res) => {
+router.patch(
+  "/witnesses",
+  tournamentHandler(async (req, res) => {
     const witnesses = req.body as IWitnesses;
-    const allNames = [...witnesses.pWitnessNames, ...witnesses.dWitnessNames, ...witnesses.swingWitnessNames];
-    if (allNames.some(n => !n?.trim())) return res.status(400).json({ message: 'Witness names cannot be empty' });
+    const allNames = [
+      ...witnesses.pWitnessNames,
+      ...witnesses.dWitnessNames,
+      ...witnesses.swingWitnessNames,
+    ];
+    if (allNames.some((n) => !n?.trim()))
+      return res.status(400).json({ message: "Witness names cannot be empty" });
     try {
-        await organizer.updateWitnesses(req.tournament, witnesses);
-        return res.status(200).json({ success: true });
+      await organizer.updateWitnesses(req.tournament, witnesses);
+      return res.status(200).json({ success: true });
     } catch (e) {
-        if (e instanceof NotFoundError) return res.status(404).json({ message: e.message });
-        if (e instanceof DbError) return res.status(500).json({ message: 'Unable to update witnesses' });
-        throw e;
+      if (e instanceof NotFoundError)
+        return res.status(404).json({ message: e.message });
+      if (e instanceof DbError)
+        return res.status(500).json({ message: "Unable to update witnesses" });
+      throw e;
     }
-}));
+  }),
+);
 
 // ── Standings Config ──────────────────────────────────────────────────────────
 
@@ -290,14 +390,20 @@ router.patch("/witnesses", tournamentHandler(async (req, res) => {
  *       200: { description: Standings config or null }
  *       500: { description: Database error }
  */
-router.get("/standings-config", tournamentHandler(async (req, res) => {
+router.get(
+  "/standings-config",
+  tournamentHandler(async (req, res) => {
     try {
-        return res.status(200).json((await organizer.getStandingsConfig(req.tournament)) ?? null);
+      return res
+        .status(200)
+        .json((await organizer.getStandingsConfig(req.tournament)) ?? null);
     } catch (e) {
-        if (e instanceof DbError) return res.status(500).json({ message: 'Database error' });
-        throw e;
+      if (e instanceof DbError)
+        return res.status(500).json({ message: "Database error" });
+      throw e;
     }
-}));
+  }),
+);
 
 /**
  * @swagger
@@ -319,14 +425,20 @@ router.get("/standings-config", tournamentHandler(async (req, res) => {
  *       200: { description: Standings data }
  *       500: { description: Database error }
  */
-router.get("/standings", tournamentHandler(async (req, res) => {
+router.get(
+  "/standings",
+  tournamentHandler(async (req, res) => {
     try {
-        return res.status(200).json(await organizer.getOrganizerStandingsData(req.tournament));
+      return res
+        .status(200)
+        .json(await organizer.getOrganizerStandingsData(req.tournament));
     } catch (e) {
-        if (e instanceof DbError) return res.status(500).json({ message: 'Database error' });
-        throw e;
+      if (e instanceof DbError)
+        return res.status(500).json({ message: "Database error" });
+      throw e;
     }
-}));
+  }),
+);
 
 /**
  * @swagger
@@ -353,17 +465,23 @@ router.get("/standings", tournamentHandler(async (req, res) => {
  *       400: { description: Missing dsl }
  *       500: { description: Unable to update standings config }
  */
-router.patch("/standings-config", tournamentHandler(async (req, res) => {
+router.patch(
+  "/standings-config",
+  tournamentHandler(async (req, res) => {
     const { dsl } = req.body as { dsl: string };
-    if (!dsl) return res.status(400).json({ message: 'Missing dsl' });
+    if (!dsl) return res.status(400).json({ message: "Missing dsl" });
     try {
-        await organizer.upsertStandingsConfig(req.tournament, dsl);
-        return res.status(200).json({ success: true });
+      await organizer.upsertStandingsConfig(req.tournament, dsl);
+      return res.status(200).json({ success: true });
     } catch (e) {
-        if (e instanceof DbError) return res.status(500).json({ message: 'Unable to update standings config' });
-        throw e;
+      if (e instanceof DbError)
+        return res
+          .status(500)
+          .json({ message: "Unable to update standings config" });
+      throw e;
     }
-}));
+  }),
+);
 
 // ── Scoring Categories ────────────────────────────────────────────────────────
 
@@ -381,9 +499,14 @@ router.patch("/standings-config", tournamentHandler(async (req, res) => {
  *     responses:
  *       200: { description: Scoring categories }
  */
-router.get("/scoring-categories", tournamentHandler(async (req, res) => {
-    return res.status(200).json(await organizer.getScoringCategories(req.tournament));
-}));
+router.get(
+  "/scoring-categories",
+  tournamentHandler(async (req, res) => {
+    return res
+      .status(200)
+      .json(await organizer.getScoringCategories(req.tournament));
+  }),
+);
 
 /**
  * @swagger
@@ -407,15 +530,24 @@ router.get("/scoring-categories", tournamentHandler(async (req, res) => {
  *       200: { description: Updated }
  *       500: { description: Unable to update scoring categories }
  */
-router.patch("/scoring-categories", tournamentHandler(async (req, res) => {
+router.patch(
+  "/scoring-categories",
+  tournamentHandler(async (req, res) => {
     try {
-        await organizer.updateScoringCategories(req.tournament, req.body as TournamentPayload['scoringCategories']);
-        return res.status(200).json({ success: true });
+      await organizer.updateScoringCategories(
+        req.tournament,
+        req.body as TournamentPayload["scoringCategories"],
+      );
+      return res.status(200).json({ success: true });
     } catch (e) {
-        if (e instanceof DbError) return res.status(500).json({ message: 'Unable to update scoring categories' });
-        throw e;
+      if (e instanceof DbError)
+        return res
+          .status(500)
+          .json({ message: "Unable to update scoring categories" });
+      throw e;
     }
-}));
+  }),
+);
 
 // ── Scorers ───────────────────────────────────────────────────────────────────
 
@@ -434,36 +566,65 @@ router.patch("/scoring-categories", tournamentHandler(async (req, res) => {
  *       200: { description: Array of scorers }
  *       500: { description: Database error }
  */
-router.get("/scorers", tournamentHandler(async (req, res) => {
+router.get(
+  "/scorers",
+  tournamentHandler(async (req, res) => {
     try {
-        return res.status(200).json(await organizer.getScorers(req.tournament));
+      return res.status(200).json(await organizer.getScorers(req.tournament));
     } catch (e) {
-        if (e instanceof DbError) return res.status(500).json({ message: 'Unable to reach backend' });
-        throw e;
+      if (e instanceof DbError)
+        return res.status(500).json({ message: "Unable to reach backend" });
+      throw e;
     }
-}));
+  }),
+);
+
+router.get(
+  "/scorers/:scorerId",
+  tournamentHandler(async (req, res) => {
+    const scorerId = req.params.scorerId as string;
+    if (!uuidRegex.test(scorerId))
+      return res.status(400).json({ message: "Invalid scorer ID" });
+    try {
+      return res
+        .status(200)
+        .json(await organizer.getScorerDetail(req.tournament, scorerId));
+    } catch (e) {
+      if (e instanceof NotFoundError)
+        return res.status(404).json({ message: e.message });
+      if (e instanceof DbError)
+        return res
+          .status(500)
+          .json({ message: "Unable to load scorer assignments" });
+      throw e;
+    }
+  }),
+);
 
 function verifyScorer(req: Request, res: Response, next: NextFunction) {
-    const scorer: IScorer = req.body;
-    if (!scorer?.name?.trim() || !scorer?.scorer_id)
-        return res.status(409).json({ message: 'Missing required field(s)' });
+  const scorer: IScorer = req.body;
+  if (!scorer?.name?.trim() || !scorer?.scorer_id)
+    return res.status(409).json({ message: "Missing required field(s)" });
 
-    const isPaper = scorer.is_paper === true;
-    // Online scorers must have a valid email; paper (offline) scorers need none.
-    if (!isPaper) {
-        if (!scorer.email) return res.status(409).json({ message: 'Missing required field(s)' });
-        if (!isValidEmail(scorer.email)) return res.status(400).json({ message: 'Invalid email address' });
-    }
+  const isPaper = scorer.is_paper === true;
+  // Online scorers must have a valid email; paper (offline) scorers need none.
+  if (!isPaper) {
+    if (!scorer.email)
+      return res.status(409).json({ message: "Missing required field(s)" });
+    if (!isValidEmail(scorer.email))
+      return res.status(400).json({ message: "Invalid email address" });
+  }
 
-    // Normalize optional profile fields so older clients and paper scorers persist cleanly.
-    req.scorer = {
-        ...scorer,
-        name: scorer.name.trim(),
-        email: isPaper ? (scorer.email?.trim() || null) : scorer.email,
-        is_paper: isPaper,
-        willing_to_preside: scorer.willing_to_preside ?? true,
-    };
-    next();
+  // Normalize optional profile fields so older clients and paper scorers persist cleanly.
+  req.scorer = {
+    ...scorer,
+    name: scorer.name.trim(),
+    email: isPaper ? scorer.email?.trim() || null : scorer.email,
+    is_paper: isPaper,
+    willing_to_preside: scorer.willing_to_preside ?? true,
+    notes: scorer.notes?.trim() ?? "",
+  };
+  next();
 }
 
 /**
@@ -495,18 +656,28 @@ function verifyScorer(req: Request, res: Response, next: NextFunction) {
  *       409: { description: Missing required fields }
  *       500: { description: Database error }
  */
-router.post("/scorers", verifyScorer, scorerHandler(async (req, res) => {
+router.post(
+  "/scorers",
+  verifyScorer,
+  scorerHandler(async (req, res) => {
     try {
-        await organizer.addScorer(req.scorer, req.tournament);
-        if (req.scorer.prefers_to_score_with) {
-            await organizer.setCoscoringPreferences(req.scorer.scorer_id, req.scorer.prefers_to_score_with);
-        }
-        return res.status(200).json(req.scorer);
+      await organizer.addScorer(req.scorer, req.tournament);
+      if (req.scorer.prefers_to_score_with) {
+        await organizer.setCoscoringPreferences(
+          req.scorer.scorer_id,
+          req.scorer.prefers_to_score_with,
+        );
+      }
+      return res.status(200).json(req.scorer);
     } catch (e) {
-        if (e instanceof DbError) return res.status(500).json({ message: 'Unable to communicate with database' });
-        throw e;
+      if (e instanceof DbError)
+        return res
+          .status(500)
+          .json({ message: "Unable to communicate with database" });
+      throw e;
     }
-}));
+  }),
+);
 
 /**
  * @swagger
@@ -537,19 +708,30 @@ router.post("/scorers", verifyScorer, scorerHandler(async (req, res) => {
  *       404: { description: Not found }
  *       500: { description: Database error }
  */
-router.put("/scorers", verifyScorer, scorerHandler(async (req, res) => {
+router.put(
+  "/scorers",
+  verifyScorer,
+  scorerHandler(async (req, res) => {
     try {
-        await organizer.updateScorer(req.scorer, req.tournament);
-        if (req.scorer.prefers_to_score_with) {
-            await organizer.setCoscoringPreferences(req.scorer.scorer_id, req.scorer.prefers_to_score_with);
-        }
-        return res.status(200).json(req.scorer);
+      await organizer.updateScorer(req.scorer, req.tournament);
+      if (req.scorer.prefers_to_score_with) {
+        await organizer.setCoscoringPreferences(
+          req.scorer.scorer_id,
+          req.scorer.prefers_to_score_with,
+        );
+      }
+      return res.status(200).json(req.scorer);
     } catch (e) {
-        if (e instanceof NotFoundError) return res.status(404).json({ message: e.message });
-        if (e instanceof DbError) return res.status(500).json({ message: 'Unable to communicate with database' });
-        throw e;
+      if (e instanceof NotFoundError)
+        return res.status(404).json({ message: e.message });
+      if (e instanceof DbError)
+        return res
+          .status(500)
+          .json({ message: "Unable to communicate with database" });
+      throw e;
     }
-}));
+  }),
+);
 
 /**
  * @swagger
@@ -577,18 +759,24 @@ router.put("/scorers", verifyScorer, scorerHandler(async (req, res) => {
  *       404: { description: Not found }
  *       500: { description: Database error }
  */
-router.delete("/scorers", tournamentHandler(async (req, res) => {
+router.delete(
+  "/scorers",
+  tournamentHandler(async (req, res) => {
     const { scorer_id } = req.body;
-    if (!scorer_id) return res.status(400).json({ message: 'Did not provide a scorer_id' });
+    if (!scorer_id)
+      return res.status(400).json({ message: "Did not provide a scorer_id" });
     try {
-        await organizer.deleteScorer(scorer_id);
-        return res.status(204).send();
+      await organizer.deleteScorer(scorer_id);
+      return res.status(204).send();
     } catch (e) {
-        if (e instanceof NotFoundError) return res.status(404).json({ message: e.message });
-        if (e instanceof DbError) return res.status(500).json({ message: 'Unable to delete scorer' });
-        throw e;
+      if (e instanceof NotFoundError)
+        return res.status(404).json({ message: e.message });
+      if (e instanceof DbError)
+        return res.status(500).json({ message: "Unable to delete scorer" });
+      throw e;
     }
-}));
+  }),
+);
 
 /**
  * @swagger
@@ -605,14 +793,20 @@ router.delete("/scorers", tournamentHandler(async (req, res) => {
  *       200: { description: All conflicts }
  *       500: { description: Database error }
  */
-router.get('/scorer-conflicts', tournamentHandler(async (req, res) => {
+router.get(
+  "/scorer-conflicts",
+  tournamentHandler(async (req, res) => {
     try {
-        return res.status(200).json(await organizer.getAllConflicts(req.tournament));
+      return res
+        .status(200)
+        .json(await organizer.getAllConflicts(req.tournament));
     } catch (e) {
-        if (e instanceof DbError) return res.status(500).json({ message: 'Database error' });
-        throw e;
+      if (e instanceof DbError)
+        return res.status(500).json({ message: "Database error" });
+      throw e;
     }
-}));
+  }),
+);
 
 /**
  * @swagger
@@ -633,14 +827,20 @@ router.get('/scorer-conflicts', tournamentHandler(async (req, res) => {
  *       200: { description: Scorer/team history pairs }
  *       500: { description: Database error }
  */
-router.get('/scorer-history', tournamentHandler(async (req, res) => {
+router.get(
+  "/scorer-history",
+  tournamentHandler(async (req, res) => {
     try {
-        return res.status(200).json(await organizer.getScorerTeamHistory(req.tournament));
+      return res
+        .status(200)
+        .json(await organizer.getScorerTeamHistory(req.tournament));
     } catch (e) {
-        if (e instanceof DbError) return res.status(500).json({ message: 'Database error' });
-        throw e;
+      if (e instanceof DbError)
+        return res.status(500).json({ message: "Database error" });
+      throw e;
     }
-}));
+  }),
+);
 
 /**
  * @swagger
@@ -662,16 +862,21 @@ router.get('/scorer-history', tournamentHandler(async (req, res) => {
  *       400: { description: Invalid scorer ID }
  *       500: { description: Database error }
  */
-router.get('/scorers/:scorerId/conflicts', async (req: Request, res: Response) => {
+router.get(
+  "/scorers/:scorerId/conflicts",
+  async (req: Request, res: Response) => {
     const scorerId = req.params.scorerId as string;
-    if (!uuidRegex.test(scorerId)) return res.status(400).json({ message: 'Invalid scorer ID' });
+    if (!uuidRegex.test(scorerId))
+      return res.status(400).json({ message: "Invalid scorer ID" });
     try {
-        return res.status(200).json(await organizer.getConflicts(scorerId));
+      return res.status(200).json(await organizer.getConflicts(scorerId));
     } catch (e) {
-        if (e instanceof DbError) return res.status(500).json({ message: 'Database error' });
-        throw e;
+      if (e instanceof DbError)
+        return res.status(500).json({ message: "Database error" });
+      throw e;
     }
-});
+  },
+);
 
 /**
  * @swagger
@@ -702,17 +907,24 @@ router.get('/scorers/:scorerId/conflicts', async (req: Request, res: Response) =
  *       400: { description: Invalid ID }
  *       409: { description: Conflict already exists }
  */
-router.post('/scorers/:scorerId/conflicts', async (req: Request, res: Response) => {
+router.post(
+  "/scorers/:scorerId/conflicts",
+  async (req: Request, res: Response) => {
     const scorerId = req.params.scorerId as string;
     const { team_id } = req.body;
-    if (!uuidRegex.test(scorerId) || !uuidRegex.test(team_id)) return res.status(400).json({ message: 'Invalid ID' });
+    if (!uuidRegex.test(scorerId) || !uuidRegex.test(team_id))
+      return res.status(400).json({ message: "Invalid ID" });
     try {
-        return res.status(201).json(await organizer.addConflict(scorerId, team_id));
+      return res
+        .status(201)
+        .json(await organizer.addConflict(scorerId, team_id));
     } catch (e) {
-        if (e instanceof AlreadyExistsError) return res.status(409).json({ message: 'Conflict already exists' });
-        throw e;
+      if (e instanceof AlreadyExistsError)
+        return res.status(409).json({ message: "Conflict already exists" });
+      throw e;
     }
-});
+  },
+);
 
 /**
  * @swagger
@@ -743,18 +955,23 @@ router.post('/scorers/:scorerId/conflicts', async (req: Request, res: Response) 
  *       400: { description: Invalid ID }
  *       404: { description: Not found }
  */
-router.delete('/scorers/:scorerId/conflicts', async (req: Request, res: Response) => {
+router.delete(
+  "/scorers/:scorerId/conflicts",
+  async (req: Request, res: Response) => {
     const scorerId = req.params.scorerId as string;
     const { team_id } = req.body;
-    if (!uuidRegex.test(scorerId) || !uuidRegex.test(team_id)) return res.status(400).json({ message: 'Invalid ID' });
+    if (!uuidRegex.test(scorerId) || !uuidRegex.test(team_id))
+      return res.status(400).json({ message: "Invalid ID" });
     try {
-        await organizer.removeConflict(scorerId, team_id);
-        return res.status(204).send();
+      await organizer.removeConflict(scorerId, team_id);
+      return res.status(204).send();
     } catch (e) {
-        if (e instanceof NotFoundError) return res.status(404).json({ message: e.message });
-        throw e;
+      if (e instanceof NotFoundError)
+        return res.status(404).json({ message: e.message });
+      throw e;
     }
-});
+  },
+);
 
 // ── Organizers ────────────────────────────────────────────────────────────────
 
@@ -773,23 +990,35 @@ router.delete('/scorers/:scorerId/conflicts', async (req: Request, res: Response
  *       200: { description: Array of organizers }
  *       500: { description: Database error }
  */
-router.get("/organizers", tournamentHandler(async (req, res) => {
+router.get(
+  "/organizers",
+  tournamentHandler(async (req, res) => {
     try {
-        return res.status(200).json(await organizer.getOrganizers(req.tournament));
+      return res
+        .status(200)
+        .json(await organizer.getOrganizers(req.tournament));
     } catch (e) {
-        if (e instanceof DbError) return res.status(500).json({ message: 'Database error' });
-        throw e;
+      if (e instanceof DbError)
+        return res.status(500).json({ message: "Database error" });
+      throw e;
     }
-}));
+  }),
+);
 
-async function verifyOrganizerPayload(req: Request, res: Response, next: NextFunction) {
-    const { organizer: org } = req.body;
-    if (!org) return res.status(400).json({ message: 'No organizer in body' });
-    const o: IOrganizer = org;
-    if (!o.name || !o.email || !o.role) return res.status(400).json({ message: 'Missing required fields' });
-    if (!isValidEmail(o.email)) return res.status(400).json({ message: 'Invalid email address' });
-    req.selectedOrganizer = o;
-    next();
+async function verifyOrganizerPayload(
+  req: Request,
+  res: Response,
+  next: NextFunction,
+) {
+  const { organizer: org } = req.body;
+  if (!org) return res.status(400).json({ message: "No organizer in body" });
+  const o: IOrganizer = org;
+  if (!o.name || !o.email || !o.role)
+    return res.status(400).json({ message: "Missing required fields" });
+  if (!isValidEmail(o.email))
+    return res.status(400).json({ message: "Invalid email address" });
+  req.selectedOrganizer = o;
+  next();
 }
 
 /**
@@ -824,26 +1053,42 @@ async function verifyOrganizerPayload(req: Request, res: Response, next: NextFun
  *       409: { description: Already a delegate }
  *       500: { description: Database error }
  */
-router.post("/organizers", verifyOrganizerPayload, organizerHandler(async (req, res) => {
+router.post(
+  "/organizers",
+  verifyOrganizerPayload,
+  organizerHandler(async (req, res) => {
     try {
+      const newOrganizer = await organizer.addOrganizer(
+        req.tournament,
+        req.selectedOrganizer.name,
+        req.selectedOrganizer.email,
+        req.selectedOrganizer.role,
+      );
 
-        const newOrganizer = await organizer.addOrganizer(req.tournament, req.selectedOrganizer.name, req.selectedOrganizer.email, req.selectedOrganizer.role);
+      getTournament(req.tournament).then((tournament) => {
+        const message: EmailTemplate = organizerAddedEmail(
+          newOrganizer.name,
+          tournament.name,
+        );
+        sendTrackedEmail(
+          newOrganizer.email,
+          message.subject,
+          message.html,
+          message.text,
+          { type: "organizer_invite", id: req.tournament },
+        );
+      });
 
-
-       getTournament(req.tournament).then((tournament) => {
-           const message : EmailTemplate = organizerAddedEmail(newOrganizer.name, tournament.name)
-           sendTrackedEmail(newOrganizer.email, message.subject, message.html, message.text,
-               { type: 'organizer_invite', id: req.tournament });
-       })
-
-
-        return res.status(201).json(newOrganizer);
+      return res.status(201).json(newOrganizer);
     } catch (e) {
-        if (e instanceof AlreadyExistsError) return res.status(409).json({ message: 'Email is already a delegate' });
-        if (e instanceof DbError) return res.status(500).json({ message: 'Unable to speak to database' });
-        throw e;
+      if (e instanceof AlreadyExistsError)
+        return res.status(409).json({ message: "Email is already a delegate" });
+      if (e instanceof DbError)
+        return res.status(500).json({ message: "Unable to speak to database" });
+      throw e;
     }
-}));
+  }),
+);
 
 /**
  * @swagger
@@ -878,17 +1123,29 @@ router.post("/organizers", verifyOrganizerPayload, organizerHandler(async (req, 
  *       404: { description: Not found }
  *       409: { description: Organizer already joined }
  */
-router.put("/organizers", verifyOrganizerPayload, organizerHandler(async (req, res) => {
-    if (!req.selectedOrganizer.id) return res.status(400).json({ message: 'Missing id field' });
-    if (!uuidRegex.test(req.selectedOrganizer.id)) return res.status(400).json({ message: 'Invalid organizer ID' });
+router.put(
+  "/organizers",
+  verifyOrganizerPayload,
+  organizerHandler(async (req, res) => {
+    if (!req.selectedOrganizer.id)
+      return res.status(400).json({ message: "Missing id field" });
+    if (!uuidRegex.test(req.selectedOrganizer.id))
+      return res.status(400).json({ message: "Invalid organizer ID" });
     try {
-        return res.status(200).json(await organizer.updateOrganizer(req.selectedOrganizer));
+      return res
+        .status(200)
+        .json(await organizer.updateOrganizer(req.selectedOrganizer));
     } catch (e) {
-        if (e instanceof OrganizerAlreadyJoinedError) return res.status(409).json({ message: 'Organizer has already joined' });
-        if (e instanceof NotFoundError) return res.status(404).json({ message: e.message });
-        throw e;
+      if (e instanceof OrganizerAlreadyJoinedError)
+        return res
+          .status(409)
+          .json({ message: "Organizer has already joined" });
+      if (e instanceof NotFoundError)
+        return res.status(404).json({ message: e.message });
+      throw e;
     }
-}));
+  }),
+);
 
 /**
  * @swagger
@@ -919,17 +1176,24 @@ router.put("/organizers", verifyOrganizerPayload, organizerHandler(async (req, r
  *       400: { description: Missing or invalid id }
  *       404: { description: Not found }
  */
-router.delete("/organizers", verifyOrganizerPayload, organizerHandler(async (req, res) => {
-    if (!req.selectedOrganizer.id) return res.status(400).json({ message: 'Missing id field in body' });
-    if (!uuidRegex.test(req.selectedOrganizer.id)) return res.status(400).json({ message: 'Invalid organizer ID' });
+router.delete(
+  "/organizers",
+  verifyOrganizerPayload,
+  organizerHandler(async (req, res) => {
+    if (!req.selectedOrganizer.id)
+      return res.status(400).json({ message: "Missing id field in body" });
+    if (!uuidRegex.test(req.selectedOrganizer.id))
+      return res.status(400).json({ message: "Invalid organizer ID" });
     try {
-        await organizer.deleteOrganizer(req.selectedOrganizer);
-        return res.status(204).send();
+      await organizer.deleteOrganizer(req.selectedOrganizer);
+      return res.status(204).send();
     } catch (e) {
-        if (e instanceof NotFoundError) return res.status(404).json({ message: e.message });
-        throw e;
+      if (e instanceof NotFoundError)
+        return res.status(404).json({ message: e.message });
+      throw e;
     }
-}));
+  }),
+);
 
 // ── Courtrooms ────────────────────────────────────────────────────────────────
 
@@ -948,14 +1212,20 @@ router.delete("/organizers", verifyOrganizerPayload, organizerHandler(async (req
  *       200: { description: Array of courtrooms }
  *       500: { description: Database error }
  */
-router.get('/courtrooms', tournamentHandler(async (req, res) => {
+router.get(
+  "/courtrooms",
+  tournamentHandler(async (req, res) => {
     try {
-        return res.status(200).json(await organizer.getCourtrooms(req.tournament));
+      return res
+        .status(200)
+        .json(await organizer.getCourtrooms(req.tournament));
     } catch (e) {
-        if (e instanceof DbError) return res.status(500).json({ message: 'Unable to get courtrooms' });
-        throw e;
+      if (e instanceof DbError)
+        return res.status(500).json({ message: "Unable to get courtrooms" });
+      throw e;
     }
-}));
+  }),
+);
 
 /**
  * @swagger
@@ -982,15 +1252,22 @@ router.get('/courtrooms', tournamentHandler(async (req, res) => {
  *       400: { description: Missing name }
  *       500: { description: Database error }
  */
-router.post('/courtrooms', tournamentHandler(async (req, res) => {
-    if (!req.body?.name) return res.status(400).json({ message: 'Missing name' });
+router.post(
+  "/courtrooms",
+  tournamentHandler(async (req, res) => {
+    if (!req.body?.name)
+      return res.status(400).json({ message: "Missing name" });
     try {
-        return res.status(201).json(await organizer.addCourtroom(req.tournament, req.body));
+      return res
+        .status(201)
+        .json(await organizer.addCourtroom(req.tournament, req.body));
     } catch (e) {
-        if (e instanceof DbError) return res.status(500).json({ message: 'Unable to add courtroom' });
-        throw e;
+      if (e instanceof DbError)
+        return res.status(500).json({ message: "Unable to add courtroom" });
+      throw e;
     }
-}));
+  }),
+);
 
 /**
  * @swagger
@@ -1018,14 +1295,16 @@ router.post('/courtrooms', tournamentHandler(async (req, res) => {
  *       400: { description: Missing id or name }
  *       404: { description: Not found }
  */
-router.put('/courtrooms', async (req: Request, res: Response) => {
-    if (!req.body?.id || !req.body?.name) return res.status(400).json({ message: 'Missing id or name' });
-    try {
-        return res.status(200).json(await organizer.updateCourtroom(req.body));
-    } catch (e) {
-        if (e instanceof NotFoundError) return res.status(404).json({ message: e.message });
-        throw e;
-    }
+router.put("/courtrooms", async (req: Request, res: Response) => {
+  if (!req.body?.id || !req.body?.name)
+    return res.status(400).json({ message: "Missing id or name" });
+  try {
+    return res.status(200).json(await organizer.updateCourtroom(req.body));
+  } catch (e) {
+    if (e instanceof NotFoundError)
+      return res.status(404).json({ message: e.message });
+    throw e;
+  }
 });
 
 /**
@@ -1053,16 +1332,17 @@ router.put('/courtrooms', async (req: Request, res: Response) => {
  *       400: { description: Missing id }
  *       404: { description: Not found }
  */
-router.delete('/courtrooms', async (req: Request, res: Response) => {
-    const { id } = req.body;
-    if (!id) return res.status(400).json({ message: 'Missing id' });
-    try {
-        await organizer.deleteCourtroom(id);
-        return res.status(204).send();
-    } catch (e) {
-        if (e instanceof NotFoundError) return res.status(404).json({ message: e.message });
-        throw e;
-    }
+router.delete("/courtrooms", async (req: Request, res: Response) => {
+  const { id } = req.body;
+  if (!id) return res.status(400).json({ message: "Missing id" });
+  try {
+    await organizer.deleteCourtroom(id);
+    return res.status(204).send();
+  } catch (e) {
+    if (e instanceof NotFoundError)
+      return res.status(404).json({ message: e.message });
+    throw e;
+  }
 });
 
 // ── Teams ─────────────────────────────────────────────────────────────────────
@@ -1081,18 +1361,51 @@ router.delete('/courtrooms', async (req: Request, res: Response) => {
  *     responses:
  *       200: { description: Array of teams }
  */
-router.get('/teams', tournamentHandler(async (req, res) => {
-    return res.status(200).json(await organizer.getTeams(req.tournament));
-}));
+router.get(
+  "/teams",
+  tournamentHandler(async (req, res) => {
+    const rawIssues =
+      req.query.issue === undefined
+        ? []
+        : Array.isArray(req.query.issue)
+          ? req.query.issue
+          : [req.query.issue];
+    if (
+      !rawIssues.every((issue): issue is string => typeof issue === "string")
+    ) {
+      return res.status(400).json({ message: "Invalid team issue filter" });
+    }
+    const issues = rawIssues.flatMap((issue) => issue.split(","));
+    const validIssues = new Set([
+      "without-rosters",
+      "without-default-assignments",
+      "without-default-call-orders",
+      "without-coaches",
+    ]);
+    if (!issues.every((issue) => validIssues.has(issue))) {
+      return res.status(400).json({ message: "Invalid team issue filter" });
+    }
+    return res
+      .status(200)
+      .json(
+        await organizer.getTeams(
+          req.tournament,
+          issues as organizer.TeamIssueFilter[],
+        ),
+      );
+  }),
+);
 
 function verifyTeamPayload(req: Request, res: Response, next: NextFunction) {
-    const { team } = req.body;
-    if (!team) return res.status(400).json({ message: 'No team in body' });
-    const t: ITeam = team;
-    if (!t.name || !t.coach_email) return res.status(400).json({ message: 'Missing required fields' });
-    if (!isValidEmail(t.coach_email)) return res.status(400).json({ message: 'Invalid coach email address' });
-    req.selectedTeam = t;
-    next();
+  const { team } = req.body;
+  if (!team) return res.status(400).json({ message: "No team in body" });
+  const t: ITeam = team;
+  if (!t.name || !t.coach_email)
+    return res.status(400).json({ message: "Missing required fields" });
+  if (!isValidEmail(t.coach_email))
+    return res.status(400).json({ message: "Invalid coach email address" });
+  req.selectedTeam = t;
+  next();
 }
 
 /**
@@ -1128,29 +1441,54 @@ function verifyTeamPayload(req: Request, res: Response, next: NextFunction) {
  *       500: { description: Database error }
  */
 
-async function sendCoachInviteEmail(tournamentID: string, teamName: string, teamId: string, coachEmail:string ){
-    getTournament(tournamentID).then(tournament => {
-        const template = teamAddedEmail(teamName, tournament.name, teamId)
-        sendTrackedEmail(coachEmail, template.subject, template.html, template.text,
-            { type: 'coach_invite', id: teamId })
-    }).catch(e => console.error(e))
+async function sendCoachInviteEmail(
+  tournamentID: string,
+  teamName: string,
+  teamId: string,
+  coachEmail: string,
+) {
+  getTournament(tournamentID)
+    .then((tournament) => {
+      const template = teamAddedEmail(teamName, tournament.name, teamId);
+      sendTrackedEmail(
+        coachEmail,
+        template.subject,
+        template.html,
+        template.text,
+        { type: "coach_invite", id: teamId },
+      );
+    })
+    .catch((e) => console.error(e));
 }
 
-router.post('/teams', verifyTeamPayload, teamHandler(async (req, res) => {
+router.post(
+  "/teams",
+  verifyTeamPayload,
+  teamHandler(async (req, res) => {
     const { name, coach_email, code } = req.selectedTeam;
-    if (await organizer.teamNameExists(req.tournament, name)) return res.status(409).json({ message: 'A team with that name already exists' });
+    if (await organizer.teamNameExists(req.tournament, name))
+      return res
+        .status(409)
+        .json({ message: "A team with that name already exists" });
     try {
-        const newTeam = await organizer.addTeam(req.tournament, name, coach_email, code || name);
+      const newTeam = await organizer.addTeam(
+        req.tournament,
+        name,
+        coach_email,
+        code || name,
+      );
 
-        //Fire and forget coach invite email
-        sendCoachInviteEmail(req.tournament, name, newTeam.id, coach_email)
+      //Fire and forget coach invite email
+      sendCoachInviteEmail(req.tournament, name, newTeam.id, coach_email);
 
-        return res.status(201).json(newTeam);
+      return res.status(201).json(newTeam);
     } catch (e) {
-        if (e instanceof DbError) return res.status(500).json({ message: 'Unable to add team' });
-        throw e;
+      if (e instanceof DbError)
+        return res.status(500).json({ message: "Unable to add team" });
+      throw e;
     }
-}));
+  }),
+);
 
 /**
  * @swagger
@@ -1186,26 +1524,40 @@ router.post('/teams', verifyTeamPayload, teamHandler(async (req, res) => {
  *       409: { description: Name already taken }
  *       500: { description: Database error }
  */
-router.put('/teams', verifyTeamPayload, teamHandler(async (req, res) => {
+router.put(
+  "/teams",
+  verifyTeamPayload,
+  teamHandler(async (req, res) => {
     const { id, name, coach_email, code } = req.selectedTeam;
-    if (!id) return res.status(400).json({ message: 'Missing id field' });
-    if (!uuidRegex.test(id)) return res.status(400).json({ message: 'Invalid team ID' });
+    if (!id) return res.status(400).json({ message: "Missing id field" });
+    if (!uuidRegex.test(id))
+      return res.status(400).json({ message: "Invalid team ID" });
     if (await organizer.teamNameExists(req.tournament, name, id))
-        return res.status(409).json({ message: 'A team with that name already exists' });
+      return res
+        .status(409)
+        .json({ message: "A team with that name already exists" });
     try {
-        const prev = await organizer.getTeam(id);
-        const updatedTeam = await organizer.updateTeam(id, name, coach_email, code || name);
-        if (prev.coach_email != updatedTeam.coach_email) {
-            //fire and forget coach invite
-            sendCoachInviteEmail(req.tournament, name, id, updatedTeam.coach_email)
-        }
-        return res.status(200).json(updatedTeam);
+      const prev = await organizer.getTeam(id);
+      const updatedTeam = await organizer.updateTeam(
+        id,
+        name,
+        coach_email,
+        code || name,
+      );
+      if (prev.coach_email != updatedTeam.coach_email) {
+        //fire and forget coach invite
+        sendCoachInviteEmail(req.tournament, name, id, updatedTeam.coach_email);
+      }
+      return res.status(200).json(updatedTeam);
     } catch (e) {
-        if (e instanceof NotFoundError) return res.status(404).json({ message: e.message });
-        if (e instanceof DbError) return res.status(500).json({ message: 'Unable to update team' });
-        throw e;
+      if (e instanceof NotFoundError)
+        return res.status(404).json({ message: e.message });
+      if (e instanceof DbError)
+        return res.status(500).json({ message: "Unable to update team" });
+      throw e;
     }
-}));
+  }),
+);
 
 /**
  * @swagger
@@ -1232,17 +1584,19 @@ router.put('/teams', verifyTeamPayload, teamHandler(async (req, res) => {
  *       400: { description: Missing or invalid id }
  *       404: { description: Not found }
  */
-router.delete('/teams', async (req: Request, res: Response) => {
-    const { id } = req.body;
-    if (!id) return res.status(400).json({ message: 'Missing id' });
-    if (!uuidRegex.test(id)) return res.status(400).json({ message: 'Invalid team ID' });
-    try {
-        await organizer.deleteTeam(id);
-        return res.status(204).send();
-    } catch (e) {
-        if (e instanceof NotFoundError) return res.status(404).json({ message: e.message });
-        throw e;
-    }
+router.delete("/teams", async (req: Request, res: Response) => {
+  const { id } = req.body;
+  if (!id) return res.status(400).json({ message: "Missing id" });
+  if (!uuidRegex.test(id))
+    return res.status(400).json({ message: "Invalid team ID" });
+  try {
+    await organizer.deleteTeam(id);
+    return res.status(204).send();
+  } catch (e) {
+    if (e instanceof NotFoundError)
+      return res.status(404).json({ message: e.message });
+    throw e;
+  }
 });
 
 /**
@@ -1274,18 +1628,21 @@ router.delete('/teams', async (req: Request, res: Response) => {
  *       400: { description: Invalid ID }
  *       404: { description: Not found }
  */
-router.put('/teams/:teamId/owner', async (req: Request, res: Response) => {
-    const teamId = req.params.teamId as string;
-    if (!uuidRegex.test(teamId)) return res.status(400).json({ message: 'Invalid team ID' });
-    const { coachId } = req.body as { coachId?: string };
-    if (!coachId || !uuidRegex.test(coachId)) return res.status(400).json({ message: 'Missing or invalid coachId' });
-    try {
-        await transferOwnership(teamId, coachId);
-        return res.status(204).send();
-    } catch (e) {
-        if (e instanceof NotFoundError) return res.status(404).json({ message: e.message });
-        throw e;
-    }
+router.put("/teams/:teamId/owner", async (req: Request, res: Response) => {
+  const teamId = req.params.teamId as string;
+  if (!uuidRegex.test(teamId))
+    return res.status(400).json({ message: "Invalid team ID" });
+  const { coachId } = req.body as { coachId?: string };
+  if (!coachId || !uuidRegex.test(coachId))
+    return res.status(400).json({ message: "Missing or invalid coachId" });
+  try {
+    await transferOwnership(teamId, coachId);
+    return res.status(204).send();
+  } catch (e) {
+    if (e instanceof NotFoundError)
+      return res.status(404).json({ message: e.message });
+    throw e;
+  }
 });
 
 // ── Organizer view of team roster (delegates to coachProvider) ────────────────
@@ -1308,8 +1665,10 @@ router.put('/teams/:teamId/owner', async (req: Request, res: Response) => {
  *     responses:
  *       200: { description: Array of coaches }
  */
-router.get('/teams/:teamId/coaches', async (req: Request, res: Response) => {
-    return res.status(200).json(await coachProvider.getCoaches(req.params.teamId as string));
+router.get("/teams/:teamId/coaches", async (req: Request, res: Response) => {
+  return res
+    .status(200)
+    .json(await coachProvider.getCoaches(req.params.teamId as string));
 });
 
 /**
@@ -1340,11 +1699,14 @@ router.get('/teams/:teamId/coaches', async (req: Request, res: Response) => {
  *       201: { description: Coach added }
  *       400: { description: Missing email }
  */
-router.post('/teams/:teamId/coaches', async (req: Request, res: Response) => {
-    const { email } = req.body as { email?: string };
-    if (!email) return res.status(400).json({ message: 'Missing email' });
-    if (!isValidEmail(email)) return res.status(400).json({ message: 'Invalid email address' });
-    return res.status(201).json(await coachProvider.addCoach(req.params.teamId as string, email));
+router.post("/teams/:teamId/coaches", async (req: Request, res: Response) => {
+  const { email } = req.body as { email?: string };
+  if (!email) return res.status(400).json({ message: "Missing email" });
+  if (!isValidEmail(email))
+    return res.status(400).json({ message: "Invalid email address" });
+  return res
+    .status(201)
+    .json(await coachProvider.addCoach(req.params.teamId as string, email));
 });
 
 /**
@@ -1370,7 +1732,7 @@ router.post('/teams/:teamId/coaches', async (req: Request, res: Response) => {
  *       204: { description: Removed }
  *       404: { description: Not found }
  */
-router.delete('/teams/:teamId/coaches/:coachId', removeCoachHandler);
+router.delete("/teams/:teamId/coaches/:coachId", removeCoachHandler);
 
 /**
  * @swagger
@@ -1390,8 +1752,10 @@ router.delete('/teams/:teamId/coaches/:coachId', removeCoachHandler);
  *     responses:
  *       200: { description: Array of students }
  */
-router.get('/teams/:teamId/students', async (req: Request, res: Response) => {
-    return res.status(200).json(await coachProvider.getStudents(req.params.teamId as string));
+router.get("/teams/:teamId/students", async (req: Request, res: Response) => {
+  return res
+    .status(200)
+    .json(await coachProvider.getStudents(req.params.teamId as string));
 });
 
 /**
@@ -1424,7 +1788,7 @@ router.get('/teams/:teamId/students', async (req: Request, res: Response) => {
  *       400: { description: Missing student_name }
  *       409: { description: Student already on roster }
  */
-router.post('/teams/:teamId/students', addStudentHandler);
+router.post("/teams/:teamId/students", addStudentHandler);
 
 /**
  * @swagger
@@ -1449,15 +1813,19 @@ router.post('/teams/:teamId/students', addStudentHandler);
  *       204: { description: Removed }
  *       404: { description: Not found }
  */
-router.delete('/teams/:teamId/students/:studentId', async (req: Request, res: Response) => {
+router.delete(
+  "/teams/:teamId/students/:studentId",
+  async (req: Request, res: Response) => {
     try {
-        await coachProvider.removeStudent(req.params.studentId as string);
-        return res.status(204).send();
+      await coachProvider.removeStudent(req.params.studentId as string);
+      return res.status(204).send();
     } catch (e) {
-        if (e instanceof NotFoundError) return res.status(404).json({ message: e.message });
-        throw e;
+      if (e instanceof NotFoundError)
+        return res.status(404).json({ message: e.message });
+      throw e;
     }
-});
+  },
+);
 
 /**
  * @swagger
@@ -1477,9 +1845,16 @@ router.delete('/teams/:teamId/students/:studentId', async (req: Request, res: Re
  *     responses:
  *       200: { description: Array of custom roster columns }
  */
-router.get('/teams/:teamId/roster-columns', async (req: Request, res: Response) => {
-    return res.status(200).json(await coachProvider.getRosterColumnsByTeam(req.params.teamId as string));
-});
+router.get(
+  "/teams/:teamId/roster-columns",
+  async (req: Request, res: Response) => {
+    return res
+      .status(200)
+      .json(
+        await coachProvider.getRosterColumnsByTeam(req.params.teamId as string),
+      );
+  },
+);
 
 /**
  * @swagger
@@ -1521,7 +1896,10 @@ router.get('/teams/:teamId/roster-columns', async (req: Request, res: Response) 
  *       400: { description: Invalid student ID or custom_data }
  *       404: { description: Not found }
  */
-router.put('/teams/:teamId/students/:studentId/custom-data', updateStudentCustomDataHandler);
+router.put(
+  "/teams/:teamId/students/:studentId/custom-data",
+  updateStudentCustomDataHandler,
+);
 
 /**
  * @swagger
@@ -1545,9 +1923,19 @@ router.put('/teams/:teamId/students/:studentId/custom-data', updateStudentCustom
  *     responses:
  *       200: { description: Witness call order }
  */
-router.get('/teams/:teamId/pairings/:pairingId/witness-order', async (req: Request, res: Response) => {
-    return res.status(200).json(await coachProvider.getWitnessCallOrder(req.params.pairingId as string, req.params.teamId as string));
-});
+router.get(
+  "/teams/:teamId/pairings/:pairingId/witness-order",
+  async (req: Request, res: Response) => {
+    return res
+      .status(200)
+      .json(
+        await coachProvider.getWitnessCallOrder(
+          req.params.pairingId as string,
+          req.params.teamId as string,
+        ),
+      );
+  },
+);
 
 /**
  * @swagger
@@ -1583,12 +1971,20 @@ router.get('/teams/:teamId/pairings/:pairingId/witness-order', async (req: Reque
  *       200: { description: Updated }
  *       400: { description: witness_ids must be an array }
  */
-router.put('/teams/:teamId/pairings/:pairingId/witness-order', async (req: Request, res: Response) => {
+router.put(
+  "/teams/:teamId/pairings/:pairingId/witness-order",
+  async (req: Request, res: Response) => {
     const { witness_ids } = req.body as { witness_ids?: string[] };
-    if (!Array.isArray(witness_ids)) return res.status(400).json({ message: 'witness_ids must be an array' });
-    await coachProvider.setWitnessCallOrder(req.params.pairingId as string, req.params.teamId as string, witness_ids);
+    if (!Array.isArray(witness_ids))
+      return res.status(400).json({ message: "witness_ids must be an array" });
+    await coachProvider.setWitnessCallOrder(
+      req.params.pairingId as string,
+      req.params.teamId as string,
+      witness_ids,
+    );
     return res.status(200).json({ success: true });
-});
+  },
+);
 
 /**
  * @swagger
@@ -1612,9 +2008,19 @@ router.put('/teams/:teamId/pairings/:pairingId/witness-order', async (req: Reque
  *     responses:
  *       200: { description: Assignments }
  */
-router.get('/teams/:teamId/pairings/:pairingId/assignments', async (req: Request, res: Response) => {
-    return res.status(200).json(await coachProvider.getStudentAssignments(req.params.pairingId as string, req.params.teamId as string));
-});
+router.get(
+  "/teams/:teamId/pairings/:pairingId/assignments",
+  async (req: Request, res: Response) => {
+    return res
+      .status(200)
+      .json(
+        await coachProvider.getStudentAssignments(
+          req.params.pairingId as string,
+          req.params.teamId as string,
+        ),
+      );
+  },
+);
 
 /**
  * @swagger
@@ -1650,16 +2056,37 @@ router.get('/teams/:teamId/pairings/:pairingId/assignments', async (req: Request
  *       400: { description: Missing field_id or student_id }
  *       500: { description: Unable to save assignment }
  */
-router.put('/teams/:teamId/pairings/:pairingId/assignments', async (req: Request, res: Response) => {
-    const { field_id, student_id, side } = req.body as { field_id?: string; student_id?: string; side?: 'P' | 'D' };
-    if (!field_id || !student_id || (side !== 'P' && side !== 'D')) return res.status(400).json({ message: 'field_id, student_id, and side (P or D) are required' });
+router.put(
+  "/teams/:teamId/pairings/:pairingId/assignments",
+  async (req: Request, res: Response) => {
+    const { field_id, student_id, side } = req.body as {
+      field_id?: string;
+      student_id?: string;
+      side?: "P" | "D";
+    };
+    if (!field_id || !student_id || (side !== "P" && side !== "D"))
+      return res.status(400).json({
+        message: "field_id, student_id, and side (P or D) are required",
+      });
     try {
-        return res.status(200).json(await coachProvider.upsertStudentAssignment(req.params.pairingId as string, req.params.teamId as string, field_id, student_id, side));
+      return res
+        .status(200)
+        .json(
+          await coachProvider.upsertStudentAssignment(
+            req.params.pairingId as string,
+            req.params.teamId as string,
+            field_id,
+            student_id,
+            side,
+          ),
+        );
     } catch (e) {
-        if (e instanceof DbError) return res.status(500).json({ message: 'Unable to save assignment' });
-        throw e;
+      if (e instanceof DbError)
+        return res.status(500).json({ message: "Unable to save assignment" });
+      throw e;
     }
-});
+  },
+);
 
 // ── Rounds ────────────────────────────────────────────────────────────────────
 
@@ -1678,30 +2105,46 @@ router.put('/teams/:teamId/pairings/:pairingId/assignments', async (req: Request
  *       200: { description: Array of rounds }
  *       500: { description: Database error }
  */
-router.get("/rounds", tournamentHandler(async (req, res) => {
+router.get(
+  "/rounds",
+  tournamentHandler(async (req, res) => {
     try {
-        return res.status(200).json(await organizer.getRounds(req.tournament));
+      return res
+        .status(200)
+        .json(await organizer.getRoundsReadiness(req.tournament));
     } catch (e) {
-        if (e instanceof DbError) return res.status(500).json({ message: 'Database error' });
-        throw e;
+      if (e instanceof DbError)
+        return res.status(500).json({ message: "Database error" });
+      throw e;
     }
-}));
+  }),
+);
 
 /** Replace a joined team's owner by email, optionally retaining the former owner as a coach. */
-router.put('/teams/:teamId/owner-email', async (req: Request, res: Response) => {
+router.put(
+  "/teams/:teamId/owner-email",
+  async (req: Request, res: Response) => {
     const teamId = req.params.teamId as string;
-    const { email, retainPreviousOwner } = req.body as { email?: string; retainPreviousOwner?: boolean };
-    if (!uuidRegex.test(teamId)) return res.status(400).json({ message: 'Invalid team ID' });
-    if (!email || !isValidEmail(email)) return res.status(400).json({ message: 'Invalid owner email address' });
-    if (typeof retainPreviousOwner !== 'boolean') return res.status(400).json({ message: 'Missing retainPreviousOwner' });
+    const { email, retainPreviousOwner } = req.body as {
+      email?: string;
+      retainPreviousOwner?: boolean;
+    };
+    if (!uuidRegex.test(teamId))
+      return res.status(400).json({ message: "Invalid team ID" });
+    if (!email || !isValidEmail(email))
+      return res.status(400).json({ message: "Invalid owner email address" });
+    if (typeof retainPreviousOwner !== "boolean")
+      return res.status(400).json({ message: "Missing retainPreviousOwner" });
     try {
-        await replaceTeamOwner(teamId, email, retainPreviousOwner);
-        return res.status(204).send();
+      await replaceTeamOwner(teamId, email, retainPreviousOwner);
+      return res.status(204).send();
     } catch (e) {
-        if (e instanceof NotFoundError) return res.status(404).json({ message: e.message });
-        throw e;
+      if (e instanceof NotFoundError)
+        return res.status(404).json({ message: e.message });
+      throw e;
     }
-});
+  },
+);
 
 /**
  * @swagger
@@ -1718,81 +2161,97 @@ router.put('/teams/:teamId/owner-email', async (req: Request, res: Response) => 
  *       201: { description: Round created }
  *       500: { description: Unable to create round }
  */
-router.post("/rounds", tournamentHandler(async (req, res) => {
+router.post(
+  "/rounds",
+  tournamentHandler(async (req, res) => {
     try {
-        const newRound = await organizer.createRound(req.tournament);
-        const out: IRound = { ...newRound, round_time: newRound.round_time?.toISOString() ?? null };
-        return res.status(201).json(out);
+      const newRound = await organizer.createRound(req.tournament);
+      const out: IRound = {
+        ...newRound,
+        round_time: newRound.round_time?.toISOString() ?? null,
+      };
+      return res.status(201).json(out);
     } catch (e) {
-        if (e instanceof DbError) return res.status(500).json({ message: 'Unable to create round' });
-        throw e;
+      if (e instanceof DbError)
+        return res.status(500).json({ message: "Unable to create round" });
+      throw e;
     }
-}));
+  }),
+);
 
 async function verifyRound(req: Request, res: Response, next: NextFunction) {
-    const { tournament } = req as TournamentRequest;
-    const { round } = req.params;
-    if (!round) return res.status(400).json({ message: 'No round id provided' });
-    const roundID = Array.isArray(round) ? round[0] : round;
-    if (!uuidRegex.test(roundID)) return res.status(400).json({ message: 'Invalid UUID' });
-    try {
-        const r = await organizer.getRound(tournament, roundID);
-        req.round = { ...r, round_time: r.round_time == null ? null : r.round_time.toISOString() };
-        next();
-    } catch (e) {
-        if (e instanceof NotFoundError) return res.status(404).json({ message: 'No round found' });
-        throw e;
-    }
+  const { tournament } = req as TournamentRequest;
+  const { round } = req.params;
+  if (!round) return res.status(400).json({ message: "No round id provided" });
+  const roundID = Array.isArray(round) ? round[0] : round;
+  if (!uuidRegex.test(roundID))
+    return res.status(400).json({ message: "Invalid UUID" });
+  try {
+    const r = await organizer.getRound(tournament, roundID);
+    req.round = {
+      ...r,
+      round_time: r.round_time == null ? null : r.round_time.toISOString(),
+    };
+    next();
+  } catch (e) {
+    if (e instanceof NotFoundError)
+      return res.status(404).json({ message: "No round found" });
+    throw e;
+  }
 }
-
 
 async function verifyPairing(req: Request, res: Response, next: NextFunction) {
-    const { pairingId } = req.params;
-    if (!pairingId) return res.status(400).json({ message: 'No pairing id provided' });
-    const pairing = Array.isArray(pairingId) ? pairingId[0] : pairingId;
-    if (!uuidRegex.test(pairing)) return res.status(400).json({ message: 'Invalid UUID' });
-    try {
-        const r = await organizer.getPairing(pairing);
-        req.pairing = {...r}
-        next();
-    } catch (e) {
-        if (e instanceof NotFoundError) return res.status(404).json({ message: 'No pairing found' });
-        throw e;
-    }
+  const { pairingId } = req.params;
+  if (!pairingId)
+    return res.status(400).json({ message: "No pairing id provided" });
+  const pairing = Array.isArray(pairingId) ? pairingId[0] : pairingId;
+  if (!uuidRegex.test(pairing))
+    return res.status(400).json({ message: "Invalid UUID" });
+  try {
+    const r = await organizer.getPairing(pairing);
+    req.pairing = { ...r };
+    next();
+  } catch (e) {
+    if (e instanceof NotFoundError)
+      return res.status(404).json({ message: "No pairing found" });
+    throw e;
+  }
 }
 
-
-router.use('/rounds/:round', verifyRound, roundRoutes);
-router.use('/pairings/:pairingId', verifyPairing, pairingRoutes);
-
+router.use("/rounds/:round", verifyRound, roundRoutes);
+router.use("/pairings/:pairingId", verifyPairing, pairingRoutes);
 
 // ── Bulk Import ───────────────────────────────────────────────────────────────
 
 /** Simple CSV parser — handles quoted fields and commas within quotes */
 function parseCsv(text: string): string[][] {
-    const rows: string[][] = [];
-    const lines = text.replace(/\r\n/g, '\n').replace(/\r/g, '\n').split('\n');
-    for (const line of lines) {
-        if (!line.trim()) continue;
-        const fields: string[] = [];
-        let current = '';
-        let inQuotes = false;
-        for (let i = 0; i < line.length; i++) {
-            const ch = line[i];
-            if (inQuotes) {
-                if (ch === '"' && line[i + 1] === '"') { current += '"'; i++; }
-                else if (ch === '"') inQuotes = false;
-                else current += ch;
-            } else {
-                if (ch === '"') inQuotes = true;
-                else if (ch === ',') { fields.push(current.trim()); current = ''; }
-                else current += ch;
-            }
-        }
-        fields.push(current.trim());
-        rows.push(fields);
+  const rows: string[][] = [];
+  const lines = text.replace(/\r\n/g, "\n").replace(/\r/g, "\n").split("\n");
+  for (const line of lines) {
+    if (!line.trim()) continue;
+    const fields: string[] = [];
+    let current = "";
+    let inQuotes = false;
+    for (let i = 0; i < line.length; i++) {
+      const ch = line[i];
+      if (inQuotes) {
+        if (ch === '"' && line[i + 1] === '"') {
+          current += '"';
+          i++;
+        } else if (ch === '"') inQuotes = false;
+        else current += ch;
+      } else {
+        if (ch === '"') inQuotes = true;
+        else if (ch === ",") {
+          fields.push(current.trim());
+          current = "";
+        } else current += ch;
+      }
     }
-    return rows;
+    fields.push(current.trim());
+    rows.push(fields);
+  }
+  return rows;
 }
 
 /**
@@ -1819,104 +2278,141 @@ function parseCsv(text: string): string[][] {
  *       200: { description: Import results with created count and errors }
  *       400: { description: Missing CSV or invalid format }
  */
-router.post('/import/scorers', tournamentHandler(async (req, res) => {
+router.post(
+  "/import/scorers",
+  tournamentHandler(async (req, res) => {
     const { csv } = req.body as { csv?: string };
-    if (!csv?.trim()) return res.status(400).json({ message: 'No CSV data provided' });
+    if (!csv?.trim())
+      return res.status(400).json({ message: "No CSV data provided" });
 
     const rows = parseCsv(csv);
-    if (rows.length === 0) return res.status(400).json({ message: 'CSV is empty' });
+    if (rows.length === 0)
+      return res.status(400).json({ message: "CSV is empty" });
 
     // New scorer format columns: name, email, is_paper, willing_to_preside.
     // When a header row names these columns we map by column name (any order,
     // extra columns ignored). The legacy "first_name,last_name,email" header
     // (and headerless rows) fall back to positional parsing so older CSVs and
     // the two-column "name,email" shape keep working.
-    const headerCells = rows[0].map(f => f.toLowerCase().trim());
-    const hasLegacyNameHeader = headerCells.includes('first_name') ||
-                                headerCells.includes('first name') ||
-                                headerCells.includes('last_name') ||
-                                headerCells.includes('lastname');
-    const NEW_HEADERS = new Set(['name', 'email', 'is_paper', 'paper', 'willing_to_preside', 'preside']);
-    const hasNewHeader = !hasLegacyNameHeader && headerCells.some(c => NEW_HEADERS.has(c));
+    const headerCells = rows[0].map((f) => f.toLowerCase().trim());
+    const hasLegacyNameHeader =
+      headerCells.includes("first_name") ||
+      headerCells.includes("first name") ||
+      headerCells.includes("last_name") ||
+      headerCells.includes("lastname");
+    const NEW_HEADERS = new Set([
+      "name",
+      "email",
+      "is_paper",
+      "paper",
+      "willing_to_preside",
+      "preside",
+    ]);
+    const hasNewHeader =
+      !hasLegacyNameHeader && headerCells.some((c) => NEW_HEADERS.has(c));
     // A legacy header row still needs to be skipped even though we parse positionally.
     const hasHeader = hasNewHeader || hasLegacyNameHeader;
 
     const colIndex = (...names: string[]): number => {
-        for (const n of names) {
-            const idx = headerCells.indexOf(n);
-            if (idx !== -1) return idx;
-        }
-        return -1;
+      for (const n of names) {
+        const idx = headerCells.indexOf(n);
+        if (idx !== -1) return idx;
+      }
+      return -1;
     };
-    const nameCol = hasNewHeader ? colIndex('name') : -1;
-    const emailCol = hasNewHeader ? colIndex('email') : -1;
-    const paperCol = hasNewHeader ? colIndex('is_paper', 'paper') : -1;
-    const presideCol = hasNewHeader ? colIndex('willing_to_preside', 'preside') : -1;
+    const nameCol = hasNewHeader ? colIndex("name") : -1;
+    const emailCol = hasNewHeader ? colIndex("email") : -1;
+    const paperCol = hasNewHeader ? colIndex("is_paper", "paper") : -1;
+    const presideCol = hasNewHeader
+      ? colIndex("willing_to_preside", "preside")
+      : -1;
 
     const dataRows = hasHeader ? rows.slice(1) : rows;
 
-    const results: { created: number; errors: { row: number; message: string }[] } = { created: 0, errors: [] };
+    const results: {
+      created: number;
+      errors: { row: number; message: string }[];
+    } = { created: 0, errors: [] };
 
     // Parse a boolean-ish cell. Empty cells fall back to the provided default.
-    const parseBool = (value: string | undefined, fallback: boolean): boolean => {
-        const v = (value ?? '').trim().toLowerCase();
-        if (!v) return fallback;
-        return ['true', 'yes', 'y', '1', 'x'].includes(v);
+    const parseBool = (
+      value: string | undefined,
+      fallback: boolean,
+    ): boolean => {
+      const v = (value ?? "").trim().toLowerCase();
+      if (!v) return fallback;
+      return ["true", "yes", "y", "1", "x"].includes(v);
     };
 
     for (let i = 0; i < dataRows.length; i++) {
-        const row = dataRows[i];
-        const rowNum = i + (hasHeader ? 2 : 1); // 1-indexed, accounting for header
+      const row = dataRows[i];
+      const rowNum = i + (hasHeader ? 2 : 1); // 1-indexed, accounting for header
 
-        let name: string;
-        let email: string;
-        let isPaper: boolean;
-        let willingToPreside: boolean;
+      let name: string;
+      let email: string;
+      let isPaper: boolean;
+      let willingToPreside: boolean;
 
-        if (hasNewHeader) {
-            name = (nameCol !== -1 ? row[nameCol] ?? '' : '').trim();
-            email = (emailCol !== -1 ? row[emailCol] ?? '' : '').trim();
-            isPaper = parseBool(paperCol !== -1 ? row[paperCol] : undefined, false);
-            willingToPreside = parseBool(presideCol !== -1 ? row[presideCol] : undefined, true);
-        } else {
-            // No new header: accept "name,email" (2 cols) or legacy "first,last,email" (3+ cols).
-            email = ((row.length >= 3 ? row[2] : row[1]) ?? '').trim();
-            name = (row.length >= 3 ? `${row[0] ?? ''} ${row[1] ?? ''}` : row[0] ?? '').trim();
-            isPaper = false;
-            willingToPreside = true;
-        }
+      if (hasNewHeader) {
+        name = (nameCol !== -1 ? (row[nameCol] ?? "") : "").trim();
+        email = (emailCol !== -1 ? (row[emailCol] ?? "") : "").trim();
+        isPaper = parseBool(paperCol !== -1 ? row[paperCol] : undefined, false);
+        willingToPreside = parseBool(
+          presideCol !== -1 ? row[presideCol] : undefined,
+          true,
+        );
+      } else {
+        // No new header: accept "name,email" (2 cols) or legacy "first,last,email" (3+ cols).
+        email = ((row.length >= 3 ? row[2] : row[1]) ?? "").trim();
+        name = (
+          row.length >= 3 ? `${row[0] ?? ""} ${row[1] ?? ""}` : (row[0] ?? "")
+        ).trim();
+        isPaper = false;
+        willingToPreside = true;
+      }
 
-        if (!name) {
-            results.errors.push({ row: rowNum, message: 'Missing name' });
-            continue;
-        }
-        // Online scorers must have a valid email; paper scorers may omit it.
-        if (!isPaper && (!email || !isValidEmail(email))) {
-            results.errors.push({ row: rowNum, message: `Invalid email: ${email || '(empty)'}` });
-            continue;
-        }
-        if (isPaper && email && !isValidEmail(email)) {
-            results.errors.push({ row: rowNum, message: `Invalid email: ${email}` });
-            continue;
-        }
+      if (!name) {
+        results.errors.push({ row: rowNum, message: "Missing name" });
+        continue;
+      }
+      // Online scorers must have a valid email; paper scorers may omit it.
+      if (!isPaper && (!email || !isValidEmail(email))) {
+        results.errors.push({
+          row: rowNum,
+          message: `Invalid email: ${email || "(empty)"}`,
+        });
+        continue;
+      }
+      if (isPaper && email && !isValidEmail(email)) {
+        results.errors.push({
+          row: rowNum,
+          message: `Invalid email: ${email}`,
+        });
+        continue;
+      }
 
-        try {
-            const scorer: IScorer = {
-                scorer_id: crypto.randomUUID(),
-                name,
-                email: email ? email : null,
-                is_paper: isPaper,
-                willing_to_preside: willingToPreside,
-            };
-            await organizer.addScorer(scorer, req.tournament);
-            results.created++;
-        } catch (e) {
-            results.errors.push({ row: rowNum, message: e instanceof Error ? e.message : 'Unknown error' });
-        }
+      try {
+        const scorer: IScorer = {
+          scorer_id: crypto.randomUUID(),
+          name,
+          email: email ? email : null,
+          is_paper: isPaper,
+          willing_to_preside: willingToPreside,
+          notes: "",
+        };
+        await organizer.addScorer(scorer, req.tournament);
+        results.created++;
+      } catch (e) {
+        results.errors.push({
+          row: rowNum,
+          message: e instanceof Error ? e.message : "Unknown error",
+        });
+      }
     }
 
     return res.status(200).json(results);
-}));
+  }),
+);
 
 /**
  * @swagger
@@ -1942,75 +2438,119 @@ router.post('/import/scorers', tournamentHandler(async (req, res) => {
  *       200: { description: Import results with created count and errors }
  *       400: { description: Missing CSV or invalid format }
  */
-router.post('/import/teams', tournamentHandler(async (req, res) => {
+router.post(
+  "/import/teams",
+  tournamentHandler(async (req, res) => {
     const { csv } = req.body as { csv?: string };
-    if (!csv?.trim()) return res.status(400).json({ message: 'No CSV data provided' });
+    if (!csv?.trim())
+      return res.status(400).json({ message: "No CSV data provided" });
 
     const rows = parseCsv(csv);
-    if (rows.length === 0) return res.status(400).json({ message: 'CSV is empty' });
+    if (rows.length === 0)
+      return res.status(400).json({ message: "CSV is empty" });
 
     // Detect header row
-    const firstRow = rows[0].map(f => f.toLowerCase());
-    const hasHeader = firstRow.includes('name') || firstRow.includes('team') ||
-                      firstRow.includes('coach_email') || firstRow.includes('email');
+    const firstRow = rows[0].map((f) => f.toLowerCase());
+    const hasHeader =
+      firstRow.includes("name") ||
+      firstRow.includes("team") ||
+      firstRow.includes("coach_email") ||
+      firstRow.includes("email");
     const dataRows = hasHeader ? rows.slice(1) : rows;
 
-    const results: { created: number; errors: { row: number; message: string }[] } = { created: 0, errors: [] };
+    const results: {
+      created: number;
+      errors: { row: number; message: string }[];
+    } = { created: 0, errors: [] };
 
     // Collect successfully created teams so we can send one invite email per team
     // after fetching the tournament once (mirrors the single-team POST /teams flow).
     const invites: { email: string; teamName: string; teamId: string }[] = [];
 
     for (let i = 0; i < dataRows.length; i++) {
-        const row = dataRows[i];
-        const [name, coachEmail, code] = row;
-        const rowNum = i + (hasHeader ? 2 : 1);
+      const row = dataRows[i];
+      const [name, coachEmail, code] = row;
+      const rowNum = i + (hasHeader ? 2 : 1);
 
-        if (!name?.trim()) {
-            results.errors.push({ row: rowNum, message: 'Missing team name' });
-            continue;
-        }
-        if (!coachEmail?.trim() || !isValidEmail(coachEmail.trim())) {
-            results.errors.push({ row: rowNum, message: `Invalid coach email: ${coachEmail ?? '(empty)'}` });
-            continue;
-        }
+      if (!name?.trim()) {
+        results.errors.push({ row: rowNum, message: "Missing team name" });
+        continue;
+      }
+      if (!coachEmail?.trim() || !isValidEmail(coachEmail.trim())) {
+        results.errors.push({
+          row: rowNum,
+          message: `Invalid coach email: ${coachEmail ?? "(empty)"}`,
+        });
+        continue;
+      }
 
-        // Check for duplicate name
-        if (await organizer.teamNameExists(req.tournament, name.trim())) {
-            results.errors.push({ row: rowNum, message: `Team "${name.trim()}" already exists` });
-            continue;
-        }
+      // Check for duplicate name
+      if (await organizer.teamNameExists(req.tournament, name.trim())) {
+        results.errors.push({
+          row: rowNum,
+          message: `Team "${name.trim()}" already exists`,
+        });
+        continue;
+      }
 
-        try {
-            const newTeam = await organizer.addTeam(req.tournament, name.trim(), coachEmail.trim(), code?.trim() || name.trim());
-            invites.push({ email: coachEmail.trim(), teamName: name.trim(), teamId: newTeam.id });
-            results.created++;
-        } catch (e) {
-            results.errors.push({ row: rowNum, message: e instanceof Error ? e.message : 'Unknown error' });
-        }
+      try {
+        const newTeam = await organizer.addTeam(
+          req.tournament,
+          name.trim(),
+          coachEmail.trim(),
+          code?.trim() || name.trim(),
+        );
+        invites.push({
+          email: coachEmail.trim(),
+          teamName: name.trim(),
+          teamId: newTeam.id,
+        });
+        results.created++;
+      } catch (e) {
+        results.errors.push({
+          row: rowNum,
+          message: e instanceof Error ? e.message : "Unknown error",
+        });
+      }
     }
 
     // Fire off the coach invitation emails without blocking the response.
     if (invites.length > 0) {
-        getTournament(req.tournament).then(tournament => {
-            for (const invite of invites) {
-                const template = teamAddedEmail(invite.teamName, tournament.name, invite.teamId);
-                sendTrackedEmail(invite.email, template.subject, template.html, template.text,
-                    { type: 'coach_invite', id: invite.teamId });
-            }
-        }).catch(e => console.error(e));
+      getTournament(req.tournament)
+        .then((tournament) => {
+          for (const invite of invites) {
+            const template = teamAddedEmail(
+              invite.teamName,
+              tournament.name,
+              invite.teamId,
+            );
+            sendTrackedEmail(
+              invite.email,
+              template.subject,
+              template.html,
+              template.text,
+              { type: "coach_invite", id: invite.teamId },
+            );
+          }
+        })
+        .catch((e) => console.error(e));
     }
 
     return res.status(200).json(results);
-}));
+  }),
+);
 
 // ── Export / Download ─────────────────────────────────────────────────────────
 
 function escapeCsvField(value: string): string {
-    const sanitized = /^[=+\-@]/.test(value) ? `'${value}` : value;
-    if (sanitized.includes(',') || sanitized.includes('"') || sanitized.includes('\n'))
-        return `"${sanitized.replace(/"/g, '""')}"`;
-    return sanitized;
+  const sanitized = /^[=+\-@]/.test(value) ? `'${value}` : value;
+  if (
+    sanitized.includes(",") ||
+    sanitized.includes('"') ||
+    sanitized.includes("\n")
+  )
+    return `"${sanitized.replace(/"/g, '""')}"`;
+  return sanitized;
 }
 
 /**
@@ -2028,48 +2568,74 @@ function escapeCsvField(value: string): string {
  *       200: { description: CSV file }
  *       500: { description: Database error }
  */
-router.get('/export/standings', tournamentHandler(async (req, res) => {
+router.get(
+  "/export/standings",
+  tournamentHandler(async (req, res) => {
     try {
-        const data = await organizer.getOrganizerStandingsData(req.tournament);
-        const { teams, ballots } = data;
+      const data = await organizer.getOrganizerStandingsData(req.tournament);
+      const { teams, ballots } = data;
 
-        // Build a map of team stats
-        const statsMap = new Map<string, { name: string; code: string; won: number; lost: number; pointsFor: number; pointsAgainst: number }>();
-        for (const t of teams)
-            statsMap.set(t.id, { name: t.name, code: t.code, won: 0, lost: 0, pointsFor: 0, pointsAgainst: 0 });
-
-        // Aggregate ballots per pairing, then determine wins/losses per ballot
-        for (const b of ballots) {
-            const pStats = statsMap.get(b.p_team_id);
-            const dStats = statsMap.get(b.d_team_id);
-            if (pStats) {
-                pStats.pointsFor += b.p_points;
-                pStats.pointsAgainst += b.d_points;
-                if (b.p_points > b.d_points) pStats.won++;
-                else if (b.d_points > b.p_points) pStats.lost++;
-            }
-            if (dStats) {
-                dStats.pointsFor += b.d_points;
-                dStats.pointsAgainst += b.p_points;
-                if (b.d_points > b.p_points) dStats.won++;
-                else if (b.p_points > b.d_points) dStats.lost++;
-            }
+      // Build a map of team stats
+      const statsMap = new Map<
+        string,
+        {
+          name: string;
+          code: string;
+          won: number;
+          lost: number;
+          pointsFor: number;
+          pointsAgainst: number;
         }
+      >();
+      for (const t of teams)
+        statsMap.set(t.id, {
+          name: t.name,
+          code: t.code,
+          won: 0,
+          lost: 0,
+          pointsFor: 0,
+          pointsAgainst: 0,
+        });
 
-        const header = 'Team Name,Team Code,Ballots Won,Ballots Lost,Total Points For,Total Points Against';
-        const rows = [...statsMap.values()].map(s =>
-            `${escapeCsvField(s.name)},${escapeCsvField(s.code)},${s.won},${s.lost},${s.pointsFor},${s.pointsAgainst}`
-        );
+      // Aggregate ballots per pairing, then determine wins/losses per ballot
+      for (const b of ballots) {
+        const pStats = statsMap.get(b.p_team_id);
+        const dStats = statsMap.get(b.d_team_id);
+        if (pStats) {
+          pStats.pointsFor += b.p_points;
+          pStats.pointsAgainst += b.d_points;
+          if (b.p_points > b.d_points) pStats.won++;
+          else if (b.d_points > b.p_points) pStats.lost++;
+        }
+        if (dStats) {
+          dStats.pointsFor += b.d_points;
+          dStats.pointsAgainst += b.p_points;
+          if (b.d_points > b.p_points) dStats.won++;
+          else if (b.p_points > b.d_points) dStats.lost++;
+        }
+      }
 
-        const csv = [header, ...rows].join('\n');
-        res.setHeader('Content-Type', 'text/csv');
-        res.setHeader('Content-Disposition', 'attachment; filename="standings.csv"');
-        return res.status(200).send(csv);
+      const header =
+        "Team Name,Team Code,Ballots Won,Ballots Lost,Total Points For,Total Points Against";
+      const rows = [...statsMap.values()].map(
+        (s) =>
+          `${escapeCsvField(s.name)},${escapeCsvField(s.code)},${s.won},${s.lost},${s.pointsFor},${s.pointsAgainst}`,
+      );
+
+      const csv = [header, ...rows].join("\n");
+      res.setHeader("Content-Type", "text/csv");
+      res.setHeader(
+        "Content-Disposition",
+        'attachment; filename="standings.csv"',
+      );
+      return res.status(200).send(csv);
     } catch (e) {
-        if (e instanceof DbError) return res.status(500).json({ message: 'Database error' });
-        throw e;
+      if (e instanceof DbError)
+        return res.status(500).json({ message: "Database error" });
+      throw e;
     }
-}));
+  }),
+);
 
 /**
  * @swagger
@@ -2090,43 +2656,59 @@ router.get('/export/standings', tournamentHandler(async (req, res) => {
  *       200: { description: CSV file }
  *       500: { description: Database error }
  */
-router.get('/export/rosters', tournamentHandler(async (req, res) => {
+router.get(
+  "/export/rosters",
+  tournamentHandler(async (req, res) => {
     const tournamentId = req.tournament as string;
-    if (!uuidRegex.test(tournamentId)) return res.status(400).json({ message: 'Invalid tournament ID' });
+    if (!uuidRegex.test(tournamentId))
+      return res.status(400).json({ message: "Invalid tournament ID" });
     try {
-        const [columns, rosters] = await Promise.all([
-            organizer.getCustomRosterColumns(tournamentId),
-            organizer.getAllRosters(tournamentId),
-        ]);
+      const [columns, rosters] = await Promise.all([
+        organizer.getCustomRosterColumns(tournamentId),
+        organizer.getAllRosters(tournamentId),
+      ]);
 
-        const header = ['School', 'Name', 'Pronoun', ...columns.map(c => c.field)]
-            .map(escapeCsvField)
-            .join(',');
+      const header = [
+        "School",
+        "Name",
+        "Pronoun",
+        ...columns.map((c) => c.field),
+      ]
+        .map(escapeCsvField)
+        .join(",");
 
-        const rows = rosters.map(r => {
-            const byField = new Map((r.custom_data ?? []).map(d => [d.field, d.value]));
-            const cells = [
-                r.team_name,
-                r.student_name,
-                r.pronouns ?? '',
-                ...columns.map(c => {
-                    const v = byField.get(c.field);
-                    return v == null ? '' : String(v);
-                }),
-            ];
-            return cells.map(escapeCsvField).join(',');
-        });
+      const rows = rosters.map((r) => {
+        const byField = new Map(
+          (r.custom_data ?? []).map((d) => [d.field, d.value]),
+        );
+        const cells = [
+          r.team_name,
+          r.student_name,
+          r.pronouns ?? "",
+          ...columns.map((c) => {
+            const v = byField.get(c.field);
+            return v == null ? "" : String(v);
+          }),
+        ];
+        return cells.map(escapeCsvField).join(",");
+      });
 
-        const csv = [header, ...rows].join('\n');
-        res.setHeader('Content-Type', 'text/csv');
-        res.setHeader('Content-Disposition', 'attachment; filename="rosters.csv"');
-        return res.status(200).send(csv);
+      const csv = [header, ...rows].join("\n");
+      res.setHeader("Content-Type", "text/csv");
+      res.setHeader(
+        "Content-Disposition",
+        'attachment; filename="rosters.csv"',
+      );
+      return res.status(200).send(csv);
     } catch (e) {
-        if (e instanceof NotFoundError) return res.status(404).json({ message: e.message });
-        if (e instanceof DbError) return res.status(500).json({ message: 'Database error' });
-        throw e;
+      if (e instanceof NotFoundError)
+        return res.status(404).json({ message: e.message });
+      if (e instanceof DbError)
+        return res.status(500).json({ message: "Database error" });
+      throw e;
     }
-}));
+  }),
+);
 
 /**
  * @swagger
@@ -2143,31 +2725,39 @@ router.get('/export/rosters', tournamentHandler(async (req, res) => {
  *       200: { description: CSV file }
  *       500: { description: Database error }
  */
-router.get('/export/results', tournamentHandler(async (req, res) => {
+router.get(
+  "/export/results",
+  tournamentHandler(async (req, res) => {
     try {
-        const data = await organizer.getOrganizerStandingsData(req.tournament);
-        const { teams, ballots, rounds } = data;
+      const data = await organizer.getOrganizerStandingsData(req.tournament);
+      const { teams, ballots, rounds } = data;
 
-        const teamNameMap = new Map<string, string>();
-        for (const t of teams) teamNameMap.set(t.id, t.name);
+      const teamNameMap = new Map<string, string>();
+      for (const t of teams) teamNameMap.set(t.id, t.name);
 
-        const roundNameMap = new Map<string, string>();
-        for (const r of rounds) roundNameMap.set(r.round_id, r.name);
+      const roundNameMap = new Map<string, string>();
+      for (const r of rounds) roundNameMap.set(r.round_id, r.name);
 
-        const header = 'Round,Prosecution,Defense,P Points,D Points';
-        const rows = ballots.map(b =>
-            `${escapeCsvField(roundNameMap.get(b.round_id) ?? 'Unknown')},${escapeCsvField(teamNameMap.get(b.p_team_id) ?? 'Unknown')},${escapeCsvField(teamNameMap.get(b.d_team_id) ?? 'Unknown')},${b.p_points},${b.d_points}`
-        );
+      const header = "Round,Prosecution,Defense,P Points,D Points";
+      const rows = ballots.map(
+        (b) =>
+          `${escapeCsvField(roundNameMap.get(b.round_id) ?? "Unknown")},${escapeCsvField(teamNameMap.get(b.p_team_id) ?? "Unknown")},${escapeCsvField(teamNameMap.get(b.d_team_id) ?? "Unknown")},${b.p_points},${b.d_points}`,
+      );
 
-        const csv = [header, ...rows].join('\n');
-        res.setHeader('Content-Type', 'text/csv');
-        res.setHeader('Content-Disposition', 'attachment; filename="results.csv"');
-        return res.status(200).send(csv);
+      const csv = [header, ...rows].join("\n");
+      res.setHeader("Content-Type", "text/csv");
+      res.setHeader(
+        "Content-Disposition",
+        'attachment; filename="results.csv"',
+      );
+      return res.status(200).send(csv);
     } catch (e) {
-        if (e instanceof DbError) return res.status(500).json({ message: 'Database error' });
-        throw e;
+      if (e instanceof DbError)
+        return res.status(500).json({ message: "Database error" });
+      throw e;
     }
-}));
+  }),
+);
 
 // ── Award Categories ──────────────────────────────────────────────────────────
 
@@ -2186,14 +2776,20 @@ router.get('/export/results', tournamentHandler(async (req, res) => {
  *       200: { description: Array of award categories }
  *       500: { description: Database error }
  */
-router.get("/award-categories", tournamentHandler(async (req, res) => {
+router.get(
+  "/award-categories",
+  tournamentHandler(async (req, res) => {
     try {
-        return res.status(200).json(await organizer.getAwardCategories(req.tournament));
+      return res
+        .status(200)
+        .json(await organizer.getAwardCategories(req.tournament));
     } catch (e) {
-        if (e instanceof DbError) return res.status(500).json({ message: 'Database error' });
-        throw e;
+      if (e instanceof DbError)
+        return res.status(500).json({ message: "Database error" });
+      throw e;
     }
-}));
+  }),
+);
 
 /**
  * @swagger
@@ -2222,20 +2818,57 @@ router.get("/award-categories", tournamentHandler(async (req, res) => {
  *       400: { description: Missing or invalid fields }
  *       500: { description: Database error }
  */
-router.post("/award-categories", tournamentHandler(async (req, res) => {
-    const { name, minNominees, maxNominees } = req.body as { name?: string; minNominees?: number; maxNominees?: number };
-    if (!name?.trim()) return res.status(400).json({ message: 'Name is required' });
-    if (minNominees == null || maxNominees == null) return res.status(400).json({ message: 'minNominees and maxNominees are required' });
-    if (minNominees < 0) return res.status(400).json({ message: 'minNominees must be >= 0' });
-    if (maxNominees < 1) return res.status(400).json({ message: 'maxNominees must be >= 1' });
-    if (minNominees > maxNominees) return res.status(400).json({ message: 'minNominees cannot exceed maxNominees' });
+router.post(
+  "/award-categories",
+  tournamentHandler(async (req, res) => {
+    const {
+      name,
+      minNominees,
+      maxNominees,
+      openToAll = false,
+    } = req.body as {
+      name?: string;
+      minNominees?: number;
+      maxNominees?: number;
+      openToAll?: boolean;
+    };
+    if (!name?.trim())
+      return res.status(400).json({ message: "Name is required" });
+    if (minNominees == null || maxNominees == null)
+      return res
+        .status(400)
+        .json({ message: "minNominees and maxNominees are required" });
+    if (minNominees < 0)
+      return res.status(400).json({ message: "minNominees must be >= 0" });
+    if (maxNominees < 1)
+      return res.status(400).json({ message: "maxNominees must be >= 1" });
+    if (minNominees > maxNominees)
+      return res
+        .status(400)
+        .json({ message: "minNominees cannot exceed maxNominees" });
+    if (typeof openToAll !== "boolean")
+      return res.status(400).json({ message: "openToAll must be a boolean" });
     try {
-        return res.status(201).json(await organizer.createAwardCategory(req.tournament, name.trim(), minNominees, maxNominees));
+      return res
+        .status(201)
+        .json(
+          await organizer.createAwardCategory(
+            req.tournament,
+            name.trim(),
+            minNominees,
+            maxNominees,
+            openToAll,
+          ),
+        );
     } catch (e) {
-        if (e instanceof DbError) return res.status(500).json({ message: 'Unable to create award category' });
-        throw e;
+      if (e instanceof DbError)
+        return res
+          .status(500)
+          .json({ message: "Unable to create award category" });
+      throw e;
     }
-}));
+  }),
+);
 
 /**
  * @swagger
@@ -2269,23 +2902,62 @@ router.post("/award-categories", tournamentHandler(async (req, res) => {
  *       404: { description: Not found }
  *       500: { description: Database error }
  */
-router.put("/award-categories/:categoryId", tournamentHandler(async (req, res) => {
+router.put(
+  "/award-categories/:categoryId",
+  tournamentHandler(async (req, res) => {
     const categoryId = req.params.categoryId as string;
-    if (!uuidRegex.test(categoryId)) return res.status(400).json({ message: 'Invalid category ID' });
-    const { name, minNominees, maxNominees } = req.body as { name?: string; minNominees?: number; maxNominees?: number };
-    if (!name?.trim()) return res.status(400).json({ message: 'Name is required' });
-    if (minNominees == null || maxNominees == null) return res.status(400).json({ message: 'minNominees and maxNominees are required' });
-    if (minNominees < 0) return res.status(400).json({ message: 'minNominees must be >= 0' });
-    if (maxNominees < 1) return res.status(400).json({ message: 'maxNominees must be >= 1' });
-    if (minNominees > maxNominees) return res.status(400).json({ message: 'minNominees cannot exceed maxNominees' });
+    if (!uuidRegex.test(categoryId))
+      return res.status(400).json({ message: "Invalid category ID" });
+    const {
+      name,
+      minNominees,
+      maxNominees,
+      openToAll = false,
+    } = req.body as {
+      name?: string;
+      minNominees?: number;
+      maxNominees?: number;
+      openToAll?: boolean;
+    };
+    if (!name?.trim())
+      return res.status(400).json({ message: "Name is required" });
+    if (minNominees == null || maxNominees == null)
+      return res
+        .status(400)
+        .json({ message: "minNominees and maxNominees are required" });
+    if (minNominees < 0)
+      return res.status(400).json({ message: "minNominees must be >= 0" });
+    if (maxNominees < 1)
+      return res.status(400).json({ message: "maxNominees must be >= 1" });
+    if (minNominees > maxNominees)
+      return res
+        .status(400)
+        .json({ message: "minNominees cannot exceed maxNominees" });
+    if (typeof openToAll !== "boolean")
+      return res.status(400).json({ message: "openToAll must be a boolean" });
     try {
-        return res.status(200).json(await organizer.updateAwardCategory(categoryId, name.trim(), minNominees, maxNominees));
+      return res
+        .status(200)
+        .json(
+          await organizer.updateAwardCategory(
+            categoryId,
+            name.trim(),
+            minNominees,
+            maxNominees,
+            openToAll,
+          ),
+        );
     } catch (e) {
-        if (e instanceof NotFoundError) return res.status(404).json({ message: e.message });
-        if (e instanceof DbError) return res.status(500).json({ message: 'Unable to update award category' });
-        throw e;
+      if (e instanceof NotFoundError)
+        return res.status(404).json({ message: e.message });
+      if (e instanceof DbError)
+        return res
+          .status(500)
+          .json({ message: "Unable to update award category" });
+      throw e;
     }
-}));
+  }),
+);
 
 /**
  * @swagger
@@ -2307,17 +2979,22 @@ router.put("/award-categories/:categoryId", tournamentHandler(async (req, res) =
  *       400: { description: Invalid category ID }
  *       404: { description: Not found }
  */
-router.delete("/award-categories/:categoryId", tournamentHandler(async (req, res) => {
+router.delete(
+  "/award-categories/:categoryId",
+  tournamentHandler(async (req, res) => {
     const categoryId = req.params.categoryId as string;
-    if (!uuidRegex.test(categoryId)) return res.status(400).json({ message: 'Invalid category ID' });
+    if (!uuidRegex.test(categoryId))
+      return res.status(400).json({ message: "Invalid category ID" });
     try {
-        await organizer.deleteAwardCategory(categoryId);
-        return res.status(204).send();
+      await organizer.deleteAwardCategory(categoryId);
+      return res.status(204).send();
     } catch (e) {
-        if (e instanceof NotFoundError) return res.status(404).json({ message: e.message });
-        throw e;
+      if (e instanceof NotFoundError)
+        return res.status(404).json({ message: e.message });
+      throw e;
     }
-}));
+  }),
+);
 
 // ── Awards / Nominations ──────────────────────────────────────────────────────
 
@@ -2350,17 +3027,19 @@ router.delete("/award-categories/:categoryId", tournamentHandler(async (req, res
  *                   average_rank: { type: number }
  *       500: { description: Database error }
  */
-router.get('/awards', tournamentHandler(async (req, res) => {
+router.get(
+  "/awards",
+  tournamentHandler(async (req, res) => {
     try {
-        const awards = await getAwardsSummary(req.tournament)
-        return res.status(200).json(awards);
+      const awards = await getAwardsSummary(req.tournament);
+      return res.status(200).json(awards);
     } catch (e) {
-        if (e instanceof DbError) return res.status(500).json({ message: 'Database error' });
-        throw e;
+      if (e instanceof DbError)
+        return res.status(500).json({ message: "Database error" });
+      throw e;
     }
-}));
-
-
+  }),
+);
 
 // ── Email delivery status ─────────────────────────────────────────────────────
 
@@ -2377,9 +3056,11 @@ router.get('/awards', tournamentHandler(async (req, res) => {
  *     responses:
  *       200: { description: Set of bounced email addresses relevant to this tournament }
  */
-router.get('/bounced-emails', tournamentHandler(async (req, res) => {
+router.get(
+  "/bounced-emails",
+  tournamentHandler(async (req, res) => {
     const result = await dbQuery<{ email: string }>(
-        `SELECT DISTINCT be.email FROM bounced_emails be
+      `SELECT DISTINCT be.email FROM bounced_emails be
          WHERE be.email IN (
              SELECT email FROM scorers WHERE tournament_id = $1 AND email IS NOT NULL
              UNION SELECT coach_email FROM (
@@ -2395,13 +3076,13 @@ router.get('/bounced-emails', tournamentHandler(async (req, res) => {
              UNION SELECT email FROM tournament_delegate_invites WHERE tournament_id = $1
              UNION SELECT a.email FROM tournament_owners tow JOIN auth a ON a.user_id = tow.delegate_id WHERE tow.tournament_id = $1
          )`,
-        [req.tournament]
+      [req.tournament],
     );
-    return res.status(200).json(result?.rows.map(r => r.email) ?? []);
-}));
+    return res.status(200).json(result?.rows.map((r) => r.email) ?? []);
+  }),
+);
 
 // ── Scorecard viewer ──────────────────────────────────────────────────────────
-
 
 /**
  * @swagger
@@ -2503,37 +3184,49 @@ router.get('/bounced-emails', tournamentHandler(async (req, res) => {
  *       404: { description: Tournament not found }
  *       500: { description: Database error }
  */
-router.get('/overview', tournamentHandler(async (req, res) => {
+router.get(
+  "/overview",
+  tournamentHandler(async (req, res) => {
     const tournamentId = req.tournament as string;
-    if (!uuidRegex.test(tournamentId)) return res.status(400).json({ message: 'Invalid tournament ID' });
+    if (!uuidRegex.test(tournamentId))
+      return res.status(400).json({ message: "Invalid tournament ID" });
     try {
-        const summary = await organizer.getTournamentSummary(tournamentId);
-        return res.status(200).json(summary);
+      const summary = await organizer.getTournamentSummary(tournamentId);
+      return res.status(200).json(summary);
     } catch (e) {
-        if (e instanceof NotFoundError) return res.status(404).json({ message: e.message });
-        if (e instanceof DbError) return res.status(500).json({ message: 'Unable to get overview' });
-        throw e;
+      if (e instanceof NotFoundError)
+        return res.status(404).json({ message: e.message });
+      if (e instanceof DbError)
+        return res.status(500).json({ message: "Unable to get overview" });
+      throw e;
     }
-}));
+  }),
+);
 
-
-router.get('/roster-columns', tournamentHandler(async (req, res) => {
+router.get(
+  "/roster-columns",
+  tournamentHandler(async (req, res) => {
     const tournamentId = req.tournament as string;
-    if (!uuidRegex.test(tournamentId)) return res.status(400).json({ message: 'Invalid tournament ID' });
+    if (!uuidRegex.test(tournamentId))
+      return res.status(400).json({ message: "Invalid tournament ID" });
     try {
-        const cols = await organizer.getCustomRosterColumns(tournamentId);
-        return res.status(200).json(cols);
+      const cols = await organizer.getCustomRosterColumns(tournamentId);
+      return res.status(200).json(cols);
     } catch (e) {
-        if (e instanceof NotFoundError) return res.status(404).json({ message: e.message });
-        if (e instanceof DbError) return res.status(500).json({ message: 'Unable to get overview' });
-        throw e;
+      if (e instanceof NotFoundError)
+        return res.status(404).json({ message: e.message });
+      if (e instanceof DbError)
+        return res.status(500).json({ message: "Unable to get overview" });
+      throw e;
     }
-}));
+  }),
+);
 
-const ROSTER_COLUMN_TYPES = ['int', 'string'] as const;
-type RosterColumnType = typeof ROSTER_COLUMN_TYPES[number];
+const ROSTER_COLUMN_TYPES = ["int", "string"] as const;
+type RosterColumnType = (typeof ROSTER_COLUMN_TYPES)[number];
 const isRosterColumnType = (t: unknown): t is RosterColumnType =>
-    typeof t === 'string' && (ROSTER_COLUMN_TYPES as readonly string[]).includes(t);
+  typeof t === "string" &&
+  (ROSTER_COLUMN_TYPES as readonly string[]).includes(t);
 
 /**
  * @swagger
@@ -2562,21 +3255,31 @@ const isRosterColumnType = (t: unknown): t is RosterColumnType =>
  *       409: { description: Column name already exists }
  *       500: { description: Database error }
  */
-router.post('/roster-columns', tournamentHandler(async (req, res) => {
+router.post(
+  "/roster-columns",
+  tournamentHandler(async (req, res) => {
     const tournamentId = req.tournament as string;
-    if (!uuidRegex.test(tournamentId)) return res.status(400).json({ message: 'Invalid tournament ID' });
-    const field = typeof req.body?.field === 'string' ? req.body.field.trim() : '';
+    if (!uuidRegex.test(tournamentId))
+      return res.status(400).json({ message: "Invalid tournament ID" });
+    const field =
+      typeof req.body?.field === "string" ? req.body.field.trim() : "";
     const { type } = req.body as { type?: unknown };
-    if (!field) return res.status(400).json({ message: 'Missing field name' });
-    if (!isRosterColumnType(type)) return res.status(400).json({ message: 'Invalid column type' });
+    if (!field) return res.status(400).json({ message: "Missing field name" });
+    if (!isRosterColumnType(type))
+      return res.status(400).json({ message: "Invalid column type" });
     try {
-        return res.status(201).json(await organizer.addCustomRosterColumn(tournamentId, field, type));
+      return res
+        .status(201)
+        .json(await organizer.addCustomRosterColumn(tournamentId, field, type));
     } catch (e) {
-        if (e instanceof AlreadyExistsError) return res.status(409).json({ message: e.message });
-        if (e instanceof DbError) return res.status(500).json({ message: 'Unable to add roster column' });
-        throw e;
+      if (e instanceof AlreadyExistsError)
+        return res.status(409).json({ message: e.message });
+      if (e instanceof DbError)
+        return res.status(500).json({ message: "Unable to add roster column" });
+      throw e;
     }
-}));
+  }),
+);
 
 /**
  * @swagger
@@ -2607,23 +3310,47 @@ router.post('/roster-columns', tournamentHandler(async (req, res) => {
  *       409: { description: Column name already exists }
  *       500: { description: Database error }
  */
-router.put('/roster-columns', tournamentHandler(async (req, res) => {
+router.put(
+  "/roster-columns",
+  tournamentHandler(async (req, res) => {
     const tournamentId = req.tournament as string;
-    if (!uuidRegex.test(tournamentId)) return res.status(400).json({ message: 'Invalid tournament ID' });
-    const originalField = typeof req.body?.originalField === 'string' ? req.body.originalField.trim() : '';
-    const field = typeof req.body?.field === 'string' ? req.body.field.trim() : '';
+    if (!uuidRegex.test(tournamentId))
+      return res.status(400).json({ message: "Invalid tournament ID" });
+    const originalField =
+      typeof req.body?.originalField === "string"
+        ? req.body.originalField.trim()
+        : "";
+    const field =
+      typeof req.body?.field === "string" ? req.body.field.trim() : "";
     const { type } = req.body as { type?: unknown };
-    if (!originalField || !field) return res.status(400).json({ message: 'Missing field name' });
-    if (!isRosterColumnType(type)) return res.status(400).json({ message: 'Invalid column type' });
+    if (!originalField || !field)
+      return res.status(400).json({ message: "Missing field name" });
+    if (!isRosterColumnType(type))
+      return res.status(400).json({ message: "Invalid column type" });
     try {
-        return res.status(200).json(await organizer.updateCustomRosterColumn(tournamentId, originalField, field, type));
+      return res
+        .status(200)
+        .json(
+          await organizer.updateCustomRosterColumn(
+            tournamentId,
+            originalField,
+            field,
+            type,
+          ),
+        );
     } catch (e) {
-        if (e instanceof AlreadyExistsError) return res.status(409).json({ message: e.message });
-        if (e instanceof NotFoundError) return res.status(404).json({ message: e.message });
-        if (e instanceof DbError) return res.status(500).json({ message: 'Unable to update roster column' });
-        throw e;
+      if (e instanceof AlreadyExistsError)
+        return res.status(409).json({ message: e.message });
+      if (e instanceof NotFoundError)
+        return res.status(404).json({ message: e.message });
+      if (e instanceof DbError)
+        return res
+          .status(500)
+          .json({ message: "Unable to update roster column" });
+      throw e;
     }
-}));
+  }),
+);
 
 /**
  * @swagger
@@ -2651,19 +3378,28 @@ router.put('/roster-columns', tournamentHandler(async (req, res) => {
  *       404: { description: Column not found }
  *       500: { description: Database error }
  */
-router.delete('/roster-columns', tournamentHandler(async (req, res) => {
+router.delete(
+  "/roster-columns",
+  tournamentHandler(async (req, res) => {
     const tournamentId = req.tournament as string;
-    if (!uuidRegex.test(tournamentId)) return res.status(400).json({ message: 'Invalid tournament ID' });
-    const field = typeof req.body?.field === 'string' ? req.body.field.trim() : '';
-    if (!field) return res.status(400).json({ message: 'Missing field name' });
+    if (!uuidRegex.test(tournamentId))
+      return res.status(400).json({ message: "Invalid tournament ID" });
+    const field =
+      typeof req.body?.field === "string" ? req.body.field.trim() : "";
+    if (!field) return res.status(400).json({ message: "Missing field name" });
     try {
-        await organizer.deleteCustomRosterColumn(tournamentId, field);
-        return res.status(204).send();
+      await organizer.deleteCustomRosterColumn(tournamentId, field);
+      return res.status(204).send();
     } catch (e) {
-        if (e instanceof NotFoundError) return res.status(404).json({ message: e.message });
-        if (e instanceof DbError) return res.status(500).json({ message: 'Unable to delete roster column' });
-        throw e;
+      if (e instanceof NotFoundError)
+        return res.status(404).json({ message: e.message });
+      if (e instanceof DbError)
+        return res
+          .status(500)
+          .json({ message: "Unable to delete roster column" });
+      throw e;
     }
-}));
+  }),
+);
 
 export default router;

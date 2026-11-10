@@ -45,6 +45,16 @@ function stubRoundsTab(rounds = ROUNDS) {
   ).as('getBallotStatus');
 }
 
+function stubRoundView() {
+  cy.intercept('GET', '/organizer/tournament/tourney-1/rounds/r-1', { statusCode: 200, body: ROUNDS[0] }).as('getRound')
+  cy.intercept('GET', '/organizer/tournament/tourney-1/rounds/r-1/pairings', { statusCode: 200, body: [] }).as('getPairings')
+  cy.intercept('GET', '/organizer/tournament/tourney-1/scorers', { statusCode: 200, body: [] }).as('getScorers')
+  cy.intercept('GET', '/organizer/tournament/tourney-1/courtrooms', { statusCode: 200, body: [] }).as('getCourtrooms')
+  cy.intercept('GET', '/organizer/tournament/tourney-1/scorer-conflicts', { statusCode: 200, body: [] }).as('getConflicts')
+  cy.intercept('GET', '/organizer/tournament/tourney-1/rounds/r-1/ballot-status', { statusCode: 200, body: [] }).as('getRoundBallotStatus')
+  cy.intercept('GET', '/organizer/tournament/tourney-1/rounds/r-1/roster-status', { statusCode: 200, body: [] }).as('getRosterStatus')
+}
+
 describe('Rounds Tab', () => {
   beforeEach(() => {
     failOnUnstubbedOrganizerRequest();
@@ -57,10 +67,10 @@ describe('Rounds Tab', () => {
     cy.get('.dash-round-summary').should('have.length', 2)
   })
 
-  // Round names render as <input value="Round 1"> not as text nodes
+  // Round names are displayed as headings in the read-only round summaries.
   it('renders round names', () => {
-    cy.get('.dash-round-summary').first().find('input.dash-round-name-input').should('have.value', 'Round 1')
-    cy.get('.dash-round-summary').eq(1).find('input.dash-round-name-input').should('have.value', 'Round 2')
+    cy.get('.dash-round-summary').first().find('h3').should('have.text', 'Round 1')
+    cy.get('.dash-round-summary').eq(1).find('h3').should('have.text', 'Round 2')
   })
 
   it('renders "+ Add round" button', () => {
@@ -74,29 +84,38 @@ describe('Rounds Tab', () => {
     }).as('postRound')
     cy.contains('button', '+ Add round').click()
     cy.wait('@postRound')
-    cy.get('.dash-round-summary').eq(2).find('input.dash-round-name-input').should('have.value', 'Round 3')
+    cy.get('.dash-round-summary').eq(2).find('h3').should('have.text', 'Round 3')
   })
 
-  it('clicking Open → navigates to round view', () => {
+  it('clicking a round navigates to its round view', () => {
     cy.intercept('GET', '/organizer/tournament/tourney-1/rounds/r-1', { statusCode: 200, body: ROUNDS[0] }).as('getRound')
     cy.intercept('GET', '/organizer/tournament/tourney-1/rounds/r-1/pairings', { statusCode: 200, body: [] }).as('getPairings')
     cy.intercept('GET', '/organizer/tournament/tourney-1/scorers', { statusCode: 200, body: [] }).as('getScorers')
     cy.intercept('GET', '/organizer/tournament/tourney-1/courtrooms', { statusCode: 200, body: [] }).as('getCourtrooms')
     cy.intercept('GET', '/organizer/tournament/tourney-1/scorer-conflicts', { statusCode: 200, body: [] }).as('getConflicts')
-    cy.get('.dash-round-summary').first().contains('button', 'Open →').click()
+    cy.get('.dash-round-summary').first().click()
     cy.url().should('include', '/organizer/tourney-1/round/r-1')
   })
 
-  it('shows remove confirmation when Remove is clicked', () => {
-    cy.get('.dash-round-summary').first().contains('button', 'Remove').click()
+  it('shows remove confirmation from round actions', () => {
+    stubRoundView()
+    cy.get('.dash-round-summary').first().click()
+    cy.wait('@getRound')
+    cy.contains('button', 'Round actions').click()
+    cy.contains('button', 'Remove round').click()
     cy.get('[role="dialog"]').should('be.visible')
     cy.contains(/remove round 1/i).should('be.visible')
   })
 
-  it('removes round on confirmation', () => {
+  it('removes a round from its detail view', () => {
+    stubRoundView()
     cy.intercept('DELETE', '/organizer/tournament/tourney-1/rounds/r-1', { statusCode: 200, body: {} }).as('deleteRound')
-    cy.get('.dash-round-summary').first().contains('button', 'Remove').click()
+    cy.get('.dash-round-summary').first().click()
+    cy.wait('@getRound')
+    cy.contains('button', 'Round actions').click()
+    cy.contains('button', 'Remove round').click()
     cy.get('[role="dialog"]').within(() => cy.contains('button', /confirm|yes|remove/i).click())
-    cy.get('.dash-round-summary').should('have.length', 1)
+    cy.wait('@deleteRound')
+    cy.url().should('include', '?page=rounds')
   })
 })

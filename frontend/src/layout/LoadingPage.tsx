@@ -1,13 +1,13 @@
-import './styles/loading.css'
+import "./styles/loading.css";
 
 type LoadingPageProps = {
-    loadingText?: string
-}
-const LoadingPage = ({loadingText = 'Loading...'} : LoadingPageProps ) => (
-    <main className="loading-main">
-        <div className="loading-spinner" role="status" aria-label="Loading" />
-        <p>{loadingText}</p>
-    </main>
-)
+  loadingText?: string;
+};
+const LoadingPage = ({ loadingText = "Loading..." }: LoadingPageProps) => (
+  <main className="loading-main">
+    <div className="loading-spinner" role="status" aria-label="Loading" />
+    <p>{loadingText}</p>
+  </main>
+);
 
-export default LoadingPage
+export default LoadingPage;

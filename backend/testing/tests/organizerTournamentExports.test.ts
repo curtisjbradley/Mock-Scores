@@ -17,7 +17,7 @@ const flushAsync = () => new Promise<void>(resolve => setImmediate(resolve));
 
 const T = 'a1b2c3d4-e5f6-4789-abcd-ef1234567890';
 const PID = 'b1b2c3d4-e5f6-4789-abcd-ef1234567890';
-const AID = 'c1b2c3d4-e5f6-4789-abcd-ef1234567890';
+const BID = 'c1b2c3d4-e5f6-4789-abcd-ef1234567890';
 
 const getToken = setupAuth();
 const auth = () => makeAuth(getToken());
@@ -941,12 +941,12 @@ describe('PATCH /api/organizer/tournament/:id/status', () => {
 });
 
 // ============================================================================
-// PUT /pairings/:pairingId/scoresheets/:assignmentId - DbError
+// PUT /pairings/:pairingId/scoresheets/:ballotId - DbError
 // ============================================================================
 
-describe('PUT /api/organizer/tournament/:id/pairings/:pid/scoresheets/:aid - DbError', () => {
+describe('PUT /api/organizer/tournament/:id/pairings/:pid/scoresheets/:bid - DbError', () => {
     const url =
-        `/organizer/tournament/${T}/pairings/${PID}/scoresheets/${AID}`;
+        `/organizer/tournament/${T}/pairings/${PID}/scoresheets/${BID}`;
 
     it('returns 500 on db failure', async () => {
         mockPairingAccess();
@@ -978,7 +978,7 @@ describe('PUT /api/organizer/tournament/:id/pairings/:pid/scoresheets/:aid - DbE
 
 describe('DELETE /api/organizer/tournament/:id/pairings/:pid/scoresheets/:bid - DbError', () => {
     const url =
-        `/organizer/tournament/${T}/pairings/${PID}/scoresheets/${AID}`;
+        `/organizer/tournament/${T}/pairings/${PID}/scoresheets/${BID}`;
 
     it('returns 500 on db failure', async () => {
         mockPairingAccess();
