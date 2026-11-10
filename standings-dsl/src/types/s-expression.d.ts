@@ -1,4 +1,4 @@
-declare module 's-expression' {
+declare module "s-expression" {
   /**
    * A parsed S-expression node.
    * - Atoms (symbols) are plain `string`s.

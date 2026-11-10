@@ -1,5 +1,5 @@
 import { Request, Response, Router } from "express";
-import type { TournamentPayload } from '@mock-scores/shared';
+import type { TournamentPayload } from "@mock-scores/shared";
 import * as organizer from "../../providers/organizerProvider";
 import { verifyTournamentAccess, verifyTournamentOwner } from "../../authUtils";
 import { DbError, NotFoundError } from "../../errors";
@@ -18,14 +18,20 @@ const router = Router();
  *       200: { description: Array of tournaments }
  *       500: { description: Database error }
  */
-router.get("/", authedHandler(async (req, res) => {
+router.get(
+  "/",
+  authedHandler(async (req, res) => {
     try {
-        return res.status(200).json(await organizer.getTournaments(req.session.userId));
+      return res
+        .status(200)
+        .json(await organizer.getTournaments(req.session.userId));
     } catch (e) {
-        if (e instanceof DbError) return res.status(500).json({ message: 'Database error' });
-        throw e;
+      if (e instanceof DbError)
+        return res.status(500).json({ message: "Database error" });
+      throw e;
     }
-}));
+  }),
+);
 
 /**
  * @swagger
@@ -38,12 +44,13 @@ router.get("/", authedHandler(async (req, res) => {
  *       500: { description: Database error }
  */
 router.get("/standings-templates", async (req: Request, res: Response) => {
-    try {
-        return res.status(200).json(await organizer.getStandingsTemplates());
-    } catch (e) {
-        if (e instanceof DbError) return res.status(500).json({ message: 'Database error' });
-        throw e;
-    }
+  try {
+    return res.status(200).json(await organizer.getStandingsTemplates());
+  } catch (e) {
+    if (e instanceof DbError)
+      return res.status(500).json({ message: "Database error" });
+    throw e;
+  }
 });
 
 /**
@@ -57,12 +64,13 @@ router.get("/standings-templates", async (req: Request, res: Response) => {
  *       500: { description: Database error }
  */
 router.get("/scoring-templates", async (req: Request, res: Response) => {
-    try {
-        return res.status(200).json(await organizer.getScoringTemplates());
-    } catch (e) {
-        if (e instanceof DbError) return res.status(500).json({ message: 'Database error' });
-        throw e;
-    }
+  try {
+    return res.status(200).json(await organizer.getScoringTemplates());
+  } catch (e) {
+    if (e instanceof DbError)
+      return res.status(500).json({ message: "Database error" });
+    throw e;
+  }
 });
 
 /**
@@ -82,16 +90,26 @@ router.get("/scoring-templates", async (req: Request, res: Response) => {
  *       201: { description: Created tournament }
  *       500: { description: Unable to create tournament }
  */
-router.post("/", authedHandler(async (req, res) => {
+router.post(
+  "/",
+  authedHandler(async (req, res) => {
     try {
-        const tournament = await organizer.createTournament(req.body as TournamentPayload);
-        await organizer.addTournamentOrganizer(tournament.id, req.session.userId, "owner");
-        return res.status(201).json(tournament);
+      const tournament = await organizer.createTournament(
+        req.body as TournamentPayload,
+      );
+      await organizer.addTournamentOrganizer(
+        tournament.id,
+        req.session.userId,
+        "owner",
+      );
+      return res.status(201).json(tournament);
     } catch (e) {
-        if (e instanceof DbError) return res.status(500).json({ message: 'Unable to create tournament' });
-        throw e;
+      if (e instanceof DbError)
+        return res.status(500).json({ message: "Unable to create tournament" });
+      throw e;
     }
-}));
+  }),
+);
 
 /**
  * @swagger
@@ -121,18 +139,46 @@ router.post("/", authedHandler(async (req, res) => {
  *       404: { description: Tournament not found }
  *       500: { description: Unable to duplicate tournament }
  */
-router.post("/duplicate/:tournamentId", verifyTournamentAccess, tournamentHandler(async (req, res) => {
-    const { scorers = false, courtrooms = false, scoringCategories = false, awards = false, witnesses = false, format = false, tiebreaker = false } = req.body ?? {};
+router.post(
+  "/duplicate/:tournamentId",
+  verifyTournamentAccess,
+  tournamentHandler(async (req, res) => {
+    const {
+      scorers = false,
+      courtrooms = false,
+      scoringCategories = false,
+      awards = false,
+      witnesses = false,
+      format = false,
+      tiebreaker = false,
+    } = req.body ?? {};
     try {
-        const dup = await organizer.duplicateTournament(req.tournament, { scorers, courtrooms, scoringCategories, awards, witnesses, format, tiebreaker });
-        await organizer.addTournamentOrganizer(dup.id, req.session.userId, 'owner');
-        return res.status(201).json(dup);
+      const dup = await organizer.duplicateTournament(req.tournament, {
+        scorers,
+        courtrooms,
+        scoringCategories,
+        awards,
+        witnesses,
+        format,
+        tiebreaker,
+      });
+      await organizer.addTournamentOrganizer(
+        dup.id,
+        req.session.userId,
+        "owner",
+      );
+      return res.status(201).json(dup);
     } catch (e) {
-        if (e instanceof NotFoundError) return res.status(404).json({ message: e.message });
-        if (e instanceof DbError) return res.status(500).json({ message: 'Unable to duplicate tournament' });
-        throw e;
+      if (e instanceof NotFoundError)
+        return res.status(404).json({ message: e.message });
+      if (e instanceof DbError)
+        return res
+          .status(500)
+          .json({ message: "Unable to duplicate tournament" });
+      throw e;
     }
-}));
+  }),
+);
 
 /**
  * @swagger
@@ -150,18 +196,23 @@ router.post("/duplicate/:tournamentId", verifyTournamentAccess, tournamentHandle
  *       404: { description: Not found }
  *       500: { description: Unable to delete tournament }
  */
-router.delete("/:tournamentId", verifyTournamentOwner, tournamentHandler(async (req, res) => {
+router.delete(
+  "/:tournamentId",
+  verifyTournamentOwner,
+  tournamentHandler(async (req, res) => {
     try {
-        await organizer.deleteTournament(req.tournament);
-        return res.status(204).send();
+      await organizer.deleteTournament(req.tournament);
+      return res.status(204).send();
     } catch (e) {
-        if (e instanceof NotFoundError) return res.status(404).json({ message: e.message });
-        if (e instanceof DbError) return res.status(500).json({ message: 'Unable to delete tournament' });
-        throw e;
+      if (e instanceof NotFoundError)
+        return res.status(404).json({ message: e.message });
+      if (e instanceof DbError)
+        return res.status(500).json({ message: "Unable to delete tournament" });
+      throw e;
     }
-}));
+  }),
+);
 
 router.use("/:tournamentId", verifyTournamentAccess, subRoutes);
-
 
 export default router;

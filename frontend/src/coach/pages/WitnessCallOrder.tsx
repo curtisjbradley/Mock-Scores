@@ -1,118 +1,182 @@
-import { useEffect, useState } from 'react'
-import { useNavigate, useParams } from 'react-router-dom'
-import { apiFetch } from '../../auth/auth'
-import type { IWitnessCallOrder } from '@mock-scores/shared'
-import { resolveCoachTournament } from '../coachApi'
-import SaveCancelActions from '../components/SaveCancelActions'
-import '../../organizer/styles/organizer.css'
-import '../../organizer/styles/tabs.css'
-import '../../organizer/styles/round-view.css'
-import '../../organizer/styles/standings.css'
+import { useEffect, useState } from "react";
+import { useNavigate, useParams } from "react-router-dom";
+import { apiFetch } from "../../auth/auth";
+import type { IWitnessCallOrder } from "@mock-scores/shared";
+import { resolveCoachTournament } from "../coachApi";
+import SaveCancelActions from "../components/SaveCancelActions";
+import "../../organizer/styles/organizer.css";
+import "../../organizer/styles/tabs.css";
+import "../../organizer/styles/round-view.css";
+import "../../organizer/styles/standings.css";
 
-interface Witness { id: string; name: string; side: string }
+interface Witness {
+  id: string;
+  name: string;
+  side: string;
+}
 
 export default function WitnessCallOrder() {
-    const { teamId, pairingId } = useParams<{ teamId: string; pairingId: string }>()
-    const navigate = useNavigate()
+  const { teamId, pairingId } = useParams<{
+    teamId: string;
+    pairingId: string;
+  }>();
+  const navigate = useNavigate();
 
-    const [witnesses, setWitnesses] = useState<Witness[]>([])
-    const [slots, setSlots] = useState<string[]>([])   // array of witness IDs, one per slot
-    const [saving, setSaving] = useState(false)
-    const [error, setError] = useState<string | null>(null)
+  const [witnesses, setWitnesses] = useState<Witness[]>([]);
+  const [slots, setSlots] = useState<string[]>([]); // array of witness IDs, one per slot
+  const [saving, setSaving] = useState(false);
+  const [error, setError] = useState<string | null>(null);
 
-    useEffect(() => {
-        if (!teamId || !pairingId) return
-        let active = true
-        const urlSide = (new URLSearchParams(window.location.search).get('side') ?? 'p') as 'p' | 'd'
+  useEffect(() => {
+    if (!teamId || !pairingId) return;
+    let active = true;
+    const urlSide = (new URLSearchParams(window.location.search).get("side") ??
+      "p") as "p" | "d";
 
-        // Tournament-scoped endpoints query by tournament id; resolve it from the team.
-        resolveCoachTournament(teamId, false, undefined).then(info => {
-            if (!active || !info) return
-            const tid = info.tournamentId
-            return Promise.all([
-                apiFetch(`/coach/tournaments/${tid}/witnesses`).then(r => r.ok ? r.json() : []),
-                apiFetch(`/coach/tournaments/${tid}/format`).then(r => r.ok ? r.json() : null),
-                apiFetch(`/coach/teams/${teamId}/pairings/${pairingId}/witness-order`).then(r => r.ok ? r.json() : []),
-            ]).then(([wits, fmt, saved]: [Witness[], { p_witnesses_called: number; d_witnesses_called: number } | null, IWitnessCallOrder[]]) => {
-                if (!active) return
-                const relevant = wits.filter(w => w.side === (urlSide === 'p' ? 'P' : 'D') || w.side === 'S')
-                setWitnesses(relevant)
-                const count = fmt ? (urlSide === 'p' ? fmt.p_witnesses_called : fmt.d_witnesses_called) : 0
-                // Pre-fill slots from saved order, pad with empty strings up to count
-                const savedIds = saved.map(w => w.witness_id)
-                const initial = Array.from({ length: count }, (_, i) => savedIds[i] ?? '')
-                setSlots(initial)
-            })
-        }).catch(() => {})
-        return () => { active = false }
-    }, [teamId, pairingId])
+    // Tournament-scoped endpoints query by tournament id; resolve it from the team.
+    resolveCoachTournament(teamId, false, undefined)
+      .then((info) => {
+        if (!active || !info) return;
+        const tid = info.tournamentId;
+        return Promise.all([
+          apiFetch(`/coach/tournaments/${tid}/witnesses`).then((r) =>
+            r.ok ? r.json() : [],
+          ),
+          apiFetch(`/coach/tournaments/${tid}/format`).then((r) =>
+            r.ok ? r.json() : null,
+          ),
+          apiFetch(
+            `/coach/teams/${teamId}/pairings/${pairingId}/witness-order`,
+          ).then((r) => (r.ok ? r.json() : [])),
+        ]).then(
+          ([wits, fmt, saved]: [
+            Witness[],
+            { p_witnesses_called: number; d_witnesses_called: number } | null,
+            IWitnessCallOrder[],
+          ]) => {
+            if (!active) return;
+            const relevant = wits.filter(
+              (w) => w.side === (urlSide === "p" ? "P" : "D") || w.side === "S",
+            );
+            setWitnesses(relevant);
+            const count = fmt
+              ? urlSide === "p"
+                ? fmt.p_witnesses_called
+                : fmt.d_witnesses_called
+              : 0;
+            // Pre-fill slots from saved order, pad with empty strings up to count
+            const savedIds = saved.map((w) => w.witness_id);
+            const initial = Array.from(
+              { length: count },
+              (_, i) => savedIds[i] ?? "",
+            );
+            setSlots(initial);
+          },
+        );
+      })
+      .catch(() => {});
+    return () => {
+      active = false;
+    };
+  }, [teamId, pairingId]);
 
-    function setSlot(index: number, witnessId: string) {
-        setSlots(prev => {
-            const next = [...prev]
-            // Clear any other slot that already has this witness selected
-            for (let i = 0; i < next.length; i++) {
-                if (i !== index && next[i] === witnessId) next[i] = ''
-            }
-            next[index] = witnessId
-            return next
-        })
+  function setSlot(index: number, witnessId: string) {
+    setSlots((prev) => {
+      const next = [...prev];
+      // Clear any other slot that already has this witness selected
+      for (let i = 0; i < next.length; i++) {
+        if (i !== index && next[i] === witnessId) next[i] = "";
+      }
+      next[index] = witnessId;
+      return next;
+    });
+  }
+
+  async function handleSave() {
+    if (!teamId || !pairingId) return;
+    setSaving(true);
+    setError(null);
+    const res = await apiFetch(
+      `/coach/teams/${teamId}/pairings/${pairingId}/witness-order`,
+      {
+        method: "PUT",
+        body: JSON.stringify({ witness_ids: slots.filter(Boolean) }),
+      },
+    );
+    setSaving(false);
+    if (!res.ok) {
+      const body = (await res.json().catch(() => null)) as {
+        message?: string;
+      } | null;
+      setError(body?.message ?? "Could not save call order.");
+      return;
     }
+    navigate(-1);
+  }
 
-    async function handleSave() {
-        if (!teamId || !pairingId) return
-        setSaving(true)
-        setError(null)
-        const res = await apiFetch(`/coach/teams/${teamId}/pairings/${pairingId}/witness-order`, {
-            method: 'PUT',
-            body: JSON.stringify({ witness_ids: slots.filter(Boolean) }),
-        })
-        setSaving(false)
-        if (!res.ok) {
-            const body = await res.json().catch(() => null) as { message?: string } | null
-            setError(body?.message ?? 'Could not save call order.')
-            return
-        }
-        navigate(-1)
-    }
-
-    return (
-        <main className="org-main">
-            <div className="org-container">
-                <button className="org-back-btn" onClick={() => navigate(-1)}> Back to schedule</button>
-                <h1>Witness Call Order</h1>
-                {witnesses.length === 0
-                    ? <p className="coach-empty">No witnesses configured for this tournament.</p>
-                    : slots.length === 0
-                    ? <p className="coach-empty">No witness call limit configured for this tournament.</p>
-                    : (
-                        <table className="dash-standings-table">
-                            <thead><tr><th>Call #</th><th>Witness</th></tr></thead>
-                            <tbody>{slots.map((val, i) => (
-                                <tr key={i}>
-                                    <td>{i + 1}</td>
-                                    <td>
-                                        <select
-                                            className="rv-select"
-                                            value={val}
-                                            onChange={e => setSlot(i, e.target.value)}
-                                        >
-                                            <option value="">— select witness —</option>
-                                            {witnesses.map(w => (
-                                                <option key={w.id} value={w.id} disabled={slots.includes(w.id) && slots[i] !== w.id}>
-                                                    {w.name}{w.side === 'S' ? ' (Swing)' : ''}
-                                                </option>
-                                            ))}
-                                        </select>
-                                    </td>
-                                </tr>
-                            ))}</tbody>
-                        </table>
-                    )
-                }
-                <SaveCancelActions onSave={handleSave} onCancel={() => navigate(-1)} saving={saving} />
-                {error && <p className="coach-save-error" role="alert">{error}</p>}
-            </div>
-        </main>
-    )
+  return (
+    <main className="org-main">
+      <div className="org-container">
+        <button className="org-back-btn" onClick={() => navigate(-1)}>
+          {" "}
+          Back to schedule
+        </button>
+        <h1>Witness Call Order</h1>
+        {witnesses.length === 0 ? (
+          <p className="coach-empty">
+            No witnesses configured for this tournament.
+          </p>
+        ) : slots.length === 0 ? (
+          <p className="coach-empty">
+            No witness call limit configured for this tournament.
+          </p>
+        ) : (
+          <table className="dash-standings-table">
+            <thead>
+              <tr>
+                <th>Call #</th>
+                <th>Witness</th>
+              </tr>
+            </thead>
+            <tbody>
+              {slots.map((val, i) => (
+                <tr key={i}>
+                  <td>{i + 1}</td>
+                  <td>
+                    <select
+                      className="rv-select"
+                      value={val}
+                      onChange={(e) => setSlot(i, e.target.value)}
+                    >
+                      <option value="">— select witness —</option>
+                      {witnesses.map((w) => (
+                        <option
+                          key={w.id}
+                          value={w.id}
+                          disabled={slots.includes(w.id) && slots[i] !== w.id}
+                        >
+                          {w.name}
+                          {w.side === "S" ? " (Swing)" : ""}
+                        </option>
+                      ))}
+                    </select>
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        )}
+        <SaveCancelActions
+          onSave={handleSave}
+          onCancel={() => navigate(-1)}
+          saving={saving}
+        />
+        {error && (
+          <p className="coach-save-error" role="alert">
+            {error}
+          </p>
+        )}
+      </div>
+    </main>
+  );
 }

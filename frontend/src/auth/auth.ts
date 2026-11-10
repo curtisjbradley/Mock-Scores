@@ -15,14 +15,14 @@
  * exactly once. No user interaction is required for token renewal.
  */
 
-import { API_BASE } from '../config';
-export { GOOGLE_CLIENT_ID } from '@mock-scores/shared';
+import { API_BASE } from "../config";
+export { GOOGLE_CLIENT_ID } from "@mock-scores/shared";
 
 export interface Session {
-    userId: string;
-    email: string;
-    firstName: string;
-    lastName: string;
+  userId: string;
+  email: string;
+  firstName: string;
+  lastName: string;
 }
 
 // ── In-memory access token ────────────────────────────────────────────────────
@@ -38,8 +38,8 @@ let _refreshing: Promise<boolean> | null = null;
  * via a custom event (equivalent to the old storage event).
  */
 export function setAccessToken(token: string | null): void {
-    _accessToken = token;
-    window.dispatchEvent(new Event('auth-changed'));
+  _accessToken = token;
+  window.dispatchEvent(new Event("auth-changed"));
 }
 
 // ── CSRF ──────────────────────────────────────────────────────────────────────
@@ -49,8 +49,8 @@ export function setAccessToken(token: string | null): void {
  * read it to echo it as an X-CSRF-Token header on refresh requests.
  */
 function getCsrfToken(): string | null {
-    const match = document.cookie.match(/(?:^|;\s*)csrf_token=([^;]+)/);
-    return match ? decodeURIComponent(match[1]) : null;
+  const match = document.cookie.match(/(?:^|;\s*)csrf_token=([^;]+)/);
+  return match ? decodeURIComponent(match[1]) : null;
 }
 
 // ── Token refresh ─────────────────────────────────────────────────────────────
@@ -65,25 +65,33 @@ function getCsrfToken(): string | null {
  * into one network request.
  */
 function refreshAccessToken(): Promise<boolean> {
-    if (_refreshing) return _refreshing;
+  if (_refreshing) return _refreshing;
 
-    _refreshing = fetch(`${API_BASE}/auth/refresh`, {
-        method: 'POST',
-        credentials: 'include',
-        headers: {
-            ...(getCsrfToken() ? { 'X-CSRF-Token': getCsrfToken()! } : {}),
-        },
+  _refreshing = fetch(`${API_BASE}/auth/refresh`, {
+    method: "POST",
+    credentials: "include",
+    headers: {
+      ...(getCsrfToken() ? { "X-CSRF-Token": getCsrfToken()! } : {}),
+    },
+  })
+    .then(async (res) => {
+      if (!res.ok) {
+        setAccessToken(null);
+        return false;
+      }
+      const data = (await res.json()) as { accessToken: string };
+      setAccessToken(data.accessToken);
+      return true;
     })
-        .then(async res => {
-            if (!res.ok) { setAccessToken(null); return false; }
-            const data = await res.json() as { accessToken: string };
-            setAccessToken(data.accessToken);
-            return true;
-        })
-        .catch(() => { setAccessToken(null); return false; })
-        .finally(() => { _refreshing = null; });
+    .catch(() => {
+      setAccessToken(null);
+      return false;
+    })
+    .finally(() => {
+      _refreshing = null;
+    });
 
-    return _refreshing;
+  return _refreshing;
 }
 
 // ── Session ───────────────────────────────────────────────────────────────────
@@ -94,31 +102,31 @@ function refreshAccessToken(): Promise<boolean> {
  * silent refresh first. Returns null when the user is not authenticated.
  */
 export async function getSession(): Promise<Session | null> {
-    // Try a silent refresh if we have no token yet (e.g. page reload)
-    if (!_accessToken) {
-        const refreshed = await refreshAccessToken();
-        if (!refreshed) return null;
-    }
+  // Try a silent refresh if we have no token yet (e.g. page reload)
+  if (!_accessToken) {
+    const refreshed = await refreshAccessToken();
+    if (!refreshed) return null;
+  }
 
-    try {
-        const res = await fetch(`${API_BASE}/auth/session`, {
-            headers: { Authorization: `Bearer ${_accessToken}` },
-        });
-        if (res.ok) return res.json();
+  try {
+    const res = await fetch(`${API_BASE}/auth/session`, {
+      headers: { Authorization: `Bearer ${_accessToken}` },
+    });
+    if (res.ok) return res.json();
 
-        // Token may have expired mid-session — try one refresh
-        if (res.status === 401) {
-            const refreshed = await refreshAccessToken();
-            if (!refreshed) return null;
-            const retry = await fetch(`${API_BASE}/auth/session`, {
-                headers: { Authorization: `Bearer ${_accessToken}` },
-            });
-            return retry.ok ? retry.json() : null;
-        }
-        return null;
-    } catch {
-        return null;
+    // Token may have expired mid-session — try one refresh
+    if (res.status === 401) {
+      const refreshed = await refreshAccessToken();
+      if (!refreshed) return null;
+      const retry = await fetch(`${API_BASE}/auth/session`, {
+        headers: { Authorization: `Bearer ${_accessToken}` },
+      });
+      return retry.ok ? retry.json() : null;
     }
+    return null;
+  } catch {
+    return null;
+  }
 }
 
 // ── Login / logout ────────────────────────────────────────────────────────────
@@ -128,12 +136,15 @@ export async function getSession(): Promise<Session | null> {
  * the HttpOnly refresh cookie on the server.
  */
 export async function logout(): Promise<void> {
-    setAccessToken(null);
-    try {
-        await fetch(`${API_BASE}/auth/logout`, { method: 'POST', credentials: 'include' });
-    } catch {
-        // Best-effort — local state is already cleared
-    }
+  setAccessToken(null);
+  try {
+    await fetch(`${API_BASE}/auth/logout`, {
+      method: "POST",
+      credentials: "include",
+    });
+  } catch {
+    // Best-effort — local state is already cleared
+  }
 }
 
 // ── Authenticated fetch ───────────────────────────────────────────────────────
@@ -148,24 +159,35 @@ export async function logout(): Promise<void> {
  * @param url - API endpoint path (relative to the current origin)
  * @param init - Optional standard `RequestInit` options
  */
-export async function apiFetch(url: string, init: RequestInit = {}): Promise<Response> {
-    const fullUrl = `${API_BASE}${url}`;
-    const makeHeaders = (): HeadersInit => ({
-        ...(init.body ? { 'Content-Type': 'application/json' } : {}),
-        ...(init.headers ?? {}),
-        ...(_accessToken ? { Authorization: `Bearer ${_accessToken}` } : {}),
+export async function apiFetch(
+  url: string,
+  init: RequestInit = {},
+): Promise<Response> {
+  const fullUrl = `${API_BASE}${url}`;
+  const makeHeaders = (): HeadersInit => ({
+    ...(init.body ? { "Content-Type": "application/json" } : {}),
+    ...(init.headers ?? {}),
+    ...(_accessToken ? { Authorization: `Bearer ${_accessToken}` } : {}),
+  });
+
+  const res = await fetch(fullUrl, {
+    ...init,
+    credentials: "include",
+    headers: makeHeaders(),
+  });
+
+  // Silent refresh on 401 — retry once
+  if (res.status === 401) {
+    const refreshed = await refreshAccessToken();
+    if (!refreshed) return res; // Return the 401 — caller handles it
+    return fetch(fullUrl, {
+      ...init,
+      credentials: "include",
+      headers: makeHeaders(),
     });
+  }
 
-    const res = await fetch(fullUrl, { ...init, credentials: 'include', headers: makeHeaders() });
-
-    // Silent refresh on 401 — retry once
-    if (res.status === 401) {
-        const refreshed = await refreshAccessToken();
-        if (!refreshed) return res; // Return the 401 — caller handles it
-        return fetch(fullUrl, { ...init, credentials: 'include', headers: makeHeaders() });
-    }
-
-    return res;
+  return res;
 }
 
 // ── Unauthenticated utility ───────────────────────────────────────────────────
@@ -175,15 +197,15 @@ export async function apiFetch(url: string, init: RequestInit = {}): Promise<Res
  * Returns the parsed body and an `ok` flag.
  */
 export async function postJson<T = Record<string, unknown>>(
-    url: string,
-    body: unknown,
+  url: string,
+  body: unknown,
 ): Promise<{ ok: boolean; data: T }> {
-    const res = await fetch(`${API_BASE}${url}`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        credentials: 'include',
-        body: JSON.stringify(body),
-    });
-    const data = await res.json().catch(() => ({})) as T;
-    return { ok: res.ok, data };
+  const res = await fetch(`${API_BASE}${url}`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    credentials: "include",
+    body: JSON.stringify(body),
+  });
+  const data = (await res.json().catch(() => ({}))) as T;
+  return { ok: res.ok, data };
 }

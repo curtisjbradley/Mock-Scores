@@ -1,23 +1,23 @@
-import DangerButton from './DangerButton'
-import AddButton from './AddButton'
+import DangerButton from "./DangerButton";
+import AddButton from "./AddButton";
 
 interface WitnessNameListProps {
-    /** Label shown above the list (e.g. "Prosecution witnesses") */
-    label: string
-    /** Current array of witness name strings */
-    names: string[]
-    /** Placeholder for each individual input (e.g. "Witness 1") */
-    placeholder?: (index: number) => string
-    /** Whether to highlight blank names as invalid */
-    showErrors?: boolean
-    /** Called when a single name changes */
-    onChangeName: (index: number, value: string) => void
-    /** Called when the + Add button is clicked */
-    onAdd: () => void
-    /** Called when the × remove button is clicked */
-    onRemove: (index: number) => void
-    /** Text for the add button (default "Add witness") */
-    addLabel?: string
+  /** Label shown above the list (e.g. "Prosecution witnesses") */
+  label: string;
+  /** Current array of witness name strings */
+  names: string[];
+  /** Placeholder for each individual input (e.g. "Witness 1") */
+  placeholder?: (index: number) => string;
+  /** Whether to highlight blank names as invalid */
+  showErrors?: boolean;
+  /** Called when a single name changes */
+  onChangeName: (index: number, value: string) => void;
+  /** Called when the + Add button is clicked */
+  onAdd: () => void;
+  /** Called when the × remove button is clicked */
+  onRemove: (index: number) => void;
+  /** Text for the add button (default "Add witness") */
+  addLabel?: string;
 }
 
 /**
@@ -36,33 +36,41 @@ interface WitnessNameListProps {
  * />
  */
 export default function WitnessNameList({
-    label,
-    names,
-    placeholder = (i) => `Witness ${i + 1}`,
-    showErrors = false,
-    onChangeName,
-    onAdd,
-    onRemove,
-    addLabel = 'Add witness',
+  label,
+  names,
+  placeholder = (i) => `Witness ${i + 1}`,
+  showErrors = false,
+  onChangeName,
+  onAdd,
+  onRemove,
+  addLabel = "Add witness",
 }: WitnessNameListProps) {
-    return (
-        <div className="tc-section">
-            <span className="tc-section-label">{label}</span>
-            <div className="tc-witness-list">
-                {names.map((name, i) => (
-                    <div key={i} className="tc-witness-row">
-                        <input
-                            type="text"
-                            className={`tc-input${showErrors && !name.trim() ? ' tc-input--invalid' : ''}`}
-                            placeholder={placeholder(i)}
-                            value={name}
-                            onChange={e => onChangeName(i, e.target.value)}
-                        />
-                        <DangerButton variant="subtle" aria-label={`Remove ${label} ${i + 1}`} onClick={() => onRemove(i)}>Remove</DangerButton>
-                    </div>
-                ))}
-            </div>
-            <AddButton variant="dashed" onClick={onAdd}>+ {addLabel}</AddButton>
-        </div>
-    )
+  return (
+    <div className="tc-section">
+      <span className="tc-section-label">{label}</span>
+      <div className="tc-witness-list">
+        {names.map((name, i) => (
+          <div key={i} className="tc-witness-row">
+            <input
+              type="text"
+              className={`tc-input${showErrors && !name.trim() ? " tc-input--invalid" : ""}`}
+              placeholder={placeholder(i)}
+              value={name}
+              onChange={(e) => onChangeName(i, e.target.value)}
+            />
+            <DangerButton
+              variant="subtle"
+              aria-label={`Remove ${label} ${i + 1}`}
+              onClick={() => onRemove(i)}
+            >
+              Remove
+            </DangerButton>
+          </div>
+        ))}
+      </div>
+      <AddButton variant="dashed" onClick={onAdd}>
+        + {addLabel}
+      </AddButton>
+    </div>
+  );
 }

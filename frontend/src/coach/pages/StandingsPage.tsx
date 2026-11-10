@@ -1,68 +1,94 @@
-import { lazy, useMemo } from 'react'
-import type { IStandingsTeam } from '@mock-scores/shared'
-import { computeStandings, parseDsl } from '@mock-scores/standings-dsl'
-import { type StandingsApiPayload, useCoachContext } from '../CoachContext'
-import { formatRank } from '../../shared/standings'
-import '../styles/standings.css'
+import { lazy, useMemo } from "react";
+import type { IStandingsTeam } from "@mock-scores/shared";
+import { computeStandings, parseDsl } from "@mock-scores/standings-dsl";
+import { type StandingsApiPayload, useCoachContext } from "../CoachContext";
+import { formatRank } from "../../shared/standings";
+import "../styles/standings.css";
 
-const TiebreakerViewer = lazy(() => import('@mock-scores/standings-dsl/react').then(m => ({ default: m.TiebreakerViewer })))
+const TiebreakerViewer = lazy(() =>
+  import("@mock-scores/standings-dsl/react").then((m) => ({
+    default: m.TiebreakerViewer,
+  })),
+);
 
 interface ComputedStandings {
-    rows: ReturnType<typeof computeStandings>
-    cols: { stat: string; label: string }[]
-    dsl: string
+  rows: ReturnType<typeof computeStandings>;
+  cols: { stat: string; label: string }[];
+  dsl: string;
 }
 
 /**
  * Pure computation: parses the DSL standings config and ballot data from the
  * API payload into standings rows and column definitions. No Blockly.
  */
-function computeStandingsFromData(data: StandingsApiPayload): ComputedStandings {
-    const config = parseDsl(data.config.dsl)
+function computeStandingsFromData(
+  data: StandingsApiPayload,
+): ComputedStandings {
+  const config = parseDsl(data.config.dsl);
 
-    const teamMap = new Map<string, IStandingsTeam>()
-    for (const t of data.teams)
-        teamMap.set(t.id, { name: t.name, code: t.code, pairings: [] })
+  const teamMap = new Map<string, IStandingsTeam>();
+  for (const t of data.teams)
+    teamMap.set(t.id, { name: t.name, code: t.code, pairings: [] });
 
-    const pairingMap = new Map<string, {
-        p: string
-        d: string
-        ballots: { pointsFor: number; pointsAgainst: number }[]
-        tiebreakerWinner: string | null
-        scorers: number
-    }>()
-    for (const b of data.ballots) {
-        const existing = pairingMap.get(b.pairing_id)
-        if (existing) {
-            existing.ballots.push({ pointsFor: b.p_points, pointsAgainst: b.d_points })
-            existing.scorers += 1
-            // The presider ballot carries the pairing's tiebreaker (winning team id).
-            if (b.presider_ballot && b.tiebreaker) existing.tiebreakerWinner = b.tiebreaker
-        } else {
-            pairingMap.set(b.pairing_id, {
-                p: b.p_team_id,
-                d: b.d_team_id,
-                ballots: [{ pointsFor: b.p_points, pointsAgainst: b.d_points }],
-                tiebreakerWinner: b.presider_ballot ? b.tiebreaker : null,
-                scorers: 1,
-            })
-        }
+  const pairingMap = new Map<
+    string,
+    {
+      p: string;
+      d: string;
+      ballots: { pointsFor: number; pointsAgainst: number }[];
+      tiebreakerWinner: string | null;
+      scorers: number;
     }
-
-    for (const [, { p, d, ballots, tiebreakerWinner, scorers }] of pairingMap) {
-        const pTeam = teamMap.get(p)
-        const dTeam = teamMap.get(d)
-        if (pTeam && dTeam) {
-            pTeam.pairings.push({ opponent: dTeam.code, ballots, won_presider_tiebreaker: tiebreakerWinner === p, num_scorers: scorers })
-            dTeam.pairings.push({ opponent: pTeam.code, ballots: ballots.map(({ pointsFor, pointsAgainst }) => ({ pointsFor: pointsAgainst, pointsAgainst: pointsFor })), won_presider_tiebreaker: tiebreakerWinner === d, num_scorers: scorers })
-        }
+  >();
+  for (const b of data.ballots) {
+    const existing = pairingMap.get(b.pairing_id);
+    if (existing) {
+      existing.ballots.push({
+        pointsFor: b.p_points,
+        pointsAgainst: b.d_points,
+      });
+      existing.scorers += 1;
+      // The presider ballot carries the pairing's tiebreaker (winning team id).
+      if (b.presider_ballot && b.tiebreaker)
+        existing.tiebreakerWinner = b.tiebreaker;
+    } else {
+      pairingMap.set(b.pairing_id, {
+        p: b.p_team_id,
+        d: b.d_team_id,
+        ballots: [{ pointsFor: b.p_points, pointsAgainst: b.d_points }],
+        tiebreakerWinner: b.presider_ballot ? b.tiebreaker : null,
+        scorers: 1,
+      });
     }
+  }
 
-    return {
-        rows: computeStandings([...teamMap.values()], config),
-        cols: config.columns,
-        dsl: data.config.dsl,
+  for (const [, { p, d, ballots, tiebreakerWinner, scorers }] of pairingMap) {
+    const pTeam = teamMap.get(p);
+    const dTeam = teamMap.get(d);
+    if (pTeam && dTeam) {
+      pTeam.pairings.push({
+        opponent: dTeam.code,
+        ballots,
+        won_presider_tiebreaker: tiebreakerWinner === p,
+        num_scorers: scorers,
+      });
+      dTeam.pairings.push({
+        opponent: pTeam.code,
+        ballots: ballots.map(({ pointsFor, pointsAgainst }) => ({
+          pointsFor: pointsAgainst,
+          pointsAgainst: pointsFor,
+        })),
+        won_presider_tiebreaker: tiebreakerWinner === d,
+        num_scorers: scorers,
+      });
     }
+  }
+
+  return {
+    rows: computeStandings([...teamMap.values()], config),
+    cols: config.columns,
+    dsl: data.config.dsl,
+  };
 }
 
 /**
@@ -70,49 +96,66 @@ function computeStandingsFromData(data: StandingsApiPayload): ComputedStandings 
  * context and runs the Blockly-based computation on it.
  */
 export default function StandingsPage() {
-    const { standings } = useCoachContext()
+  const { standings } = useCoachContext();
 
-    const computed = useMemo<ComputedStandings | null>(() => {
-        if (!standings?.config) return null
-        try {
-            return computeStandingsFromData(standings)
-        } catch (e) {
-            console.error('Standings computation failed:', e)
-            return null
-        }
-    }, [standings])
+  const computed = useMemo<ComputedStandings | null>(() => {
+    if (!standings?.config) return null;
+    try {
+      return computeStandingsFromData(standings);
+    } catch (e) {
+      console.error("Standings computation failed:", e);
+      return null;
+    }
+  }, [standings]);
 
-    if (!computed || computed.rows.length === 0) return <p className="coach-empty">No standings available yet.</p>
+  if (!computed || computed.rows.length === 0)
+    return <p className="coach-empty">No standings available yet.</p>;
 
-    const { rows, cols, dsl } = computed
+  const { rows, cols, dsl } = computed;
 
-    return (
-        <>
-            <div className="coach-standings-table-scroll">
-                <table className="dash-standings-table">
-                <thead><tr>
-                    <th>#</th><th>Code</th><th>Team</th>
-                    {cols.map(c => <th key={c.stat}>{c.label}</th>)}
-                </tr></thead>
-                <tbody>{rows.map((row, i) => (
-                    <tr key={row.code}>
-                        <td>{formatRank(row.rank, i)}</td>
-                        <td className="dash-team-code">{row.code}</td>
-                        <td>{row.name}</td>
-                        {cols.map(c => {
-                            const val = row[c.stat]
-                            const num = typeof val === 'number' ? val : NaN
-                            return <td key={c.stat}>{isNaN(num) ? '—' : Number.isInteger(num) ? num : num.toFixed(3)}</td>
-                        })}
-                    </tr>
-                ))}</tbody>
-                </table>
-            </div>
-            {dsl && (
-                <div className="coach-tiebreaker-viewer">
-                    <TiebreakerViewer dsl={dsl} />
-                </div>
-            )}
-        </>
-    )
+  return (
+    <>
+      <div className="coach-standings-table-scroll">
+        <table className="dash-standings-table">
+          <thead>
+            <tr>
+              <th>#</th>
+              <th>Code</th>
+              <th>Team</th>
+              {cols.map((c) => (
+                <th key={c.stat}>{c.label}</th>
+              ))}
+            </tr>
+          </thead>
+          <tbody>
+            {rows.map((row, i) => (
+              <tr key={row.code}>
+                <td>{formatRank(row.rank, i)}</td>
+                <td className="dash-team-code">{row.code}</td>
+                <td>{row.name}</td>
+                {cols.map((c) => {
+                  const val = row[c.stat];
+                  const num = typeof val === "number" ? val : NaN;
+                  return (
+                    <td key={c.stat}>
+                      {isNaN(num)
+                        ? "—"
+                        : Number.isInteger(num)
+                          ? num
+                          : num.toFixed(3)}
+                    </td>
+                  );
+                })}
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
+      {dsl && (
+        <div className="coach-tiebreaker-viewer">
+          <TiebreakerViewer dsl={dsl} />
+        </div>
+      )}
+    </>
+  );
 }

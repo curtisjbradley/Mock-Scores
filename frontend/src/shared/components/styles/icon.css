@@ -4,18 +4,18 @@
    an icon inherits its parent's `color` — which is `var(--text)` app-wide by
    default, and follows contextual colors (e.g. button hover) where set. */
 .app-icon {
-    display: inline-block;
-    flex-shrink: 0;
-    width: var(--icon-size, 1.25rem);
-    height: var(--icon-size, 1.25rem);
-    background-color: currentColor;
-    mask-image: var(--icon-mask);
-    -webkit-mask-image: var(--icon-mask);
-    mask-repeat: no-repeat;
-    -webkit-mask-repeat: no-repeat;
-    mask-position: center;
-    -webkit-mask-position: center;
-    mask-size: contain;
-    -webkit-mask-size: contain;
-    margin: 0.5rem;
+  display: inline-block;
+  flex-shrink: 0;
+  width: var(--icon-size, 1.25rem);
+  height: var(--icon-size, 1.25rem);
+  background-color: currentColor;
+  mask-image: var(--icon-mask);
+  -webkit-mask-image: var(--icon-mask);
+  mask-repeat: no-repeat;
+  -webkit-mask-repeat: no-repeat;
+  mask-position: center;
+  -webkit-mask-position: center;
+  mask-size: contain;
+  -webkit-mask-size: contain;
+  margin: 0.5rem;
 }

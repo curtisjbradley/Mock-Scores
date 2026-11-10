@@ -1,79 +1,79 @@
 export interface ITrialAssignment {
-    assignmentName: string;
-    assignmentKey: string;
-    pStudentId: string | null;
-    dStudentId: string | null;
-    side: 'D' | 'P' | 'BOTH';
-    minScore: number;
-    maxScore: number;
-    /**
-     * Per-field score multiplier. Applied when computing ballot point totals so
-     * a field can weight (or, when negative, deduct) more than its raw score.
-     * Optional: some format builders (e.g. blank printable ballots) omit it, in
-     * which case consumers treat it as 1.
-     */
-    multiplier?: number;
+  assignmentName: string;
+  assignmentKey: string;
+  pStudentId: string | null;
+  dStudentId: string | null;
+  side: "D" | "P" | "BOTH";
+  minScore: number;
+  maxScore: number;
+  /**
+   * Per-field score multiplier. Applied when computing ballot point totals so
+   * a field can weight (or, when negative, deduct) more than its raw score.
+   * Optional: some format builders (e.g. blank printable ballots) omit it, in
+   * which case consumers treat it as 1.
+   */
+  multiplier?: number;
 }
 
 export interface IScoreCategory {
-    categoryName: string;
-    witnessId: string | null;
-    categoryAssignments: ITrialAssignment[];
+  categoryName: string;
+  witnessId: string | null;
+  categoryAssignments: ITrialAssignment[];
 }
 
 export interface IStudentInfo {
-    name: string;
-    pronouns: string | null;
-    schoolId: string;
+  name: string;
+  pronouns: string | null;
+  schoolId: string;
 }
 
 export interface IWitnessInfo {
-    characterName: string;
+  characterName: string;
 }
 
 /** Award category info sent to the scorer for post-ballot nominations */
 export interface IAwardCategoryInfo {
-    name: string;
-    minNominees: number;
-    maxNominees: number;
-    /** Student IDs eligible for nomination in this category. */
-    eligibleStudentIds: string[];
+  name: string;
+  minNominees: number;
+  maxNominees: number;
+  /** Student IDs eligible for nomination in this category. */
+  eligibleStudentIds: string[];
 }
 
 export interface IScoreSheetFormat {
-    isCriminal: boolean;
-    ballotOptions: {
-        fillableScores: boolean;
-        showTiebreaker: boolean;
-    }
-    pairingID: string;
-    scorer : IScoringUser;
+  isCriminal: boolean;
+  ballotOptions: {
+    fillableScores: boolean;
+    showTiebreaker: boolean;
+  };
+  pairingID: string;
+  scorer: IScoringUser;
 
-    presiderName: string;
-    courtroomNumber: string;
-    caseName: string;
-    /** Tournament display name, shown on the scoresheet and printable ballot. */
-    tournamentName: string;
-    prosecutionCode: string;
-    defenseCode: string;
-    prosecutionId: string;
-    defenseId: string;
-    students: Record<string, IStudentInfo>;
-    witnesses: Record<string, IWitnessInfo>;
-    scoringCategories: Record<string, IScoreCategory>;
-    categoryOrder: string[];
-    /** Award categories for post-ballot nomination step. Empty object if none configured. */
-    awardCategories: Record<string, IAwardCategoryInfo>;
-    /**
-     * True once the organizer has locked the round. Scoring is only open when locked;
-     * the scoresheet UI disables score entry and submission until this is true, and the
-     * server rejects ballot submissions for unlocked rounds.
-     */
-    roundLocked: boolean;
+  presiderName: string;
+  courtroomNumber: string;
+  caseName: string;
+  /** Tournament display name, shown on the scoresheet and printable ballot. */
+  tournamentName: string;
+  prosecutionCode: string;
+  defenseCode: string;
+  prosecutionId: string;
+  defenseId: string;
+  students: Record<string, IStudentInfo>;
+  witnesses: Record<string, IWitnessInfo>;
+  scoringCategories: Record<string, IScoreCategory>;
+  categoryOrder: string[];
+  /** Award categories for post-ballot nomination step. Empty object if none configured. */
+  awardCategories: Record<string, IAwardCategoryInfo>;
+  /**
+   * True once the organizer has locked the round. Scoring is only open when locked;
+   * the scoresheet UI disables score entry and submission until this is true, and the
+   * server rejects ballot submissions for unlocked rounds.
+   */
+  roundLocked: boolean;
 }
 
 export interface IScoringUser {
-    name: string;
-    scorerID: string;
-    isPaper: boolean;
+  name: string;
+  scorerID: string;
+  isPaper: boolean;
 }

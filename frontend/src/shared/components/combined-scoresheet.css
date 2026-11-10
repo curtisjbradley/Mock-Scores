@@ -5,236 +5,325 @@
 
 /* ── Page frame ─────────────────────────────────────────────────────────── */
 .cs-page {
-    max-width: 60rem;
-    margin: 0 auto;
-    padding: 1.5rem 1rem 3rem;
-    width: 100%;
-    --defense: #c00000;
-    --prosecution: black;
+  max-width: 60rem;
+  margin: 0 auto;
+  padding: 1.5rem 1rem 3rem;
+  width: 100%;
+  --defense: #c00000;
+  --prosecution: black;
 }
 
 .cs-message {
-    color: var(--text-muted);
-    margin-top: 1rem;
+  color: var(--text-muted);
+  margin-top: 1rem;
 }
 
 .cs-toolbar {
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    gap: 0.5rem;
-    margin-bottom: 1rem;
-    flex-wrap: wrap;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.5rem;
+  margin-bottom: 1rem;
+  flex-wrap: wrap;
 }
 
 .cs-back-btn,
 .cs-print-btn {
-    font-family: inherit;
-    font-size: 0.9rem;
-    font-weight: 600;
-    padding: 0.45rem 0.9rem;
-    border-radius: 0.5rem;
-    cursor: pointer;
-    border: 1px solid var(--border-strong);
-    background: var(--surface);
-    color: var(--text);
-    transition: background 120ms ease, border-color 120ms ease;
+  font-family: inherit;
+  font-size: 0.9rem;
+  font-weight: 600;
+  padding: 0.45rem 0.9rem;
+  border-radius: 0.5rem;
+  cursor: pointer;
+  border: 1px solid var(--border-strong);
+  background: var(--surface);
+  color: var(--text);
+  transition:
+    background 120ms ease,
+    border-color 120ms ease;
 }
-.cs-back-btn:hover { background: var(--surface-muted); }
+.cs-back-btn:hover {
+  background: var(--surface-muted);
+}
 .cs-print-btn {
-    border-color: var(--primary);
-    background: var(--primary);
-    color: var(--white);
+  border-color: var(--primary);
+  background: var(--primary);
+  color: var(--white);
 }
-.cs-print-btn:hover { filter: brightness(0.95); }
+.cs-print-btn:hover {
+  filter: brightness(0.95);
+}
 
 /* ── Sheet ──────────────────────────────────────────────────────────────── */
 .cs-sheet {
-    font-family: "Helvetica Neue", Arial, sans-serif;
-    color: #111;
-    background: #fff;
+  font-family: "Helvetica Neue", Arial, sans-serif;
+  color: #111;
+  background: #fff;
 }
 
 .cs-header {
-    display: flex;
-    align-items: baseline;
-    justify-content: space-between;
-    gap: 1rem;
-    padding-bottom: 0.5rem;
-    margin-bottom: 0.5rem;
-    border-bottom: 2px solid #000;
-    flex-wrap: wrap;
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 1rem;
+  padding-bottom: 0.5rem;
+  margin-bottom: 0.5rem;
+  border-bottom: 2px solid #000;
+  flex-wrap: wrap;
 }
 
-.cs-header-meta { display: inline-flex; align-items: baseline; gap: 0.75rem; }
-.cs-round { font-size: 1rem; font-weight: 700; }
-.cs-date { font-size: 0.9rem; color: #333; }
-.cs-matchup { display: inline-flex; align-items: baseline; gap: 0.5rem; font-size: 1.1rem; }
-.cs-team { font-weight: 700; }
-.cs-vs { color: #666; font-style: italic; }
+.cs-header-meta {
+  display: inline-flex;
+  align-items: baseline;
+  gap: 0.75rem;
+}
+.cs-round {
+  font-size: 1rem;
+  font-weight: 700;
+}
+.cs-date {
+  font-size: 0.9rem;
+  color: #333;
+}
+.cs-matchup {
+  display: inline-flex;
+  align-items: baseline;
+  gap: 0.5rem;
+  font-size: 1.1rem;
+}
+.cs-team {
+  font-weight: 700;
+}
+.cs-vs {
+  color: #666;
+  font-style: italic;
+}
 
-.cs-table-scroll { overflow-x: auto; }
+.cs-table-scroll {
+  overflow-x: auto;
+}
 
 .cs-table {
-    border-collapse: collapse;
-    width: 100%;
-    font-size: 0.8rem;
-    line-height: 1.2;
+  border-collapse: collapse;
+  width: 100%;
+  font-size: 0.8rem;
+  line-height: 1.2;
 }
 
 .cs-table th,
 .cs-table td {
-    border: 1px solid #000;
-    padding: 2px 6px;
-    text-align: center;
-    white-space: nowrap;
-    vertical-align: middle;
+  border: 1px solid #000;
+  padding: 2px 6px;
+  text-align: center;
+  white-space: nowrap;
+  vertical-align: middle;
 }
 
 /* Segment (leftmost) column */
 .cs-seg-col {
-    text-align: left;
-    font-weight: 600;
-    background: #fff;
-    left: 0;
+  text-align: left;
+  font-weight: 600;
+  background: #fff;
+  left: 0;
 }
-tfoot .cs-seg-col { font-weight: 700; }
+tfoot .cs-seg-col {
+  font-weight: 700;
+}
 
 /* Per-row multiplier column */
 .cs-mult-col {
-    text-align: center;
-    font-size: 0.75rem;
-    font-weight: 600;
-    color: #555;
-    white-space: nowrap;
+  text-align: center;
+  font-size: 0.75rem;
+  font-weight: 600;
+  color: #555;
+  white-space: nowrap;
 }
 
-.cs-scorer-count { font-weight: 400; font-size: 0.72rem; color: #333; }
+.cs-scorer-count {
+  font-weight: 400;
+  font-size: 0.72rem;
+  color: #333;
+}
 
 /* Header band */
-.cs-scorer-head { background: #bfbfbf; font-weight: 700; }
-.cs-scorer-sub { background: #bfbfbf; font-size: 0.72rem; font-weight: 600; }
+.cs-scorer-head {
+  background: #bfbfbf;
+  font-weight: 700;
+}
+.cs-scorer-sub {
+  background: #bfbfbf;
+  font-size: 0.72rem;
+  font-weight: 600;
+}
 
 /* Defense figures rendered red like the reference sheet */
 
-.cs-side-d {color: var(--defense)}
-.cs-side-p { color: var(--prosecution) }
+.cs-side-d {
+  color: var(--defense);
+}
+.cs-side-p {
+  color: var(--prosecution);
+}
 
-.cs-total-row td { border-top: 2px solid #000; font-weight: 700; background: #fafafa; }
+.cs-total-row td {
+  border-top: 2px solid #000;
+  font-weight: 700;
+  background: #fafafa;
+}
 
 /* Rightmost per-row student/name column */
 .cs-student-col {
-    text-align: left;
-    border-left: 2px solid #000;
-    color: #222;
+  text-align: left;
+  border-left: 2px solid #000;
+  color: #222;
 }
-
 
 /* ── Summary block ──────────────────────────────────────────────────────── */
 .cs-summary {
-    margin-top: 0.75rem;
-    display: flex;
-    flex-wrap: wrap;
-    align-items: center;
-    justify-content: space-between;
-    gap: 1rem;
+  margin-top: 0.75rem;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
 }
-.cs-summary-pcts { display: flex; gap: 1.5rem; }
+.cs-summary-pcts {
+  display: flex;
+  gap: 1.5rem;
+}
 .cs-pct {
-    display: flex;
-    flex-direction: column;
-    align-items: flex-start;
-    border: 1px solid #000;
-    padding: 0.35rem 0.6rem;
-    min-width: 8rem;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  border: 1px solid #000;
+  padding: 0.35rem 0.6rem;
+  min-width: 8rem;
 }
-.cs-pct-label { font-size: 0.75rem; text-transform: uppercase; letter-spacing: 0.03em; color: #444; }
-.cs-pct-points { font-size: 1.1rem; font-weight: 700; }
-.cs-pct-value { font-size: 0.85rem; color: #333; }
+.cs-pct-label {
+  font-size: 0.75rem;
+  text-transform: uppercase;
+  letter-spacing: 0.03em;
+  color: #444;
+}
+.cs-pct-points {
+  font-size: 1.1rem;
+  font-weight: 700;
+}
+.cs-pct-value {
+  font-size: 0.85rem;
+  color: #333;
+}
 
 .cs-summary-right {
-    display: flex;
-    flex-direction: column;
-    align-items: flex-end;
-    gap: 0.35rem;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 0.35rem;
 }
 .cs-tiebreaker {
-    display: inline-flex;
-    align-items: baseline;
-    gap: 0.5rem;
-    font-size: 0.95rem;
+  display: inline-flex;
+  align-items: baseline;
+  gap: 0.5rem;
+  font-size: 0.95rem;
 }
-.cs-tiebreaker-label { font-weight: 600; color: #444; }
-.cs-tiebreaker-value { font-weight: 700; }
+.cs-tiebreaker-label {
+  font-weight: 600;
+  color: #444;
+}
+.cs-tiebreaker-value {
+  font-weight: 700;
+}
 
 .cs-winner {
-    display: inline-flex;
-    align-items: baseline;
-    gap: 0.5rem;
-    font-size: 1.05rem;
+  display: inline-flex;
+  align-items: baseline;
+  gap: 0.5rem;
+  font-size: 1.05rem;
 }
-.cs-winner-label { font-weight: 600; color: #444; }
-.cs-winner-value { font-weight: 700; }
+.cs-winner-label {
+  font-weight: 600;
+  color: #444;
+}
+.cs-winner-value {
+  font-weight: 700;
+}
 
 /* ── Tournament stats (per-trial) block ─────────────────────────────────── */
 .cs-stats {
-    margin-top: 0;
-    border-top: 2px solid #000;
-    padding-top: 0.75rem;
+  margin-top: 0;
+  border-top: 2px solid #000;
+  padding-top: 0.75rem;
 }
 .cs-stats-title {
-    font-size: 0.8rem;
-    font-weight: 700;
-    text-transform: uppercase;
-    letter-spacing: 0.04em;
-    color: #444;
-    margin-bottom: 0.4rem;
+  font-size: 0.8rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: #444;
+  margin-bottom: 0.4rem;
 }
 .cs-stats-table {
-    border-collapse: collapse;
-    width: 100%;
-    max-width: 32rem;
-    font-size: 0.85rem;
+  border-collapse: collapse;
+  width: 100%;
+  max-width: 32rem;
+  font-size: 0.85rem;
 }
 .cs-stats-table th,
 .cs-stats-table td {
-    border: 1px solid #000;
-    padding: 3px 8px;
-    text-align: center;
-    font-variant-numeric: tabular-nums;
+  border: 1px solid #000;
+  padding: 3px 8px;
+  text-align: center;
+  font-variant-numeric: tabular-nums;
 }
 .cs-stats-table thead th {
-    background: #bfbfbf;
-    font-weight: 700;
-    font-size: 0.75rem;
-    text-transform: uppercase;
-    letter-spacing: 0.03em;
+  background: #bfbfbf;
+  font-weight: 700;
+  font-size: 0.75rem;
+  text-transform: uppercase;
+  letter-spacing: 0.03em;
 }
 .cs-stats-table .cs-stats-label-col {
-    text-align: left;
-    font-weight: 600;
+  text-align: left;
+  font-weight: 600;
 }
 /* Bold the leading side for each stat so the tabulation winner is obvious. */
-.cs-stats-table .cs-stat-lead { font-weight: 800; }
-
-.cs-table td.cs-side-d , .cs-table th.cs-side-d{
-    border-right-width: 3px;
+.cs-stats-table .cs-stat-lead {
+  font-weight: 800;
 }
 
-.cs-table td.cs-side-p, .cs-table th.cs-side-p {
-    border-left-width: 3px;
+.cs-table td.cs-side-d,
+.cs-table th.cs-side-d {
+  border-right-width: 3px;
+}
+
+.cs-table td.cs-side-p,
+.cs-table th.cs-side-p {
+  border-left-width: 3px;
 }
 .cs-table th.cs-scorer-head {
-    border-width: 3px;
-    border-bottom-width: 1px;
+  border-width: 3px;
+  border-bottom-width: 1px;
 }
 /* Print: fill the page, drop chrome, keep the grid crisp. */
 
 @media print {
-    .cs-page { max-width: none; padding: 0; }
-    .cs-sheet { font-size: 100%; }
-    .cs-table { font-size: 0.72rem; }
-    .cs-seg-col { position: static; }
-    .cs-table-scroll { overflow: visible; }
-    .cs-toolbar { display: none !important; }
+  .cs-page {
+    max-width: none;
+    padding: 0;
+  }
+  .cs-sheet {
+    font-size: 100%;
+  }
+  .cs-table {
+    font-size: 0.72rem;
+  }
+  .cs-seg-col {
+    position: static;
+  }
+  .cs-table-scroll {
+    overflow: visible;
+  }
+  .cs-toolbar {
+    display: none !important;
+  }
 }

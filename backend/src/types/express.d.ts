@@ -1,44 +1,50 @@
-import 'express';
-import { Request } from 'express';
-import { ISessionPayload } from '../authUtils';
-import {IOrganizer, IPairing, IRound, IScorer, ITeam} from '@mock-scores/shared';
+import "express";
+import { Request } from "express";
+import { ISessionPayload } from "../authUtils";
+import {
+  IOrganizer,
+  IPairing,
+  IRound,
+  IScorer,
+  ITeam,
+} from "@mock-scores/shared";
 
-declare module 'express' {
-    interface Request {
-        session?: ISessionPayload
-        tournament?: string
-        scorer?: IScorer
-        round?: IRound
-        pairing?: IPairing
-        selectedOrganizer?: IOrganizer
-        selectedTeam?: ITeam
-    }
+declare module "express" {
+  interface Request {
+    session?: ISessionPayload;
+    tournament?: string;
+    scorer?: IScorer;
+    round?: IRound;
+    pairing?: IPairing;
+    selectedOrganizer?: IOrganizer;
+    selectedTeam?: ITeam;
+  }
 }
 
 export interface AuthenticatedRequest extends Request {
-    session: ISessionPayload
+  session: ISessionPayload;
 }
 
 export interface TournamentRequest extends AuthenticatedRequest {
-    tournament: string
+  tournament: string;
 }
 
 export interface RoundRequest extends TournamentRequest {
-    round: IRound
+  round: IRound;
 }
 
 export interface PairingRequest extends TournamentRequest {
-    pairing: IPairing
+  pairing: IPairing;
 }
 
 export interface ScorerRequest extends TournamentRequest {
-    scorer: IScorer
+  scorer: IScorer;
 }
 
 export interface OrganizerRequest extends TournamentRequest {
-    selectedOrganizer: IOrganizer
+  selectedOrganizer: IOrganizer;
 }
 
 export interface TeamRequest extends TournamentRequest {
-    selectedTeam: ITeam
+  selectedTeam: ITeam;
 }

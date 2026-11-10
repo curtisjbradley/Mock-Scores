@@ -1,10 +1,10 @@
-import { GoogleLogin, GoogleOAuthProvider } from '@react-oauth/google'
-import { GOOGLE_CLIENT_ID, setAccessToken } from './auth'
-import { API_BASE } from '../config'
+import { GoogleLogin, GoogleOAuthProvider } from "@react-oauth/google";
+import { GOOGLE_CLIENT_ID, setAccessToken } from "./auth";
+import { API_BASE } from "../config";
 
 interface Props {
-    onSuccess: () => void
-    onError: (message: string) => void
+  onSuccess: () => void;
+  onError: (message: string) => void;
 }
 
 /**
@@ -14,21 +14,31 @@ interface Props {
  * `onSuccess`.
  */
 export default function GoogleAuthButton({ onSuccess, onError }: Props) {
-    return (
-        <GoogleOAuthProvider clientId={GOOGLE_CLIENT_ID}>
-            <GoogleLogin width="280" onSuccess={async (credentialResponse) => {
-                if (!credentialResponse.credential) return
-                const res = await fetch(`${API_BASE}/auth/google/login`, {
-                    method: 'POST',
-                    credentials: 'include',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ token: credentialResponse.credential }),
-                })
-                const data = await res.json().catch(() => ({})) as { accessToken?: string; message?: string }
-                if (!res.ok) { onError(data.message ?? 'Unable to sign in with Google.'); return }
-                setAccessToken(data.accessToken!)
-                onSuccess()
-            }} onError={() => onError('Google sign-in failed.')} />
-        </GoogleOAuthProvider>
-    )
+  return (
+    <GoogleOAuthProvider clientId={GOOGLE_CLIENT_ID}>
+      <GoogleLogin
+        width="280"
+        onSuccess={async (credentialResponse) => {
+          if (!credentialResponse.credential) return;
+          const res = await fetch(`${API_BASE}/auth/google/login`, {
+            method: "POST",
+            credentials: "include",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ token: credentialResponse.credential }),
+          });
+          const data = (await res.json().catch(() => ({}))) as {
+            accessToken?: string;
+            message?: string;
+          };
+          if (!res.ok) {
+            onError(data.message ?? "Unable to sign in with Google.");
+            return;
+          }
+          setAccessToken(data.accessToken!);
+          onSuccess();
+        }}
+        onError={() => onError("Google sign-in failed.")}
+      />
+    </GoogleOAuthProvider>
+  );
 }

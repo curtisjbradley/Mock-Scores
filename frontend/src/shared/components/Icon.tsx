@@ -1,21 +1,21 @@
-import './styles/icon.css'
-import type { CSSProperties } from 'react'
+import "./styles/icon.css";
+import type { CSSProperties } from "react";
 
 interface IconProps {
-    /** SVG name (without extension) in `public/icons/`, e.g. "Overview". */
-    name: string
-    /**
-     * Box size. Accepts any CSS length; a bare number is treated as `rem`.
-     * Defaults to `1.25rem`.
-     */
-    size?: number | string
-    /** Extra class names to merge onto the icon element. */
-    className?: string
-    /**
-     * Accessible label. When provided, the icon is exposed to assistive tech
-     * with this label; otherwise it is hidden (`aria-hidden`) as decoration.
-     */
-    label?: string
+  /** SVG name (without extension) in `public/icons/`, e.g. "Overview". */
+  name: string;
+  /**
+   * Box size. Accepts any CSS length; a bare number is treated as `rem`.
+   * Defaults to `1.25rem`.
+   */
+  size?: number | string;
+  /** Extra class names to merge onto the icon element. */
+  className?: string;
+  /**
+   * Accessible label. When provided, the icon is exposed to assistive tech
+   * with this label; otherwise it is hidden (`aria-hidden`) as decoration.
+   */
+  label?: string;
 }
 
 /**
@@ -25,23 +25,23 @@ interface IconProps {
  * with the theme and inherit `currentColor` from its context (hover states, etc.).
  */
 export default function Icon({ name, size, className, label }: IconProps) {
-    const dimension = typeof size === 'number' ? `${size}rem` : size
-    const maskUrl = `url(/icons/${name}.svg)`
+  const dimension = typeof size === "number" ? `${size}rem` : size;
+  const maskUrl = `url(/icons/${name}.svg)`;
 
-    // Dynamic per-icon values (mask asset + optional size) are passed to the
-    // `.app-icon` rule via CSS custom properties rather than static styling.
-    const iconVars = {
-        '--icon-mask': maskUrl,
-        ...(dimension ? { '--icon-size': dimension } : {}),
-    } as CSSProperties
+  // Dynamic per-icon values (mask asset + optional size) are passed to the
+  // `.app-icon` rule via CSS custom properties rather than static styling.
+  const iconVars = {
+    "--icon-mask": maskUrl,
+    ...(dimension ? { "--icon-size": dimension } : {}),
+  } as CSSProperties;
 
-    return (
-        <span
-            className={`app-icon${className ? ` ${className}` : ''}`}
-            role={label ? 'img' : undefined}
-            aria-label={label}
-            aria-hidden={label ? undefined : true}
-            style={iconVars}
-        />
-    )
+  return (
+    <span
+      className={`app-icon${className ? ` ${className}` : ""}`}
+      role={label ? "img" : undefined}
+      aria-label={label}
+      aria-hidden={label ? undefined : true}
+      style={iconVars}
+    />
+  );
 }

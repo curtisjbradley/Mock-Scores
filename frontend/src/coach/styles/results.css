@@ -7,70 +7,76 @@
 
 /* Clickable pairing row + win/loss diff cell. */
 .coach-pairing-row {
-    cursor: pointer;
+  cursor: pointer;
 }
 
 .coach-diff-cell {
-    font-size: 0.8rem;
-    font-weight: 700;
+  font-size: 0.8rem;
+  font-weight: 700;
 }
 
-.coach-diff-cell--pos { color: var(--success-fg); }
-.coach-diff-cell--neg { color: var(--danger-strong); }
-.coach-diff-cell--tie { color: var(--text-muted); }
+.coach-diff-cell--pos {
+  color: var(--success-fg);
+}
+.coach-diff-cell--neg {
+  color: var(--danger-strong);
+}
+.coach-diff-cell--tie {
+  color: var(--text-muted);
+}
 
 /* Expanded ballot-detail cell. */
 .coach-ballot-cell {
-    padding: 0.5rem 1rem;
-    background: var(--surface-muted);
+  padding: 0.5rem 1rem;
+  background: var(--surface-muted);
 }
 
 .coach-ballot-status {
-    font-size: 0.85rem;
-    color: var(--text-muted);
+  font-size: 0.85rem;
+  color: var(--text-muted);
 }
 
 .coach-ballot-status--empty {
-    font-style: italic;
+  font-style: italic;
 }
 
 .coach-ballot-link-row {
-    margin-bottom: 0.5rem;
+  margin-bottom: 0.5rem;
 }
 
 .coach-ballot-table {
-    width: 100%;
-    font-size: 0.85rem;
-    border-collapse: collapse;
+  width: 100%;
+  font-size: 0.85rem;
+  border-collapse: collapse;
 }
 
 .coach-ballot-table tr {
-    border-bottom: 1px solid var(--border);
+  border-bottom: 1px solid var(--border);
 }
 
 .coach-ballot-table th,
 .coach-ballot-table td {
-    padding: 0.35rem 0.5rem;
+  padding: 0.35rem 0.5rem;
 }
 
 .coach-ballot-table th {
-    padding: 0.25rem 0.5rem;
+  padding: 0.25rem 0.5rem;
 }
 
 .coach-ballot-table .coach-ballot-col-label {
-    text-align: left;
+  text-align: left;
 }
 
 .coach-ballot-table .coach-ballot-col-center {
-    text-align: center;
+  text-align: center;
 }
 
 .coach-ballot-table .coach-ballot-result {
-    text-align: center;
-    font-weight: 700;
+  text-align: center;
+  font-weight: 700;
 }
 .coach-results-no-pairings {
-    color: var(--text-muted);
+  color: var(--text-muted);
 }
 
 /* ── Stat-driven results layout (two rows per pairing) ──────────────────── */
@@ -82,59 +88,63 @@
 /* Suppress the inherited per-cell bottom border between the two side-rows of a
    pairing so the pair reads as one block. */
 .coach-results-table .coach-pairing-row--top > td {
-    border-bottom: none;
+  border-bottom: none;
 }
 
 /* Separator above every pairing group except the first. */
-.coach-results-table .coach-pairing-group + .coach-pairing-group .coach-pairing-row--top > td {
-    border-top: 1px solid var(--border);
+.coach-results-table
+  .coach-pairing-group
+  + .coach-pairing-group
+  .coach-pairing-row--top
+  > td {
+  border-top: 1px solid var(--border);
 }
 
 /* Hover highlights the entire pairing group, not a single side-row. */
 .coach-results-table .coach-pairing-group:hover .coach-pairing-row > td {
-    background: var(--surface-muted);
+  background: var(--surface-muted);
 }
 
 .coach-side-cell {
-    font-weight: 700;
-    white-space: nowrap;
-    color: var(--text-muted);
-    width: 3rem;
+  font-weight: 700;
+  white-space: nowrap;
+  color: var(--text-muted);
+  width: 3rem;
 }
 
 .coach-stat-col {
-    text-align: center;
+  text-align: center;
 }
 
 /* Numeric stat cells read better tabularly aligned. */
 .coach-results-table td.coach-stat-col {
-    font-variant-numeric: tabular-nums;
+  font-variant-numeric: tabular-nums;
 }
 
 /* Right-side expand affordance, vertically centered across both side-rows. */
 .coach-expand-cell {
-    text-align: center;
-    color: var(--text-muted);
-    font-size: 0.7rem;
-    vertical-align: middle;
-    width: 2rem;
+  text-align: center;
+  color: var(--text-muted);
+  font-size: 0.7rem;
+  vertical-align: middle;
+  width: 2rem;
 }
 
 /* The expanded ballot-detail row spans the group; drop its own hover tint. */
 .coach-results-table .coach-ballot-detail-row > td {
-    border-bottom: none;
+  border-bottom: none;
 }
 
 /* "Won presider tiebreaker" badge shown next to the winning side. */
 .coach-tb-badge {
-    display: inline-block;
-    margin-left: 0.4rem;
-    padding: 0.05rem 0.3rem;
-    border-radius: 0.35rem;
-    background: var(--primary-subtle);
-    color: var(--primary);
-    font-size: 0.6rem;
-    font-weight: 700;
-    letter-spacing: 0.04em;
-    vertical-align: middle;
+  display: inline-block;
+  margin-left: 0.4rem;
+  padding: 0.05rem 0.3rem;
+  border-radius: 0.35rem;
+  background: var(--primary-subtle);
+  color: var(--primary);
+  font-size: 0.6rem;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  vertical-align: middle;
 }

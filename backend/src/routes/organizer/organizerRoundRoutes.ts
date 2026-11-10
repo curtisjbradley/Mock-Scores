@@ -3,9 +3,15 @@ import * as organizer from "../../providers/organizerProvider";
 import { IPairingCreationPayload, IRound } from "@mock-scores/shared";
 import { DbError, NotFoundError } from "../../errors";
 import { roundHandler } from "../../types/handlers";
-import { scorerInviteEmail, roundResultsPublicEmail, pairingsPublicEmail, sendEmail, sendTrackedEmail } from "../../email";
+import {
+  scorerInviteEmail,
+  roundResultsPublicEmail,
+  pairingsPublicEmail,
+  sendEmail,
+  sendTrackedEmail,
+} from "../../email";
 
-const BASE_URL = process.env.FRONTEND_URL ?? 'http://localhost:5173';
+const BASE_URL = process.env.FRONTEND_URL ?? "http://localhost:5173";
 
 const router = Router();
 
@@ -28,9 +34,12 @@ const router = Router();
  *       200: { description: Round object }
  *       404: { description: Not found }
  */
-router.get("/", roundHandler(async (req, res) => {
+router.get(
+  "/",
+  roundHandler(async (req, res) => {
     return res.status(200).json(req.round);
-}));
+  }),
+);
 
 /**
  * @swagger
@@ -64,46 +73,86 @@ router.get("/", roundHandler(async (req, res) => {
  *       400: { description: Missing required fields }
  *       404: { description: Not found }
  */
-router.patch("/", roundHandler(async (req, res) => {
+router.patch(
+  "/",
+  roundHandler(async (req, res) => {
     const body: IRound = req.body;
-    if (body.name == undefined || body.results_public == undefined || body.teams_public == undefined)
-        return res.status(400).json({ message: "Missing required fields" });
+    if (
+      body.name == undefined ||
+      body.results_public == undefined ||
+      body.teams_public == undefined
+    )
+      return res.status(400).json({ message: "Missing required fields" });
 
     // results_public and teams_public are one-way: once true they cannot be unset
     if (req.round.results_public && !body.results_public)
-        return res.status(400).json({ message: "Results cannot be made private once published" });
+      return res
+        .status(400)
+        .json({ message: "Results cannot be made private once published" });
     if (req.round.teams_public && !body.teams_public)
-        return res.status(400).json({ message: "Teams cannot be made private once published" });
+      return res
+        .status(400)
+        .json({ message: "Teams cannot be made private once published" });
 
     try {
-        const wasResultsPublic = req.round.results_public;
-        const wasPairingsPublic = req.round.teams_public;
-        const updated = await organizer.updateRound(req.round.round_id, body);
-        // Fire results-public emails only on the false→true transition
-        if (!wasPairingsPublic && updated.teams_public) {
-            organizer.getRoundEmailContext(req.round.round_id).then(ctx => {
-                if (!ctx || ctx.coaches.length === 0) return;
-                return Promise.all(ctx.coaches.map(coach => {
-                    const template = pairingsPublicEmail(ctx.tournamentName, ctx.roundName, `${BASE_URL}/coach/${coach.team_id}/schedule`);
-                    sendEmail(coach.coach_email, template.subject, template.html, template.text).catch(console.error)
-                }));
-            }).catch(console.error);
-        }
-        if (!wasResultsPublic && updated.results_public) {
-            organizer.getRoundEmailContext(req.round.round_id).then(ctx => {
-                if (!ctx || ctx.coaches.length === 0) return;
-                return Promise.all(ctx.coaches.map(coach => {
-                    const template = roundResultsPublicEmail(ctx.tournamentName, ctx.roundName, `${BASE_URL}/coach/${coach.team_id}/results`);
-                    sendEmail(coach.coach_email, template.subject, template.html, template.text).catch(console.error)
-                }));
-            }).catch(console.error);
-        }
-        return res.status(200).json(updated);
+      const wasResultsPublic = req.round.results_public;
+      const wasPairingsPublic = req.round.teams_public;
+      const updated = await organizer.updateRound(req.round.round_id, body);
+      // Fire results-public emails only on the false→true transition
+      if (!wasPairingsPublic && updated.teams_public) {
+        organizer
+          .getRoundEmailContext(req.round.round_id)
+          .then((ctx) => {
+            if (!ctx || ctx.coaches.length === 0) return;
+            return Promise.all(
+              ctx.coaches.map((coach) => {
+                const template = pairingsPublicEmail(
+                  ctx.tournamentName,
+                  ctx.roundName,
+                  `${BASE_URL}/coach/${coach.team_id}/schedule`,
+                );
+                sendEmail(
+                  coach.coach_email,
+                  template.subject,
+                  template.html,
+                  template.text,
+                ).catch(console.error);
+              }),
+            );
+          })
+          .catch(console.error);
+      }
+      if (!wasResultsPublic && updated.results_public) {
+        organizer
+          .getRoundEmailContext(req.round.round_id)
+          .then((ctx) => {
+            if (!ctx || ctx.coaches.length === 0) return;
+            return Promise.all(
+              ctx.coaches.map((coach) => {
+                const template = roundResultsPublicEmail(
+                  ctx.tournamentName,
+                  ctx.roundName,
+                  `${BASE_URL}/coach/${coach.team_id}/results`,
+                );
+                sendEmail(
+                  coach.coach_email,
+                  template.subject,
+                  template.html,
+                  template.text,
+                ).catch(console.error);
+              }),
+            );
+          })
+          .catch(console.error);
+      }
+      return res.status(200).json(updated);
     } catch (e) {
-        if (e instanceof NotFoundError) return res.status(404).json({ message: e.message });
-        throw e;
+      if (e instanceof NotFoundError)
+        return res.status(404).json({ message: e.message });
+      throw e;
     }
-}));
+  }),
+);
 
 /**
  * @swagger
@@ -124,15 +173,21 @@ router.patch("/", roundHandler(async (req, res) => {
  *       204: { description: Deleted }
  *       404: { description: Not found }
  */
-router.delete("/", roundHandler(async (req, res) => {
+router.delete(
+  "/",
+  roundHandler(async (req, res) => {
     try {
-        const row = await organizer.deleteRound(req.round.round_id);
-        return res.status(204).json({ ...row, round_time: row.round_time?.toISOString() ?? null });
+      const row = await organizer.deleteRound(req.round.round_id);
+      return res
+        .status(204)
+        .json({ ...row, round_time: row.round_time?.toISOString() ?? null });
     } catch (e) {
-        if (e instanceof NotFoundError) return res.status(404).json({ message: e.message });
-        throw e;
+      if (e instanceof NotFoundError)
+        return res.status(404).json({ message: e.message });
+      throw e;
     }
-}));
+  }),
+);
 
 /**
  * @swagger
@@ -153,24 +208,38 @@ router.delete("/", roundHandler(async (req, res) => {
  *       200: { description: Array of pairings }
  *       500: { description: Database error }
  */
-router.get('/pairings', roundHandler(async (req, res) => {
+router.get(
+  "/pairings",
+  roundHandler(async (req, res) => {
     try {
-        return res.status(200).json(await organizer.getPairings(req.round.round_id));
+      return res
+        .status(200)
+        .json(await organizer.getPairings(req.round.round_id));
     } catch (e) {
-        if (e instanceof DbError) return res.status(500).json({ message: 'Database error' });
-        throw e;
+      if (e instanceof DbError)
+        return res.status(500).json({ message: "Database error" });
+      throw e;
     }
-}));
+  }),
+);
 
 /** Returns each competing team's roster/call-order readiness for this round. */
-router.get('/roster-status', roundHandler(async (req, res) => {
+router.get(
+  "/roster-status",
+  roundHandler(async (req, res) => {
     try {
-        return res.status(200).json(await organizer.getRoundPairingRosterStatuses(req.round.round_id));
+      return res
+        .status(200)
+        .json(
+          await organizer.getRoundPairingRosterStatuses(req.round.round_id),
+        );
     } catch (e) {
-        if (e instanceof DbError) return res.status(500).json({ message: 'Database error' });
-        throw e;
+      if (e instanceof DbError)
+        return res.status(500).json({ message: "Database error" });
+      throw e;
     }
-}));
+  }),
+);
 
 /**
  * @swagger
@@ -204,20 +273,44 @@ router.get('/roster-status', roundHandler(async (req, res) => {
  *       409: { description: Team already assigned this round }
  *       500: { description: Database error }
  */
-router.post('/pairings', roundHandler(async (req, res) => {
-    const { prosectionID, defenseID, courtroomID }: IPairingCreationPayload = req.body;
-    if (!prosectionID || !defenseID) return res.status(400).json({ message: "Missing required fields" });
-    if (prosectionID === defenseID) return res.status(400).json({ message: "Prosecution and defense teams must differ" });
+router.post(
+  "/pairings",
+  roundHandler(async (req, res) => {
+    const { prosectionID, defenseID, courtroomID }: IPairingCreationPayload =
+      req.body;
+    if (!prosectionID || !defenseID)
+      return res.status(400).json({ message: "Missing required fields" });
+    if (prosectionID === defenseID)
+      return res
+        .status(400)
+        .json({ message: "Prosecution and defense teams must differ" });
     try {
-        return res.status(201).json(await organizer.createRoundPairing(req.round.round_id, prosectionID, defenseID, courtroomID));
+      return res
+        .status(201)
+        .json(
+          await organizer.createRoundPairing(
+            req.round.round_id,
+            prosectionID,
+            defenseID,
+            courtroomID,
+          ),
+        );
     } catch (e: unknown) {
-        const detail: string = (e as { detail?: string })?.detail ?? '';
-        if (detail.includes('p_team')) return res.status(409).json({ message: "That team is already assigned as prosecution this round" });
-        if (detail.includes('d_team')) return res.status(409).json({ message: "That team is already assigned as defense this round" });
-        if (e instanceof DbError) return res.status(500).json({ message: 'Unable to create pairing' });
-        throw e;
+      const detail: string = (e as { detail?: string })?.detail ?? "";
+      if (detail.includes("p_team"))
+        return res.status(409).json({
+          message: "That team is already assigned as prosecution this round",
+        });
+      if (detail.includes("d_team"))
+        return res.status(409).json({
+          message: "That team is already assigned as defense this round",
+        });
+      if (e instanceof DbError)
+        return res.status(500).json({ message: "Unable to create pairing" });
+      throw e;
     }
-}));
+  }),
+);
 
 /**
  * @swagger
@@ -249,16 +342,20 @@ router.post('/pairings', roundHandler(async (req, res) => {
  *                   submitted: { type: integer }
  *       500: { description: Database error }
  */
-router.get('/ballot-status', roundHandler(async (req, res) => {
+router.get(
+  "/ballot-status",
+  roundHandler(async (req, res) => {
     try {
-        return res.status(200).json(await organizer.getBallotStatus(req.round.round_id));
+      return res
+        .status(200)
+        .json(await organizer.getBallotStatus(req.round.round_id));
     } catch (e) {
-        if (e instanceof DbError) return res.status(500).json({ message: 'Database error' });
-        throw e;
+      if (e instanceof DbError)
+        return res.status(500).json({ message: "Database error" });
+      throw e;
     }
-}));
-
-
+  }),
+);
 
 /**
  * @swagger
@@ -284,29 +381,42 @@ router.get('/ballot-status', roundHandler(async (req, res) => {
  *                  sent: { type: boolean }
  *       500: { description: Database error }
  */
-router.post('/send-scoring-links', roundHandler(async (req, res) => {
+router.post(
+  "/send-scoring-links",
+  roundHandler(async (req, res) => {
     // Scoring links must never go out before the round is locked (scoring opens on lock).
     if (!req.round.locked) {
-        return res.status(409).json({ message: 'Lock the round before sending scoring links.' });
+      return res
+        .status(409)
+        .json({ message: "Lock the round before sending scoring links." });
     }
     // Bulk send is one-time per round: if any scoring-link email has already been
     // recorded for this round's assignments, refuse (individual resends use the
     // per-assignment endpoint). This holds even across page reloads / other clients.
     if (await organizer.hasSentScoringLinksForRound(req.round.round_id)) {
-        return res.status(409).json({ message: 'Scoring links have already been sent for this round.' });
+      return res.status(409).json({
+        message: "Scoring links have already been sent for this round.",
+      });
     }
-    const contexts = await organizer.getScorerInviteContextsForRound(req.round.round_id);
+    const contexts = await organizer.getScorerInviteContextsForRound(
+      req.round.round_id,
+    );
     let sent = 0;
     for (const ctx of contexts) {
-        const scorecardUrl = `${BASE_URL}/score/${ctx.assignmentId}`;
-        const template = scorerInviteEmail(ctx.tournamentName, scorecardUrl);
-        sendTrackedEmail(ctx.email, template.subject, template.html, template.text,
-            { type: 'scoring_link', id: ctx.assignmentId })
-            .catch(console.error);
-        sent++;
+      const scorecardUrl = `${BASE_URL}/score/${ctx.assignmentId}`;
+      const template = scorerInviteEmail(ctx.tournamentName, scorecardUrl);
+      sendTrackedEmail(
+        ctx.email,
+        template.subject,
+        template.html,
+        template.text,
+        { type: "scoring_link", id: ctx.assignmentId },
+      ).catch(console.error);
+      sent++;
     }
     return res.status(200).json({ sent });
-}));
+  }),
+);
 
 /**
  * @swagger
@@ -332,23 +442,40 @@ router.post('/send-scoring-links', roundHandler(async (req, res) => {
  *       404: {description: Cannot find the assignment}
  *       500: { description: Database error }
  */
-router.post('/send-scoring-links/:assignment', roundHandler(async (req, res) => {
+router.post(
+  "/send-scoring-links/:assignment",
+  roundHandler(async (req, res) => {
     // Scoring links must never go out before the round is locked (scoring opens on lock).
     if (!req.round.locked) {
-        return res.status(409).json({ message: 'Lock the round before sending scoring links.' });
+      return res
+        .status(409)
+        .json({ message: "Lock the round before sending scoring links." });
     }
     const assignment = req.params.assignment as string;
-    const context = await organizer.getScorerInviteContextForAssignment(assignment);
+    const context =
+      await organizer.getScorerInviteContextForAssignment(assignment);
     if (context === null) {
-        return res.status(404).json({message: "Cannot resolve scoring assignment"})
+      return res
+        .status(404)
+        .json({ message: "Cannot resolve scoring assignment" });
     }
 
     const scorecardUrl = `${BASE_URL}/score/${context.assignmentId}`;
     const template = scorerInviteEmail(context.tournamentName, scorecardUrl);
-    return await sendTrackedEmail(context.email, template.subject, template.html, template.text,
-        { type: 'scoring_link', id: context.assignmentId })
-        .then(() => res.status(200).json({sent: true}) )
-        .catch((err) => res.status(500).json({message: `Error when attempting to send email: ${err}`}))
-}));
+    return await sendTrackedEmail(
+      context.email,
+      template.subject,
+      template.html,
+      template.text,
+      { type: "scoring_link", id: context.assignmentId },
+    )
+      .then(() => res.status(200).json({ sent: true }))
+      .catch((err) =>
+        res
+          .status(500)
+          .json({ message: `Error when attempting to send email: ${err}` }),
+      );
+  }),
+);
 
 export default router;

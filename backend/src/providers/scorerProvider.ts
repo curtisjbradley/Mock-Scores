@@ -1,26 +1,32 @@
-import { dbQuery, withTransaction } from '../db';
-import type { IScoreSheetFormat, ScorecardPayload } from '@mock-scores/shared';
-import { DbError, NotFoundError, AlreadySubmittedError, ConflictReportedError, RoundNotLockedError } from '../errors';
-import {IBallotRow} from "../types/dbtypes";
+import { dbQuery, withTransaction } from "../db";
+import type { IScoreSheetFormat, ScorecardPayload } from "@mock-scores/shared";
+import {
+  DbError,
+  NotFoundError,
+  AlreadySubmittedError,
+  ConflictReportedError,
+  RoundNotLockedError,
+} from "../errors";
+import { IBallotRow } from "../types/dbtypes";
 
 // ─── Shared format builder ───────────────────────────────────────────────────
 
 /** Resolved pairing context needed to build the scoresheet/ballot format. */
 interface PairingFormatContext {
-    pairingId: string;
-    tournamentId: string;
-    pTeam: string;
-    dTeam: string;
-    courtroomName: string | null;
-    presiderName: string;
-    /** assignment_id to embed as scorerID; empty string for a blank/pairing-level ballot. */
-    scorerAssignmentId: string;
-    scorerName: string;
-    isPaper: boolean;
-    fillableScores: boolean;
-    /** Whether to show the tiebreaker selection — true only for the presider's ballot. */
-    showTiebreaker: boolean;
-    roundLocked: boolean;
+  pairingId: string;
+  tournamentId: string;
+  pTeam: string;
+  dTeam: string;
+  courtroomName: string | null;
+  presiderName: string;
+  /** assignment_id to embed as scorerID; empty string for a blank/pairing-level ballot. */
+  scorerAssignmentId: string;
+  scorerName: string;
+  isPaper: boolean;
+  fillableScores: boolean;
+  /** Whether to show the tiebreaker selection — true only for the presider's ballot. */
+  showTiebreaker: boolean;
+  roundLocked: boolean;
 }
 
 /**
@@ -34,8 +40,8 @@ interface PairingFormatContext {
  * when the key does not contain a field segment.
  */
 export function fieldIdFromAssignmentKey(assignmentKey: string): string | null {
-    const parts = assignmentKey.split('__');
-    return parts.length >= 2 ? parts[1] : null;
+  const parts = assignmentKey.split("__");
+  return parts.length >= 2 ? parts[1] : null;
 }
 
 /**
@@ -49,36 +55,41 @@ export function fieldIdFromAssignmentKey(assignmentKey: string): string | null {
  * back from pg as strings, so multipliers are coerced with Number().
  */
 export function computeBallotTotals(
-    scores: { side: 'P' | 'D'; assignmentKey: string; score: number }[],
-    multipliers: Map<string, number>,
+  scores: { side: "P" | "D"; assignmentKey: string; score: number }[],
+  multipliers: Map<string, number>,
 ): { pPoints: number; dPoints: number } {
-    const contribution = (s: { assignmentKey: string; score: number }) => {
-        const fieldId = fieldIdFromAssignmentKey(s.assignmentKey);
-        const mult = fieldId != null ? Number(multipliers.get(fieldId) ?? 1) : 1;
-        return s.score * mult;
-    };
-    let pPoints = 0;
-    let dPoints = 0;
-    for (const s of scores) {
-        if (s.side === 'P') pPoints += contribution(s);
-        else if (s.side === 'D') dPoints += contribution(s);
-    }
-    return { pPoints, dPoints };
+  const contribution = (s: { assignmentKey: string; score: number }) => {
+    const fieldId = fieldIdFromAssignmentKey(s.assignmentKey);
+    const mult = fieldId != null ? Number(multipliers.get(fieldId) ?? 1) : 1;
+    return s.score * mult;
+  };
+  let pPoints = 0;
+  let dPoints = 0;
+  for (const s of scores) {
+    if (s.side === "P") pPoints += contribution(s);
+    else if (s.side === "D") dPoints += contribution(s);
+  }
+  return { pPoints, dPoints };
 }
 
 /**
  * Loads a field_id → multiplier map for every scoring field in a tournament.
  * Used to apply per-field multipliers when computing/recomputing ballot totals.
  */
-export async function getFieldMultipliers(tournamentId: string): Promise<Map<string, number>> {
-    const rows = (await dbQuery<{ id: string; multiplier: number }>(
+export async function getFieldMultipliers(
+  tournamentId: string,
+): Promise<Map<string, number>> {
+  const rows =
+    (
+      await dbQuery<{ id: string; multiplier: number }>(
         `SELECT sf.id, sf.multiplier
          FROM scoring_fields sf
                   JOIN scoring_categories sc ON sc.id = sf.category_id
          WHERE sc.tournament_id = $1`,
         [tournamentId],
-    ))?.rows ?? [];
-    return new Map(rows.map(r => [r.id, Number(r.multiplier)]));
+      )
+    )?.rows ?? [];
+  return new Map(rows.map((r) => [r.id, Number(r.multiplier)]));
 }
 
 /**
@@ -89,49 +100,69 @@ export async function getFieldMultipliers(tournamentId: string): Promise<Map<str
  * Throws NotFoundError when the tournament/format cannot be resolved.
  * Throws DbError when a query fails.
  */
-async function buildScoreSheetForPairing(ctx: PairingFormatContext): Promise<IScoreSheetFormat> {
-    const { pairingId: pairing_id, tournamentId: tournament_id, pTeam: p_team, dTeam: d_team } = ctx;
+async function buildScoreSheetForPairing(
+  ctx: PairingFormatContext,
+): Promise<IScoreSheetFormat> {
+  const {
+    pairingId: pairing_id,
+    tournamentId: tournament_id,
+    pTeam: p_team,
+    dTeam: d_team,
+  } = ctx;
 
-    // ── 3. Tournament / format ────────────────────────────────────────────────
-    const tourney = (await dbQuery<{
-        tournament_name: string;
-        case_name: string;
-        criminal_case: boolean;
-        p_witnesses_called: number;
-        d_witnesses_called: number;
-        has_swing: boolean;
-        format_id: string;
-    }>(`
+  // ── 3. Tournament / format ────────────────────────────────────────────────
+  const tourney = (
+    await dbQuery<{
+      tournament_name: string;
+      case_name: string;
+      criminal_case: boolean;
+      p_witnesses_called: number;
+      d_witnesses_called: number;
+      has_swing: boolean;
+      format_id: string;
+    }>(
+      `
         SELECT t.name AS tournament_name, tf.case_name, tf.criminal_case, tf.p_witnesses_called,
                tf.d_witnesses_called, tf.has_swing, tf.format_id
         FROM tournaments t
                  JOIN tournament_format tf ON tf.format_id = t.case_format_id
         WHERE t.id = $1
-    `, [tournament_id]))?.rows[0];
+    `,
+      [tournament_id],
+    )
+  )?.rows[0];
 
-    if (!tourney) throw new NotFoundError('Tournament not found');
+  if (!tourney) throw new NotFoundError("Tournament not found");
 
-    // ── 4. Teams ──────────────────────────────────────────────────────────────
-    const teamsRows = (await dbQuery<{ id: string; code: string; name: string }>(
-        'SELECT id, code, name FROM teams WHERE id = ANY($1)',
+  // ── 4. Teams ──────────────────────────────────────────────────────────────
+  const teamsRows =
+    (
+      await dbQuery<{ id: string; code: string; name: string }>(
+        "SELECT id, code, name FROM teams WHERE id = ANY($1)",
         [[p_team, d_team]],
-    ))?.rows ?? [];
-    const teamMap = Object.fromEntries(teamsRows.map(t => [t.id, t]));
-    const pTeam = teamMap[p_team];
-    const dTeam = teamMap[d_team];
+      )
+    )?.rows ?? [];
+  const teamMap = Object.fromEntries(teamsRows.map((t) => [t.id, t]));
+  const pTeam = teamMap[p_team];
+  const dTeam = teamMap[d_team];
 
-    // ── 6. Scoring categories + fields ────────────────────────────────────────
-    const catRows = (await dbQuery<{
+  // ── 6. Scoring categories + fields ────────────────────────────────────────
+  const catRows =
+    (
+      await dbQuery<{
         id: string;
         name: string;
         witness_category: boolean;
         position: number;
-    }>(
-        'SELECT id, name, witness_category, position FROM scoring_categories WHERE tournament_id = $1 ORDER BY position',
+      }>(
+        "SELECT id, name, witness_category, position FROM scoring_categories WHERE tournament_id = $1 ORDER BY position",
         [tournament_id],
-    ))?.rows ?? [];
+      )
+    )?.rows ?? [];
 
-    const fieldRows = (await dbQuery<{
+  const fieldRows =
+    (
+      await dbQuery<{
         id: string;
         category_id: string;
         label: string;
@@ -146,7 +177,7 @@ async function buildScoreSheetForPairing(ctx: PairingFormatContext): Promise<ISc
         visible_to_scorers: boolean;
         position: number;
         award_category_id: string | null;
-    }>(
+      }>(
         `SELECT id, category_id, label, min_score, max_score, multiplier, assignable,
                 prosecution, defense, calling, crossing, visible_to_scorers, position,
                 award_category_id
@@ -154,213 +185,273 @@ async function buildScoreSheetForPairing(ctx: PairingFormatContext): Promise<ISc
          WHERE category_id = ANY($1)
            AND visible_to_scorers = true
          ORDER BY position`,
-        [catRows.map(c => c.id)],
-    ))?.rows ?? [];
+        [catRows.map((c) => c.id)],
+      )
+    )?.rows ?? [];
 
-    const fieldsByCat = new Map<string, typeof fieldRows>();
-    for (const f of fieldRows) {
-        if (!fieldsByCat.has(f.category_id)) fieldsByCat.set(f.category_id, []);
-        fieldsByCat.get(f.category_id)!.push(f);
-    }
+  const fieldsByCat = new Map<string, typeof fieldRows>();
+  for (const f of fieldRows) {
+    if (!fieldsByCat.has(f.category_id)) fieldsByCat.set(f.category_id, []);
+    fieldsByCat.get(f.category_id)!.push(f);
+  }
 
-    // ── 7. Witnesses for this format ──────────────────────────────────────────
-    const witnessRows = (await dbQuery<{ id: string; name: string; side: 'P' | 'D' | 'S' }>(
-        'SELECT id, name, side FROM case_witnesses WHERE case_format = $1',
+  // ── 7. Witnesses for this format ──────────────────────────────────────────
+  const witnessRows =
+    (
+      await dbQuery<{ id: string; name: string; side: "P" | "D" | "S" }>(
+        "SELECT id, name, side FROM case_witnesses WHERE case_format = $1",
         [tourney.format_id],
-    ))?.rows ?? [];
+      )
+    )?.rows ?? [];
 
-    // ── 7b. Witness call order for this pairing ───────────────────────────────
-    const callOrderRows = (await dbQuery<{
+  // ── 7b. Witness call order for this pairing ───────────────────────────────
+  const callOrderRows =
+    (
+      await dbQuery<{
         team_id: string;
         witness_id: string;
         position: number;
-    }>(
+      }>(
         `SELECT team_id, witness_id, position
          FROM witness_call_order
          WHERE pairing_id = $1
          ORDER BY team_id, position`,
         [pairing_id],
-    ))?.rows ?? [];
+      )
+    )?.rows ?? [];
 
-    const pCallOrder = callOrderRows.filter(r => r.team_id === p_team).map(r => r.witness_id);
-    const dCallOrder = callOrderRows.filter(r => r.team_id === d_team).map(r => r.witness_id);
+  const pCallOrder = callOrderRows
+    .filter((r) => r.team_id === p_team)
+    .map((r) => r.witness_id);
+  const dCallOrder = callOrderRows
+    .filter((r) => r.team_id === d_team)
+    .map((r) => r.witness_id);
 
-    const witnessMap = new Map(witnessRows.map(w => [w.id, w]));
+  const witnessMap = new Map(witnessRows.map((w) => [w.id, w]));
 
-    const pWitnesses = witnessRows.filter(w => w.side === 'P');
-    const dWitnesses = witnessRows.filter(w => w.side === 'D');
-    const swingWitnesses = witnessRows.filter(w => w.side === 'S');
+  const pWitnesses = witnessRows.filter((w) => w.side === "P");
+  const dWitnesses = witnessRows.filter((w) => w.side === "D");
+  const swingWitnesses = witnessRows.filter((w) => w.side === "S");
 
-    const resolvedPWitnesses = pCallOrder.length > 0
-        ? pCallOrder.map(id => witnessMap.get(id)).filter((w): w is typeof witnessRows[0] => w != null)
-        : [...pWitnesses.slice(0, tourney.p_witnesses_called), ...swingWitnesses];
+  const resolvedPWitnesses =
+    pCallOrder.length > 0
+      ? pCallOrder
+          .map((id) => witnessMap.get(id))
+          .filter((w): w is (typeof witnessRows)[0] => w != null)
+      : [...pWitnesses.slice(0, tourney.p_witnesses_called), ...swingWitnesses];
 
-    const resolvedDWitnesses = dCallOrder.length > 0
-        ? dCallOrder.map(id => witnessMap.get(id)).filter((w): w is typeof witnessRows[0] => w != null)
-        : [...dWitnesses.slice(0, tourney.d_witnesses_called), ...swingWitnesses];
+  const resolvedDWitnesses =
+    dCallOrder.length > 0
+      ? dCallOrder
+          .map((id) => witnessMap.get(id))
+          .filter((w): w is (typeof witnessRows)[0] => w != null)
+      : [...dWitnesses.slice(0, tourney.d_witnesses_called), ...swingWitnesses];
 
-    // ── 8. Student assignments for this pairing ───────────────────────────────
-    const studentAsgRows = (await dbQuery<{
+  // ── 8. Student assignments for this pairing ───────────────────────────────
+  const studentAsgRows =
+    (
+      await dbQuery<{
         field_id: string;
-        side: 'P' | 'D';
+        side: "P" | "D";
         witness_id: string | null;
         student_id: string;
         team_id: string;
-    }>(
+      }>(
         `SELECT field_id, side, witness_id, student_id, team_id
          FROM student_assignments
          WHERE pairing_id = $1`,
         [pairing_id],
-    ))?.rows ?? [];
+      )
+    )?.rows ?? [];
 
-    const studentByField = new Map<string, { pStudentId: string | null; dStudentId: string | null }>();
-    for (const sa of studentAsgRows) {
-        const key = sa.witness_id ? `${sa.field_id}:${sa.witness_id}` : sa.field_id;
-        const existing = studentByField.get(key) ?? { pStudentId: null, dStudentId: null };
-        if (sa.team_id === p_team && sa.side === 'P') existing.pStudentId = sa.student_id;
-        else if (sa.team_id === d_team && sa.side === 'D') existing.dStudentId = sa.student_id;
-        studentByField.set(key, existing);
-    }
+  const studentByField = new Map<
+    string,
+    { pStudentId: string | null; dStudentId: string | null }
+  >();
+  for (const sa of studentAsgRows) {
+    const key = sa.witness_id ? `${sa.field_id}:${sa.witness_id}` : sa.field_id;
+    const existing = studentByField.get(key) ?? {
+      pStudentId: null,
+      dStudentId: null,
+    };
+    if (sa.team_id === p_team && sa.side === "P")
+      existing.pStudentId = sa.student_id;
+    else if (sa.team_id === d_team && sa.side === "D")
+      existing.dStudentId = sa.student_id;
+    studentByField.set(key, existing);
+  }
 
-    // ── 9. Student info ───────────────────────────────────────────────────────
-    const studentsRecord: IScoreSheetFormat['students'] = {};
-    // Award nominations can recognize any student participating in this trial,
-    // including rostered students whom the coach did not assign to a scorecard role.
-    const studentRows = (await dbQuery<{
+  // ── 9. Student info ───────────────────────────────────────────────────────
+  const studentsRecord: IScoreSheetFormat["students"] = {};
+  // Award nominations can recognize any student participating in this trial,
+  // including rostered students whom the coach did not assign to a scorecard role.
+  const studentRows =
+    (
+      await dbQuery<{
         student_id: string;
         student_name: string;
         pronouns: string | null;
         team_id: string;
-    }>(
-        'SELECT student_id, student_name, pronouns, team_id FROM team_rostered_students WHERE team_id = ANY($1) ORDER BY team_id, student_name',
+      }>(
+        "SELECT student_id, student_name, pronouns, team_id FROM team_rostered_students WHERE team_id = ANY($1) ORDER BY team_id, student_name",
         [[p_team, d_team]],
-    ))?.rows ?? [];
-    for (const s of studentRows) {
-        studentsRecord[s.student_id] = { name: s.student_name, pronouns: s.pronouns, schoolId: s.team_id };
-    }
-
-    // ── 10. Assemble categories ───────────────────────────────────────────────
-    const scoringCategories: IScoreSheetFormat['scoringCategories'] = {};
-    const categoryOrder: string[] = [];
-    const witnessesRecord: IScoreSheetFormat['witnesses'] = {};
-
-    for (const cat of catRows) {
-        const catFields = fieldsByCat.get(cat.id) ?? [];
-        if (!catFields.length) continue;
-
-        if (!cat.witness_category) {
-            categoryOrder.push(cat.id);
-            scoringCategories[cat.id] = {
-                categoryName: cat.name,
-                witnessId: null,
-                categoryAssignments: catFields.map(f => {
-                    const students = studentByField.get(f.id) ?? { pStudentId: null, dStudentId: null };
-                    const side: 'P' | 'D' | 'BOTH' = f.prosecution && f.defense ? 'BOTH' : f.prosecution ? 'P' : 'D';
-                    return {
-                        assignmentName: f.label,
-                        assignmentKey: `${cat.id}__${f.id}`,
-                        pStudentId: side !== 'D' ? students.pStudentId : null,
-                        dStudentId: side !== 'P' ? students.dStudentId : null,
-                        side,
-                        minScore: f.min_score,
-                        maxScore: f.max_score,
-                        multiplier: Number(f.multiplier),
-                    };
-                }),
-            };
-        } else {
-            const seenWitnesses = new Set<string>();
-            const calledWitnesses: typeof witnessRows = [];
-            for (const w of [...resolvedPWitnesses, ...resolvedDWitnesses]) {
-                if (!seenWitnesses.has(w.id)) { seenWitnesses.add(w.id); calledWitnesses.push(w); }
-            }
-
-            for (const witness of calledWitnesses) {
-                witnessesRecord[witness.id] = { characterName: witness.name };
-                const catId = `${cat.id}__${witness.id}`;
-                categoryOrder.push(catId);
-                scoringCategories[catId] = {
-                    categoryName: cat.name,
-                    witnessId: witness.id,
-                    categoryAssignments: catFields.map(f => {
-                        const students = studentByField.get(`${f.id}:${witness.id}`) ?? { pStudentId: null, dStudentId: null };
-                        let side: 'P' | 'D' | 'BOTH' = f.prosecution && f.defense ? 'BOTH' : f.prosecution ? 'P' : 'D';
-                        if (f.calling && !f.crossing) side = witness.side === 'P' || witness.side === 'S' ? 'P' : 'D';
-                        else if (f.crossing && !f.calling) side = witness.side === 'P' || witness.side === 'S' ? 'D' : 'P';
-                        return {
-                            assignmentName: f.label,
-                            assignmentKey: `${cat.id}__${f.id}__${witness.id}`,
-                            pStudentId: side !== 'D' ? students.pStudentId : null,
-                            dStudentId: side !== 'P' ? students.dStudentId : null,
-                            side,
-                            minScore: f.min_score,
-                            maxScore: f.max_score,
-                            multiplier: Number(f.multiplier),
-                        };
-                    }),
-                };
-            }
-        }
-    }
-
-    // ── 12. Award categories ──────────────────────────────────────────────────
-    const awardCatRows = (await dbQuery<{
-        id: string; name: string; min_nominees: number; max_nominees: number; open_to_all: boolean;
-    }>(
-        'SELECT id, name, min_nominees, max_nominees, open_to_all FROM individual_award_categories WHERE tournament_id = $1 ORDER BY name',
-        [tournament_id],
-    ))?.rows ?? [];
-
-    const awardCategories: IScoreSheetFormat['awardCategories'] = {};
-    if (awardCatRows.length > 0) {
-        const fieldsByAwardCat = new Map<string, string[]>();
-        for (const f of fieldRows) {
-            if (f.award_category_id) {
-                const fieldIds = fieldsByAwardCat.get(f.award_category_id) ?? [];
-                fieldIds.push(f.id);
-                fieldsByAwardCat.set(f.award_category_id, fieldIds);
-            }
-        }
-
-        for (const ac of awardCatRows) {
-            const eligibleStudentIds = ac.open_to_all
-                ? Object.keys(studentsRecord)
-                : studentAsgRows
-                    .filter(assignment => (fieldsByAwardCat.get(ac.id) ?? []).includes(assignment.field_id))
-                    .map(assignment => assignment.student_id);
-            awardCategories[ac.id] = {
-                name: ac.name,
-                minNominees: ac.min_nominees,
-                maxNominees: ac.max_nominees,
-                eligibleStudentIds: [...new Set(eligibleStudentIds)],
-            };
-        }
-    }
-
-    return {
-        isCriminal: tourney.criminal_case,
-        ballotOptions: { fillableScores: ctx.fillableScores, showTiebreaker: ctx.showTiebreaker, },
-        pairingID: pairing_id,
-        scorer: {
-            name: ctx.scorerName,
-            scorerID: ctx.scorerAssignmentId,
-            isPaper: ctx.isPaper,
-        },
-        presiderName: ctx.presiderName,
-        courtroomNumber: ctx.courtroomName ?? '',
-        caseName: tourney.case_name,
-        tournamentName: tourney.tournament_name,
-        prosecutionCode: pTeam?.code ?? '',
-        defenseCode: dTeam?.code ?? '',
-        prosecutionId: p_team,
-        defenseId: d_team,
-        students: studentsRecord,
-        witnesses: witnessesRecord,
-        scoringCategories,
-        categoryOrder,
-        awardCategories,
-        roundLocked: ctx.roundLocked,
+      )
+    )?.rows ?? [];
+  for (const s of studentRows) {
+    studentsRecord[s.student_id] = {
+      name: s.student_name,
+      pronouns: s.pronouns,
+      schoolId: s.team_id,
     };
+  }
+
+  // ── 10. Assemble categories ───────────────────────────────────────────────
+  const scoringCategories: IScoreSheetFormat["scoringCategories"] = {};
+  const categoryOrder: string[] = [];
+  const witnessesRecord: IScoreSheetFormat["witnesses"] = {};
+
+  for (const cat of catRows) {
+    const catFields = fieldsByCat.get(cat.id) ?? [];
+    if (!catFields.length) continue;
+
+    if (!cat.witness_category) {
+      categoryOrder.push(cat.id);
+      scoringCategories[cat.id] = {
+        categoryName: cat.name,
+        witnessId: null,
+        categoryAssignments: catFields.map((f) => {
+          const students = studentByField.get(f.id) ?? {
+            pStudentId: null,
+            dStudentId: null,
+          };
+          const side: "P" | "D" | "BOTH" =
+            f.prosecution && f.defense ? "BOTH" : f.prosecution ? "P" : "D";
+          return {
+            assignmentName: f.label,
+            assignmentKey: `${cat.id}__${f.id}`,
+            pStudentId: side !== "D" ? students.pStudentId : null,
+            dStudentId: side !== "P" ? students.dStudentId : null,
+            side,
+            minScore: f.min_score,
+            maxScore: f.max_score,
+            multiplier: Number(f.multiplier),
+          };
+        }),
+      };
+    } else {
+      const seenWitnesses = new Set<string>();
+      const calledWitnesses: typeof witnessRows = [];
+      for (const w of [...resolvedPWitnesses, ...resolvedDWitnesses]) {
+        if (!seenWitnesses.has(w.id)) {
+          seenWitnesses.add(w.id);
+          calledWitnesses.push(w);
+        }
+      }
+
+      for (const witness of calledWitnesses) {
+        witnessesRecord[witness.id] = { characterName: witness.name };
+        const catId = `${cat.id}__${witness.id}`;
+        categoryOrder.push(catId);
+        scoringCategories[catId] = {
+          categoryName: cat.name,
+          witnessId: witness.id,
+          categoryAssignments: catFields.map((f) => {
+            const students = studentByField.get(`${f.id}:${witness.id}`) ?? {
+              pStudentId: null,
+              dStudentId: null,
+            };
+            let side: "P" | "D" | "BOTH" =
+              f.prosecution && f.defense ? "BOTH" : f.prosecution ? "P" : "D";
+            if (f.calling && !f.crossing)
+              side = witness.side === "P" || witness.side === "S" ? "P" : "D";
+            else if (f.crossing && !f.calling)
+              side = witness.side === "P" || witness.side === "S" ? "D" : "P";
+            return {
+              assignmentName: f.label,
+              assignmentKey: `${cat.id}__${f.id}__${witness.id}`,
+              pStudentId: side !== "D" ? students.pStudentId : null,
+              dStudentId: side !== "P" ? students.dStudentId : null,
+              side,
+              minScore: f.min_score,
+              maxScore: f.max_score,
+              multiplier: Number(f.multiplier),
+            };
+          }),
+        };
+      }
+    }
+  }
+
+  // ── 12. Award categories ──────────────────────────────────────────────────
+  const awardCatRows =
+    (
+      await dbQuery<{
+        id: string;
+        name: string;
+        min_nominees: number;
+        max_nominees: number;
+        open_to_all: boolean;
+      }>(
+        "SELECT id, name, min_nominees, max_nominees, open_to_all FROM individual_award_categories WHERE tournament_id = $1 ORDER BY name",
+        [tournament_id],
+      )
+    )?.rows ?? [];
+
+  const awardCategories: IScoreSheetFormat["awardCategories"] = {};
+  if (awardCatRows.length > 0) {
+    const fieldsByAwardCat = new Map<string, string[]>();
+    for (const f of fieldRows) {
+      if (f.award_category_id) {
+        const fieldIds = fieldsByAwardCat.get(f.award_category_id) ?? [];
+        fieldIds.push(f.id);
+        fieldsByAwardCat.set(f.award_category_id, fieldIds);
+      }
+    }
+
+    for (const ac of awardCatRows) {
+      const eligibleStudentIds = ac.open_to_all
+        ? Object.keys(studentsRecord)
+        : studentAsgRows
+            .filter((assignment) =>
+              (fieldsByAwardCat.get(ac.id) ?? []).includes(assignment.field_id),
+            )
+            .map((assignment) => assignment.student_id);
+      awardCategories[ac.id] = {
+        name: ac.name,
+        minNominees: ac.min_nominees,
+        maxNominees: ac.max_nominees,
+        eligibleStudentIds: [...new Set(eligibleStudentIds)],
+      };
+    }
+  }
+
+  return {
+    isCriminal: tourney.criminal_case,
+    ballotOptions: {
+      fillableScores: ctx.fillableScores,
+      showTiebreaker: ctx.showTiebreaker,
+    },
+    pairingID: pairing_id,
+    scorer: {
+      name: ctx.scorerName,
+      scorerID: ctx.scorerAssignmentId,
+      isPaper: ctx.isPaper,
+    },
+    presiderName: ctx.presiderName,
+    courtroomNumber: ctx.courtroomName ?? "",
+    caseName: tourney.case_name,
+    tournamentName: tourney.tournament_name,
+    prosecutionCode: pTeam?.code ?? "",
+    defenseCode: dTeam?.code ?? "",
+    prosecutionId: p_team,
+    defenseId: d_team,
+    students: studentsRecord,
+    witnesses: witnessesRecord,
+    scoringCategories,
+    categoryOrder,
+    awardCategories,
+    roundLocked: ctx.roundLocked,
+  };
 }
 
 // ─── getPairingBallotFormat ──────────────────────────────────────────────────
@@ -374,66 +465,78 @@ async function buildScoreSheetForPairing(ctx: PairingFormatContext): Promise<ISc
  * Throws NotFoundError when the pairing does not exist.
  * Throws DbError when a query fails.
  */
-export async function getPairingBallotFormat(pairingId: string): Promise<IScoreSheetFormat> {
-    const pairing = (await dbQuery<{
-        p_team: string;
-        d_team: string;
-        courtroom_name: string | null;
-        tournament_id: string;
-        locked: boolean;
-    }>(`
+export async function getPairingBallotFormat(
+  pairingId: string,
+): Promise<IScoreSheetFormat> {
+  const pairing = (
+    await dbQuery<{
+      p_team: string;
+      d_team: string;
+      courtroom_name: string | null;
+      tournament_id: string;
+      locked: boolean;
+    }>(
+      `
         SELECT p.p_team, p.d_team, cr.name AS courtroom_name, r.tournament_id, r.locked
         FROM pairings p
                  JOIN rounds r           ON r.round_id = p.round_id
                  LEFT JOIN courtrooms cr ON cr.id      = p.courtroom
         WHERE p.pairing_id = $1
-    `, [pairingId]))?.rows[0];
+    `,
+      [pairingId],
+    )
+  )?.rows[0];
 
-    if (!pairing) throw new NotFoundError('Pairing not found');
+  if (!pairing) throw new NotFoundError("Pairing not found");
 
-    // Resolve the currently assigned presider's name, if any.
-    let presiderName = '';
-    const pres = (await dbQuery<{ name: string }>(`
+  // Resolve the currently assigned presider's name, if any.
+  let presiderName = "";
+  const pres = (
+    await dbQuery<{ name: string }>(
+      `
         SELECT s.name
         FROM scorer_presider_assignment pa
                  JOIN scorer_pairing_assignments spa ON spa.assignment_id = pa.scorer_assignment_id
                  JOIN scorers s                      ON s.scorer_id       = spa.scorer_id
         WHERE pa.pairing_id = $1
-    `, [pairingId]))?.rows[0];
-    if (pres) presiderName = pres.name.trim();
+    `,
+      [pairingId],
+    )
+  )?.rows[0];
+  if (pres) presiderName = pres.name.trim();
 
-    return buildScoreSheetForPairing({
-        pairingId,
-        tournamentId: pairing.tournament_id,
-        pTeam: pairing.p_team,
-        dTeam: pairing.d_team,
-        courtroomName: pairing.courtroom_name,
-        presiderName,
-        scorerAssignmentId: '',
-        scorerName: '',
-        isPaper: true,
-        fillableScores: true,
-        showTiebreaker: false,
-        roundLocked: pairing.locked,
-    });
+  return buildScoreSheetForPairing({
+    pairingId,
+    tournamentId: pairing.tournament_id,
+    pTeam: pairing.p_team,
+    dTeam: pairing.d_team,
+    courtroomName: pairing.courtroom_name,
+    presiderName,
+    scorerAssignmentId: "",
+    scorerName: "",
+    isPaper: true,
+    fillableScores: true,
+    showTiebreaker: false,
+    roundLocked: pairing.locked,
+  });
 }
 
 // ─── scorer score sheets ───────────────────────────────────────────────────────
 
 interface ScorerSheetRow {
-    assignment_id: string;
-    pairing_id: string;
-    scorer_is_paper: boolean;
-    p_team: string;
-    d_team: string;
-    courtroom_name: string | null;
-    tournament_id: string;
-    presider_scorer_assignment_id: string | null;
-    show_scores: boolean | null;
-    conflict_reported: boolean;
-    locked: boolean;
-    scorer_name: string | null;
-    presider_name: string | null;
+  assignment_id: string;
+  pairing_id: string;
+  scorer_is_paper: boolean;
+  p_team: string;
+  d_team: string;
+  courtroom_name: string | null;
+  tournament_id: string;
+  presider_scorer_assignment_id: string | null;
+  show_scores: boolean | null;
+  conflict_reported: boolean;
+  locked: boolean;
+  scorer_name: string | null;
+  presider_name: string | null;
 }
 
 /**
@@ -444,10 +547,12 @@ interface ScorerSheetRow {
  * skipGuards is true.
  */
 export async function getSheetFromBallot(
-    ballotId: string,
-    options?: { skipGuards?: boolean },
+  ballotId: string,
+  options?: { skipGuards?: boolean },
 ): Promise<IScoreSheetFormat> {
-    const asg = (await dbQuery<ScorerSheetRow>(`
+  const asg = (
+    await dbQuery<ScorerSheetRow>(
+      `
         SELECT
             spa.assignment_id,
             spa.pairing_id,
@@ -480,33 +585,36 @@ export async function getSheetFromBallot(
         LEFT JOIN scorers presider_scorer
              ON presider_scorer.scorer_id = presider_assignment.scorer_id
         WHERE b.ballot_id = $1
-    `, [ballotId]))?.rows[0];
+    `,
+      [ballotId],
+    )
+  )?.rows[0];
 
-    if (!asg) throw new NotFoundError('Ballot not found');
+  if (!asg) throw new NotFoundError("Ballot not found");
 
-    if (asg.conflict_reported && !options?.skipGuards) {
-        throw new ConflictReportedError();
-    }
+  if (asg.conflict_reported && !options?.skipGuards) {
+    throw new ConflictReportedError();
+  }
 
-    const isPresider = asg.presider_scorer_assignment_id === asg.assignment_id;
+  const isPresider = asg.presider_scorer_assignment_id === asg.assignment_id;
 
-    const scorerName = asg.scorer_name ?? '';
-    const presiderName = asg.presider_name ?? '';
+  const scorerName = asg.scorer_name ?? "";
+  const presiderName = asg.presider_name ?? "";
 
-    return buildScoreSheetForPairing({
-        pairingId: asg.pairing_id,
-        tournamentId: asg.tournament_id,
-        pTeam: asg.p_team,
-        dTeam: asg.d_team,
-        courtroomName: asg.courtroom_name,
-        presiderName,
-        scorerAssignmentId: asg.assignment_id,
-        scorerName,
-        isPaper: asg.scorer_is_paper,
-        fillableScores: !isPresider || asg.show_scores === true,
-        showTiebreaker: isPresider,
-        roundLocked: asg.locked,
-    });
+  return buildScoreSheetForPairing({
+    pairingId: asg.pairing_id,
+    tournamentId: asg.tournament_id,
+    pTeam: asg.p_team,
+    dTeam: asg.d_team,
+    courtroomName: asg.courtroom_name,
+    presiderName,
+    scorerAssignmentId: asg.assignment_id,
+    scorerName,
+    isPaper: asg.scorer_is_paper,
+    fillableScores: !isPresider || asg.show_scores === true,
+    showTiebreaker: isPresider,
+    roundLocked: asg.locked,
+  });
 }
 
 /**
@@ -516,10 +624,12 @@ export async function getSheetFromBallot(
  * the link is spent and AlreadySubmittedError is thrown unless skipGuards is true.
  */
 export async function getSheetFromAssignment(
-    assignmentId: string,
-    options?: { skipGuards?: boolean },
+  assignmentId: string,
+  options?: { skipGuards?: boolean },
 ): Promise<IScoreSheetFormat> {
-    const asg = (await dbQuery<ScorerSheetRow>(`
+  const asg = (
+    await dbQuery<ScorerSheetRow>(
+      `
         SELECT
             spa.assignment_id,
             spa.pairing_id,
@@ -550,42 +660,47 @@ export async function getSheetFromAssignment(
         LEFT JOIN scorers presider_scorer
              ON presider_scorer.scorer_id = presider_assignment.scorer_id
         WHERE spa.assignment_id = $1
-    `, [assignmentId]))?.rows[0];
+    `,
+      [assignmentId],
+    )
+  )?.rows[0];
 
-    if (!asg) throw new NotFoundError('Assignment not found');
+  if (!asg) throw new NotFoundError("Assignment not found");
 
-    if (!options?.skipGuards) {
-        if (asg.conflict_reported) {
-            throw new ConflictReportedError();
-        }
-
-        const existing = (await dbQuery<{ ballot_id: string }>(
-            'SELECT ballot_id FROM ballots WHERE scorer_assignment_id = $1 LIMIT 1',
-            [assignmentId],
-        ))?.rows[0];
-
-        if (existing) throw new AlreadySubmittedError();
+  if (!options?.skipGuards) {
+    if (asg.conflict_reported) {
+      throw new ConflictReportedError();
     }
 
-    const isPresider = asg.presider_scorer_assignment_id === asg.assignment_id;
+    const existing = (
+      await dbQuery<{ ballot_id: string }>(
+        "SELECT ballot_id FROM ballots WHERE scorer_assignment_id = $1 LIMIT 1",
+        [assignmentId],
+      )
+    )?.rows[0];
 
-    const scorerName = asg.scorer_name ?? '';
-    const presiderName = asg.presider_name ?? '';
+    if (existing) throw new AlreadySubmittedError();
+  }
 
-    return buildScoreSheetForPairing({
-        pairingId: asg.pairing_id,
-        tournamentId: asg.tournament_id,
-        pTeam: asg.p_team,
-        dTeam: asg.d_team,
-        courtroomName: asg.courtroom_name,
-        presiderName,
-        scorerAssignmentId: asg.assignment_id,
-        scorerName,
-        isPaper: asg.scorer_is_paper,
-        fillableScores: !isPresider || asg.show_scores === true,
-        showTiebreaker: isPresider,
-        roundLocked: asg.locked,
-    });
+  const isPresider = asg.presider_scorer_assignment_id === asg.assignment_id;
+
+  const scorerName = asg.scorer_name ?? "";
+  const presiderName = asg.presider_name ?? "";
+
+  return buildScoreSheetForPairing({
+    pairingId: asg.pairing_id,
+    tournamentId: asg.tournament_id,
+    pTeam: asg.p_team,
+    dTeam: asg.d_team,
+    courtroomName: asg.courtroom_name,
+    presiderName,
+    scorerAssignmentId: asg.assignment_id,
+    scorerName,
+    isPaper: asg.scorer_is_paper,
+    fillableScores: !isPresider || asg.show_scores === true,
+    showTiebreaker: isPresider,
+    roundLocked: asg.locked,
+  });
 }
 
 // ─── submitBallot ──────────────────────────────────────────────────────────────
@@ -595,15 +710,20 @@ export async function getSheetFromAssignment(
  * from the scores array and inserts into the ballots table.
  * Throws NotFoundError if the assignment does not exist.
  */
-export async function submitBallot(assignmentId: string, payload: ScorecardPayload): Promise<void> {
-    const asg = (await dbQuery<{
-        pairing_id: string;
-        tournament_id: string;
-        p_team: string;
-        d_team: string;
-        is_presider: boolean;
-        locked: boolean;
-    }>(`
+export async function submitBallot(
+  assignmentId: string,
+  payload: ScorecardPayload,
+): Promise<void> {
+  const asg = (
+    await dbQuery<{
+      pairing_id: string;
+      tournament_id: string;
+      p_team: string;
+      d_team: string;
+      is_presider: boolean;
+      locked: boolean;
+    }>(
+      `
         SELECT spa.pairing_id, r.tournament_id, p.p_team, p.d_team, r.locked,
                (pres.scorer_assignment_id = spa.assignment_id) AS is_presider
         FROM scorer_pairing_assignments spa
@@ -611,48 +731,62 @@ export async function submitBallot(assignmentId: string, payload: ScorecardPaylo
                  JOIN rounds r   ON r.round_id   = p.round_id
                  LEFT JOIN scorer_presider_assignment pres ON pres.pairing_id = p.pairing_id
         WHERE spa.assignment_id = $1
-    `, [assignmentId]))?.rows[0];
+    `,
+      [assignmentId],
+    )
+  )?.rows[0];
 
-    if (!asg) throw new NotFoundError('Assignment not found');
+  if (!asg) throw new NotFoundError("Assignment not found");
 
-    // Scoring only opens once the organizer has locked the round (i.e. finalized
-    // pairings, rosters, and call orders). Reject ballots for unlocked rounds.
-    if (!asg.locked) throw new RoundNotLockedError();
+  // Scoring only opens once the organizer has locked the round (i.e. finalized
+  // pairings, rosters, and call orders). Reject ballots for unlocked rounds.
+  if (!asg.locked) throw new RoundNotLockedError();
 
-    const multipliers = await getFieldMultipliers(asg.tournament_id);
-    const { pPoints, dPoints } = computeBallotTotals(payload.scores, multipliers);
+  const multipliers = await getFieldMultipliers(asg.tournament_id);
+  const { pPoints, dPoints } = computeBallotTotals(payload.scores, multipliers);
 
-    // Only the presider's ballot carries a tiebreaker. Every other ballot stores
-    // NULL so standings never credit a non-presider ballot with a tiebreaker win.
-    const isPresiderBallot = asg.is_presider === true;
-    const tiebreaker = isPresiderBallot ? payload.tiebreaker : null;
+  // Only the presider's ballot carries a tiebreaker. Every other ballot stores
+  // NULL so standings never credit a non-presider ballot with a tiebreaker win.
+  const isPresiderBallot = asg.is_presider === true;
+  const tiebreaker = isPresiderBallot ? payload.tiebreaker : null;
 
-    // Insert the ballot and its nominations atomically: if any nomination insert
-    // fails, the ballot insert is rolled back too, so we never persist a ballot
-    // with a partial set of nominations. Errors (including the 23505
-    // unique-constraint violation on scorer_assignment_id, used by the route to
-    // return 409) propagate to the caller.
-    await withTransaction(async (client) => {
-        const ballotResult = await client.query<{ ballot_id: string }>(
-            `INSERT INTO ballots
+  // Insert the ballot and its nominations atomically: if any nomination insert
+  // fails, the ballot insert is rolled back too, so we never persist a ballot
+  // with a partial set of nominations. Errors (including the 23505
+  // unique-constraint violation on scorer_assignment_id, used by the route to
+  // return 409) propagate to the caller.
+  await withTransaction(async (client) => {
+    const ballotResult = await client.query<{ ballot_id: string }>(
+      `INSERT INTO ballots
              (scorer_assignment_id, tournament_id, pairing_id, ballot_json, p_team_id, d_team_id, p_points, d_points,  tiebreaker, presider_ballot)
              VALUES ($1, $2, $3, $4, $5, $6, $7, $8,$9,$10)
              RETURNING ballot_id`,
-            [assignmentId, asg.tournament_id, asg.pairing_id, JSON.stringify(payload), asg.p_team, asg.d_team, pPoints, dPoints, tiebreaker, isPresiderBallot],
-        );
-        const ballotId = ballotResult.rows[0]?.ballot_id;
-        if (!ballotId) throw new DbError('Failed to insert ballot');
+      [
+        assignmentId,
+        asg.tournament_id,
+        asg.pairing_id,
+        JSON.stringify(payload),
+        asg.p_team,
+        asg.d_team,
+        pPoints,
+        dPoints,
+        tiebreaker,
+        isPresiderBallot,
+      ],
+    );
+    const ballotId = ballotResult.rows[0]?.ballot_id;
+    if (!ballotId) throw new DbError("Failed to insert ballot");
 
-        // Insert nominations into the structured table if present
-        if (payload.nominations && payload.nominations.length > 0) {
-            for (const nom of payload.nominations) {
-                await client.query(
-                    'INSERT INTO nominations (ballot_id, award_category_id, student_id, rank) VALUES ($1, $2, $3, $4)',
-                    [ballotId, nom.awardCategoryId, nom.studentId, nom.rank],
-                );
-            }
-        }
-    });
+    // Insert nominations into the structured table if present
+    if (payload.nominations && payload.nominations.length > 0) {
+      for (const nom of payload.nominations) {
+        await client.query(
+          "INSERT INTO nominations (ballot_id, award_category_id, student_id, rank) VALUES ($1, $2, $3, $4)",
+          [ballotId, nom.awardCategoryId, nom.studentId, nom.rank],
+        );
+      }
+    }
+  });
 }
 
 // ─── reportConflict ───────────────────────────────────────────────────────────
@@ -665,41 +799,49 @@ export async function submitBallot(assignmentId: string, payload: ScorecardPaylo
  * The flag is cleared automatically when the assignment is deleted (CASCADE),
  * so a fresh assignment always starts clean.
  */
-export async function getConflictReportContext(assignmentId: string): Promise<{
-    scorerName: string;
-    tournamentName: string;
-    roundName: string | null;
-    courtroomName: string | null;
-    ownerEmail: string;
-    ownerFirstName: string;
-} | null | 'already_reported'> {
-    // Single conditional UPDATE: only sets the flag if it was false.
-    // rowCount === 0 means either the row doesn't exist or it was already reported.
-    const flagResult = await dbQuery(
-        `UPDATE scorer_pairing_assignments
+export async function getConflictReportContext(assignmentId: string): Promise<
+  | {
+      scorerName: string;
+      tournamentName: string;
+      roundName: string | null;
+      courtroomName: string | null;
+      ownerEmail: string;
+      ownerFirstName: string;
+    }
+  | null
+  | "already_reported"
+> {
+  // Single conditional UPDATE: only sets the flag if it was false.
+  // rowCount === 0 means either the row doesn't exist or it was already reported.
+  const flagResult = await dbQuery(
+    `UPDATE scorer_pairing_assignments
          SET conflict_reported = true
          WHERE assignment_id = $1 AND conflict_reported = false`,
+    [assignmentId],
+  );
+
+  if (!flagResult) return null; // DB error
+  if ((flagResult.rowCount ?? 0) === 0) {
+    // Distinguish not-found from already-reported
+    const exists = (
+      await dbQuery<{ assignment_id: string }>(
+        "SELECT assignment_id FROM scorer_pairing_assignments WHERE assignment_id = $1",
         [assignmentId],
-    );
+      )
+    )?.rows[0];
+    return exists ? "already_reported" : null;
+  }
 
-    if (!flagResult) return null; // DB error
-    if ((flagResult.rowCount ?? 0) === 0) {
-        // Distinguish not-found from already-reported
-        const exists = (await dbQuery<{ assignment_id: string }>(
-            'SELECT assignment_id FROM scorer_pairing_assignments WHERE assignment_id = $1',
-            [assignmentId],
-        ))?.rows[0];
-        return exists ? 'already_reported' : null;
-    }
-
-    const row = (await dbQuery<{
-        scorer_name: string;
-        tournament_name: string;
-        round_name: string;
-        courtroom_name: string | null;
-        owner_email: string;
-        owner_first_name: string;
-    }>(`
+  const row = (
+    await dbQuery<{
+      scorer_name: string;
+      tournament_name: string;
+      round_name: string;
+      courtroom_name: string | null;
+      owner_email: string;
+      owner_first_name: string;
+    }>(
+      `
         SELECT
             s.name              AS scorer_name,
             t.name              AS tournament_name,
@@ -718,18 +860,21 @@ export async function getConflictReportContext(assignmentId: string): Promise<{
                  LEFT JOIN courtrooms cr ON cr.id     = p.courtroom
         WHERE spa.assignment_id = $1
         LIMIT 1
-    `, [assignmentId]))?.rows[0];
+    `,
+      [assignmentId],
+    )
+  )?.rows[0];
 
-    if (!row) return null;
+  if (!row) return null;
 
-    return {
-        scorerName: row.scorer_name.trim(),
-        tournamentName: row.tournament_name,
-        roundName: row.round_name,
-        courtroomName: row.courtroom_name,
-        ownerEmail: row.owner_email,
-        ownerFirstName: row.owner_first_name,
-    };
+  return {
+    scorerName: row.scorer_name.trim(),
+    tournamentName: row.tournament_name,
+    roundName: row.round_name,
+    courtroomName: row.courtroom_name,
+    ownerEmail: row.owner_email,
+    ownerFirstName: row.owner_first_name,
+  };
 }
 
 // ─── getBallot ────────────────────────────────────────────────────────────────
@@ -739,11 +884,12 @@ export async function getConflictReportContext(assignmentId: string): Promise<{
  * been submitted yet. Used by the organizer scorecard viewer.
  */
 export async function getBallot(ballotId: string): Promise<IBallotRow | null> {
-    const row = (await dbQuery<IBallotRow>(
-        'SELECT * FROM ballots WHERE ballot_id = $1',
-        [ballotId],
-    ))?.rows[0];
-    return row ?? null;
+  const row = (
+    await dbQuery<IBallotRow>("SELECT * FROM ballots WHERE ballot_id = $1", [
+      ballotId,
+    ])
+  )?.rows[0];
+  return row ?? null;
 }
 
 // ─── submitNominations ────────────────────────────────────────────────────────
@@ -756,36 +902,45 @@ export async function getBallot(ballotId: string): Promise<IBallotRow | null> {
  * Throws NotFoundError if no ballot exists for this assignment.
  */
 export async function submitNominations(
-    assignmentId: string,
-    nominations: { awardCategoryId: string; studentId: string; rank: number }[],
+  assignmentId: string,
+  nominations: { awardCategoryId: string; studentId: string; rank: number }[],
 ): Promise<void> {
-    const existing = (await dbQuery<{ ballot_id: string; ballot_json: ScorecardPayload }>(
-        'SELECT ballot_id, ballot_json FROM ballots WHERE scorer_assignment_id = $1',
-        [assignmentId],
-    ))?.rows[0];
+  const existing = (
+    await dbQuery<{ ballot_id: string; ballot_json: ScorecardPayload }>(
+      "SELECT ballot_id, ballot_json FROM ballots WHERE scorer_assignment_id = $1",
+      [assignmentId],
+    )
+  )?.rows[0];
 
-    if (!existing) throw new NotFoundError('Ballot not found — submit scores first');
+  if (!existing)
+    throw new NotFoundError("Ballot not found — submit scores first");
 
-    // Merge nominations into the existing ballot_json
-    const updatedPayload = {
-        ...(typeof existing.ballot_json === 'string' ? JSON.parse(existing.ballot_json) : existing.ballot_json),
-        nominations,
-    };
+  // Merge nominations into the existing ballot_json
+  const updatedPayload = {
+    ...(typeof existing.ballot_json === "string"
+      ? JSON.parse(existing.ballot_json)
+      : existing.ballot_json),
+    nominations,
+  };
 
-    const result = await dbQuery(
-        'UPDATE ballots SET ballot_json = $1 WHERE ballot_id = $2',
-        [JSON.stringify(updatedPayload), existing.ballot_id],
+  const result = await dbQuery(
+    "UPDATE ballots SET ballot_json = $1 WHERE ballot_id = $2",
+    [JSON.stringify(updatedPayload), existing.ballot_id],
+  );
+  if (!result) throw new DbError("submitNominations");
+
+  // Insert structured nomination rows (replace any existing for this ballot)
+  await dbQuery("DELETE FROM nominations WHERE ballot_id = $1", [
+    existing.ballot_id,
+  ]);
+  if (nominations.length > 0) {
+    await Promise.all(
+      nominations.map((nom) =>
+        dbQuery(
+          "INSERT INTO nominations (ballot_id, award_category_id, student_id, rank) VALUES ($1, $2, $3, $4)",
+          [existing.ballot_id, nom.awardCategoryId, nom.studentId, nom.rank],
+        ),
+      ),
     );
-    if (!result) throw new DbError('submitNominations');
-
-    // Insert structured nomination rows (replace any existing for this ballot)
-    await dbQuery('DELETE FROM nominations WHERE ballot_id = $1', [existing.ballot_id]);
-    if (nominations.length > 0) {
-        await Promise.all(nominations.map(nom =>
-            dbQuery(
-                'INSERT INTO nominations (ballot_id, award_category_id, student_id, rank) VALUES ($1, $2, $3, $4)',
-                [existing.ballot_id, nom.awardCategoryId, nom.studentId, nom.rank],
-            )
-        ));
-    }
+  }
 }

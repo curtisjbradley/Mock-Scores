@@ -1,12 +1,16 @@
-import { useState } from 'react';
-import StandingsBuilder from './StandingsBuilder.js';
-import StandingsPreview from './StandingsPreview.js';
-import TiebreakerViewer from './TiebreakerViewer.js';
-import { AMTA_DEMO_DSL } from './demoConfigs.js';
-import type { StandingsConfig } from '@mock-scores/standings-dsl';
-import './styles.css';
+import { useState } from "react";
+import StandingsBuilder from "./StandingsBuilder.js";
+import StandingsPreview from "./StandingsPreview.js";
+import TiebreakerViewer from "./TiebreakerViewer.js";
+import { AMTA_DEMO_DSL } from "./demoConfigs.js";
+import type { StandingsConfig } from "@mock-scores/standings-dsl";
+import "./styles.css";
 
-const EMPTY: StandingsConfig = { statDefs: [], columns: [], tiebreakers: { method: 'min', rules: [] } };
+const EMPTY: StandingsConfig = {
+  statDefs: [],
+  columns: [],
+  tiebreakers: { method: "min", rules: [] },
+};
 
 export interface StandingsPlaygroundProps {
   /** Initial DSL to load into the editor. Defaults to the AMTA demo config. */
@@ -21,7 +25,9 @@ export interface StandingsPlaygroundProps {
  * tournament data or backend required — so readers can experiment with stats
  * and tiebreakers and watch the standings re-rank in real time.
  */
-export default function StandingsPlayground({ initialDsl = AMTA_DEMO_DSL }: StandingsPlaygroundProps) {
+export default function StandingsPlayground({
+  initialDsl = AMTA_DEMO_DSL,
+}: StandingsPlaygroundProps) {
   const [config, setConfig] = useState<StandingsConfig>(EMPTY);
   const [dsl, setDsl] = useState(initialDsl);
 
@@ -30,7 +36,10 @@ export default function StandingsPlayground({ initialDsl = AMTA_DEMO_DSL }: Stan
       <StandingsPreview config={config} />
       <StandingsBuilder
         initialDsl={initialDsl}
-        onChange={(cfg, nextDsl) => { setConfig(cfg); setDsl(nextDsl); }}
+        onChange={(cfg, nextDsl) => {
+          setConfig(cfg);
+          setDsl(nextDsl);
+        }}
       />
       <TiebreakerViewer dsl={dsl} />
     </div>

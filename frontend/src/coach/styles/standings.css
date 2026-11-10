@@ -4,10 +4,10 @@
    ───────────────────────────────────────────────────────────────────────── */
 
 .coach-tiebreaker-viewer {
-    margin-top: 24px;
+  margin-top: 24px;
 }
 
 .coach-standings-table-scroll {
-    max-width: 100%;
-    overflow-x: auto;
+  max-width: 100%;
+  overflow-x: auto;
 }

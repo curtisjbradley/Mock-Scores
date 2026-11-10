@@ -5,193 +5,193 @@
 
 /* Default-setup action button row. */
 .coach-roster-actions {
-    display: grid;
-    grid-template-columns: repeat(2, minmax(0, 1fr));
-    gap: 0.75rem;
-    margin-top: 1.5rem;
-    padding: 0.75rem;
-    border: 1px solid var(--border);
-    border-radius: var(--radius);
-    background: var(--surface-muted);
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 0.75rem;
+  margin-top: 1.5rem;
+  padding: 0.75rem;
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  background: var(--surface-muted);
 }
 
 .coach-roster-actions .btn-primary {
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    min-height: 3.25rem;
-    height: auto;
-    padding: 0.65rem 1rem;
-    line-height: 1.3;
-    text-align: center;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 3.25rem;
+  height: auto;
+  padding: 0.65rem 1rem;
+  line-height: 1.3;
+  text-align: center;
 }
 
 /* Side-setup modal dialog + inner spacing. */
 .coach-setup-modal {
-    max-width: 36rem;
-    width: 100%;
-    max-height: 80vh;
-    overflow-y: auto;
+  max-width: 36rem;
+  width: 100%;
+  max-height: 80vh;
+  overflow-y: auto;
 }
 
 .coach-setup-modal h2 {
-    margin-top: 0;
+  margin-top: 0;
 }
 
 .coach-setup-heading {
-    margin: 0 0 0.5rem;
+  margin: 0 0 0.5rem;
 }
 
 .coach-setup-table {
-    margin-bottom: 1rem;
+  margin-bottom: 1rem;
 }
 
 /* Roster table with custom columns: keep inline value inputs compact. */
 .roster-table .roster-custom-input {
-    width: 100%;
-    min-width: 6rem;
-    background-image: none;
-    padding-right: 0.1rem;
+  width: 100%;
+  min-width: 6rem;
+  background-image: none;
+  padding-right: 0.1rem;
 }
 
 @media (max-width: 40rem) {
-    .coach-roster-actions {
-        grid-template-columns: 1fr;
-        gap: 0.5rem;
-        padding: 0.5rem;
-    }
+  .coach-roster-actions {
+    grid-template-columns: 1fr;
+    gap: 0.5rem;
+    padding: 0.5rem;
+  }
 
-    .coach-roster-actions .btn-primary {
-        width: 100%;
-    }
+  .coach-roster-actions .btn-primary {
+    width: 100%;
+  }
 
-    .coach-setup-modal {
-        max-height: calc(100dvh - 2rem);
-        padding: 1rem;
-    }
+  .coach-setup-modal {
+    max-height: calc(100dvh - 2rem);
+    padding: 1rem;
+  }
 
-    .coach-setup-heading {
-        margin-top: 1.25rem;
-    }
+  .coach-setup-heading {
+    margin-top: 1.25rem;
+  }
 
-    .coach-setup-table,
-    .coach-setup-table tbody,
-    .coach-setup-table tr,
-    .coach-setup-table td {
-        display: block;
-        width: 100%;
-    }
+  .coach-setup-table,
+  .coach-setup-table tbody,
+  .coach-setup-table tr,
+  .coach-setup-table td {
+    display: block;
+    width: 100%;
+  }
 
-    .coach-setup-table {
-        border: 0;
-        background: transparent;
-    }
+  .coach-setup-table {
+    border: 0;
+    background: transparent;
+  }
 
-    .coach-setup-table thead {
-        display: none;
-    }
+  .coach-setup-table thead {
+    display: none;
+  }
 
-    .coach-setup-table tr {
-        margin-bottom: 0.75rem;
-        overflow: hidden;
-        border: 1px solid var(--border);
-        border-radius: var(--radius);
-        background: var(--surface-muted);
-    }
+  .coach-setup-table tr {
+    margin-bottom: 0.75rem;
+    overflow: hidden;
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    background: var(--surface-muted);
+  }
 
-    .coach-setup-table tr:last-child {
-        margin-bottom: 0;
-    }
+  .coach-setup-table tr:last-child {
+    margin-bottom: 0;
+  }
 
-    .coach-setup-table td {
-        display: flex;
-        align-items: center;
-        justify-content: space-between;
-        gap: 1rem;
-        padding: 0.65rem 0.75rem;
-        border-bottom: 1px solid var(--border);
-        text-align: right;
-    }
+  .coach-setup-table td {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 1rem;
+    padding: 0.65rem 0.75rem;
+    border-bottom: 1px solid var(--border);
+    text-align: right;
+  }
 
-    .coach-setup-table td::before {
-        content: attr(data-label);
-        flex: 0 0 6.5rem;
-        color: var(--text-muted);
-        font-size: 0.75rem;
-        font-weight: 700;
-        text-align: left;
-        text-transform: uppercase;
-    }
+  .coach-setup-table td::before {
+    content: attr(data-label);
+    flex: 0 0 6.5rem;
+    color: var(--text-muted);
+    font-size: 0.75rem;
+    font-weight: 700;
+    text-align: left;
+    text-transform: uppercase;
+  }
 
-    .coach-setup-table td:last-child {
-        border-bottom: 0;
-    }
+  .coach-setup-table td:last-child {
+    border-bottom: 0;
+  }
 
-    .coach-setup-table .rv-select {
-        flex: 1;
-        min-width: 0;
-        width: 100%;
-    }
+  .coach-setup-table .rv-select {
+    flex: 1;
+    min-width: 0;
+    width: 100%;
+  }
 
-    .roster-table-wrap {
-        overflow-x: visible;
-    }
+  .roster-table-wrap {
+    overflow-x: visible;
+  }
 
-    .roster-table,
-    .roster-table tbody,
-    .roster-table tr,
-    .roster-table td {
-        display: block;
-        width: 100%;
-    }
+  .roster-table,
+  .roster-table tbody,
+  .roster-table tr,
+  .roster-table td {
+    display: block;
+    width: 100%;
+  }
 
-    .roster-table {
-        border: 0;
-        background: transparent;
-    }
+  .roster-table {
+    border: 0;
+    background: transparent;
+  }
 
-    .roster-table thead {
-        display: none;
-    }
+  .roster-table thead {
+    display: none;
+  }
 
-    .roster-table tr {
-        margin-bottom: 0.75rem;
-        overflow: hidden;
-        border: 1px solid var(--border);
-        border-radius: var(--radius);
-        background: var(--surface);
-        box-shadow: var(--shadow-sm);
-    }
+  .roster-table tr {
+    margin-bottom: 0.75rem;
+    overflow: hidden;
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    background: var(--surface);
+    box-shadow: var(--shadow-sm);
+  }
 
-    .roster-table tr:last-child {
-        margin-bottom: 0;
-    }
+  .roster-table tr:last-child {
+    margin-bottom: 0;
+  }
 
-    .roster-table td {
-        display: flex;
-        align-items: center;
-        justify-content: space-between;
-        gap: 1rem;
-        padding: 0.65rem 0.8rem;
-        border-bottom: 1px solid var(--border);
-        text-align: right;
-    }
+  .roster-table td {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 1rem;
+    padding: 0.65rem 0.8rem;
+    border-bottom: 1px solid var(--border);
+    text-align: right;
+  }
 
-    .roster-table td::before {
-        content: attr(data-label);
-        flex: 0 0 6.5rem;
-        color: var(--text-muted);
-        font-size: 0.75rem;
-        font-weight: 700;
-        text-align: left;
-        text-transform: uppercase;
-    }
+  .roster-table td::before {
+    content: attr(data-label);
+    flex: 0 0 6.5rem;
+    color: var(--text-muted);
+    font-size: 0.75rem;
+    font-weight: 700;
+    text-align: left;
+    text-transform: uppercase;
+  }
 
-    .roster-table td:last-child {
-        border-bottom: 0;
-    }
+  .roster-table td:last-child {
+    border-bottom: 0;
+  }
 
-    .roster-table .roster-custom-input {
-        min-width: 0;
-    }
+  .roster-table .roster-custom-input {
+    min-width: 0;
+  }
 }

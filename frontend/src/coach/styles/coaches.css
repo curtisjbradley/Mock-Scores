@@ -6,114 +6,114 @@
 
 /* ── Notification toggle ─────────────────────────────────────────────────── */
 .coach-notif-toggle {
-    display: inline-grid;
-    place-items: center;
-    width: 2rem;
-    height: 2rem;
-    padding: 0;
-    border-radius: 0.5rem;
-    cursor: pointer;
-    border: none;
-    background-color: transparent;
-    transition: background 120ms ease, border-color 120ms ease;
+  display: inline-grid;
+  place-items: center;
+  width: 2rem;
+  height: 2rem;
+  padding: 0;
+  border-radius: 0.5rem;
+  cursor: pointer;
+  border: none;
+  background-color: transparent;
+  transition:
+    background 120ms ease,
+    border-color 120ms ease;
 }
 
-
-
 .coach-notif-toggle:hover {
-    background: var(--primary-subtle);
-    border-color: var(--primary);
+  background: var(--primary-subtle);
+  border-color: var(--primary);
 }
 
 .coach-notif-toggle .app-icon {
-    background-color: var(--text);
+  background-color: var(--text);
 }
 
 /* Dim the icon when notifications are off. */
 .coach-notif-toggle[aria-pressed="false"] .app-icon {
-    opacity: 0.45;
+  opacity: 0.45;
 }
 .notif-cell > * {
-    width: 100%;
-    justify-content: center;
-    display: flex;
-    flex-direction: row;
+  width: 100%;
+  justify-content: center;
+  display: flex;
+  flex-direction: row;
 }
 
 @media (max-width: 40rem) {
-    .coaches-table-wrap {
-        overflow-x: visible;
-    }
+  .coaches-table-wrap {
+    overflow-x: visible;
+  }
 
-    .coaches-table,
-    .coaches-table tbody,
-    .coaches-table tr,
-    .coaches-table td {
-        display: block;
-        width: 100%;
-    }
+  .coaches-table,
+  .coaches-table tbody,
+  .coaches-table tr,
+  .coaches-table td {
+    display: block;
+    width: 100%;
+  }
 
-    .coaches-table {
-        border: 0;
-        background: transparent;
-    }
+  .coaches-table {
+    border: 0;
+    background: transparent;
+  }
 
-    .coaches-table thead {
-        display: none;
-    }
+  .coaches-table thead {
+    display: none;
+  }
 
-    .coaches-table tr {
-        margin-bottom: 0.75rem;
-        overflow: hidden;
-        border: 1px solid var(--border);
-        border-radius: var(--radius);
-        background: var(--surface);
-        box-shadow: var(--shadow-sm);
-    }
+  .coaches-table tr {
+    margin-bottom: 0.75rem;
+    overflow: hidden;
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    background: var(--surface);
+    box-shadow: var(--shadow-sm);
+  }
 
-    .coaches-table tr:last-child {
-        margin-bottom: 0;
-    }
+  .coaches-table tr:last-child {
+    margin-bottom: 0;
+  }
 
-    .coaches-table td {
-        display: flex;
-        align-items: center;
-        justify-content: space-between;
-        gap: 1rem;
-        padding: 0.65rem 0.8rem;
-        border-bottom: 1px solid var(--border);
-        text-align: right;
-    }
+  .coaches-table td {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 1rem;
+    padding: 0.65rem 0.8rem;
+    border-bottom: 1px solid var(--border);
+    text-align: right;
+  }
 
-    .coaches-table td::before {
-        content: attr(data-label);
-        flex: 0 0 6.5rem;
-        color: var(--text-muted);
-        font-size: 0.75rem;
-        font-weight: 700;
-        text-align: left;
-        text-transform: uppercase;
-    }
+  .coaches-table td::before {
+    content: attr(data-label);
+    flex: 0 0 6.5rem;
+    color: var(--text-muted);
+    font-size: 0.75rem;
+    font-weight: 700;
+    text-align: left;
+    text-transform: uppercase;
+  }
 
-    .coaches-table td:empty {
-        display: none;
-    }
+  .coaches-table td:empty {
+    display: none;
+  }
 
-    .coaches-table td:last-child {
-        border-bottom: 0;
-    }
+  .coaches-table td:last-child {
+    border-bottom: 0;
+  }
 
-    .coaches-table .dash-judge-name {
-        overflow-wrap: anywhere;
-    }
+  .coaches-table .dash-judge-name {
+    overflow-wrap: anywhere;
+  }
 
-    .coaches-table .notif-cell > * {
-        width: auto;
-    }
+  .coaches-table .notif-cell > * {
+    width: auto;
+  }
 
-    .coaches-table .dash-actions-cell {
-        flex: 1;
-        justify-content: flex-end;
-        flex-wrap: wrap;
-    }
+  .coaches-table .dash-actions-cell {
+    flex: 1;
+    justify-content: flex-end;
+    flex-wrap: wrap;
+  }
 }

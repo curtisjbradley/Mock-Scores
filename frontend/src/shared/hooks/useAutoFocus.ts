@@ -1,4 +1,4 @@
-import { useEffect, useRef } from 'react'
+import { useEffect, useRef } from "react";
 
 /**
  * Returns a ref that programmatically moves focus to the target element after
@@ -15,10 +15,12 @@ import { useEffect, useRef } from 'react'
  * const inputRef = useAutoFocus<HTMLInputElement>()
  * return <input ref={inputRef} />
  */
-export function useAutoFocus<T extends HTMLElement = HTMLElement>(active = true) {
-    const ref = useRef<T>(null)
-    useEffect(() => {
-        if (active) ref.current?.focus()
-    }, [active])
-    return ref
+export function useAutoFocus<T extends HTMLElement = HTMLElement>(
+  active = true,
+) {
+  const ref = useRef<T>(null);
+  useEffect(() => {
+    if (active) ref.current?.focus();
+  }, [active]);
+  return ref;
 }

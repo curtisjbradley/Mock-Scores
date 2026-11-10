@@ -5,145 +5,145 @@
    ───────────────────────────────────────────────────────────────────────── */
 
 .coach-schedule-table {
-    max-width: 100%;
-    width: 100%;
-    table-layout: fixed;
+  max-width: 100%;
+  width: 100%;
+  table-layout: fixed;
 }
 
 .coach-schedule-table th,
 .coach-schedule-table td {
-    overflow-wrap: anywhere;
+  overflow-wrap: anywhere;
 }
 
 .coach-schedule-table .coach-schedule-actions {
-    min-width: 0;
+  min-width: 0;
 }
 
 .coach-schedule-table .coach-schedule-actions .btn-primary {
-    flex: 1 1 9rem;
-    min-width: 0;
-    max-width: 100%;
-    white-space: normal;
+  flex: 1 1 9rem;
+  min-width: 0;
+  max-width: 100%;
+  white-space: normal;
 }
 
 .coach-schedule-actions {
-    display: flex;
-    gap: 0.5rem;
-    flex-wrap: wrap;
+  display: flex;
+  gap: 0.5rem;
+  flex-wrap: wrap;
 }
 
 .coach-schedule-no-pairing {
-    margin: 0;
-    padding: 1rem 1.125rem;
-    border: 1px dashed var(--border);
-    border-radius: var(--radius);
-    background: var(--surface-muted);
-    color: var(--text-muted);
-    font-weight: 500;
+  margin: 0;
+  padding: 1rem 1.125rem;
+  border: 1px dashed var(--border);
+  border-radius: var(--radius);
+  background: var(--surface-muted);
+  color: var(--text-muted);
+  font-weight: 500;
 }
 
 .coach-btn-submitted {
-    background: var(--surface);
-    border: 1px solid var(--border);
-    color: var(--text-muted);
-    cursor: default;
-    font-weight: 500;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  color: var(--text-muted);
+  cursor: default;
+  font-weight: 500;
 }
 
 /* Editable action whose value has already been set (round still unlocked). Stays
    clickable so coaches can revise it until the round locks, but reads as "done". */
 .coach-btn-set {
-    border-color: var(--success-strong);
-    color: var(--success-strong);
-    font-weight: 600;
+  border-color: var(--success-strong);
+  color: var(--success-strong);
+  font-weight: 600;
 }
 
 .coach-schedule-results-btn {
-    background: var(--surface);
-    border-color: var(--primary);
-    color: var(--primary);
-    font-weight: 600;
+  background: var(--surface);
+  border-color: var(--primary);
+  color: var(--primary);
+  font-weight: 600;
 }
 
 /* "Locked" badge shown in the round heading when a round is locked. */
 .coach-round-locked {
-    font-size: 0.8rem;
-    font-weight: 600;
-    color: var(--text-muted);
-    margin-left: 0.5rem;
+  font-size: 0.8rem;
+  font-weight: 600;
+  color: var(--text-muted);
+  margin-left: 0.5rem;
 }
 
 .ss-chip {
-    margin-left: 1rem;
+  margin-left: 1rem;
 }
 
 @media (max-width: 40rem) {
-    .coach-schedule-table,
-    .coach-schedule-table tbody,
-    .coach-schedule-table tr,
-    .coach-schedule-table td {
-        display: block;
-        width: 100%;
-    }
+  .coach-schedule-table,
+  .coach-schedule-table tbody,
+  .coach-schedule-table tr,
+  .coach-schedule-table td {
+    display: block;
+    width: 100%;
+  }
 
-    .coach-schedule-table {
-        border: 0;
-        background: transparent;
-    }
+  .coach-schedule-table {
+    border: 0;
+    background: transparent;
+  }
 
-    .coach-schedule-table thead {
-        display: none;
-    }
+  .coach-schedule-table thead {
+    display: none;
+  }
 
-    .coach-schedule-table tr {
-        margin-bottom: 0.75rem;
-        overflow: hidden;
-        border: 1px solid var(--border);
-        border-radius: var(--radius);
-        background: var(--surface);
-        box-shadow: var(--shadow-sm);
-    }
+  .coach-schedule-table tr {
+    margin-bottom: 0.75rem;
+    overflow: hidden;
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    background: var(--surface);
+    box-shadow: var(--shadow-sm);
+  }
 
-    .coach-schedule-table tr:last-child {
-        margin-bottom: 0;
-    }
+  .coach-schedule-table tr:last-child {
+    margin-bottom: 0;
+  }
 
-    .coach-schedule-table td {
-        display: flex;
-        align-items: flex-start;
-        justify-content: space-between;
-        gap: 1rem;
-        padding: 0.75rem;
-        border-bottom: 1px solid var(--border);
-        text-align: right;
-    }
+  .coach-schedule-table td {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: 1rem;
+    padding: 0.75rem;
+    border-bottom: 1px solid var(--border);
+    text-align: right;
+  }
 
-    .coach-schedule-table td::before {
-        content: attr(data-label);
-        flex: 0 0 6.5rem;
-        color: var(--text-muted);
-        font-size: 0.75rem;
-        font-weight: 700;
-        letter-spacing: 0.03em;
-        text-align: left;
-        text-transform: uppercase;
-    }
+  .coach-schedule-table td::before {
+    content: attr(data-label);
+    flex: 0 0 6.5rem;
+    color: var(--text-muted);
+    font-size: 0.75rem;
+    font-weight: 700;
+    letter-spacing: 0.03em;
+    text-align: left;
+    text-transform: uppercase;
+  }
 
-    .coach-schedule-table .coach-schedule-actions {
-        align-items: stretch;
-        flex-direction: column;
-    }
+  .coach-schedule-table .coach-schedule-actions {
+    align-items: stretch;
+    flex-direction: column;
+  }
 
-    .coach-schedule-table .coach-schedule-actions .btn-primary {
-        flex: none;
-        width: 100%;
-    }
+  .coach-schedule-table .coach-schedule-actions .btn-primary {
+    flex: none;
+    width: 100%;
+  }
 
-    .coach-schedule-table .coach-schedule-actions::before {
-        padding-top: 0.25rem;
-    }
+  .coach-schedule-table .coach-schedule-actions::before {
+    padding-top: 0.25rem;
+  }
 
-    .coach-schedule-table td:last-child {
-        border-bottom: 0;
-    }
+  .coach-schedule-table td:last-child {
+    border-bottom: 0;
+  }
 }

@@ -1,19 +1,77 @@
-.courtroom-view__trial-modal { width: min(100%, 42rem); }
-.courtroom-view__trial-modal > p { margin: -0.35rem 0 1rem; color: var(--text-muted); }
-.courtroom-view__trial-options { display: grid; gap: 0.5rem; margin: 1rem 0; padding: 0; border: 0; }
-.courtroom-view__trial-options legend { margin-bottom: 0.5rem; font-weight: 700; }
-.courtroom-view__trial-options > p { margin: 0; color: var(--text-muted); }
-.courtroom-view__trial-option { display: grid; grid-template-columns: auto minmax(0, 1fr) minmax(0, 1fr) minmax(11rem, 1fr); gap: 0.7rem; align-items: center; padding: 0.75rem; border: 1px solid var(--border); border-radius: var(--radius); cursor: pointer; }
-.courtroom-view__trial-option:hover { background: var(--surface-muted); }
-.courtroom-view__trial-option input { margin: 0; }
-.courtroom-view__trial-option span { overflow-wrap: anywhere; }
-.courtroom-view__trial-actions { display: flex; flex-wrap: wrap; gap: 0.4rem; }
-.courtroom-view__trial-actions .btn-secondary { padding: 0.35rem 0.6rem; font-size: 0.78rem; }
-.courtroom-view__double-booked { margin: 0 0 1rem; padding: 0.75rem; border: 1px solid var(--danger, #b7791f); border-radius: var(--radius); background: var(--surface-muted, #fffaf0); color: var(--danger, #8a4b08); }
-.courtroom-view__row-warning { display: inline-block; margin-left: 0.45rem; color: var(--danger, #8a4b08); font-size: 0.75rem; font-weight: 700; }
+.courtroom-view__trial-modal {
+  width: min(100%, 42rem);
+}
+.courtroom-view__trial-modal > p {
+  margin: -0.35rem 0 1rem;
+  color: var(--text-muted);
+}
+.courtroom-view__trial-options {
+  display: grid;
+  gap: 0.5rem;
+  margin: 1rem 0;
+  padding: 0;
+  border: 0;
+}
+.courtroom-view__trial-options legend {
+  margin-bottom: 0.5rem;
+  font-weight: 700;
+}
+.courtroom-view__trial-options > p {
+  margin: 0;
+  color: var(--text-muted);
+}
+.courtroom-view__trial-option {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr) minmax(0, 1fr) minmax(11rem, 1fr);
+  gap: 0.7rem;
+  align-items: center;
+  padding: 0.75rem;
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  cursor: pointer;
+}
+.courtroom-view__trial-option:hover {
+  background: var(--surface-muted);
+}
+.courtroom-view__trial-option input {
+  margin: 0;
+}
+.courtroom-view__trial-option span {
+  overflow-wrap: anywhere;
+}
+.courtroom-view__trial-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.4rem;
+}
+.courtroom-view__trial-actions .btn-secondary {
+  padding: 0.35rem 0.6rem;
+  font-size: 0.78rem;
+}
+.courtroom-view__double-booked {
+  margin: 0 0 1rem;
+  padding: 0.75rem;
+  border: 1px solid var(--danger, #b7791f);
+  border-radius: var(--radius);
+  background: var(--surface-muted, #fffaf0);
+  color: var(--danger, #8a4b08);
+}
+.courtroom-view__row-warning {
+  display: inline-block;
+  margin-left: 0.45rem;
+  color: var(--danger, #8a4b08);
+  font-size: 0.75rem;
+  font-weight: 700;
+}
 
 @media (max-width: 40rem) {
-    .courtroom-view__trial-option { grid-template-columns: auto 1fr; }
-    .courtroom-view__trial-option span { grid-column: 2; }
-    .courtroom-view__trial-actions { justify-content: flex-end; }
+  .courtroom-view__trial-option {
+    grid-template-columns: auto 1fr;
+  }
+  .courtroom-view__trial-option span {
+    grid-column: 2;
+  }
+  .courtroom-view__trial-actions {
+    justify-content: flex-end;
+  }
 }

@@ -4,107 +4,112 @@
    ───────────────────────────────────────────────────────────────────────── */
 
 .tooltip-wrapper {
-    position: relative;
-    display: inline-flex;
-    /* Establish a stacking context so the high-z bubble layers predictably. */
-    isolation: isolate;
+  position: relative;
+  display: inline-flex;
+  /* Establish a stacking context so the high-z bubble layers predictably. */
+  isolation: isolate;
 }
 
 .tooltip-trigger {
-    display: inline-flex;
-    align-items: center;
-    width: 100%;
+  display: inline-flex;
+  align-items: center;
+  width: 100%;
 }
 
 .tooltip-bubble {
-    position: fixed;
-    z-index: 2147483000; /* Float above modals (10000) and everything else. */
-    max-width: 18rem;
-    width: max-content;
-    padding: 0.45rem 0.65rem;
-    border-radius: 0.5rem;
-    /* Semi-transparent surface with a soft blur behind it. */
-    background: var(--surface);
-    color: var(--text);
-    font-size: 0.8rem;
-    font-weight: 500;
-    line-height: 1.35;
-    text-align: left;
-    white-space: normal;
-    box-shadow: var(--shadow);
-    backdrop-filter: blur(2px);
-    pointer-events: none; /* Never intercept clicks meant for content below. */
-    opacity: 0;
-    visibility: hidden;
-    transform: scale(0.96);
-    transition: opacity 120ms ease, transform 120ms ease, visibility 0s linear 120ms;
-    text-transform: none;
+  position: fixed;
+  z-index: 2147483000; /* Float above modals (10000) and everything else. */
+  max-width: 18rem;
+  width: max-content;
+  padding: 0.45rem 0.65rem;
+  border-radius: 0.5rem;
+  /* Semi-transparent surface with a soft blur behind it. */
+  background: var(--surface);
+  color: var(--text);
+  font-size: 0.8rem;
+  font-weight: 500;
+  line-height: 1.35;
+  text-align: left;
+  white-space: normal;
+  box-shadow: var(--shadow);
+  backdrop-filter: blur(2px);
+  pointer-events: none; /* Never intercept clicks meant for content below. */
+  opacity: 0;
+  visibility: hidden;
+  transform: scale(0.96);
+  transition:
+    opacity 120ms ease,
+    transform 120ms ease,
+    visibility 0s linear 120ms;
+  text-transform: none;
 }
 
 .tooltip-bubble--visible {
-    opacity: 1;
-    visibility: visible;
-    transform: scale(1);
-    transition: opacity 120ms ease, transform 120ms ease;
+  opacity: 1;
+  visibility: visible;
+  transform: scale(1);
+  transition:
+    opacity 120ms ease,
+    transform 120ms ease;
 }
 
 /* ── Placement ───────────────────────────────────────────────────────────── */
 .tooltip-bubble--top {
-    transform-origin: bottom center;
-    translate: -50% -100%;
+  transform-origin: bottom center;
+  translate: -50% -100%;
 }
 
 .tooltip-bubble--bottom {
-    transform-origin: top center;
-    translate: -50% 0;
+  transform-origin: top center;
+  translate: -50% 0;
 }
 
 .tooltip-bubble--left {
-    transform-origin: center right;
-    translate: -100% -50%;
+  transform-origin: center right;
+  translate: -100% -50%;
 }
 
 .tooltip-bubble--right {
-    transform-origin: center left;
-    translate: 0 -50%;
+  transform-origin: center left;
+  translate: 0 -50%;
 }
 
 /* ── Arrow ───────────────────────────────────────────────────────────────── */
 .tooltip-bubble::after {
-    content: '';
-    position: absolute;
-    width: 0.5rem;
-    height: 0.5rem;
-    background: inherit;
-    transform: rotate(45deg);
+  content: "";
+  position: absolute;
+  width: 0.5rem;
+  height: 0.5rem;
+  background: inherit;
+  transform: rotate(45deg);
 }
 
 .tooltip-bubble--top::after {
-    bottom: -0.2rem;
-    left: 50%;
-    margin-left: -0.25rem;
+  bottom: -0.2rem;
+  left: 50%;
+  margin-left: -0.25rem;
 }
 
 .tooltip-bubble--bottom::after {
-    top: -0.2rem;
-    left: 50%;
-    margin-left: -0.25rem;
+  top: -0.2rem;
+  left: 50%;
+  margin-left: -0.25rem;
 }
 
 .tooltip-bubble--left::after {
-    right: -0.2rem;
-    top: 50%;
-    margin-top: -0.25rem;
+  right: -0.2rem;
+  top: 50%;
+  margin-top: -0.25rem;
 }
 
 .tooltip-bubble--right::after {
-    left: -0.2rem;
-    top: 50%;
-    margin-top: -0.25rem;
+  left: -0.2rem;
+  top: 50%;
+  margin-top: -0.25rem;
 }
 
 @media (prefers-reduced-motion: reduce) {
-    .tooltip-bubble {
-        transition: none;
-    }
+  .tooltip-bubble {
+    transition: none;
+  }
 }

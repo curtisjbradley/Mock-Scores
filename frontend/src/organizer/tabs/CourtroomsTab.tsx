@@ -1,133 +1,241 @@
-import { useState, useEffect } from 'react'
-import type { ICourtroom } from '@mock-scores/shared'
-import { ConfirmRemoveModal } from '../components/modals'
-import ModalBackdrop from '../../shared/components/ModalBackdrop'
-import DangerButton from '../../shared/components/DangerButton'
-import AddButton from '../../shared/components/AddButton'
-import { useConfirmRemove } from '../../shared/hooks/useConfirmRemove'
-import { useAutoFocus } from '../../shared/hooks/useAutoFocus'
-import Section from './Section'
-import { apiFetch } from '../../auth/auth'
-import { v4 as randomUUID } from 'uuid'
-import { Link } from 'react-router-dom'
+import { useState, useEffect } from "react";
+import type { ICourtroom } from "@mock-scores/shared";
+import { ConfirmRemoveModal } from "../components/modals";
+import ModalBackdrop from "../../shared/components/ModalBackdrop";
+import DangerButton from "../../shared/components/DangerButton";
+import AddButton from "../../shared/components/AddButton";
+import { useConfirmRemove } from "../../shared/hooks/useConfirmRemove";
+import { useAutoFocus } from "../../shared/hooks/useAutoFocus";
+import Section from "./Section";
+import { apiFetch } from "../../auth/auth";
+import { v4 as randomUUID } from "uuid";
+import { Link } from "react-router-dom";
 
-export default function CourtroomsTab({ tournamentId }: { tournamentId: string }) {
-    const [courtrooms, setCourtrooms] = useState<ICourtroom[]>([])
-    const [showModal, setShowModal] = useState(false)
-    const [editingId, setEditingId] = useState<string | null>(null)
-    const confirmRemove = useConfirmRemove<ICourtroom>()
-    const [name, setName] = useState('')
-    const [location, setLocation] = useState('')
-    const [error, setError] = useState<string | null>(null)
-    const [saving, setSaving] = useState(false)
-    const nameRef = useAutoFocus<HTMLInputElement>(showModal)
+export default function CourtroomsTab({
+  tournamentId,
+}: {
+  tournamentId: string;
+}) {
+  const [courtrooms, setCourtrooms] = useState<ICourtroom[]>([]);
+  const [showModal, setShowModal] = useState(false);
+  const [editingId, setEditingId] = useState<string | null>(null);
+  const confirmRemove = useConfirmRemove<ICourtroom>();
+  const [name, setName] = useState("");
+  const [location, setLocation] = useState("");
+  const [error, setError] = useState<string | null>(null);
+  const [saving, setSaving] = useState(false);
+  const nameRef = useAutoFocus<HTMLInputElement>(showModal);
 
-    useEffect(() => {
-        apiFetch(`/organizer/tournament/${tournamentId}/courtrooms`)
-            .then(res => { if (!res.ok) throw new Error('Courtrooms not found.'); return res.json() })
-            .then(setCourtrooms).catch(console.error)
-    }, [tournamentId])
+  useEffect(() => {
+    apiFetch(`/organizer/tournament/${tournamentId}/courtrooms`)
+      .then((res) => {
+        if (!res.ok) throw new Error("Courtrooms not found.");
+        return res.json();
+      })
+      .then(setCourtrooms)
+      .catch(console.error);
+  }, [tournamentId]);
 
-    const openAddModal = () => { setEditingId(null); setName(''); setLocation(''); setShowModal(true) }
-    const openEditModal = (courtroom: ICourtroom) => { setEditingId(courtroom.id); setName(courtroom.name); setLocation(courtroom.location ?? ''); setShowModal(true) }
+  const openAddModal = () => {
+    setEditingId(null);
+    setName("");
+    setLocation("");
+    setShowModal(true);
+  };
+  const openEditModal = (courtroom: ICourtroom) => {
+    setEditingId(courtroom.id);
+    setName(courtroom.name);
+    setLocation(courtroom.location ?? "");
+    setShowModal(true);
+  };
 
-    const handleSave = async () => {
-        if (!name.trim()) return
-        setSaving(true)
-        setError(null)
-        try {
-        if (editingId) {
-            const modified: ICourtroom = { id: editingId, name: name.trim(), location: location.trim() }
-            const res = await apiFetch(`/organizer/tournament/${tournamentId}/courtrooms`, { method: 'PUT', body: JSON.stringify(modified) })
-            if (!res.ok) throw new Error('Unable to save courtroom.')
-            setCourtrooms(prev => prev.map(courtroom => courtroom.id === editingId ? modified : courtroom))
-        } else {
-            const created: ICourtroom = { id: randomUUID(), name: name.trim(), location: location.trim() }
-            const res = await apiFetch(`/organizer/tournament/${tournamentId}/courtrooms`, { method: 'POST', body: JSON.stringify(created) })
-            if (!res.ok) throw new Error('Unable to add courtroom.')
-            setCourtrooms(prev => [...prev, created])
-        }
-        setShowModal(false)
-        } catch (e) {
-            setError(e instanceof Error ? e.message : 'Unable to save courtroom.')
-        } finally {
-            setSaving(false)
-        }
+  const handleSave = async () => {
+    if (!name.trim()) return;
+    setSaving(true);
+    setError(null);
+    try {
+      if (editingId) {
+        const modified: ICourtroom = {
+          id: editingId,
+          name: name.trim(),
+          location: location.trim(),
+        };
+        const res = await apiFetch(
+          `/organizer/tournament/${tournamentId}/courtrooms`,
+          { method: "PUT", body: JSON.stringify(modified) },
+        );
+        if (!res.ok) throw new Error("Unable to save courtroom.");
+        setCourtrooms((prev) =>
+          prev.map((courtroom) =>
+            courtroom.id === editingId ? modified : courtroom,
+          ),
+        );
+      } else {
+        const created: ICourtroom = {
+          id: randomUUID(),
+          name: name.trim(),
+          location: location.trim(),
+        };
+        const res = await apiFetch(
+          `/organizer/tournament/${tournamentId}/courtrooms`,
+          { method: "POST", body: JSON.stringify(created) },
+        );
+        if (!res.ok) throw new Error("Unable to add courtroom.");
+        setCourtrooms((prev) => [...prev, created]);
+      }
+      setShowModal(false);
+    } catch (e) {
+      setError(e instanceof Error ? e.message : "Unable to save courtroom.");
+    } finally {
+      setSaving(false);
     }
+  };
 
-    const handleRemove = async (courtroom: ICourtroom) => {
-        setSaving(true)
-        setError(null)
-        try {
-            const response = await apiFetch(`/organizer/tournament/${tournamentId}/courtrooms`, { method: 'DELETE', body: JSON.stringify(courtroom) })
-            if (!response.ok) throw new Error('Unable to remove courtroom.')
-            setCourtrooms(previous => previous.filter(candidate => candidate.id !== courtroom.id))
-            confirmRemove.clear()
-        } catch (reason: unknown) {
-            setError(reason instanceof Error ? reason.message : 'Unable to remove courtroom.')
-        } finally {
-            setSaving(false)
-        }
+  const handleRemove = async (courtroom: ICourtroom) => {
+    setSaving(true);
+    setError(null);
+    try {
+      const response = await apiFetch(
+        `/organizer/tournament/${tournamentId}/courtrooms`,
+        { method: "DELETE", body: JSON.stringify(courtroom) },
+      );
+      if (!response.ok) throw new Error("Unable to remove courtroom.");
+      setCourtrooms((previous) =>
+        previous.filter((candidate) => candidate.id !== courtroom.id),
+      );
+      confirmRemove.clear();
+    } catch (reason: unknown) {
+      setError(
+        reason instanceof Error
+          ? reason.message
+          : "Unable to remove courtroom.",
+      );
+    } finally {
+      setSaving(false);
     }
+  };
 
-    return (
-        <Section title="Courtrooms" description="Manage available courtrooms">
-            {error && <p className="org-error" role="alert">{error}</p>}
-            <div className="tab-actions">
-                <AddButton onClick={openAddModal}>+ Add courtroom</AddButton>
-            </div>
+  return (
+    <Section title="Courtrooms" description="Manage available courtrooms">
+      {error && (
+        <p className="org-error" role="alert">
+          {error}
+        </p>
+      )}
+      <div className="tab-actions">
+        <AddButton onClick={openAddModal}>+ Add courtroom</AddButton>
+      </div>
 
-            <div className="dash-table-scroll">
-                <table className="dash-standings-table">
-                    <thead><tr><th>Name</th><th>Details</th><th></th></tr></thead>
-                    <tbody>
-                        {courtrooms.map(c => (
-                            <tr key={c.id}>
-                                <td className="dash-courtroom-name"><Link to={`/organizer/${tournamentId}/courtrooms/${c.id}`}>{c.name}</Link></td>
-                                <td className="dash-judge-name">{c.location ?? '—'}</td>
-                                <td>
-                                    <div className="dash-actions-cell">
-                                        <button type="button" className="dash-remove-btn" onClick={() => openEditModal(c)}>Edit</button>
-                                        <Link className="dash-remove-btn" to={`/organizer/${tournamentId}/courtrooms/${c.id}`}>Manage courtroom</Link>
-                                        <DangerButton onClick={() => confirmRemove.open(c)}>Remove</DangerButton>
-                                    </div>
-                                </td>
-                            </tr>
-                        ))}
-                    </tbody>
-                </table>
-            </div>
+      <div className="dash-table-scroll">
+        <table className="dash-standings-table">
+          <thead>
+            <tr>
+              <th>Name</th>
+              <th>Details</th>
+              <th></th>
+            </tr>
+          </thead>
+          <tbody>
+            {courtrooms.map((c) => (
+              <tr key={c.id}>
+                <td className="dash-courtroom-name">
+                  <Link to={`/organizer/${tournamentId}/courtrooms/${c.id}`}>
+                    {c.name}
+                  </Link>
+                </td>
+                <td className="dash-judge-name">{c.location ?? "—"}</td>
+                <td>
+                  <div className="dash-actions-cell">
+                    <button
+                      type="button"
+                      className="dash-remove-btn"
+                      onClick={() => openEditModal(c)}
+                    >
+                      Edit
+                    </button>
+                    <Link
+                      className="dash-remove-btn"
+                      to={`/organizer/${tournamentId}/courtrooms/${c.id}`}
+                    >
+                      Manage courtroom
+                    </Link>
+                    <DangerButton onClick={() => confirmRemove.open(c)}>
+                      Remove
+                    </DangerButton>
+                  </div>
+                </td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
 
-            {showModal && (
-                <ModalBackdrop onClose={() => setShowModal(false)}>
-                    <div className="confirm-modal" role="dialog" aria-modal="true">
-                        <h2>{editingId ? 'Edit courtroom' : 'Add courtroom'}</h2>
-                        <form className="tc-form" onSubmit={e => { e.preventDefault(); handleSave() }} noValidate>
-                            <div className="tc-field">
-                                <label className="tc-label" htmlFor="cr-name">Name</label>
-                                <input id="cr-name" type="text" className="tc-input" required ref={nameRef}
-                                    value={name} onChange={e => setName(e.target.value)} placeholder="e.g. 1A" />
-                            </div>
-                            <div className="tc-field">
-                                <label className="tc-label" htmlFor="cr-details">Details (optional)</label>
-                                <input id="cr-details" type="text" className="tc-input"
-                                    value={location} onChange={e => setLocation(e.target.value)} placeholder="e.g. 2nd Floor" />
-                            </div>
-                            <div className="confirm-actions">
-                                <button type="button" onClick={() => setShowModal(false)} disabled={saving}>Cancel</button>
-                                <button type="submit" disabled={!name.trim() || saving}>{saving ? 'Saving…' : editingId ? 'Save' : 'Add courtroom'}</button>
-                            </div>
-                        </form>
-                    </div>
-                </ModalBackdrop>
-            )}
+      {showModal && (
+        <ModalBackdrop onClose={() => setShowModal(false)}>
+          <div className="confirm-modal" role="dialog" aria-modal="true">
+            <h2>{editingId ? "Edit courtroom" : "Add courtroom"}</h2>
+            <form
+              className="tc-form"
+              onSubmit={(e) => {
+                e.preventDefault();
+                handleSave();
+              }}
+              noValidate
+            >
+              <div className="tc-field">
+                <label className="tc-label" htmlFor="cr-name">
+                  Name
+                </label>
+                <input
+                  id="cr-name"
+                  type="text"
+                  className="tc-input"
+                  required
+                  ref={nameRef}
+                  value={name}
+                  onChange={(e) => setName(e.target.value)}
+                  placeholder="e.g. 1A"
+                />
+              </div>
+              <div className="tc-field">
+                <label className="tc-label" htmlFor="cr-details">
+                  Details (optional)
+                </label>
+                <input
+                  id="cr-details"
+                  type="text"
+                  className="tc-input"
+                  value={location}
+                  onChange={(e) => setLocation(e.target.value)}
+                  placeholder="e.g. 2nd Floor"
+                />
+              </div>
+              <div className="confirm-actions">
+                <button
+                  type="button"
+                  onClick={() => setShowModal(false)}
+                  disabled={saving}
+                >
+                  Cancel
+                </button>
+                <button type="submit" disabled={!name.trim() || saving}>
+                  {saving ? "Saving…" : editingId ? "Save" : "Add courtroom"}
+                </button>
+              </div>
+            </form>
+          </div>
+        </ModalBackdrop>
+      )}
 
-            {confirmRemove.pending && <ConfirmRemoveModal
-                message={`Remove ${confirmRemove.pending.name} from the courtroom list?`}
-                onCancel={confirmRemove.clear}
-                onConfirm={() => { void handleRemove(confirmRemove.pending!) }}
-            />}
-
-        </Section>
-    )
+      {confirmRemove.pending && (
+        <ConfirmRemoveModal
+          message={`Remove ${confirmRemove.pending.name} from the courtroom list?`}
+          onCancel={confirmRemove.clear}
+          onConfirm={() => {
+            void handleRemove(confirmRemove.pending!);
+          }}
+        />
+      )}
+    </Section>
+  );
 }
