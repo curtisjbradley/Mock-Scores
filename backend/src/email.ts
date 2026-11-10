@@ -34,29 +34,52 @@ export function isValidEmail(email: string): boolean {
 
 /** Strips HTML tags to produce a plaintext fallback when none is supplied. */
 const htmlToText = (html: string): string => {
-  // Repeatedly apply a removal regex until it reaches a fixpoint. A single pass is
-  // unsafe because overlapping or nested constructs can leave a fresh match behind
-  // (e.g. `<sty<style>le>` -> `<style>` after one pass). Looping guarantees no
-  // removable construct survives. (CodeQL: js/incomplete-multi-character-sanitization)
-  const stripUntilStable = (input: string, pattern: RegExp): string => {
-    let current = input;
-    let previous: string;
-    do {
-      previous = current;
-      current = current.replace(pattern, " ");
-    } while (current !== previous);
-    return current;
-  };
+  // Scan tags once instead of repeatedly applying ambiguous regular expressions to
+  // uncontrolled HTML. This is linear in the input length and removes script/style
+  // element bodies as well as ordinary tags.
+  const lowerHtml = html.toLowerCase();
+  let out = "";
+  let position = 0;
 
-  let out = html;
-  // Remove <style>/<script> element bodies entirely (case-insensitive, across newlines).
-  // Accept tolerant HTML parser end-tag forms like `</script >` or `</script foo="x">`.
-  out = stripUntilStable(out, /<style[\s\S]*?<\/style(?:\s+[^>]*)?>/gi);
-  out = stripUntilStable(out, /<script[\s\S]*?<\/script(?:\s+[^>]*)?>/gi);
-  // Remove any remaining complete tags.
-  out = stripUntilStable(out, /<[^>]+>/g);
-  // Remove any trailing/dangling incomplete tag fragment (e.g. `<sc` with no closing `>`).
-  out = out.replace(/<[^>]*$/g, " ");
+  while (position < html.length) {
+    const tagStart = html.indexOf("<", position);
+    if (tagStart === -1) {
+      out += html.slice(position);
+      break;
+    }
+
+    out += html.slice(position, tagStart);
+    const tagEnd = html.indexOf(">", tagStart + 1);
+    if (tagEnd === -1) {
+      // A dangling '<' starts an incomplete tag, so omit the rest of the fragment.
+      out += " ";
+      break;
+    }
+
+    const element = lowerHtml.startsWith("<style", tagStart)
+      ? "style"
+      : lowerHtml.startsWith("<script", tagStart)
+        ? "script"
+        : null;
+    if (element !== null) {
+      const closingTag = `</${element}>`;
+      const closingTagStart = lowerHtml.indexOf(closingTag, tagEnd + 1);
+      if (closingTagStart !== -1) {
+        out += " ";
+        position = closingTagStart + closingTag.length;
+        continue;
+      }
+
+      // Treat an unterminated script/style element as extending to the end of
+      // the document. Besides being the safest plaintext fallback, stopping
+      // here prevents repeated end-of-input searches for malformed markup.
+      out += " ";
+      break;
+    }
+
+    out += " ";
+    position = tagEnd + 1;
+  }
 
   return (
     out
