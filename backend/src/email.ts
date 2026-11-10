@@ -50,8 +50,9 @@ const htmlToText = (html: string): string => {
 
   let out = html;
   // Remove <style>/<script> element bodies entirely (case-insensitive, across newlines).
-  out = stripUntilStable(out, /<style[\s\S]*?<\/style>/gi);
-  out = stripUntilStable(out, /<script[\s\S]*?<\/script>/gi);
+  // Accept tolerant HTML parser end-tag forms like `</script >` or `</script foo="x">`.
+  out = stripUntilStable(out, /<style[\s\S]*?<\/style(?:\s+[^>]*)?>/gi);
+  out = stripUntilStable(out, /<script[\s\S]*?<\/script(?:\s+[^>]*)?>/gi);
   // Remove any remaining complete tags.
   out = stripUntilStable(out, /<[^>]+>/g);
   // Remove any trailing/dangling incomplete tag fragment (e.g. `<sc` with no closing `>`).
