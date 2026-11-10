@@ -43,7 +43,21 @@ Before publishing, check every card for:
 
 You may also select **Download ballot** to open a printable ballot for the pairing.
 
-Scorers and presiders are managed on the same card, but their links are sent later. See [Managing Ballots and Results](/docs/organizer/managing-ballots-and-results/).
+Scorers and presiders are managed on the same card, but their links are sent later. You can choose an existing scorer or create a new online or paper scorer without leaving the round. See [Managing Ballots and Results](/docs/organizer/managing-ballots-and-results/).
+
+## Auto-assign scorers
+
+For a round with several trials, open **Round actions** and select **Auto-assign scorers**. The tool is a starting point, not a substitute for a final check.
+
+1. Choose the scorers who are available and the number needed for each pairing.
+2. Leave **Avoid repeat matchups** on when possible. MockScores checks prior assignments so a scorer is less likely to see the same team again.
+3. Review the preview. It respects recorded team conflicts, accounts for submitted ballots, and shows any slots it could not fill.
+4. Select **Confirm & assign** only after reviewing every matchup.
+5. Return to each pairing to select a presider. Auto-assignment intentionally leaves presiders unset.
+
+:::caution
+Applying the preview replaces existing unsubmitted scorer assignments for the affected pairings. Submitted ballots stay in place and count toward the requested number of scorers. Check the replacement warning before confirming.
+:::
 
 ## Publish pairings
 
@@ -70,4 +84,3 @@ A round can be locked only after its pairings are published. Before locking, use
 When a coach did not create pairing-specific assignments or call orders, locking copies that team's saved defaults. After locking, coaches cannot edit the copied or pairing-specific preparation.
 
 The lock action is covered in [Managing Ballots and Results](/docs/organizer/managing-ballots-and-results/).
-

@@ -9,7 +9,15 @@ export default defineConfig({
   output: 'static',
 
   integrations: [
-    sitemap(),
+    sitemap({
+      serialize(item) {
+        if (item.url === 'https://mockscores.org/terms/') {
+          return { ...item, url: 'https://mockscores.org/terms' };
+        }
+
+        return item;
+      },
+    }),
     react(),
 
     starlight({
