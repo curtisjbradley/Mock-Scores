@@ -88,7 +88,7 @@ export default function TournamentDetails({ info, onChange, onNext, onBack }: Pr
 
 
             <div className="tc-actions">
-                <button type="button" className="btn-cancel" onClick={onBack}><Icon name={'Left-Arrow'}/> Back</button>
+                <button type="button" className="btn-cancel" onClick={onBack}> Back</button>
                 <button type="submit" className="btn-confirm">Next <Icon name={'Right-Arrow'}/></button>
             </div>
         </form>

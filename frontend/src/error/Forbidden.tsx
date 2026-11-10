@@ -1,6 +1,5 @@
 import { Link, useNavigate } from 'react-router-dom'
 import './styles/notfound.css'
-import Icon from "../shared/components/Icon.tsx";
 
 const Forbidden = () => {
     const navigate = useNavigate()
@@ -13,9 +12,9 @@ const Forbidden = () => {
             <h2>Access denied</h2>
             <p>You don't have permission to view this page.</p>
             {canGoBack && (
-                <button className="notfound-back-btn" onClick={() => navigate(-1)}><Icon name={'Left-Arrow'}/> Go back</button>
+                <button className="notfound-back-btn" onClick={() => navigate(-1)}> Go back</button>
             )}
-            <Link to="/"><Icon name={'Left-Arrow'}/> Go home</Link>
+            <Link to="/">Go home</Link>
         </main>
     )
 }

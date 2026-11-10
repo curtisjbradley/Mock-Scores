@@ -357,7 +357,7 @@ router.get('/scoresheets/:ballotId', pairingHandler(async (req, res) => {
 }));
 /**
  * @swagger
- * /organizer/tournament/{tournamentId}/pairings/{pairingId}/scoresheets/{assignmentId}:
+ * /organizer/tournament/{tournamentId}/pairings/{pairingId}/scoresheets/{ballotId}:
  *   put:
  *     summary: Edit a submitted ballot's scores
  *     tags: [Organizer - Scorecards]
@@ -371,7 +371,7 @@ router.get('/scoresheets/:ballotId', pairingHandler(async (req, res) => {
  *         required: true
  *         schema: { type: string, format: uuid }
  *       - in: path
- *         name: assignmentId
+ *         name: ballotId
  *         required: true
  *         schema: { type: string, format: uuid }
  *     requestBody:
@@ -390,13 +390,13 @@ router.get('/scoresheets/:ballotId', pairingHandler(async (req, res) => {
  *       404: { description: Ballot not found }
  *       500: { description: Database error }
  */
-router.put('/scoresheets/:assignmentId', pairingHandler(async (req, res) => {
-    const assignmentId = req.params.assignmentId as string;
-    if (!uuidRegex.test(assignmentId)) return res.status(400).json({ message: 'Invalid assignment ID' });
+router.put('/scoresheets/:ballotId', pairingHandler(async (req, res) => {
+    const ballotId = req.params.ballotId as string;
+    if (!uuidRegex.test(ballotId)) return res.status(400).json({ message: 'Invalid ballot ID' });
     const { scores, reason } = req.body as { scores?: { assignmentKey: string; side: 'P' | 'D'; score: number; studentId: string | null; categoryId: string }[]; reason?: string };
     if (!Array.isArray(scores) || !reason?.trim()) return res.status(400).json({ message: 'scores array and reason are required' });
     try {
-        await organizer.editBallot(assignmentId, { scores }, req.session.email, reason.trim());
+        await organizer.editBallot(ballotId, { scores }, req.session.email, reason.trim());
         return res.status(200).json({ success: true });
     } catch (e) {
         if (e instanceof NotFoundError) return res.status(404).json({ message: e.message });
@@ -425,7 +425,7 @@ router.put('/scoresheets/:assignmentId', pairingHandler(async (req, res) => {
  *         schema: { type: string, format: uuid }
  *     responses:
  *       204: { description: Ballot deleted }
- *       400: { description: Invalid assignment ID }
+ *       400: { description: Invalid ballot ID }
  *       404: { description: Ballot not found }
  *       500: { description: Database error }
  */

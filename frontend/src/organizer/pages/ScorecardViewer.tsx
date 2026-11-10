@@ -5,9 +5,7 @@ import type { IScoreSheetFormat, ScorecardPayload } from '@mock-scores/shared'
 import ModalBackdrop from '../../shared/components/ModalBackdrop'
 import { useAutoFocus } from '../../shared/hooks/useAutoFocus'
 import { resolveCoachTournament } from '../../coach/coachApi'
-import '../styles/organizer.css'
-import '../../judges/styles/scoresheet.css'
-import '../../judges/styles/modal.css'
+import '../styles/scorecard-viewer.css'
 import AddButton from "../../shared/components/AddButton.tsx";
 import DangerButton from "../../shared/components/DangerButton.tsx";
 import Icon from "../../shared/components/Icon.tsx";
@@ -233,12 +231,18 @@ function mapScoresToSheet(sheet: IScoreSheetFormat, ballot: ScorecardPayload): M
     return mapped
 }
 
-function unpackBallot(record: ScorecardResponse['ballot']): { payload: ScorecardPayload | null; tiebreaker: string | null } {
+function unpackBallot(record: ScorecardResponse['ballot']): {
+    payload: ScorecardPayload | null
+    tiebreaker: string | null
+} {
     if (!record) return { payload: null, tiebreaker: null }
     if ('ballot_json' in record) {
         const payload = record.ballot_json
         const payloadTiebreaker = (payload as DirectBallotPayload).tiebreaker ?? null
-        return { payload, tiebreaker: record.tiebreaker ?? payloadTiebreaker }
+        return {
+            payload,
+            tiebreaker: record.tiebreaker ?? payloadTiebreaker,
+        }
     }
     return { payload: record, tiebreaker: record.tiebreaker ?? null }
 }
@@ -445,9 +449,9 @@ const ScorecardViewer = () => {
 
     if (loading) {
         return (
-            <main className="org-main">
-                <div className="org-container">
-                    <button className="org-back-btn" onClick={() => navigate(-1)}>Back</button>
+            <main className="sv-page">
+                <div className="sv-page-container">
+                    <button className="sv-back-button" onClick={() => navigate(-1)}>Back</button>
                     <p>Loading scorecard…</p>
                 </div>
             </main>
@@ -456,10 +460,10 @@ const ScorecardViewer = () => {
 
     if (error || !sheet) {
         return (
-            <main className="org-main">
-                <div className="org-container">
-                    <button className="org-back-btn" onClick={() => navigate(-1)}><Icon name={'Left-Arrow'}/> Back</button>
-                    <p className="coach-empty">{error ?? 'Scoresheet not found.'}</p>
+            <main className="sv-page">
+                <div className="sv-page-container">
+                    <button className="sv-back-button" onClick={() => navigate(-1)}>Back</button>
+                    <p className="sv-empty">{error ?? 'Scoresheet not found.'}</p>
                 </div>
             </main>
         )
@@ -501,11 +505,11 @@ const ScorecardViewer = () => {
 
     return (
         <>
-            <main className="org-main">
-                <div className="org-container">
-                    <button className="org-back-btn" onClick={() => navigate(-1)}><Icon name={'Left-Arrow'} /> Back to tournament</button>
+            <main className="sv-page">
+                <div className="sv-page-container">
+                    <button className="sv-back-button" onClick={() => navigate(-1)}>Back to tournament</button>
 
-                    <div className="coach-section">
+                    <div className="sv-card">
                         <div className="sv-header">
                             <h2>Scorecard{sheet.scorer.name ? ` - ${sheet.scorer.name}` : ''}</h2>
                             {ballot && (
@@ -545,8 +549,8 @@ const ScorecardViewer = () => {
                                             <AddButton onClick={startEditing}>Edit Scores</AddButton>
                                         ) : (
                                             <>
-                                                <button className="pc-save-btn" onClick={() => setShowSaveModal(true)}>Save Changes</button>
-                                                <button className="pc-cancel-btn" onClick={cancelEditing}>Cancel</button>
+                                                <button className="sv-save-button" onClick={() => setShowSaveModal(true)}>Save Changes</button>
+                                                <button className="sv-cancel-button" onClick={cancelEditing}>Cancel</button>
                                             </>
                                         )
                                     )}
@@ -572,7 +576,7 @@ const ScorecardViewer = () => {
                                                     <span className="sv-editlog-time">{new Date(entry.edited_at).toLocaleString()}</span>
                                                 </div>
                                                 <div className="sv-editlog-diff">
-                                                    P: {entry.p_points_before} <Icon name={'Right-Arrow'}/> {entry.p_points_after} | D: {entry.d_points_before} <Icon name={'Right-Arrow'}/> {entry.d_points_after}
+                                                    P: {entry.p_points_before} <Icon name={'Right-Arrow'} className={'points-change-icon'}/> {entry.p_points_after} | D: {entry.d_points_before} <Icon name={'Right-Arrow'} className={'points-change-icon'}/> {entry.d_points_after}
                                                 </div>
                                                 <div className="sv-editlog-reason">{entry.reason}</div>
                                             </div>
@@ -596,26 +600,26 @@ const ScorecardViewer = () => {
                         )}
 
                         {/* Trial info */}
-                        <div className="trial-info-card sv-trial-info">
-                            <div className="trial-info-meta">
-                                <span className="trial-info-courtroom">Courtroom {sheet.courtroomNumber}</span>
-                                <span className="trial-info-presider">{sheet.presiderName}</span>
+                        <div className="sv-trial-info">
+                            <div className="sv-trial-meta">
+                                <span className="sv-courtroom">Courtroom {sheet.courtroomNumber}</span>
+                                <span className="sv-presider">{sheet.presiderName}</span>
                             </div>
-                            <p className="case-name sv-case-name">{sheet.caseName}</p>
-                            <div className="team-labels">
-                                <div className="team-label team-label--prosecution">
-                                    <span className="team-code">{sheet.prosecutionCode}</span>
-                                    <span className="team-label-role">{prosecutionLabel}</span>
+                            <p className="sv-case-name">{sheet.caseName}</p>
+                            <div className="sv-team-labels">
+                                <div className="sv-team-label sv-team-label--prosecution">
+                                    <span className="sv-team-code">{sheet.prosecutionCode}</span>
+                                    <span className="sv-team-role">{prosecutionLabel}</span>
                                 </div>
-                                <div className="team-label team-label--defense">
-                                    <span className="team-code team-code--defense">{sheet.defenseCode}</span>
-                                    <span className="team-label-role">Defense</span>
+                                <div className="sv-team-label sv-team-label--defense">
+                                    <span className="sv-team-code sv-team-code--defense">{sheet.defenseCode}</span>
+                                    <span className="sv-team-role">Defense</span>
                                 </div>
                             </div>
                         </div>
 
                         {ballot === null && (
-                            <p className="coach-empty sv-empty-italic">
+                            <p className="sv-empty sv-empty-italic">
                                 No ballot has been submitted yet.
                             </p>
                         )}
@@ -623,10 +627,10 @@ const ScorecardViewer = () => {
                         {ballot && (
                             <>
                                 {/* Scores table */}
-                                <div className="score-container">
-                                    <table id="score-table">
+                                <div className="sv-score-container">
+                                    <table className="sv-score-table">
                                         <thead>
-                                        <tr className="scoresheet-header">
+                                        <tr className="sv-score-table-header">
                                             <th>Scoring Category</th>
                                             <th>{prosecutionLabel}</th>
                                             <th>Defense</th>
@@ -640,7 +644,7 @@ const ScorecardViewer = () => {
                                                 : cat.categoryName
                                             return (
                                                 <tbody key={catId}>
-                                                <tr className="category-name">
+                                                <tr className="sv-category-name">
                                                     <th colSpan={3}>{displayName}</th>
                                                 </tr>
                                                 {cat.categoryAssignments.map((a) => {
@@ -649,27 +653,27 @@ const ScorecardViewer = () => {
                                                     const pStudent = student(a.pStudentId)
                                                     const dStudent = student(a.dStudentId)
                                                     return (
-                                                        <tr key={`${a.assignmentKey}-${a.side}`} className="score-row">
+                                                        <tr key={`${a.assignmentKey}-${a.side}`} className="sv-score-row">
                                                             <td>{a.assignmentName}</td>
                                                             <td>
                                                                 {a.side !== 'D' && (
-                                                                    <div className="score-box">
+                                                                    <div className="sv-score-box">
                                                                         {editing ? (
                                                                             <input
                                                                                 type="number"
                                                                                 inputMode="numeric"
-                                                                                className="score-input sv-score-input-edit"
+                                                                                className="sv-score-input sv-score-input-edit"
                                                                                 aria-label={`${prosecutionLabel} score for ${a.assignmentName}`}
                                                                                 value={editedScores[`${a.assignmentKey}:P`] ?? ''}
                                                                                 onChange={e => setEditedScores(prev => ({ ...prev, [`${a.assignmentKey}:P`]: Number(e.target.value) }))}
                                                                             />
                                                                         ) : (
-                                                                            <span className="score-input sv-score-input-view">
+                                                                            <span className="sv-score-input sv-score-input-view">
                                                                                 {pScore ?? '—'}
                                                                             </span>
                                                                         )}
                                                                         {pStudent && (
-                                                                            <p className="student-name">
+                                                                            <p className="sv-student-name">
                                                                                 {pStudent.name}
                                                                             </p>
                                                                         )}
@@ -678,23 +682,23 @@ const ScorecardViewer = () => {
                                                             </td>
                                                             <td>
                                                                 {a.side !== 'P' && (
-                                                                    <div className="score-box">
+                                                                    <div className="sv-score-box">
                                                                         {editing ? (
                                                                             <input
                                                                                 type="number"
                                                                                 inputMode="numeric"
-                                                                                className="score-input sv-score-input-edit"
+                                                                                className="sv-score-input sv-score-input-edit"
                                                                                 aria-label={`Defense score for ${a.assignmentName}`}
                                                                                 value={editedScores[`${a.assignmentKey}:D`] ?? ''}
                                                                                 onChange={e => setEditedScores(prev => ({ ...prev, [`${a.assignmentKey}:D`]: Number(e.target.value) }))}
                                                                             />
                                                                         ) : (
-                                                                            <span className="score-input sv-score-input-view">
+                                                                            <span className="sv-score-input sv-score-input-view">
                                                                                 {dScore ?? '—'}
                                                                             </span>
                                                                         )}
                                                                         {dStudent && (
-                                                                            <p className="student-name">
+                                                                            <p className="sv-student-name">
                                                                                 {dStudent.name}
                                                                             </p>
                                                                         )}
@@ -785,7 +789,7 @@ const ScorecardViewer = () => {
 
             {showDeleteModal && (
                 <ModalBackdrop onClose={() => setShowDeleteModal(false)} dismissible={!deleting}>
-                    <div className="confirm-modal" role="dialog" aria-modal="true" aria-labelledby="delete-modal-title">
+                    <div className="sv-dialog" role="dialog" aria-modal="true" aria-labelledby="delete-modal-title">
                         <h2 id="delete-modal-title" className="sv-modal-title--danger">Delete Ballot</h2>
                         <p className="sv-modal-text">
                             Are you sure you want to delete this ballot? This action cannot be undone.
@@ -793,7 +797,7 @@ const ScorecardViewer = () => {
                         <p className="sv-modal-text--muted">
                             The scorer will need to resubmit their scores. Any standings or results that include this ballot will be recalculated.
                         </p>
-                        <div className="confirm-actions">
+                        <div className="sv-dialog-actions">
                             <button onClick={() => setShowDeleteModal(false)} disabled={deleting}>Cancel</button>
                             <button onClick={handleDeleteBallot} disabled={deleting} className="sv-modal-confirm-danger">
                                 {deleting ? 'Deleting…' : 'Confirm Delete'}
@@ -805,7 +809,7 @@ const ScorecardViewer = () => {
 
             {showSaveModal && (
                 <ModalBackdrop onClose={() => setShowSaveModal(false)} dismissible={!saving}>
-                    <div className="confirm-modal" role="dialog" aria-modal="true" aria-labelledby="save-modal-title">
+                    <div className="sv-dialog" role="dialog" aria-modal="true" aria-labelledby="save-modal-title">
                         <h2 id="save-modal-title" className="sv-modal-title">Save Ballot Edits</h2>
                         <p className="sv-modal-text--intro">
                             Please provide a reason for this edit. This will be logged for audit purposes.
@@ -814,12 +818,12 @@ const ScorecardViewer = () => {
                         <textarea
                             id="edit-reason"
                             ref={reasonRef}
-                            className="modal-input sv-reason-textarea"
+                            className="sv-dialog-input sv-reason-textarea"
                             value={editReason}
                             onChange={e => setEditReason(e.target.value)}
                             placeholder="e.g., Scorer reported incorrect score for witness #2"
                         />
-                        <div className="confirm-actions sv-modal-actions-spaced">
+                        <div className="sv-dialog-actions sv-modal-actions-spaced">
                             <button onClick={() => { setShowSaveModal(false); setEditReason('') }} disabled={saving}>Cancel</button>
                             <button onClick={handleSaveEdit} disabled={saving || !editReason.trim()}>
                                 {saving ? 'Saving…' : 'Confirm Edit'}

@@ -1524,7 +1524,7 @@ export async function deleteBallot(ballotId: string): Promise<void> {
     if (!result.rows[0]) throw new NotFoundError('ballot');
 }
 
-export async function editBallot(assignmentId: string, newPayload: {
+export async function editBallot(ballotId: string, newPayload: {
     scores: { assignmentKey: string; side: 'P' | 'D'; score: number; studentId: string | null; categoryId: string }[]
 }, editorEmail: string, reason: string,): Promise<void> {
     // Get current ballot
@@ -1534,7 +1534,7 @@ export async function editBallot(assignmentId: string, newPayload: {
         p_points: number;
         d_points: number;
         tournament_id: string
-    }>('SELECT ballot_id, ballot_json, p_points, d_points, tournament_id FROM ballots WHERE scorer_assignment_id=$1', [assignmentId],);
+    }>('SELECT ballot_id, ballot_json, p_points, d_points, tournament_id FROM ballots WHERE ballot_id=$1', [ballotId],);
     if (!result) throw new DbError('editBallot');
     const current = result.rows[0];
     if (!current) throw new NotFoundError('ballot');

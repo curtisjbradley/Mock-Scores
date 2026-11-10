@@ -129,7 +129,7 @@ export default function TournamentCaseFormat({ caseFormat, onChange, onNext, onB
             {submitted && errors.witnessNames && <span className="tc-field-error">{errors.witnessNames}</span>}
 
             <div className="tc-actions">
-                <button type="button" className="btn-cancel" onClick={onBack}><Icon name={'Left-Arrow'}/> Back</button>
+                <button type="button" className="btn-cancel" onClick={onBack}> Back</button>
                 <button type="submit" className="btn-confirm">Next <Icon name={'Right-Arrow'}/></button>
             </div>
         </form>

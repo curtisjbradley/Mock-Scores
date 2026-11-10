@@ -35,7 +35,7 @@ describe('New Tournament wizard', () => {
     cy.get('input[type="checkbox"]').each($cb => cy.wrap($cb).check({ force: true }))
     cy.contains('button', 'Next').click()
     cy.contains('h1', 'Case format').should('be.visible')
-    cy.contains('button', 'back').click()
+    cy.contains('button', 'Back').click()
     cy.contains('h1', 'New tournament').should('be.visible')
   })
 

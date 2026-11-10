@@ -369,11 +369,11 @@ describe('Score sheet page', () => {
         })
   }
 
-  const openAwardsModal = () => {
+  const openAwardsPage = () => {
     proceedToScoreSheet()
     fillAllScores()
     cy.get('#score-submit-desktop').click()
-    cy.get('[role="dialog"]').should('be.visible')
+    cy.get('#award-nominations').should('be.visible')
   }
 
   const selectNominee = (categoryName, studentName) => {
@@ -499,30 +499,37 @@ describe('Score sheet page', () => {
     cy.contains('[role="alert"]', 'Must be 0–10.').should('be.visible')
   })
 
-  it('opens the awards and tiebreaker modal after valid scores are submitted', () => {
-    openAwardsModal()
+  it('shows awards on the scoresheet and opens tiebreaker confirmation after valid selections', () => {
+    openAwardsPage()
 
-    cy.get('[role="dialog"]').within(() => {
-      cy.contains('h2', 'Submit score sheet?').should('be.visible')
+    cy.get('#award-nominations').within(() => {
       cy.contains('Individual Award Nominations').should('be.visible')
       cy.contains('Outstanding Attorney').should('be.visible')
       cy.contains('Outstanding Bailiff').should('be.visible')
       cy.contains('Outstanding Clerk').should('be.visible')
       cy.contains('Outstanding Pretrial').should('be.visible')
       cy.contains('Outstanding Witness').should('be.visible')
+      cy.contains('[role="alert"]', 'Please select the minimum number of nominees').should('be.visible')
+    })
+
+    cy.get('[role="dialog"]').should('not.exist')
+    selectRequiredNominees()
+    cy.get('#score-submit-desktop').click()
+
+    cy.get('[role="dialog"]').within(() => {
+      cy.contains('h2', 'Submit score sheet?').should('be.visible')
       cy.contains('h3', 'Tiebreaker').should('be.visible')
       cy.contains('P-101').should('be.visible')
       cy.contains('D-202').should('be.visible')
       cy.get('#confirm-button').should('be.disabled')
-      cy.contains('[role="alert"]', 'Please select the minimum number of nominees').should('be.visible')
       cy.contains('[role="alert"]', 'Please select a tiebreaker team.').should('be.visible')
     })
 
-    cy.focused().should('have.attr', 'type', 'checkbox')
+    cy.focused().should('have.attr', 'type', 'radio')
   })
 
   it('shows only eligible students in each award category', () => {
-    openAwardsModal()
+    openAwardsPage()
 
     const expectedNominees = {
       'Outstanding Attorney': ['Priya Shah', 'Elena Ruiz', 'Marcus Lee', 'Maya Thompson'],
@@ -550,7 +557,7 @@ describe('Score sheet page', () => {
   })
 
   it('ranks multiple nominees and allows their order to change', () => {
-    openAwardsModal()
+    openAwardsPage()
     selectNominee('Outstanding Attorney', 'Priya Shah')
     selectNominee('Outstanding Attorney', 'Elena Ruiz')
 
@@ -569,21 +576,22 @@ describe('Score sheet page', () => {
   })
 
   it('enables confirmation only after required awards and a tiebreaker are selected', () => {
-    openAwardsModal()
+    openAwardsPage()
     selectRequiredNominees()
 
+    cy.get('#score-submit-desktop').click()
     cy.get('#confirm-button').should('be.disabled')
     selectTiebreaker(SCORE_SHEET_RESPONSE.prosecutionId)
 
-    cy.contains('[role="alert"]', 'Please select the minimum number of nominees').should('not.exist')
     cy.contains('[role="alert"]', 'Please select a tiebreaker team.').should('not.exist')
 
     cy.get('#confirm-button').should('be.enabled')
   })
 
-  it('closes the modal with Escape or Cancel without clearing entered scores', () => {
-    openAwardsModal()
-    selectNominee('Outstanding Attorney', 'Priya Shah')
+  it('closes confirmation with Escape or Cancel without clearing entered scores or awards', () => {
+    openAwardsPage()
+    selectRequiredNominees()
+    cy.get('#score-submit-desktop').click()
     selectTiebreaker(SCORE_SHEET_RESPONSE.prosecutionId)
 
 
@@ -591,9 +599,9 @@ describe('Score sheet page', () => {
     cy.get('[role="dialog"]').should('not.exist')
     cy.get('input.score-input:visible').first().should('have.value', '7')
 
+    cy.get('#award-nominations input[type="checkbox"]:checked').should('have.length', 4)
     cy.get('#score-submit-desktop').click()
     cy.get('[role="dialog"]').should('be.visible')
-    cy.get('[role="dialog"] input[type="checkbox"]:checked').should('not.exist')
     cy.get('[role="dialog"] input[name="tiebreaker"]:checked').should('not.exist')
     cy.get('[role="dialog"]').contains('button', 'Cancel').click()
     cy.get('[role="dialog"]').should('not.exist')
@@ -606,8 +614,9 @@ describe('Score sheet page', () => {
       body: {},
     }).as('submitBallot')
 
-    openAwardsModal()
+    openAwardsPage()
     selectRequiredNominees()
+    cy.get('#score-submit-desktop').click()
     selectTiebreaker(SCORE_SHEET_RESPONSE.prosecutionId)
 
     cy.get('#confirm-button').click()

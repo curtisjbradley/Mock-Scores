@@ -54,7 +54,7 @@ export default function TournamentStandings({ onSubmit, onBack }: Props) {
                 Standings configuration can be fully customized from the tournament dashboard after creation.
             </p>
             <div className="tc-actions">
-                <button type="button" className="btn-cancel" onClick={onBack}><Icon name={'Left-Arrow'}/>Back</button>
+                <button type="button" className="btn-cancel" onClick={onBack}>Back</button>
                 <button type="submit" className="btn-confirm" disabled={loading}>Create tournament <Icon name={'Right-Arrow'}/></button>
             </div>
         </form>
