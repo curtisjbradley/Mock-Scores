@@ -1,5 +1,12 @@
 import "../styles/scoresheet.css";
-import { useEffect, useMemo, useState } from "react";
+import {
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+  type CSSProperties,
+  type TouchEvent,
+} from "react";
 import {
   type Control,
   type FieldErrors,
@@ -26,6 +33,51 @@ export type ScoreResults = Record<string, number>;
 
 /** Per-category award selections, ordered from highest to lowest nomination. */
 export type NominationSelections = Record<string, string[]>;
+
+const MINIMUM_SWIPE_DISTANCE = 48;
+const MOBILE_SCORESHEET_MEDIA_QUERY = "(max-width: 48rem)";
+const SCORE_SHEET_HISTORY_STATE = "mockScoresScoreSheet";
+
+interface ScoreSheetHistoryEntry {
+  key: string;
+  categoryIndex: number;
+}
+
+interface SwipeFeedback {
+  direction: "next" | "previous";
+  progress: number;
+}
+
+function isHistoryState(value: unknown): value is Record<string, unknown> {
+  return typeof value === "object" && value !== null;
+}
+
+function getHistoryCategory(state: unknown, key: string): number | null {
+  if (!isHistoryState(state)) {
+    return null;
+  }
+
+  const entry = state[SCORE_SHEET_HISTORY_STATE];
+
+  if (!isHistoryState(entry) || entry.key !== key) {
+    return null;
+  }
+
+  return typeof entry.categoryIndex === "number" &&
+    Number.isInteger(entry.categoryIndex)
+    ? entry.categoryIndex
+    : null;
+}
+
+function buildHistoryState(
+  state: unknown,
+  entry: ScoreSheetHistoryEntry,
+): Record<string, unknown> {
+  return {
+    ...(isHistoryState(state) ? state : {}),
+    [SCORE_SHEET_HISTORY_STATE]: entry,
+  };
+}
 
 /**
  * Builds the form field ID for a score input.
@@ -337,6 +389,7 @@ function ScoreSheet(
   },
 ) {
   const storageKey = `mock-trial-scores-${details.pairingID}-${details.scorer.scorerID}`;
+  const historyKey = `${details.pairingID}-${details.scorer.scorerID}`;
 
   const categoryKey = `${storageKey}-category`;
 
@@ -380,6 +433,11 @@ function ScoreSheet(
   const [pendingErrorId, setPendingErrorId] = useState<string | null>(null);
 
   const [showConfirm, setShowConfirm] = useState(false);
+
+  const touchStart = useRef<{ x: number; y: number } | null>(null);
+  const [swipeFeedback, setSwipeFeedback] = useState<SwipeFeedback | null>(
+    null,
+  );
 
   const [pendingScores, setPendingScores] = useState<ScoreResults | null>(null);
 
@@ -471,6 +529,70 @@ function ScoreSheet(
   }, [categoryIndex, categoryKey]);
 
   /*
+   * Mark the current browser-history entry with the category it represents.
+   * This makes the Android/system Back action return to the previous category
+   * before leaving the scoresheet.
+   */
+  useEffect(() => {
+    const currentCategory = getHistoryCategory(
+      window.history.state,
+      historyKey,
+    );
+
+    if (currentCategory === categoryIndex) {
+      return;
+    }
+
+    /*
+     * A restored scoresheet may begin on a later category. Seed its earlier
+     * categories so Back still works immediately after a page refresh.
+     */
+    if (currentCategory === null && categoryIndex > 0) {
+      window.history.replaceState(
+        buildHistoryState(window.history.state, {
+          key: historyKey,
+          categoryIndex: 0,
+        }),
+        "",
+      );
+
+      for (let index = 1; index <= categoryIndex; index++) {
+        window.history.pushState(
+          buildHistoryState(window.history.state, {
+            key: historyKey,
+            categoryIndex: index,
+          }),
+          "",
+        );
+      }
+      return;
+    }
+
+    window.history.replaceState(
+      buildHistoryState(window.history.state, {
+        key: historyKey,
+        categoryIndex,
+      }),
+      "",
+    );
+  }, [categoryIndex, historyKey]);
+
+  useEffect(() => {
+    const handlePopState = (event: PopStateEvent) => {
+      const index = getHistoryCategory(event.state, historyKey);
+
+      if (index !== null && index >= 0 && index <= lastIndex) {
+        setCategoryIndex(index);
+      }
+    };
+
+    window.addEventListener("popstate", handlePopState);
+    return () => {
+      window.removeEventListener("popstate", handlePopState);
+    };
+  }, [historyKey, lastIndex]);
+
+  /*
    * Persist scores whenever a form value changes.
    *
    * The subscription is recreated automatically if storageKey
@@ -524,7 +646,7 @@ function ScoreSheet(
   const onSubmit: SubmitHandler<ScoreResults> = (scores) => {
     if (!isNominationsValid) {
       setShowAwardValidation(true);
-      setCategoryIndex(awardCategoryIndex);
+      navigateToCategory(awardCategoryIndex);
       return;
     }
     setPendingScores(scores);
@@ -589,28 +711,128 @@ function ScoreSheet(
          */
         if (assignment.side !== "D" && get(formErrors, pId)) {
           setPendingErrorId(pId);
-          setCategoryIndex(categoryIdx);
+          navigateToCategory(categoryIdx);
           return;
         }
 
         if (assignment.side !== "P" && get(formErrors, dId)) {
           setPendingErrorId(dId);
-          setCategoryIndex(categoryIdx);
+          navigateToCategory(categoryIdx);
           return;
         }
       }
     }
   };
 
+  const navigateToCategory = (index: number) => {
+    const nextIndex = Math.max(0, Math.min(lastIndex, index));
+
+    if (nextIndex === categoryIndex) {
+      return;
+    }
+
+    window.history.pushState(
+      buildHistoryState(window.history.state, {
+        key: historyKey,
+        categoryIndex: nextIndex,
+      }),
+      "",
+    );
+    setCategoryIndex(nextIndex);
+  };
+
   const handlePrev = () => {
-    setCategoryIndex((current) => Math.max(0, current - 1));
+    if (categoryIndex > 0) {
+      window.history.back();
+    }
   };
 
   /**
    * Advance to the next category.
    */
   const handleNext = () => {
-    setCategoryIndex((current) => Math.min(lastIndex, current + 1));
+    navigateToCategory(categoryIndex + 1);
+  };
+
+  /**
+   * Store the origin of a single-finger gesture. Scrolling is left to the
+   * browser; only a deliberate, mostly horizontal swipe changes categories.
+   */
+  const handleTouchStart = (event: TouchEvent<HTMLElement>) => {
+    setSwipeFeedback(null);
+
+    if (!window.matchMedia(MOBILE_SCORESHEET_MEDIA_QUERY).matches) {
+      touchStart.current = null;
+      return;
+    }
+
+    if (event.touches.length !== 1) {
+      touchStart.current = null;
+      return;
+    }
+
+    const touch = event.touches[0];
+    touchStart.current = { x: touch.clientX, y: touch.clientY };
+  };
+
+  const handleTouchMove = (event: TouchEvent<HTMLElement>) => {
+    const start = touchStart.current;
+
+    if (!start || event.touches.length !== 1) {
+      return;
+    }
+
+    const touch = event.touches[0];
+    const horizontalDistance = touch.clientX - start.x;
+    const verticalDistance = touch.clientY - start.y;
+
+    if (Math.abs(horizontalDistance) <= Math.abs(verticalDistance)) {
+      setSwipeFeedback(null);
+      return;
+    }
+
+    const direction = horizontalDistance < 0 ? "next" : "previous";
+    const canNavigate =
+      direction === "next" ? categoryIndex < lastIndex : categoryIndex > 0;
+
+    setSwipeFeedback(
+      canNavigate
+        ? {
+            direction,
+            progress: Math.min(
+              Math.abs(horizontalDistance) / MINIMUM_SWIPE_DISTANCE,
+              1,
+            ),
+          }
+        : null,
+    );
+  };
+
+  const handleTouchEnd = (event: TouchEvent<HTMLElement>) => {
+    const start = touchStart.current;
+    touchStart.current = null;
+    setSwipeFeedback(null);
+
+    if (!start || event.changedTouches.length !== 1) {
+      return;
+    }
+
+    const touch = event.changedTouches[0];
+    const horizontalDistance = touch.clientX - start.x;
+    const verticalDistance = touch.clientY - start.y;
+
+    if (
+      Math.abs(horizontalDistance) < MINIMUM_SWIPE_DISTANCE ||
+      Math.abs(horizontalDistance) <= Math.abs(verticalDistance)
+    ) {
+      return;
+    }
+
+    if (horizontalDistance < 0) {
+      handleNext();
+    } else {
+      handlePrev();
+    }
   };
 
   const isLastCategory = categoryIndex === lastIndex;
@@ -620,6 +842,13 @@ function ScoreSheet(
       <form
         id="scores"
         onSubmit={handleSubmit(onSubmit, onInvalid)}
+        onTouchStart={handleTouchStart}
+        onTouchMove={handleTouchMove}
+        onTouchEnd={handleTouchEnd}
+        onTouchCancel={() => {
+          touchStart.current = null;
+          setSwipeFeedback(null);
+        }}
         noValidate
         autoComplete="off"
       >
@@ -848,6 +1077,32 @@ function ScoreSheet(
             Submit
           </button>
         </nav>
+
+        {swipeFeedback && (
+          <div
+            className={`swipe-feedback swipe-feedback--${swipeFeedback.direction}`}
+            style={
+              {
+                opacity: swipeFeedback.progress,
+                transform: `translateY(-50%) scale(${0.85 + swipeFeedback.progress * 0.15})`,
+              } satisfies CSSProperties
+            }
+            aria-hidden="true"
+          >
+            <Icon
+              name={
+                swipeFeedback.direction === "next"
+                  ? "Right-Arrow"
+                  : "Left-Arrow"
+              }
+            />
+            <span>
+              {swipeFeedback.direction === "next"
+                ? "Next category"
+                : "Previous category"}
+            </span>
+          </div>
+        )}
       </form>
 
       {showConfirm && (
