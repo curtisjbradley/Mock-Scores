@@ -76,7 +76,8 @@ function ConflictCheck({ details, onProceed }: ConflictCheckProps) {
         </dl>
 
         <p className="conflict-prompt">
-          Please look around for any conflicts of interest before proceeding.
+          Please look around for any conflicts before proceeding. Make sure you
+          don't know any of the participants.
         </p>
 
         <div className="conflict-actions">
